@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OfferPSP — PSP Solutions for iGaming & eCommerce</title>
+  <meta name="description" content="We connect merchants with verified PSP providers. Fast setup, 20+ GEOs, iGaming & eCommerce solutions." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #1B2D6B;
+      --navy-light: #243680;
+      --blue: #4A90C4;
+      --blue-light: #5BA3D8;
+      --gray: #6B7280;
+      --gray-light: #F3F4F6;
+      --gray-mid: #E5E7EB;
+      --text: #111827;
+      --text-muted: #4B5563;
+      --white: #ffffff;
+      --radius: 10px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* NAV */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-mid);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .logo img { width: 44px; height: 44px; object-fit: contain; }
+
+    .logo-text {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+    .logo-text span:first-child { color: var(--navy); }
+    .logo-text span:last-child { color: var(--blue); }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--navy); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 22px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      border: none;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: var(--navy); color: var(--white); }
+    .btn-primary:hover { background: var(--navy-light); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(27,45,107,0.25); }
+    .btn-outline { background: transparent; color: var(--navy); border: 2px solid var(--navy); }
+    .btn-outline:hover { background: var(--navy); color: var(--white); }
+    .btn-lg { padding: 14px 32px; font-size: 16px; border-radius: 12px; }
+
+    /* HERO */
+    .hero {
+      background: linear-gradient(135deg, var(--navy) 0%, #2A3F8F 50%, #1a5a8a 100%);
+      color: var(--white);
+      padding: 90px 24px 80px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    .hero-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 100px;
+      padding: 6px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 24px;
+      letter-spacing: 0.3px;
+    }
+
+    .hero h1 {
+      font-size: clamp(32px, 5vw, 58px);
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 20px;
+      letter-spacing: -1px;
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      color: #7EC8F0;
+    }
+
+    .hero p {
+      font-size: clamp(16px, 2vw, 19px);
+      opacity: 0.85;
+      max-width: 580px;
+      margin: 0 auto 36px;
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-white { background: var(--white); color: var(--navy); }
+    .btn-white:hover { background: #f0f4ff; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+    .btn-ghost { background: rgba(255,255,255,0.12); color: var(--white); border: 1px solid rgba(255,255,255,0.25); }
+    .btn-ghost:hover { background: rgba(255,255,255,0.2); }
+
+    /* STATS */
+    .stats {
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-mid);
+      padding: 28px 24px;
+    }
+
+    .stats-inner {
+      max-width: 900px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      text-align: center;
+    }
+
+    .stat-item .num {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--navy);
+      line-height: 1;
+    }
+
+    .stat-item .label {
+      font-size: 13px;
+      color: var(--gray);
+      margin-top: 4px;
+    }
+
+    /* SECTIONS */
+    section { padding: 72px 24px; }
+    .container { max-width: 1080px; margin: 0 auto; }
+
+    .section-tag {
+      display: inline-block;
+      background: #EEF2FF;
+      color: var(--navy);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 5px 12px;
+      border-radius: 100px;
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      font-size: clamp(26px, 3.5vw, 38px);
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      font-size: 17px;
+      color: var(--text-muted);
+      max-width: 540px;
+      margin-bottom: 48px;
+    }
+
+    /* SOLUTIONS */
+    .solutions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+    }
+
+    .solution-card {
+      background: var(--white);
+      border: 1px solid var(--gray-mid);
+      border-radius: 14px;
+      padding: 28px 24px;
+      transition: all 0.2s;
+    }
+    .solution-card:hover {
+      border-color: var(--blue);
+      box-shadow: 0 8px 24px rgba(74,144,196,0.12);
+      transform: translateY(-3px);
+    }
+
+    .card-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: #EEF2FF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 22px;
+    }
+
+    .solution-card h3 {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 8px;
+    }
+    .solution-card p { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 14px;
+    }
+    .tag {
+      background: var(--gray-light);
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 3px 10px;
+      border-radius: 100px;
+    }
+    .tag.blue { background: #DBEAFE; color: #1D4ED8; }
+
+    /* GEOS */
+    .geos-bg { background: var(--gray-light); }
+
+    .geo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+
+    .geo-card {
+      background: var(--white);
+      border: 1px solid var(--gray-mid);
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.15s;
+    }
+    .geo-card:hover { border-color: var(--blue); box-shadow: 0 4px 12px rgba(74,144,196,0.1); }
+
+    .geo-flag { font-size: 24px; line-height: 1; }
+    .geo-info .geo-name { font-size: 14px; font-weight: 600; color: var(--navy); }
+    .geo-info .geo-methods { font-size: 12px; color: var(--gray); margin-top: 2px; }
+
+    /* HOW IT WORKS */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 32px;
+      position: relative;
+    }
+
+    .step { text-align: center; }
+
+    .step-num {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--navy);
+      color: var(--white);
+      font-size: 20px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+    }
+
+    .step h3 {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 8px;
+    }
+    .step p { font-size: 14px; color: var(--text-muted); }
+
+    /* FORM */
+    .form-bg {
+      background: linear-gradient(135deg, var(--navy) 0%, #1a5a8a 100%);
+      color: var(--white);
+    }
+
+    .form-wrap {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: start;
+    }
+
+    .form-left h2 { color: var(--white); }
+    .form-left .subtitle { color: rgba(255,255,255,0.75); }
+
+    .form-benefits { list-style: none; margin-top: 28px; }
+    .form-benefits li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 15px;
+      color: rgba(255,255,255,0.85);
+      margin-bottom: 12px;
+    }
+    .form-benefits li::before {
+      content: '✓';
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    form {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 36px 32px;
+    }
+
+    .form-group { margin-bottom: 18px; }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--navy);
+      margin-bottom: 6px;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid var(--gray-mid);
+      border-radius: 8px;
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+      font-family: inherit;
+      background: var(--white);
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(74,144,196,0.12); }
+    textarea { resize: vertical; min-height: 90px; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+    form .btn { width: 100%; justify-content: center; margin-top: 4px; }
+    form .btn-primary { background: var(--navy); }
+    form .btn-primary:hover { background: var(--navy-light); }
+
+    .form-note {
+      text-align: center;
+      font-size: 12px;
+      color: var(--gray);
+      margin-top: 12px;
+    }
+
+    /* TELEGRAM CTA */
+    .tg-cta {
+      background: #F0F7FF;
+      border-top: 1px solid var(--gray-mid);
+      padding: 48px 24px;
+      text-align: center;
+    }
+    .tg-cta p { color: var(--text-muted); margin-bottom: 16px; font-size: 16px; }
+    .btn-tg { background: #229ED9; color: white; }
+    .btn-tg:hover { background: #1a8cc4; transform: translateY(-1px); }
+
+    /* FOOTER */
+    footer {
+      background: var(--navy);
+      color: rgba(255,255,255,0.6);
+      padding: 32px 24px;
+      text-align: center;
+      font-size: 13px;
+    }
+    footer strong { color: var(--white); }
+    footer a { color: rgba(255,255,255,0.6); text-decoration: none; }
+    footer a:hover { color: var(--white); }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .stats-inner { grid-template-columns: repeat(2, 1fr); }
+      .form-wrap { grid-template-columns: 1fr; gap: 32px; }
+      .form-row { grid-template-columns: 1fr; }
+      section { padding: 52px 16px; }
+    }
+
+    @media (max-width: 480px) {
+      .stats-inner { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="logo">
+    <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4QBMRXhpZgAATU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAAeKADAAQAAAABAAAAeAAAAAD/4QqPaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wLwA8P3hwYWNrZXQgYmVnaW49Iu+7vyIgaWQ9Ilc1TTBNcENlaGlIenJlU3pOVGN6a2M5ZCI/PiA8eDp4bXBtZXRhIHhtbG5zOng9ImFkb2JlOm5zOm1ldGEvIiB4OnhtcHRrPSJYTVAgQ29yZSA2LjAuMCI+IDxyZGY6UkRGIHhtbG5zOnJkZj0iaHR0cDovL3d3dy53My5vcmcvMTk5OS8wMi8yMi1yZGYtc3ludGF4LW5zIyI+IDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSIiIHhtbG5zOnBob3Rvc2hvcD0iaHR0cDovL25zLmFkb2JlLmNvbS9waG90b3Nob3AvMS4wLyIgeG1sbnM6SXB0YzR4bXBFeHQ9Imh0dHA6Ly9pcHRjLm9yZy9zdGQvSXB0YzR4bXBFeHQvMjAwOC0wMi0yOS8iIHBob3Rvc2hvcDpDcmVkaXQ9Ik1hZGUgd2l0aCBHb29nbGUgQUkiIElwdGM0eG1wRXh0OkRpZ2l0YWxTb3VyY2VUeXBlPSJodHRwOi8vY3YuaXB0Yy5vcmcvbmV3c2NvZGVzL2RpZ2l0YWxzb3VyY2V0eXBlL3RyYWluZWRBbGdvcml0aG1pY01lZGlhIiBJcHRjNHhtcEV4dDpEaWdpdGFsU291cmNlRmlsZVR5cGU9Imh0dHA6Ly9jdi5pcHRjLm9yZy9uZXdzY29kZXMvZGlnaXRhbHNvdXJjZXR5cGUvdHJhaW5lZEFsZ29yaXRobWljTWVkaWEiLz4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg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" alt="OfferPSP" />
+    <span class="logo-text">
+      <span>Offer</span><span>PSP</span>
+    </span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#solutions">Solutions</a></li>
+    <li><a href="#geos">GEOs</a></li>
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#contact" class="btn btn-primary" style="padding:8px 18px;">Get PSP →</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">PSP Brokerage & Affiliate Platform</div>
+  <h1>The Bridge Between<br><em>Merchants & PSPs</em></h1>
+  <p>We match iGaming and eCommerce businesses with verified payment providers — fast, transparent, and without the hassle.</p>
+  <div class="hero-cta">
+    <a href="#contact" class="btn btn-white btn-lg">Get a PSP Offer →</a>
+    <a href="#geos" class="btn btn-ghost btn-lg">See GEO Coverage</a>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats">
+  <div class="stats-inner">
+    <div class="stat-item">
+      <div class="num">20+</div>
+      <div class="label">GEOs Covered</div>
+    </div>
+    <div class="stat-item">
+      <div class="num">50+</div>
+      <div class="label">PSP Partners</div>
+    </div>
+    <div class="stat-item">
+      <div class="num">48h</div>
+      <div class="label">Avg. Setup Time</div>
+    </div>
+    <div class="stat-item">
+      <div class="num">24/7</div>
+      <div class="label">Support</div>
+    </div>
+  </div>
+</div>
+
+<!-- SOLUTIONS -->
+<section id="solutions">
+  <div class="container">
+    <div class="section-tag">Solutions</div>
+    <h2>Payment Methods We Cover</h2>
+    <p class="subtitle">From classic card acquiring to local P2P methods — we find the right PSP for your traffic and GEO.</p>
+    <div class="solutions-grid">
+      <div class="solution-card">
+        <div class="card-icon">💳</div>
+        <h3>Card eCommerce</h3>
+        <p>Visa & Mastercard acquiring for FTD and Trusted traffic across Europe and worldwide.</p>
+        <div class="tags">
+          <span class="tag blue">FTD</span>
+          <span class="tag blue">Trusted</span>
+          <span class="tag">EUR / USD</span>
+        </div>
+      </div>
+      <div class="solution-card">
+        <div class="card-icon">📲</div>
+        <h3>P2P / SBP</h3>
+        <p>Local P2P and SBP solutions for Russia, Uzbekistan, Kyrgyzstan with fast settlement.</p>
+        <div class="tags">
+          <span class="tag blue">RUB</span>
+          <span class="tag blue">UZS</span>
+          <span class="tag blue">KGS</span>
+          <span class="tag">T+1</span>
+        </div>
+      </div>
+      <div class="solution-card">
+        <div class="card-icon">🏦</div>
+        <h3>SEPA / Open Banking</h3>
+        <p>EU bank transfers and open banking for high-volume European merchants.</p>
+        <div class="tags">
+          <span class="tag blue">EUR</span>
+          <span class="tag blue">GBP</span>
+          <span class="tag">T+2</span>
+        </div>
+      </div>
+      <div class="solution-card">
+        <div class="card-icon">💸</div>
+        <h3>Payouts</h3>
+        <p>Worldwide payout solutions — Visa/MC, SBP, OCT. Fast, automated, with USDT settlement option.</p>
+        <div class="tags">
+          <span class="tag blue">Worldwide</span>
+          <span class="tag blue">RUB</span>
+          <span class="tag blue">KZT</span>
+          <span class="tag">USDT</span>
+        </div>
+      </div>
+      <div class="solution-card">
+        <div class="card-icon">🎰</div>
+        <h3>iGaming Specific</h3>
+        <p>MCC 7995 solutions, trusted traffic filters, chargeback protection — tailored for online gambling.</p>
+        <div class="tags">
+          <span class="tag blue">MCC 7995</span>
+          <span class="tag blue">6012</span>
+          <span class="tag">CB Protection</span>
+        </div>
+      </div>
+      <div class="solution-card">
+        <div class="card-icon">🔗</div>
+        <h3>Quasi-eCommerce</h3>
+        <p>Alternative acquiring for hard-to-place merchants. Azerbaijan, CIS and other complex GEOs.</p>
+        <div class="tags">
+          <span class="tag blue">AZN</span>
+          <span class="tag blue">TRY</span>
+          <span class="tag">High Risk OK</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GEOS -->
+<section id="geos" class="geos-bg">
+  <div class="container">
+    <div class="section-tag">GEO Coverage</div>
+    <h2>Where We Operate</h2>
+    <p class="subtitle">Active PSP partnerships across 20+ markets. New GEOs added regularly.</p>
+    <div class="geo-grid">
+      <div class="geo-card"><span class="geo-flag">🇪🇺</span><div class="geo-info"><div class="geo-name">Europe (EUR)</div><div class="geo-methods">Visa/MC · SEPA · Open Banking</div></div></div>
+      <div class="geo-card"><span class="geo-flag">🇷🇺</span><div class="geo-info"><div class="geo-name">Russia</div><div class="geo-methods">P2P · SBP · SberPay</div></div></div>
+      <div class="geo-card"><span class="geo-flag">🇰🇿</span><div class="geo-info"><div class="geo-name">Kazakhstan</div><div class="geo-methods">Visa/MC · ecom · Payouts</div></div></div>
+      <div class="geo-card"><span class="geo-flag">🇺🇿</span><div class="geo-info"><div class="geo-name">Uzbekistan</div><div class="geo-methods">HUMO · P2P · Click QR</div></div></div>
+      <div class="geo-card"><span class="geo-flag">🇦🇿</span><div class="geo-info"><div class="geo-name">Azerbaijan</div><div class="geo-methods">Visa/MC · Quasi-ecom</div></div></div>
+      <div class="geo-card"><span class="geo-flag">🇹🇷</span><div class="geo-info"><div class="geo-name">Turkey</div><div class="geo-methods">Visa/MC · TRY</div></div></div>
+      <div class="geo-card"><span class="geo-flag">🇮🇳</span><div class="geo-info"><div class="geo-name">India</div><div class="geo-methods">UPI · IMPS · INR</div></div></div>
+      <div class="geo-card"><span class="geo-flag">🇰🇬</span><div class="geo-info"><div class="geo-name">Kyrgyzstan</div><div class="geo-methods">QR · KGS</div></div></div>
+      <div class="geo-card"><span class="geo-flag">🇩🇪</span><div class="geo-info"><div class="geo-name">Germany</div><div class="geo-methods">Open Banking · EUR</div></div></div>
+      <div class="geo-card"><span class="geo-flag">🇬🇧</span><div class="geo-info"><div class="geo-name">United Kingdom</div><div class="geo-methods">Open Banking · GBP</div></div></div>
+      <div class="geo-card"><span class="geo-flag">🇵🇱</span><div class="geo-info"><div class="geo-name">Poland</div><div class="geo-methods">Visa/MC · EUR</div></div></div>
+      <div class="geo-card"><span class="geo-flag">🌍</span><div class="geo-info"><div class="geo-name">+ More GEOs</div><div class="geo-methods">Ask for your region</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="container">
+    <div class="section-tag">Process</div>
+    <h2>How It Works</h2>
+    <p class="subtitle">From first contact to live integration — we handle the heavy lifting.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Tell Us Your Needs</h3>
+        <p>Share your GEO, traffic type (FTD/Trusted), MCC and monthly volume. Takes 2 minutes.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>We Match & Negotiate</h3>
+        <p>We select the best-fit PSP partners from our network and negotiate rates on your behalf.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Connect & Go Live</h3>
+        <p>Integration support included. Typical setup time: 24–48 hours after docs are approved.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT FORM -->
+<section id="contact" class="form-bg">
+  <div class="container">
+    <div class="form-wrap">
+      <div class="form-left">
+        <div class="section-tag" style="background:rgba(255,255,255,0.15);color:white;">Get Started</div>
+        <h2>Get a PSP Offer</h2>
+        <p class="subtitle">Tell us about your business and we'll come back within 24 hours with options.</p>
+        <ul class="form-benefits">
+          <li>No upfront fees — we earn on successful connections</li>
+          <li>Multiple PSP options for comparison</li>
+          <li>Rate negotiation included</li>
+          <li>Integration & onboarding support</li>
+        </ul>
+      </div>
+      <div class="form-right">
+        <form id="contactForm" onsubmit="handleSubmit(event)">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="name">Your Name *</label>
+              <input type="text" id="name" placeholder="Boris" required />
+            </div>
+            <div class="form-group">
+              <label for="company">Company *</label>
+              <input type="text" id="company" placeholder="Acme Gaming Ltd" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="telegram">Telegram *</label>
+            <input type="text" id="telegram" placeholder="@yourusername" required />
+          </div>
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" placeholder="you@company.com" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="geo">Primary GEO *</label>
+              <select id="geo" required>
+                <option value="">Select GEO</option>
+                <option>Europe (EUR)</option>
+                <option>Russia (RUB)</option>
+                <option>Kazakhstan (KZT)</option>
+                <option>Uzbekistan (UZS)</option>
+                <option>Turkey (TRY)</option>
+                <option>India (INR)</option>
+                <option>Azerbaijan (AZN)</option>
+                <option>Kyrgyzstan (KGS)</option>
+                <option>Other / Multiple</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="traffic">Traffic Type *</label>
+              <select id="traffic" required>
+                <option value="">Select type</option>
+                <option>FTD</option>
+                <option>Trusted</option>
+                <option>Both FTD & Trusted</option>
+                <option>eCommerce (not gaming)</option>
+                <option>Payouts only</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="volume">Monthly Volume (USD)</label>
+            <select id="volume">
+              <option value="">Select range</option>
+              <option>Under $50k</option>
+              <option>$50k – $200k</option>
+              <option>$200k – $1M</option>
+              <option>Over $1M</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="message">Additional Info</label>
+            <textarea id="message" placeholder="MCC code, current PSP issues, specific requirements..."></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg">Send Request →</button>
+          <p class="form-note">We respond within 24 hours · No spam · Your data is safe</p>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TELEGRAM CTA -->
+<div class="tg-cta">
+  <p>Prefer to chat directly? Message us on Telegram for a faster response.</p>
+  <a href="https://t.me/Brain_Index" class="btn btn-tg btn-lg">✈ Write on Telegram</a>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <p>© 2025 <strong>OfferPSP</strong> · Part of <strong>Brain Index</strong> ecosystem · <a href="mailto:hello@offerspsp.com">hello@offerspsp.com</a></p>
+  <p style="margin-top:8px;font-size:12px;">offerpsp.com · Registered in Georgia · All rights reserved</p>
+</footer>
+
+<script>
+  function handleSubmit(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type=submit]');
+    btn.textContent = '✓ Sent! We\'ll be in touch soon.';
+    btn.style.background = '#16a34a';
+    btn.disabled = true;
+
+    const data = {
+      name: document.getElementById('name').value,
+      company: document.getElementById('company').value,
+      telegram: document.getElementById('telegram').value,
+      email: document.getElementById('email').value,
+      geo: document.getElementById('geo').value,
+      traffic: document.getElementById('traffic').value,
+      volume: document.getElementById('volume').value,
+      message: document.getElementById('message').value,
+    };
+    console.log('Form submitted:', data);
+  }
+
+  // Smooth scroll for nav links
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+</script>
+</body>
+</html>
