@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#080a13">
+  <title>OfferPSP Client Cabinet</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/portal/styles.css">
+</head>
+<body>
+  <div class="ambient" aria-hidden="true"></div>
+
+  <main id="authView" class="auth-shell">
+    <section class="auth-card">
+      <a class="brand" href="/">
+        <span class="brand-mark">OP</span>
+        <span>OfferPSP</span>
+      </a>
+      <p class="eyebrow">Client cabinet</p>
+      <h1>Your PSP shortlist, in one place.</h1>
+      <p class="auth-copy">Use the same work email that you submitted in your OfferPSP request.</p>
+      <form id="loginForm">
+        <label>
+          Work email
+          <input id="emailInput" type="email" autocomplete="email" required placeholder="you@company.com">
+        </label>
+        <label>
+          Password <span>optional</span>
+          <input id="passwordInput" type="password" autocomplete="current-password" placeholder="Existing account password">
+        </label>
+        <button class="button primary" type="submit">Sign in</button>
+        <button id="googleLoginButton" class="button secondary" type="button">Continue with Google</button>
+        <button id="magicLinkButton" class="button secondary" type="button">Send secure login link</button>
+      </form>
+      <p id="authStatus" class="status" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <main id="portalView" class="portal is-hidden">
+    <header class="portal-header">
+      <a class="brand" href="/">
+        <span class="brand-mark">OP</span>
+        <span>OfferPSP</span>
+      </a>
+      <div class="header-actions">
+        <span id="userEmail"></span>
+        <button id="signOutButton" class="text-button" type="button">Sign out</button>
+      </div>
+    </header>
+
+    <div class="portal-main">
+      <section id="noRequestState" class="empty-card is-hidden">
+        <span class="empty-mark">◇</span>
+        <h1>No request is linked to this email yet.</h1>
+        <p>Submit a request using this work email or contact your OfferPSP manager.</p>
+        <a class="button primary" href="/#request">Submit a request</a>
+      </section>
+
+      <div id="requestView" class="is-hidden">
+        <section class="hero-card">
+          <div>
+            <p class="eyebrow">Payment partner search</p>
+            <h1 id="companyName">Your request</h1>
+            <p id="requestMeta" class="hero-copy"></p>
+          </div>
+          <span id="statusPill" class="status-pill">In review</span>
+        </section>
+
+        <section class="progress-card">
+          <div class="progress-head">
+            <div>
+              <p class="eyebrow">Progress</p>
+              <h2>Where your request stands</h2>
+            </div>
+            <span id="progressLabel">Qualification</span>
+          </div>
+          <div class="progress-track">
+            <span id="progressFill"></span>
+          </div>
+          <div class="progress-labels">
+            <span>Submitted</span>
+            <span>Qualified</span>
+            <span>Matched</span>
+            <span>Introductions</span>
+          </div>
+        </section>
+
+        <section class="section-block">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Curated for your profile</p>
+              <h2>Your PSP shortlist</h2>
+            </div>
+            <span id="shortlistUpdated" class="muted"></span>
+          </div>
+          <div id="shortlistPending" class="pending-card">
+            <span class="pulse"></span>
+            <div>
+              <strong>Matching is in progress</strong>
+              <p>We are checking your requirements against the PSP database. Reviewed recommendations will appear here.</p>
+            </div>
+          </div>
+          <div id="shortlistGrid" class="shortlist-grid is-hidden"></div>
+        </section>
+
+        <section class="section-block conversation-block">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Direct line</p>
+              <h2>Conversation</h2>
+            </div>
+          </div>
+          <div id="messageList" class="message-list"></div>
+          <form id="messageForm" class="message-form">
+            <textarea id="messageInput" rows="3" placeholder="Ask a question or share an update…" required></textarea>
+            <button class="button primary" type="submit">Send message</button>
+          </form>
+          <p id="messageStatus" class="status" role="status" aria-live="polite"></p>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="/portal/app.js"></script>
+</body>
+</html>

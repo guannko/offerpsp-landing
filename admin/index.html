@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#080a13">
+  <title>OfferPSP Desk</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/admin/styles.css">
+</head>
+<body>
+  <div class="app-bg" aria-hidden="true"></div>
+
+  <main id="authView" class="auth-shell">
+    <section class="auth-card">
+      <div class="language-switch" aria-label="Язык интерфейса">
+        <button type="button" data-language="ru">RU</button>
+        <button type="button" data-language="en">EN</button>
+      </div>
+      <a class="brand" href="/">
+        <span class="brand-mark">OP</span>
+        <span>OfferPSP</span>
+      </a>
+      <div class="eyebrow">Private operations desk</div>
+      <h1>Sign in to the lead desk</h1>
+      <p class="auth-copy">Merchant requests, matching, tasks and communication in one protected workspace.</p>
+
+      <form id="loginForm" class="auth-form">
+        <label>
+          Work email
+          <input id="emailInput" name="email" type="email" autocomplete="email" required placeholder="you@company.com">
+        </label>
+        <label>
+          Password
+          <input id="passwordInput" name="password" type="password" autocomplete="current-password" placeholder="Your password">
+        </label>
+        <button class="button button-primary" type="submit">Sign in</button>
+        <button id="googleLoginButton" class="button button-secondary" type="button">Continue with Google</button>
+        <button id="magicLinkButton" class="button button-secondary" type="button">Email me a secure link</button>
+      </form>
+      <p id="authStatus" class="form-status" role="status" aria-live="polite"></p>
+      <p class="auth-footnote">Access is limited to approved OfferPSP staff accounts.</p>
+    </section>
+  </main>
+
+  <div id="appView" class="app-shell is-hidden">
+    <aside class="sidebar">
+      <a class="brand sidebar-brand" href="/">
+        <span class="brand-mark">OP</span>
+        <span>OfferPSP</span>
+      </a>
+      <nav class="side-nav" aria-label="Operations">
+        <button class="nav-item is-active" type="button" data-view="leads">
+          <span class="nav-icon">⌁</span>
+          Lead desk
+        </button>
+        <button class="nav-item" type="button" disabled title="Coming in the next delivery">
+          <span class="nav-icon">◇</span>
+          Matching
+          <span class="soon">Soon</span>
+        </button>
+        <button class="nav-item" type="button" disabled title="Coming in the next delivery">
+          <span class="nav-icon">✓</span>
+          Tasks
+          <span class="soon">Soon</span>
+        </button>
+        <button class="nav-item" type="button" data-scroll="analytics">
+          <span class="nav-icon">↗</span>
+          Analytics
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-chip">
+          <span id="userInitial" class="avatar">B</span>
+          <span>
+            <strong id="userName">Boris</strong>
+            <small id="userRole">Owner</small>
+          </span>
+        </div>
+        <button id="signOutButton" class="text-button" type="button">Sign out</button>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <button id="menuButton" class="menu-button" type="button" aria-label="Open menu">☰</button>
+        <div>
+          <p class="eyebrow">Operations</p>
+          <h1>Merchant requests</h1>
+        </div>
+        <div class="topbar-actions">
+          <div class="language-switch" aria-label="Язык интерфейса">
+            <button type="button" data-language="ru">RU</button>
+            <button type="button" data-language="en">EN</button>
+          </div>
+          <span id="lastUpdated" class="last-updated"></span>
+          <button id="refreshButton" class="icon-button" type="button" aria-label="Refresh leads">↻</button>
+        </div>
+      </header>
+
+      <section class="stats-grid" aria-label="Lead summary">
+        <article class="stat-card stat-total">
+          <span>Total requests</span>
+          <strong id="statTotal">—</strong>
+          <small>All time</small>
+        </article>
+        <article class="stat-card">
+          <span>Needs review</span>
+          <strong id="statNew">—</strong>
+          <small>New + qualifying</small>
+        </article>
+        <article class="stat-card">
+          <span>In matching</span>
+          <strong id="statMatching">—</strong>
+          <small>Active research</small>
+        </article>
+        <article class="stat-card">
+          <span>Shortlists ready</span>
+          <strong id="statReady">—</strong>
+          <small>Ready to share</small>
+        </article>
+        <article class="stat-card stat-won">
+          <span>Converted</span>
+          <strong id="statWon">—</strong>
+          <small id="statWonRate">Won opportunities</small>
+        </article>
+      </section>
+
+      <section class="panel lead-panel">
+        <div class="panel-head">
+          <div>
+            <h2>Lead inbox</h2>
+            <p id="resultCount">Loading requests…</p>
+          </div>
+          <div class="filters">
+            <label class="search-field">
+              <span aria-hidden="true">⌕</span>
+              <input id="searchInput" type="search" placeholder="Search company, email or GEO">
+            </label>
+            <select id="statusFilter" aria-label="Filter by status">
+              <option value="all">All statuses</option>
+              <option value="new">New</option>
+              <option value="qualifying">Qualifying</option>
+              <option value="matching">Matching</option>
+              <option value="shortlist_ready">Shortlist ready</option>
+              <option value="shared">Shared</option>
+              <option value="negotiating">Negotiating</option>
+              <option value="won">Won</option>
+              <option value="lost">Lost</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="loadingState" class="state-card">
+          <span class="spinner"></span>
+          Loading the lead desk…
+        </div>
+        <div id="emptyState" class="state-card is-hidden">
+          <span class="empty-icon">◇</span>
+          <strong>No requests found</strong>
+          <p>New merchant requests will appear here automatically.</p>
+        </div>
+        <div id="leadsTableWrap" class="table-wrap is-hidden">
+          <table>
+            <thead>
+              <tr>
+                <th>Merchant</th>
+                <th>Operating profile</th>
+                <th>Volume</th>
+                <th>Quality</th>
+                <th>Status</th>
+                <th>Received</th>
+                <th aria-label="Open"></th>
+              </tr>
+            </thead>
+            <tbody id="leadsTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="analytics" class="panel analytics-panel">
+        <div class="panel-head">
+          <div>
+            <h2>Conversion snapshot</h2>
+            <p>Live funnel based on the current lead pipeline</p>
+          </div>
+          <strong id="conversionRate" class="conversion-rate">0%</strong>
+        </div>
+        <div class="funnel">
+          <div class="funnel-row">
+            <span>Submitted</span>
+            <div><i id="funnelSubmittedBar"></i></div>
+            <strong id="funnelSubmitted">0</strong>
+          </div>
+          <div class="funnel-row">
+            <span>Qualified</span>
+            <div><i id="funnelQualifiedBar"></i></div>
+            <strong id="funnelQualified">0</strong>
+          </div>
+          <div class="funnel-row">
+            <span>Matched</span>
+            <div><i id="funnelMatchedBar"></i></div>
+            <strong id="funnelMatched">0</strong>
+          </div>
+          <div class="funnel-row">
+            <span>Introduced</span>
+            <div><i id="funnelIntroducedBar"></i></div>
+            <strong id="funnelIntroduced">0</strong>
+          </div>
+          <div class="funnel-row">
+            <span>Won</span>
+            <div><i id="funnelWonBar"></i></div>
+            <strong id="funnelWon">0</strong>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="drawerBackdrop" class="drawer-backdrop is-hidden"></div>
+  <aside id="leadDrawer" class="lead-drawer" aria-hidden="true" aria-label="Lead details">
+    <div class="drawer-head">
+      <div>
+        <p class="eyebrow">Merchant request</p>
+        <h2 id="drawerCompany">—</h2>
+        <p id="drawerContact" class="drawer-contact">—</p>
+      </div>
+      <button id="closeDrawerButton" class="icon-button" type="button" aria-label="Close">×</button>
+    </div>
+
+    <div class="drawer-body">
+      <section class="detail-section">
+        <div class="section-head">
+          <h3>Pipeline</h3>
+          <span id="drawerLeadId" class="lead-id"></span>
+        </div>
+        <div class="field-grid">
+          <label>
+            Status
+            <select id="drawerStatus">
+              <option value="new">New</option>
+              <option value="qualifying">Qualifying</option>
+              <option value="matching">Matching</option>
+              <option value="shortlist_ready">Shortlist ready</option>
+              <option value="shared">Shared</option>
+              <option value="negotiating">Negotiating</option>
+              <option value="won">Won</option>
+              <option value="lost">Lost</option>
+            </select>
+          </label>
+          <label>
+            Quality score
+            <input id="drawerScore" type="number" min="0" max="100" placeholder="0–100">
+          </label>
+          <label>
+            Grade
+            <select id="drawerGrade">
+              <option value="">Not scored</option>
+              <option value="A">A — priority</option>
+              <option value="B">B — qualified</option>
+              <option value="C">C — needs work</option>
+              <option value="D">D — low fit</option>
+            </select>
+          </label>
+        </div>
+        <button id="saveLeadButton" class="button button-primary button-compact" type="button">Save changes</button>
+        <p id="drawerStatusMessage" class="form-status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="detail-section">
+        <h3>Operating profile</h3>
+        <dl id="profileDetails" class="details-grid"></dl>
+      </section>
+
+      <section class="detail-section">
+        <div class="section-head">
+          <div>
+            <h3>PSP matching</h3>
+            <p id="matchSummary" class="section-copy">Loading candidates…</p>
+          </div>
+          <div class="section-actions">
+            <button id="runMatchingButton" class="button button-secondary button-compact" type="button">Run matching</button>
+            <button id="shareShortlistButton" class="button button-primary button-compact is-hidden" type="button">Share shortlist</button>
+          </div>
+        </div>
+        <div id="matchesList" class="matches-list"></div>
+      </section>
+
+      <section class="detail-section">
+        <h3>Internal note</h3>
+        <textarea id="noteInput" rows="4" placeholder="Add qualification context, PSP requirements or next steps…"></textarea>
+        <button id="addNoteButton" class="button button-secondary button-compact" type="button">Add to history</button>
+      </section>
+
+      <section class="detail-section">
+        <h3>Tasks</h3>
+        <div class="task-composer">
+          <input id="taskTitleInput" type="text" placeholder="e.g. Verify licence and processing history">
+          <div class="field-grid">
+            <label>
+              Priority
+              <select id="taskPriorityInput">
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+                <option value="low">Low</option>
+              </select>
+            </label>
+            <label>
+              Due date
+              <input id="taskDueInput" type="date">
+            </label>
+          </div>
+          <button id="addTaskButton" class="button button-secondary button-compact" type="button">Create task</button>
+        </div>
+        <div id="taskList" class="task-list"></div>
+      </section>
+
+      <section class="detail-section">
+        <h3>Client conversation</h3>
+        <div id="adminMessageList" class="message-list"></div>
+        <div class="admin-message-composer">
+          <textarea id="adminMessageInput" rows="3" placeholder="Reply in the client cabinet…"></textarea>
+          <button id="sendAdminMessageButton" class="button button-secondary button-compact" type="button">Send reply</button>
+        </div>
+      </section>
+
+      <section class="detail-section">
+        <h3>Activity</h3>
+        <div id="activityList" class="timeline"></div>
+      </section>
+    </div>
+  </aside>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/admin/i18n.js"></script>
+  <script type="module" src="/admin/app.js"></script>
+</body>
+</html>

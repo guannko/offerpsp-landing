@@ -1,755 +1,1978 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OfferPSP — PSP Solutions for iGaming & eCommerce</title>
-  <meta name="description" content="We connect merchants with verified PSP providers. Fast setup, 20+ GEOs, iGaming & eCommerce solutions." />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OfferPSP — Private PSP Matching for iGaming &amp; eCommerce</title>
+  <meta name="description" content="A private PSP matching desk for iGaming and high-risk eCommerce. Share your operating profile and receive a focused shortlist of relevant payment partners.">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#080a13">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="canonical" href="https://offerpsp.com/">
 
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://offerpsp.com/">
+  <meta property="og:title" content="OfferPSP — Private PSP Matching">
+  <meta property="og:description" content="The right PSP. Without the wrong introductions.">
+  <meta property="og:site_name" content="OfferPSP">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:image" content="https://offerpsp.com/og-offerpsp.png">
+  <meta property="og:image:width" content="1734">
+  <meta property="og:image:height" content="907">
+  <meta property="og:image:alt" content="OfferPSP — The right PSP. Without the wrong introductions.">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="OfferPSP — Private PSP Matching">
+  <meta name="twitter:description" content="The right PSP. Without the wrong introductions.">
+  <meta name="twitter:image" content="https://offerpsp.com/og-offerpsp.png">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "ProfessionalService",
+    "name": "OfferPSP",
+    "url": "https://offerpsp.com",
+    "description": "A private B2B matching and introduction service connecting merchants with independent payment service providers.",
+    "areaServed": ["Europe", "CIS", "MENA", "LATAM", "APAC"],
+    "serviceType": "Payment service provider matching and introductions",
+    "parentOrganization": {
+      "@type": "Organization",
+      "name": "Brain Index"
+    }
+  }
+  </script>
+
+  <style>
     :root {
-      --navy: #1B2D6B;
-      --navy-light: #243680;
-      --blue: #4A90C4;
-      --blue-light: #5BA3D8;
-      --gray: #6B7280;
-      --gray-light: #F3F4F6;
-      --gray-mid: #E5E7EB;
-      --text: #111827;
-      --text-muted: #4B5563;
-      --white: #ffffff;
-      --radius: 10px;
+      color-scheme: dark;
+      --ink: #080a13;
+      --ink-soft: #0d101c;
+      --panel: #111522;
+      --panel-2: #151a29;
+      --line: rgba(255,255,255,.105);
+      --line-strong: rgba(255,255,255,.18);
+      --paper: #f6f3ec;
+      --paper-muted: #aaaeb9;
+      --coral: #ff4d7a;
+      --coral-soft: #ff7899;
+      --mint: #a7f3d0;
+      --mint-deep: #35c68b;
+      --max: 1180px;
+      --radius-sm: 12px;
+      --radius: 20px;
+      --radius-lg: 30px;
+      --shadow: 0 28px 90px rgba(0,0,0,.34);
     }
 
-    html { scroll-behavior: smooth; }
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 92px;
+    }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      color: var(--text);
+      margin: 0;
+      background:
+        radial-gradient(circle at 84% 5%, rgba(255,77,122,.09), transparent 25rem),
+        var(--ink);
+      color: var(--paper);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 16px;
       line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
     }
 
-    /* NAV */
-    nav {
-      position: sticky;
-      top: 0;
+    body.menu-open {
+      overflow: hidden;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button,
+    a {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    ::selection {
+      color: var(--ink);
+      background: var(--mint);
+    }
+
+    .skip-link {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 999;
+      padding: 10px 14px;
+      border-radius: 8px;
+      color: var(--ink);
+      background: var(--paper);
+      transform: translateY(-150%);
+      transition: transform .2s ease;
+    }
+
+    .skip-link:focus {
+      transform: translateY(0);
+    }
+
+    .site-header {
+      position: fixed;
+      inset: 0 0 auto;
       z-index: 100;
-      background: var(--white);
-      border-bottom: 1px solid var(--gray-mid);
-      padding: 0 24px;
+      border-bottom: 1px solid transparent;
+      transition: background .25s ease, border-color .25s ease, backdrop-filter .25s ease;
+    }
+
+    .site-header.scrolled {
+      background: rgba(8,10,19,.84);
+      border-color: var(--line);
+      -webkit-backdrop-filter: blur(18px);
+      backdrop-filter: blur(18px);
+    }
+
+    .nav {
+      width: min(calc(100% - 40px), var(--max));
+      height: 78px;
+      margin: 0 auto;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      height: 64px;
+      gap: 28px;
     }
 
-    .logo {
-      display: flex;
+    .brand {
+      display: inline-flex;
       align-items: center;
-      gap: 10px;
+      gap: 11px;
       text-decoration: none;
+      font-weight: 790;
+      letter-spacing: -.045em;
+      font-size: 22px;
+      white-space: nowrap;
     }
 
-    .logo img { width: 44px; height: 44px; object-fit: contain; }
-
-    .logo-text {
-      font-size: 20px;
-      font-weight: 700;
-      letter-spacing: -0.3px;
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line-strong);
+      border-radius: 9px;
+      color: var(--ink);
+      background: var(--coral);
+      font-size: 12px;
+      letter-spacing: -.06em;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.2);
     }
-    .logo-text span:first-child { color: var(--navy); }
-    .logo-text span:last-child { color: var(--blue); }
+
+    .brand strong {
+      color: var(--coral);
+      font-weight: inherit;
+    }
 
     .nav-links {
+      margin: 0 0 0 auto;
+      padding: 0;
       display: flex;
       align-items: center;
-      gap: 28px;
+      gap: 30px;
       list-style: none;
     }
 
     .nav-links a {
+      color: var(--paper-muted);
       text-decoration: none;
-      color: var(--text-muted);
       font-size: 14px;
-      font-weight: 500;
-      transition: color 0.2s;
+      font-weight: 620;
+      transition: color .2s ease;
     }
-    .nav-links a:hover { color: var(--navy); }
 
-    .btn {
+    .nav-links a:hover,
+    .nav-links a:focus-visible {
+      color: var(--paper);
+    }
+
+    .nav-cta,
+    .button {
+      min-height: 48px;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 10px 22px;
-      border-radius: var(--radius);
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
+      justify-content: center;
+      gap: 10px;
+      padding: 0 20px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      color: var(--ink);
+      background: var(--coral);
       text-decoration: none;
-      border: none;
-      transition: all 0.2s;
+      font-weight: 750;
+      line-height: 1;
+      cursor: pointer;
+      transition: transform .2s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease;
     }
-    .btn-primary { background: var(--navy); color: var(--white); }
-    .btn-primary:hover { background: var(--navy-light); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(27,45,107,0.25); }
-    .btn-outline { background: transparent; color: var(--navy); border: 2px solid var(--navy); }
-    .btn-outline:hover { background: var(--navy); color: var(--white); }
-    .btn-lg { padding: 14px 32px; font-size: 16px; border-radius: 12px; }
 
-    /* HERO */
+    .nav-cta {
+      min-height: 42px;
+      padding-inline: 17px;
+      font-size: 14px;
+    }
+
+    .nav-cta:hover,
+    .button:hover {
+      transform: translateY(-2px);
+      background: var(--coral-soft);
+      box-shadow: 0 14px 34px rgba(255,77,122,.2);
+    }
+
+    .button-secondary {
+      color: var(--paper);
+      background: transparent;
+      border-color: var(--line-strong);
+    }
+
+    .button-secondary:hover {
+      background: rgba(255,255,255,.055);
+      border-color: rgba(255,255,255,.32);
+      box-shadow: none;
+    }
+
+    .button-arrow::after {
+      content: "↗";
+      font-size: 17px;
+      font-weight: 500;
+    }
+
+    .menu-toggle {
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      display: none;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--paper);
+      background: rgba(255,255,255,.04);
+      cursor: pointer;
+    }
+
+    .menu-toggle span,
+    .menu-toggle::before,
+    .menu-toggle::after {
+      width: 18px;
+      height: 1px;
+      display: block;
+      background: currentColor;
+      content: "";
+      transition: transform .2s ease, opacity .2s ease;
+    }
+
+    .menu-toggle span {
+      margin: 5px 0;
+    }
+
+    .menu-open .menu-toggle span {
+      opacity: 0;
+    }
+
+    .menu-open .menu-toggle::before {
+      transform: translateY(6px) rotate(45deg);
+    }
+
+    .menu-open .menu-toggle::after {
+      transform: translateY(-6px) rotate(-45deg);
+    }
+
+    main {
+      display: block;
+    }
+
+    .container {
+      width: min(calc(100% - 40px), var(--max));
+      margin: 0 auto;
+    }
+
     .hero {
-      background: linear-gradient(135deg, var(--navy) 0%, #2A3F8F 50%, #1a5a8a 100%);
-      color: var(--white);
-      padding: 90px 24px 80px;
+      min-height: 760px;
+      padding: 150px 0 86px;
+      position: relative;
+      display: grid;
+      align-items: center;
+      overflow: clip;
+    }
+
+    .hero::before {
+      position: absolute;
+      inset: 0;
+      z-index: -2;
+      content: "";
+      background-image:
+        linear-gradient(rgba(255,255,255,.034) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.034) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,.88), transparent 94%);
+    }
+
+    .hero::after {
+      width: 560px;
+      height: 560px;
+      position: absolute;
+      top: 70px;
+      right: -220px;
+      z-index: -1;
+      border: 1px solid rgba(255,77,122,.18);
+      border-radius: 50%;
+      content: "";
+      box-shadow:
+        0 0 0 80px rgba(255,77,122,.025),
+        0 0 0 160px rgba(255,77,122,.018);
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(380px, .75fr);
+      gap: clamp(48px, 7vw, 92px);
+      align-items: center;
+    }
+
+    .eyebrow {
+      margin-bottom: 24px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--mint);
+      font-size: 12px;
+      font-weight: 780;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      content: "";
+      box-shadow: 0 0 0 5px rgba(167,243,208,.08);
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
+    }
+
+    h1 {
+      max-width: 780px;
+      margin-bottom: 28px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(52px, 7vw, 92px);
+      font-weight: 500;
+      letter-spacing: -.063em;
+      line-height: .98;
+    }
+
+    h1 em {
+      color: var(--coral);
+      font-style: normal;
+    }
+
+    .hero-copy {
+      max-width: 650px;
+      margin-bottom: 34px;
+      color: #c4c6ce;
+      font-size: clamp(17px, 2vw, 20px);
+      line-height: 1.65;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .hero-note {
+      margin: 22px 0 0;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: #868b99;
+      font-size: 13px;
+    }
+
+    .hero-note::before {
+      width: 16px;
+      height: 16px;
+      border: 1px solid var(--mint-deep);
+      border-radius: 50%;
+      content: "✓";
+      display: grid;
+      place-items: center;
+      color: var(--mint);
+      font-size: 10px;
+    }
+
+    .signal-card {
+      position: relative;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-lg);
+      background: rgba(15,18,30,.86);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .signal-card::after {
+      width: 120px;
+      height: 120px;
+      position: absolute;
+      right: -44px;
+      bottom: -54px;
+      border: 1px solid rgba(167,243,208,.16);
+      border-radius: 50%;
+      content: "";
+      box-shadow: 0 0 0 28px rgba(167,243,208,.02), 0 0 0 56px rgba(167,243,208,.016);
+    }
+
+    .signal-head {
+      padding: 18px 21px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      color: #858a98;
+      font-size: 11px;
+      font-weight: 750;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .signal-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--mint);
+      letter-spacing: .06em;
+    }
+
+    .signal-status::before {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--mint-deep);
+      content: "";
+      box-shadow: 0 0 0 4px rgba(53,198,139,.1);
+    }
+
+    .signal-body {
+      padding: 26px 22px 24px;
+    }
+
+    .profile-label {
+      margin-bottom: 13px;
+      color: #7d8290;
+      font-size: 12px;
+    }
+
+    .profile-tags {
+      margin-bottom: 28px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tag {
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      color: #d6d7dc;
+      background: rgba(255,255,255,.035);
+      font-size: 12px;
+    }
+
+    .route {
+      position: relative;
+      display: grid;
+      gap: 12px;
+    }
+
+    .route::before {
+      width: 1px;
+      position: absolute;
+      top: 25px;
+      bottom: 25px;
+      left: 17px;
+      background: linear-gradient(var(--coral), var(--mint));
+      content: "";
+      opacity: .45;
+    }
+
+    .route-step {
+      min-height: 62px;
+      padding: 13px 14px 13px 48px;
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,.025);
+    }
+
+    .route-step::before {
+      width: 11px;
+      height: 11px;
+      position: absolute;
+      top: 24px;
+      left: 12px;
+      z-index: 1;
+      border: 3px solid var(--panel);
+      border-radius: 50%;
+      background: var(--coral);
+      content: "";
+      box-shadow: 0 0 0 1px var(--coral);
+    }
+
+    .route-step:nth-child(2)::before {
+      background: #f6f3ec;
+      box-shadow: 0 0 0 1px #f6f3ec;
+    }
+
+    .route-step:nth-child(3)::before {
+      background: var(--mint);
+      box-shadow: 0 0 0 1px var(--mint);
+    }
+
+    .route-step strong {
+      display: block;
+      color: #e9e7e1;
+      font-size: 13px;
+    }
+
+    .route-step span {
+      color: #7f8491;
+      font-size: 12px;
+    }
+
+    .trust-strip {
+      border-block: 1px solid var(--line);
+      background: rgba(255,255,255,.018);
+    }
+
+    .trust-inner {
+      min-height: 82px;
+      display: grid;
+      grid-template-columns: 1.2fr repeat(5, 1fr);
+      align-items: center;
+    }
+
+    .trust-label,
+    .trust-item {
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-right: 1px solid var(--line);
+      color: #7f8491;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
       text-align: center;
+      text-transform: uppercase;
+    }
+
+    .trust-label {
+      justify-content: flex-start;
+      color: #b3b5bd;
+    }
+
+    .trust-item:last-child {
+      border-right: 0;
+    }
+
+    section {
+      padding: 120px 0;
+    }
+
+    .section-kicker {
+      margin-bottom: 16px;
+      color: var(--coral);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+
+    .section-title {
+      max-width: 830px;
+      margin-bottom: 24px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(40px, 5vw, 66px);
+      font-weight: 500;
+      letter-spacing: -.05em;
+      line-height: 1.05;
+    }
+
+    .section-lead {
+      max-width: 650px;
+      margin-bottom: 0;
+      color: var(--paper-muted);
+      font-size: 18px;
+      line-height: 1.7;
+    }
+
+    .problem-grid {
+      margin-top: 64px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border-top: 1px solid var(--line);
+      border-left: 1px solid var(--line);
+    }
+
+    .problem {
+      min-height: 330px;
+      padding: 32px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      transition: background .25s ease;
+    }
+
+    .problem:hover {
+      background: rgba(255,255,255,.025);
+    }
+
+    .problem-index {
+      margin-bottom: 74px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--coral);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .problem-index::after {
+      width: 34px;
+      height: 1px;
+      background: var(--coral);
+      content: "";
+      opacity: .55;
+    }
+
+    .problem h3 {
+      margin-bottom: 13px;
+      font-size: 22px;
+      letter-spacing: -.03em;
+      line-height: 1.24;
+    }
+
+    .problem p {
+      margin-bottom: 0;
+      color: var(--paper-muted);
+      font-size: 14px;
+    }
+
+    .matching {
+      background: var(--paper);
+      color: #141620;
+    }
+
+    .matching .section-kicker {
+      color: #b51747;
+    }
+
+    .matching .section-lead {
+      color: #5d606b;
+    }
+
+    .matching-layout {
+      display: grid;
+      grid-template-columns: .72fr 1.28fr;
+      gap: clamp(50px, 8vw, 110px);
+      align-items: start;
+    }
+
+    .sticky-copy {
+      position: sticky;
+      top: 118px;
+    }
+
+    .process {
+      border-top: 1px solid rgba(20,22,32,.16);
+    }
+
+    .process-step {
+      padding: 30px 0;
+      display: grid;
+      grid-template-columns: 70px 1fr;
+      border-bottom: 1px solid rgba(20,22,32,.16);
+    }
+
+    .process-number {
+      color: #b51747;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .process-step h3 {
+      margin-bottom: 8px;
+      font-size: 24px;
+      letter-spacing: -.035em;
+    }
+
+    .process-step p {
+      max-width: 570px;
+      margin-bottom: 0;
+      color: #626570;
+    }
+
+    .process-note {
+      margin-top: 28px;
+      padding: 17px 18px;
+      display: flex;
+      gap: 12px;
+      border: 1px solid rgba(20,22,32,.14);
+      border-radius: 14px;
+      color: #4c4f58;
+      background: rgba(255,255,255,.45);
+      font-size: 13px;
+    }
+
+    .process-note::before {
+      content: "◉";
+      color: #b51747;
+    }
+
+    .coverage {
       position: relative;
       overflow: hidden;
     }
 
-    .hero::before {
-      content: '';
+    .coverage::after {
+      width: 520px;
+      height: 520px;
       position: absolute;
-      inset: 0;
-      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      top: 50px;
+      right: -250px;
+      z-index: -1;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      content: "";
+      box-shadow: 0 0 0 70px rgba(255,255,255,.012), 0 0 0 140px rgba(255,255,255,.009);
     }
 
-    .hero-badge {
-      display: inline-block;
-      background: rgba(255,255,255,0.12);
-      border: 1px solid rgba(255,255,255,0.2);
-      border-radius: 100px;
-      padding: 6px 16px;
-      font-size: 13px;
-      font-weight: 500;
-      margin-bottom: 24px;
-      letter-spacing: 0.3px;
+    .coverage-grid {
+      margin-top: 60px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      border-top: 1px solid var(--line);
+      border-left: 1px solid var(--line);
     }
 
-    .hero h1 {
-      font-size: clamp(32px, 5vw, 58px);
-      font-weight: 800;
-      line-height: 1.15;
-      margin-bottom: 20px;
-      letter-spacing: -1px;
+    .region {
+      min-height: 220px;
+      padding: 24px;
+      position: relative;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
     }
 
-    .hero h1 em {
-      font-style: normal;
-      color: #7EC8F0;
+    .region-code {
+      margin-bottom: 80px;
+      color: var(--mint);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 34px;
+      letter-spacing: -.04em;
     }
 
-    .hero p {
-      font-size: clamp(16px, 2vw, 19px);
-      opacity: 0.85;
-      max-width: 580px;
-      margin: 0 auto 36px;
+    .region strong {
+      display: block;
+      font-size: 14px;
     }
 
-    .hero-cta {
-      display: flex;
-      gap: 14px;
-      justify-content: center;
-      flex-wrap: wrap;
+    .region span {
+      color: #777d8b;
+      font-size: 12px;
     }
 
-    .btn-white { background: var(--white); color: var(--navy); }
-    .btn-white:hover { background: #f0f4ff; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
-    .btn-ghost { background: rgba(255,255,255,0.12); color: var(--white); border: 1px solid rgba(255,255,255,0.25); }
-    .btn-ghost:hover { background: rgba(255,255,255,0.2); }
-
-    /* STATS */
-    .stats {
-      background: var(--white);
-      border-bottom: 1px solid var(--gray-mid);
-      padding: 28px 24px;
-    }
-
-    .stats-inner {
-      max-width: 900px;
-      margin: 0 auto;
+    .method-grid {
+      margin-top: 20px;
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      text-align: center;
+      gap: 12px;
     }
 
-    .stat-item .num {
-      font-size: 28px;
-      font-weight: 800;
-      color: var(--navy);
-      line-height: 1;
-    }
-
-    .stat-item .label {
-      font-size: 13px;
-      color: var(--gray);
-      margin-top: 4px;
-    }
-
-    /* SECTIONS */
-    section { padding: 72px 24px; }
-    .container { max-width: 1080px; margin: 0 auto; }
-
-    .section-tag {
-      display: inline-block;
-      background: #EEF2FF;
-      color: var(--navy);
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      padding: 5px 12px;
-      border-radius: 100px;
-      margin-bottom: 12px;
-    }
-
-    h2 {
-      font-size: clamp(26px, 3.5vw, 38px);
-      font-weight: 800;
-      color: var(--navy);
-      margin-bottom: 12px;
-      letter-spacing: -0.5px;
-    }
-
-    .subtitle {
-      font-size: 17px;
-      color: var(--text-muted);
-      max-width: 540px;
-      margin-bottom: 48px;
-    }
-
-    /* SOLUTIONS */
-    .solutions-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 20px;
-    }
-
-    .solution-card {
-      background: var(--white);
-      border: 1px solid var(--gray-mid);
+    .method {
+      min-height: 112px;
+      padding: 19px;
+      border: 1px solid var(--line);
       border-radius: 14px;
-      padding: 28px 24px;
-      transition: all 0.2s;
-    }
-    .solution-card:hover {
-      border-color: var(--blue);
-      box-shadow: 0 8px 24px rgba(74,144,196,0.12);
-      transform: translateY(-3px);
+      background: rgba(255,255,255,.018);
     }
 
-    .card-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      background: #EEF2FF;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 16px;
-      font-size: 22px;
+    .method strong {
+      margin-bottom: 4px;
+      display: block;
+      font-size: 14px;
     }
 
-    .solution-card h3 {
-      font-size: 17px;
-      font-weight: 700;
-      color: var(--navy);
-      margin-bottom: 8px;
-    }
-    .solution-card p { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
-
-    .tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 14px;
-    }
-    .tag {
-      background: var(--gray-light);
-      color: var(--text-muted);
+    .method span {
+      color: #777d8b;
       font-size: 12px;
-      font-weight: 500;
-      padding: 3px 10px;
-      border-radius: 100px;
     }
-    .tag.blue { background: #DBEAFE; color: #1D4ED8; }
 
-    /* GEOS */
-    .geos-bg { background: var(--gray-light); }
+    .fit {
+      padding-top: 50px;
+    }
 
-    .geo-grid {
+    .fit-card {
+      padding: clamp(34px, 6vw, 70px);
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 12px;
+      grid-template-columns: .82fr 1.18fr;
+      gap: clamp(38px, 7vw, 86px);
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-lg);
+      background:
+        linear-gradient(135deg, rgba(255,77,122,.1), transparent 42%),
+        var(--panel);
+      box-shadow: var(--shadow);
     }
 
-    .geo-card {
-      background: var(--white);
-      border: 1px solid var(--gray-mid);
-      border-radius: 10px;
-      padding: 14px 16px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      transition: all 0.15s;
-    }
-    .geo-card:hover { border-color: var(--blue); box-shadow: 0 4px 12px rgba(74,144,196,0.1); }
-
-    .geo-flag { font-size: 24px; line-height: 1; }
-    .geo-info .geo-name { font-size: 14px; font-weight: 600; color: var(--navy); }
-    .geo-info .geo-methods { font-size: 12px; color: var(--gray); margin-top: 2px; }
-
-    /* HOW IT WORKS */
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 32px;
-      position: relative;
-    }
-
-    .step { text-align: center; }
-
-    .step-num {
-      width: 52px;
-      height: 52px;
-      border-radius: 50%;
-      background: var(--navy);
-      color: var(--white);
-      font-size: 20px;
-      font-weight: 800;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 16px;
-    }
-
-    .step h3 {
-      font-size: 17px;
-      font-weight: 700;
-      color: var(--navy);
-      margin-bottom: 8px;
-    }
-    .step p { font-size: 14px; color: var(--text-muted); }
-
-    /* FORM */
-    .form-bg {
-      background: linear-gradient(135deg, var(--navy) 0%, #1a5a8a 100%);
-      color: var(--white);
-    }
-
-    .form-wrap {
+    .fit-list {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 60px;
+      gap: 12px;
+    }
+
+    .fit-item {
+      min-height: 132px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(8,10,19,.34);
+    }
+
+    .fit-item::before {
+      width: 23px;
+      height: 23px;
+      margin-bottom: 22px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(167,243,208,.38);
+      border-radius: 50%;
+      color: var(--mint);
+      content: "✓";
+      font-size: 11px;
+    }
+
+    .fit-item strong {
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .faq-layout {
+      display: grid;
+      grid-template-columns: .72fr 1.28fr;
+      gap: clamp(50px, 8vw, 110px);
+    }
+
+    .faq-list {
+      border-top: 1px solid var(--line);
+    }
+
+    details {
+      border-bottom: 1px solid var(--line);
+    }
+
+    summary {
+      min-height: 88px;
+      padding: 24px 48px 24px 0;
+      position: relative;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      list-style: none;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -.02em;
+    }
+
+    summary::-webkit-details-marker {
+      display: none;
+    }
+
+    summary::after {
+      width: 28px;
+      height: 28px;
+      position: absolute;
+      right: 0;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line-strong);
+      border-radius: 50%;
+      content: "+";
+      color: var(--coral);
+      font-size: 18px;
+      font-weight: 400;
+      transition: transform .2s ease;
+    }
+
+    details[open] summary::after {
+      transform: rotate(45deg);
+    }
+
+    details p {
+      max-width: 680px;
+      margin: -5px 50px 28px 0;
+      color: var(--paper-muted);
+    }
+
+    .contact {
+      padding-top: 80px;
+      background:
+        linear-gradient(180deg, transparent, rgba(255,77,122,.035));
+    }
+
+    .contact-layout {
+      display: grid;
+      grid-template-columns: .7fr 1.3fr;
+      gap: clamp(50px, 8vw, 110px);
       align-items: start;
     }
 
-    .form-left h2 { color: var(--white); }
-    .form-left .subtitle { color: rgba(255,255,255,0.75); }
+    .contact-copy {
+      position: sticky;
+      top: 118px;
+    }
 
-    .form-benefits { list-style: none; margin-top: 28px; }
-    .form-benefits li {
+    .contact-side-note {
+      margin-top: 28px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+      color: #818694;
+      font-size: 13px;
+    }
+
+    .telegram-link {
+      margin-top: 16px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--mint);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .telegram-link:hover {
+      text-decoration: underline;
+      text-underline-offset: 4px;
+    }
+
+    .lead-form {
+      padding: clamp(24px, 5vw, 46px);
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-lg);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .form-head {
+      margin-bottom: 30px;
       display: flex;
       align-items: flex-start;
-      gap: 10px;
-      font-size: 15px;
-      color: rgba(255,255,255,0.85);
-      margin-bottom: 12px;
+      justify-content: space-between;
+      gap: 20px;
     }
-    .form-benefits li::before {
-      content: '✓';
-      flex-shrink: 0;
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+
+    .form-head h3 {
+      margin-bottom: 6px;
+      font-size: 26px;
+      letter-spacing: -.04em;
+    }
+
+    .form-head p {
+      margin-bottom: 0;
+      color: #858a97;
+      font-size: 13px;
+    }
+
+    .form-badge {
+      padding: 7px 10px;
+      border: 1px solid rgba(167,243,208,.22);
+      border-radius: 999px;
+      color: var(--mint);
+      background: rgba(167,243,208,.05);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .field-full {
+      grid-column: 1 / -1;
+    }
+
+    .field label {
+      color: #c9cbd2;
       font-size: 12px;
       font-weight: 700;
     }
 
-    form {
-      background: var(--white);
-      border-radius: 16px;
-      padding: 36px 32px;
+    .field label span {
+      color: #7d8290;
+      font-weight: 500;
     }
 
-    .form-group { margin-bottom: 18px; }
-    label {
-      display: block;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--navy);
-      margin-bottom: 6px;
-    }
-    input, select, textarea {
+    input,
+    select,
+    textarea {
       width: 100%;
-      padding: 11px 14px;
-      border: 1.5px solid var(--gray-mid);
-      border-radius: 8px;
-      font-size: 14px;
-      color: var(--text);
+      min-height: 50px;
+      padding: 0 14px;
+      border: 1px solid var(--line-strong);
+      border-radius: 11px;
       outline: none;
-      transition: border-color 0.2s;
-      font-family: inherit;
-      background: var(--white);
+      color: var(--paper);
+      background: #0c0f1a;
+      transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
     }
-    input:focus, select:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(74,144,196,0.12); }
-    textarea { resize: vertical; min-height: 90px; }
 
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    textarea {
+      min-height: 118px;
+      padding-block: 13px;
+      resize: vertical;
+    }
 
-    form .btn { width: 100%; justify-content: center; margin-top: 4px; }
-    form .btn-primary { background: var(--navy); }
-    form .btn-primary:hover { background: var(--navy-light); }
+    select {
+      cursor: pointer;
+    }
 
-    .form-note {
-      text-align: center;
+    input::placeholder,
+    textarea::placeholder {
+      color: #5f6471;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: rgba(255,77,122,.72);
+      background: #0f1220;
+      box-shadow: 0 0 0 4px rgba(255,77,122,.09);
+    }
+
+    .honeypot {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      padding: 0 !important;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0 !important;
+    }
+
+    .consent {
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: 18px 1fr;
+      gap: 10px;
+      align-items: start;
+      color: #858a97;
       font-size: 12px;
-      color: var(--gray);
-      margin-top: 12px;
     }
 
-    /* TELEGRAM CTA */
-    .tg-cta {
-      background: #F0F7FF;
-      border-top: 1px solid var(--gray-mid);
-      padding: 48px 24px;
-      text-align: center;
+    .consent input {
+      width: 16px;
+      min-height: 16px;
+      height: 16px;
+      margin-top: 2px;
+      padding: 0;
+      accent-color: var(--coral);
     }
-    .tg-cta p { color: var(--text-muted); margin-bottom: 16px; font-size: 16px; }
-    .btn-tg { background: #229ED9; color: white; }
-    .btn-tg:hover { background: #1a8cc4; transform: translateY(-1px); }
 
-    /* FOOTER */
-    footer {
-      background: var(--navy);
-      color: rgba(255,255,255,0.6);
-      padding: 32px 24px;
-      text-align: center;
+    .consent a {
+      color: #c9cbd2;
+      text-underline-offset: 3px;
+    }
+
+    .form-footer {
+      margin-top: 24px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .submit-button {
+      min-width: 210px;
+      border: 0;
+    }
+
+    .submit-button[disabled] {
+      cursor: wait;
+      opacity: .7;
+      transform: none;
+    }
+
+    .form-status {
+      min-height: 24px;
+      margin: 0;
+      color: #9ca0ac;
       font-size: 13px;
     }
-    footer strong { color: var(--white); }
-    footer a { color: rgba(255,255,255,0.6); text-decoration: none; }
-    footer a:hover { color: var(--white); }
 
-    /* RESPONSIVE */
-    @media (max-width: 768px) {
-      .nav-links { display: none; }
-      .stats-inner { grid-template-columns: repeat(2, 1fr); }
-      .form-wrap { grid-template-columns: 1fr; gap: 32px; }
-      .form-row { grid-template-columns: 1fr; }
-      section { padding: 52px 16px; }
+    .form-status.success {
+      color: var(--mint);
     }
 
-    @media (max-width: 480px) {
-      .stats-inner { grid-template-columns: repeat(2, 1fr); }
+    .form-status.error {
+      color: #ff9ab3;
+    }
+
+    .success-panel {
+      min-height: 430px;
+      display: none;
+      place-items: center;
+      text-align: center;
+    }
+
+    .success-panel.visible {
+      display: grid;
+    }
+
+    .success-icon {
+      width: 62px;
+      height: 62px;
+      margin: 0 auto 24px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(167,243,208,.42);
+      border-radius: 50%;
+      color: var(--mint);
+      background: rgba(167,243,208,.06);
+      font-size: 25px;
+    }
+
+    .success-panel h3 {
+      margin-bottom: 12px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 36px;
+      font-weight: 500;
+      letter-spacing: -.04em;
+    }
+
+    .success-panel p {
+      max-width: 470px;
+      margin: 0 auto;
+      color: var(--paper-muted);
+    }
+
+    .site-footer {
+      padding: 50px 0 28px;
+      border-top: 1px solid var(--line);
+      background: #070910;
+    }
+
+    .footer-top {
+      padding-bottom: 42px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 40px;
+      align-items: end;
+    }
+
+    .footer-statement {
+      max-width: 680px;
+      margin: 20px 0 0;
+      color: #7d8290;
+      font-size: 14px;
+    }
+
+    .footer-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+    }
+
+    .footer-links a {
+      color: #a3a6af;
+      text-decoration: none;
+      font-size: 13px;
+    }
+
+    .footer-links a:hover {
+      color: var(--paper);
+    }
+
+    .footer-bottom {
+      padding-top: 22px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 28px;
+      border-top: 1px solid var(--line);
+      color: #5e6370;
+      font-size: 11px;
+    }
+
+    .footer-bottom p {
+      max-width: 820px;
+      margin-bottom: 0;
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity .65s ease, transform .65s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 1020px) {
+      .hero-grid,
+      .matching-layout,
+      .faq-layout,
+      .contact-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        min-height: auto;
+      }
+
+      .signal-card {
+        max-width: 640px;
+      }
+
+      .trust-inner {
+        grid-template-columns: repeat(3, 1fr);
+        padding-block: 16px;
+      }
+
+      .trust-label {
+        grid-column: 1 / -1;
+        justify-content: center;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .problem-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .sticky-copy,
+      .contact-copy {
+        position: static;
+      }
+
+      .coverage-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .method-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .fit-card {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .nav {
+        width: min(calc(100% - 28px), var(--max));
+        height: 70px;
+      }
+
+      .menu-toggle {
+        display: grid;
+      }
+
+      .nav-links {
+        position: fixed;
+        inset: 70px 0 0;
+        margin: 0;
+        padding: 40px 24px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        background: rgba(8,10,19,.97);
+        transform: translateX(100%);
+        transition: transform .25s ease;
+      }
+
+      .menu-open .nav-links {
+        transform: translateX(0);
+      }
+
+      .nav-links li,
+      .nav-links a {
+        width: 100%;
+      }
+
+      .nav-links a {
+        padding: 14px 0;
+        display: block;
+        border-bottom: 1px solid var(--line);
+        color: var(--paper);
+        font-size: 18px;
+      }
+
+      .nav-cta {
+        display: none;
+      }
+
+      .container {
+        width: min(calc(100% - 28px), var(--max));
+      }
+
+      .hero {
+        padding: 124px 0 68px;
+      }
+
+      .hero-grid {
+        gap: 44px;
+      }
+
+      h1 {
+        font-size: clamp(48px, 15vw, 68px);
+      }
+
+      .hero-copy {
+        font-size: 17px;
+      }
+
+      .hero-actions .button {
+        width: 100%;
+      }
+
+      .trust-inner {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .trust-label {
+        grid-column: 1 / -1;
+      }
+
+      .trust-item {
+        border-bottom: 1px solid var(--line);
+      }
+
+      section {
+        padding: 82px 0;
+      }
+
+      .section-title {
+        font-size: clamp(38px, 12vw, 52px);
+      }
+
+      .problem-grid,
+      .coverage-grid,
+      .method-grid,
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .problem {
+        min-height: 280px;
+      }
+
+      .problem-index {
+        margin-bottom: 50px;
+      }
+
+      .region {
+        min-height: 156px;
+      }
+
+      .region-code {
+        margin-bottom: 34px;
+      }
+
+      .fit-list {
+        grid-template-columns: 1fr;
+      }
+
+      .form-head {
+        display: block;
+      }
+
+      .form-badge {
+        margin-top: 14px;
+        display: inline-flex;
+      }
+
+      .form-footer {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .submit-button {
+        width: 100%;
+      }
+
+      .footer-top,
+      .footer-bottom {
+        grid-template-columns: 1fr;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      *,
+      *::before,
+      *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+      }
+
+      .reveal {
+        opacity: 1;
+        transform: none;
+      }
     }
   </style>
 </head>
+
 <body>
+  <a class="skip-link" href="#main">Skip to content</a>
 
-<!-- NAV -->
-<nav>
-  <a href="#" class="logo">
-    <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4QBMRXhpZgAATU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAAeKADAAQAAAABAAAAeAAAAAD/4QqPaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wLwA8P3hwYWNrZXQgYmVnaW49Iu+7vyIgaWQ9Ilc1TTBNcENlaGlIenJlU3pOVGN6a2M5ZCI/PiA8eDp4bXBtZXRhIHhtbG5zOng9ImFkb2JlOm5zOm1ldGEvIiB4OnhtcHRrPSJYTVAgQ29yZSA2LjAuMCI+IDxyZGY6UkRGIHhtbG5zOnJkZj0iaHR0cDovL3d3dy53My5vcmcvMTk5OS8wMi8yMi1yZGYtc3ludGF4LW5zIyI+IDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSIiIHhtbG5zOnBob3Rvc2hvcD0iaHR0cDovL25zLmFkb2JlLmNvbS9waG90b3Nob3AvMS4wLyIgeG1sbnM6SXB0YzR4bXBFeHQ9Imh0dHA6Ly9pcHRjLm9yZy9zdGQvSXB0YzR4bXBFeHQvMjAwOC0wMi0yOS8iIHBob3Rvc2hvcDpDcmVkaXQ9Ik1hZGUgd2l0aCBHb29nbGUgQUkiIElwdGM0eG1wRXh0OkRpZ2l0YWxTb3VyY2VUeXBlPSJodHRwOi8vY3YuaXB0Yy5vcmcvbmV3c2NvZGVzL2RpZ2l0YWxzb3VyY2V0eXBlL3RyYWluZWRBbGdvcml0aG1pY01lZGlhIiBJcHRjNHhtcEV4dDpEaWdpdGFsU291cmNlRmlsZVR5cGU9Imh0dHA6Ly9jdi5pcHRjLm9yZy9uZXdzY29kZXMvZGlnaXRhbHNvdXJjZXR5cGUvdHJhaW5lZEFsZ29yaXRobWljTWVkaWEiLz4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg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" alt="OfferPSP" />
-    <span class="logo-text">
-      <span>Offer</span><span>PSP</span>
-    </span>
-  </a>
-  <ul class="nav-links">
-    <li><a href="#solutions">Solutions</a></li>
-    <li><a href="#geos">GEOs</a></li>
-    <li><a href="#how">How it works</a></li>
-    <li><a href="#contact" class="btn btn-primary" style="padding:8px 18px;">Get PSP →</a></li>
-  </ul>
-</nav>
+  <header class="site-header" id="siteHeader">
+    <nav class="nav" aria-label="Primary navigation">
+      <a class="brand" href="#top" aria-label="OfferPSP home">
+        <span class="brand-mark" aria-hidden="true">OP</span>
+        <span>Offer<strong>PSP</strong></span>
+      </a>
 
-<!-- HERO -->
-<section class="hero">
-  <div class="hero-badge">PSP Brokerage & Affiliate Platform</div>
-  <h1>The Bridge Between<br><em>Merchants & PSPs</em></h1>
-  <p>We match iGaming and eCommerce businesses with verified payment providers — fast, transparent, and without the hassle.</p>
-  <div class="hero-cta">
-    <a href="#contact" class="btn btn-white btn-lg">Get a PSP Offer →</a>
-    <a href="#geos" class="btn btn-ghost btn-lg">See GEO Coverage</a>
-  </div>
-</section>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#why">Why OfferPSP</a></li>
+        <li><a href="#process">Process</a></li>
+        <li><a href="#coverage">Coverage</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="/portal/">Client login</a></li>
+      </ul>
 
-<!-- STATS -->
-<div class="stats">
-  <div class="stats-inner">
-    <div class="stat-item">
-      <div class="num">20+</div>
-      <div class="label">GEOs Covered</div>
-    </div>
-    <div class="stat-item">
-      <div class="num">50+</div>
-      <div class="label">PSP Partners</div>
-    </div>
-    <div class="stat-item">
-      <div class="num">48h</div>
-      <div class="label">Avg. Setup Time</div>
-    </div>
-    <div class="stat-item">
-      <div class="num">24/7</div>
-      <div class="label">Support</div>
-    </div>
-  </div>
-</div>
+      <a class="nav-cta" href="#request">Request a match</a>
+      <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false" aria-controls="navLinks" aria-label="Open navigation">
+        <span></span>
+      </button>
+    </nav>
+  </header>
 
-<!-- SOLUTIONS -->
-<section id="solutions">
-  <div class="container">
-    <div class="section-tag">Solutions</div>
-    <h2>Payment Methods We Cover</h2>
-    <p class="subtitle">From classic card acquiring to local P2P methods — we find the right PSP for your traffic and GEO.</p>
-    <div class="solutions-grid">
-      <div class="solution-card">
-        <div class="card-icon">💳</div>
-        <h3>Card eCommerce</h3>
-        <p>Visa & Mastercard acquiring for FTD and Trusted traffic across Europe and worldwide.</p>
-        <div class="tags">
-          <span class="tag blue">FTD</span>
-          <span class="tag blue">Trusted</span>
-          <span class="tag">EUR / USD</span>
+  <main id="main">
+    <section class="hero" id="top">
+      <div class="container hero-grid">
+        <div class="hero-content">
+          <div class="eyebrow">Private PSP matching desk</div>
+          <h1>The right PSP. <em>Without the wrong introductions.</em></h1>
+          <p class="hero-copy">
+            We turn your operating profile into a focused shortlist of relevant payment partners — aligned to your GEOs, vertical, methods, volumes and risk model.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-arrow" href="#request">Request a private match</a>
+            <a class="button button-secondary" href="#process">See how matching works</a>
+          </div>
+          <p class="hero-note">Your operating profile stays private and is reviewed by a specialist.</p>
         </div>
-      </div>
-      <div class="solution-card">
-        <div class="card-icon">📲</div>
-        <h3>P2P / SBP</h3>
-        <p>Local P2P and SBP solutions for Russia, Uzbekistan, Kyrgyzstan with fast settlement.</p>
-        <div class="tags">
-          <span class="tag blue">RUB</span>
-          <span class="tag blue">UZS</span>
-          <span class="tag blue">KGS</span>
-          <span class="tag">T+1</span>
-        </div>
-      </div>
-      <div class="solution-card">
-        <div class="card-icon">🏦</div>
-        <h3>SEPA / Open Banking</h3>
-        <p>EU bank transfers and open banking for high-volume European merchants.</p>
-        <div class="tags">
-          <span class="tag blue">EUR</span>
-          <span class="tag blue">GBP</span>
-          <span class="tag">T+2</span>
-        </div>
-      </div>
-      <div class="solution-card">
-        <div class="card-icon">💸</div>
-        <h3>Payouts</h3>
-        <p>Worldwide payout solutions — Visa/MC, SBP, OCT. Fast, automated, with USDT settlement option.</p>
-        <div class="tags">
-          <span class="tag blue">Worldwide</span>
-          <span class="tag blue">RUB</span>
-          <span class="tag blue">KZT</span>
-          <span class="tag">USDT</span>
-        </div>
-      </div>
-      <div class="solution-card">
-        <div class="card-icon">🎰</div>
-        <h3>iGaming Specific</h3>
-        <p>MCC 7995 solutions, trusted traffic filters, chargeback protection — tailored for online gambling.</p>
-        <div class="tags">
-          <span class="tag blue">MCC 7995</span>
-          <span class="tag blue">6012</span>
-          <span class="tag">CB Protection</span>
-        </div>
-      </div>
-      <div class="solution-card">
-        <div class="card-icon">🔗</div>
-        <h3>Quasi-eCommerce</h3>
-        <p>Alternative acquiring for hard-to-place merchants. Azerbaijan, CIS and other complex GEOs.</p>
-        <div class="tags">
-          <span class="tag blue">AZN</span>
-          <span class="tag blue">TRY</span>
-          <span class="tag">High Risk OK</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
 
-<!-- GEOS -->
-<section id="geos" class="geos-bg">
-  <div class="container">
-    <div class="section-tag">GEO Coverage</div>
-    <h2>Where We Operate</h2>
-    <p class="subtitle">Active PSP partnerships across 20+ markets. New GEOs added regularly.</p>
-    <div class="geo-grid">
-      <div class="geo-card"><span class="geo-flag">🇪🇺</span><div class="geo-info"><div class="geo-name">Europe (EUR)</div><div class="geo-methods">Visa/MC · SEPA · Open Banking</div></div></div>
-      <div class="geo-card"><span class="geo-flag">🇷🇺</span><div class="geo-info"><div class="geo-name">Russia</div><div class="geo-methods">P2P · SBP · SberPay</div></div></div>
-      <div class="geo-card"><span class="geo-flag">🇰🇿</span><div class="geo-info"><div class="geo-name">Kazakhstan</div><div class="geo-methods">Visa/MC · ecom · Payouts</div></div></div>
-      <div class="geo-card"><span class="geo-flag">🇺🇿</span><div class="geo-info"><div class="geo-name">Uzbekistan</div><div class="geo-methods">HUMO · P2P · Click QR</div></div></div>
-      <div class="geo-card"><span class="geo-flag">🇦🇿</span><div class="geo-info"><div class="geo-name">Azerbaijan</div><div class="geo-methods">Visa/MC · Quasi-ecom</div></div></div>
-      <div class="geo-card"><span class="geo-flag">🇹🇷</span><div class="geo-info"><div class="geo-name">Turkey</div><div class="geo-methods">Visa/MC · TRY</div></div></div>
-      <div class="geo-card"><span class="geo-flag">🇮🇳</span><div class="geo-info"><div class="geo-name">India</div><div class="geo-methods">UPI · IMPS · INR</div></div></div>
-      <div class="geo-card"><span class="geo-flag">🇰🇬</span><div class="geo-info"><div class="geo-name">Kyrgyzstan</div><div class="geo-methods">QR · KGS</div></div></div>
-      <div class="geo-card"><span class="geo-flag">🇩🇪</span><div class="geo-info"><div class="geo-name">Germany</div><div class="geo-methods">Open Banking · EUR</div></div></div>
-      <div class="geo-card"><span class="geo-flag">🇬🇧</span><div class="geo-info"><div class="geo-name">United Kingdom</div><div class="geo-methods">Open Banking · GBP</div></div></div>
-      <div class="geo-card"><span class="geo-flag">🇵🇱</span><div class="geo-info"><div class="geo-name">Poland</div><div class="geo-methods">Visa/MC · EUR</div></div></div>
-      <div class="geo-card"><span class="geo-flag">🌍</span><div class="geo-info"><div class="geo-name">+ More GEOs</div><div class="geo-methods">Ask for your region</div></div></div>
-    </div>
-  </div>
-</section>
-
-<!-- HOW IT WORKS -->
-<section id="how">
-  <div class="container">
-    <div class="section-tag">Process</div>
-    <h2>How It Works</h2>
-    <p class="subtitle">From first contact to live integration — we handle the heavy lifting.</p>
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <h3>Tell Us Your Needs</h3>
-        <p>Share your GEO, traffic type (FTD/Trusted), MCC and monthly volume. Takes 2 minutes.</p>
-      </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <h3>We Match & Negotiate</h3>
-        <p>We select the best-fit PSP partners from our network and negotiate rates on your behalf.</p>
-      </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <h3>Connect & Go Live</h3>
-        <p>Integration support included. Typical setup time: 24–48 hours after docs are approved.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- CONTACT FORM -->
-<section id="contact" class="form-bg">
-  <div class="container">
-    <div class="form-wrap">
-      <div class="form-left">
-        <div class="section-tag" style="background:rgba(255,255,255,0.15);color:white;">Get Started</div>
-        <h2>Get a PSP Offer</h2>
-        <p class="subtitle">Tell us about your business and we'll come back within 24 hours with options.</p>
-        <ul class="form-benefits">
-          <li>No upfront fees — we earn on successful connections</li>
-          <li>Multiple PSP options for comparison</li>
-          <li>Rate negotiation included</li>
-          <li>Integration & onboarding support</li>
-        </ul>
-      </div>
-      <div class="form-right">
-        <form id="contactForm" onsubmit="handleSubmit(event)">
-          <div class="form-row">
-            <div class="form-group">
-              <label for="name">Your Name *</label>
-              <input type="text" id="name" placeholder="Boris" required />
+        <aside class="signal-card" aria-label="Example matching process">
+          <div class="signal-head">
+            <span>Qualification signal</span>
+            <span class="signal-status">Private review</span>
+          </div>
+          <div class="signal-body">
+            <div class="profile-label">Merchant profile</div>
+            <div class="profile-tags">
+              <span class="tag">iGaming</span>
+              <span class="tag">EU + CIS</span>
+              <span class="tag">Cards + APMs</span>
+              <span class="tag">Scaling volume</span>
             </div>
-            <div class="form-group">
-              <label for="company">Company *</label>
-              <input type="text" id="company" placeholder="Acme Gaming Ltd" required />
+            <div class="route">
+              <div class="route-step">
+                <strong>Fit screening</strong>
+                <span>Coverage, methods and operating model</span>
+              </div>
+              <div class="route-step">
+                <strong>Risk alignment</strong>
+                <span>Vertical, licensing and traffic profile</span>
+              </div>
+              <div class="route-step">
+                <strong>Warm introduction</strong>
+                <span>Only where both sides are relevant</span>
+              </div>
             </div>
           </div>
-          <div class="form-group">
-            <label for="telegram">Telegram *</label>
-            <input type="text" id="telegram" placeholder="@yourusername" required />
-          </div>
-          <div class="form-group">
-            <label for="email">Email</label>
-            <input type="email" id="email" placeholder="you@company.com" />
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="geo">Primary GEO *</label>
-              <select id="geo" required>
-                <option value="">Select GEO</option>
-                <option>Europe (EUR)</option>
-                <option>Russia (RUB)</option>
-                <option>Kazakhstan (KZT)</option>
-                <option>Uzbekistan (UZS)</option>
-                <option>Turkey (TRY)</option>
-                <option>India (INR)</option>
-                <option>Azerbaijan (AZN)</option>
-                <option>Kyrgyzstan (KGS)</option>
-                <option>Other / Multiple</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="traffic">Traffic Type *</label>
-              <select id="traffic" required>
-                <option value="">Select type</option>
-                <option>FTD</option>
-                <option>Trusted</option>
-                <option>Both FTD & Trusted</option>
-                <option>eCommerce (not gaming)</option>
-                <option>Payouts only</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="volume">Monthly Volume (USD)</label>
-            <select id="volume">
-              <option value="">Select range</option>
-              <option>Under $50k</option>
-              <option>$50k – $200k</option>
-              <option>$200k – $1M</option>
-              <option>Over $1M</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="message">Additional Info</label>
-            <textarea id="message" placeholder="MCC code, current PSP issues, specific requirements..."></textarea>
-          </div>
-          <button type="submit" class="btn btn-primary btn-lg">Send Request →</button>
-          <p class="form-note">We respond within 24 hours · No spam · Your data is safe</p>
-        </form>
+        </aside>
+      </div>
+    </section>
+
+    <div class="trust-strip" aria-label="Service coverage">
+      <div class="container trust-inner">
+        <div class="trust-label">Built for complex payment profiles</div>
+        <div class="trust-item">iGaming</div>
+        <div class="trust-item">eCommerce</div>
+        <div class="trust-item">High-risk</div>
+        <div class="trust-item">Cross-border</div>
+        <div class="trust-item">Multi-GEO</div>
       </div>
     </div>
-  </div>
-</section>
 
-<!-- TELEGRAM CTA -->
-<div class="tg-cta">
-  <p>Prefer to chat directly? Message us on Telegram for a faster response.</p>
-  <a href="https://t.me/Brain_Index" class="btn btn-tg btn-lg">✈ Write on Telegram</a>
-</div>
+    <section id="why">
+      <div class="container">
+        <div class="section-kicker reveal">The problem</div>
+        <h2 class="section-title reveal">A long provider list is not a payment strategy.</h2>
+        <p class="section-lead reveal">
+          The wrong introduction wastes compliance time on both sides. We qualify the context first, then open only the conversations that have a credible reason to move forward.
+        </p>
 
-<!-- FOOTER -->
-<footer>
-  <p>© 2025 <strong>OfferPSP</strong> · Part of <strong>Brain Index</strong> ecosystem · <a href="mailto:hello@offerspsp.com">hello@offerspsp.com</a></p>
-  <p style="margin-top:8px;font-size:12px;">offerpsp.com · Registered in Georgia · All rights reserved</p>
-</footer>
+        <div class="problem-grid reveal">
+          <article class="problem">
+            <div class="problem-index"><span>01</span></div>
+            <h3>Generic lists ignore the operating reality</h3>
+            <p>A provider may support your country on paper and still be the wrong fit for your vertical, traffic, methods or expected volume.</p>
+          </article>
+          <article class="problem">
+            <div class="problem-index"><span>02</span></div>
+            <h3>Cold outreach creates slow, low-signal conversations</h3>
+            <p>Merchants repeat the same profile to multiple teams. PSPs spend time qualifying requests that should never have reached sales.</p>
+          </article>
+          <article class="problem">
+            <div class="problem-index"><span>03</span></div>
+            <h3>Approval is only the beginning</h3>
+            <p>Commercial terms, integration path, payout logic and operational support matter just as much as the initial account opening.</p>
+          </article>
+        </div>
+      </div>
+    </section>
 
-<script>
-  function handleSubmit(e) {
-    e.preventDefault();
-    const btn = e.target.querySelector('button[type=submit]');
-    btn.textContent = '✓ Sent! We\'ll be in touch soon.';
-    btn.style.background = '#16a34a';
-    btn.disabled = true;
+    <section class="matching" id="process">
+      <div class="container matching-layout">
+        <div class="sticky-copy">
+          <div class="section-kicker reveal">The matching desk</div>
+          <h2 class="section-title reveal">Context first. Introductions second.</h2>
+          <p class="section-lead reveal">
+            OfferPSP is not a public marketplace. Every request starts with a private qualification brief so the shortlist reflects how your business actually operates.
+          </p>
+        </div>
 
-    const data = {
-      name: document.getElementById('name').value,
-      company: document.getElementById('company').value,
-      telegram: document.getElementById('telegram').value,
-      email: document.getElementById('email').value,
-      geo: document.getElementById('geo').value,
-      traffic: document.getElementById('traffic').value,
-      volume: document.getElementById('volume').value,
-      message: document.getElementById('message').value,
+        <div class="process reveal">
+          <article class="process-step">
+            <div class="process-number">01</div>
+            <div>
+              <h3>Share the operating profile</h3>
+              <p>Vertical, entity, licensing, target GEOs, methods, current processing situation and realistic monthly volume.</p>
+            </div>
+          </article>
+          <article class="process-step">
+            <div class="process-number">02</div>
+            <div>
+              <h3>We screen for practical fit</h3>
+              <p>We compare the request against provider coverage and known operating constraints — not a marketing checklist.</p>
+            </div>
+          </article>
+          <article class="process-step">
+            <div class="process-number">03</div>
+            <div>
+              <h3>You receive a focused shortlist</h3>
+              <p>Each suggested route should have a clear reason: geography, method, vertical appetite, onboarding profile or commercial structure.</p>
+            </div>
+          </article>
+          <article class="process-step">
+            <div class="process-number">04</div>
+            <div>
+              <h3>Warm introductions and launch support</h3>
+              <p>We connect relevant sides, keep the context intact and help move the conversation from qualification to integration.</p>
+            </div>
+          </article>
+          <div class="process-note">
+            OfferPSP does not approve merchant accounts or process funds. Final onboarding, due diligence and commercial terms are determined by each independent provider.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="coverage" id="coverage">
+      <div class="container">
+        <div class="section-kicker reveal">Coverage</div>
+        <h2 class="section-title reveal">One brief. Multiple relevant routes.</h2>
+        <p class="section-lead reveal">
+          We work across major operating regions and payment categories. Exact availability always depends on the merchant profile and the provider’s current underwriting criteria.
+        </p>
+
+        <div class="coverage-grid reveal">
+          <div class="region">
+            <div class="region-code">EU</div>
+            <strong>Europe</strong>
+            <span>EEA, UK and selected local markets</span>
+          </div>
+          <div class="region">
+            <div class="region-code">CIS</div>
+            <strong>CIS & Central Asia</strong>
+            <span>Local rails and regional alternatives</span>
+          </div>
+          <div class="region">
+            <div class="region-code">MENA</div>
+            <strong>Middle East</strong>
+            <span>Selected markets and methods</span>
+          </div>
+          <div class="region">
+            <div class="region-code">LATAM</div>
+            <strong>Latin America</strong>
+            <span>Local methods and payout routes</span>
+          </div>
+          <div class="region">
+            <div class="region-code">APAC</div>
+            <strong>Asia-Pacific</strong>
+            <span>Regional coverage by profile</span>
+          </div>
+        </div>
+
+        <div class="method-grid reveal" aria-label="Payment method categories">
+          <div class="method">
+            <strong>Card acquiring</strong>
+            <span>Visa, Mastercard and relevant regional schemes</span>
+          </div>
+          <div class="method">
+            <strong>Bank & open banking</strong>
+            <span>Transfers, instant bank payments and local rails</span>
+          </div>
+          <div class="method">
+            <strong>Alternative methods</strong>
+            <span>Wallets, vouchers, mobile and market-specific options</span>
+          </div>
+          <div class="method">
+            <strong>Payout infrastructure</strong>
+            <span>Merchant and user payout routes where supported</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="fit">
+      <div class="container">
+        <div class="fit-card reveal">
+          <div>
+            <div class="section-kicker">Best fit</div>
+            <h2 class="section-title">Built for teams with a real payment brief.</h2>
+            <p class="section-lead">
+              The more precise the operating context, the better the match. We are most useful when you can clearly describe what must work.
+            </p>
+          </div>
+          <div class="fit-list">
+            <div class="fit-item"><strong>Licensed or actively preparing a complete onboarding package</strong></div>
+            <div class="fit-item"><strong>Launching a new GEO or adding a backup processing route</strong></div>
+            <div class="fit-item"><strong>Replacing a provider that no longer fits volume or risk needs</strong></div>
+            <div class="fit-item"><strong>Seeking local methods beyond a standard card stack</strong></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq">
+      <div class="container faq-layout">
+        <div>
+          <div class="section-kicker reveal">Questions</div>
+          <h2 class="section-title reveal">What happens after you send the brief?</h2>
+        </div>
+
+        <div class="faq-list reveal">
+          <details>
+            <summary>Is OfferPSP itself a payment processor?</summary>
+            <p>No. OfferPSP is a B2B matching and introduction service. Payment services, underwriting, onboarding and final commercial terms are provided by independent PSPs.</p>
+          </details>
+          <details>
+            <summary>Do you publish your PSP partner list?</summary>
+            <p>No. The network is not used as a public directory. We share relevant names only when there is a plausible fit for the specific merchant profile.</p>
+          </details>
+          <details>
+            <summary>Can you guarantee approval?</summary>
+            <p>No responsible intermediary can. Each provider runs its own due diligence and risk assessment. Our role is to reduce obviously mismatched conversations before that process begins.</p>
+          </details>
+          <details>
+            <summary>What information should we prepare?</summary>
+            <p>Entity and licensing status, website, target GEOs, vertical, payment methods, expected volume, average ticket, chargeback profile and any current processing constraints.</p>
+          </details>
+          <details>
+            <summary>Do you work only with iGaming?</summary>
+            <p>iGaming is a core focus. We also review high-risk and cross-border eCommerce profiles where our provider network has relevant coverage.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section class="contact" id="request">
+      <div class="container contact-layout">
+        <div class="contact-copy">
+          <div class="section-kicker reveal">Private request</div>
+          <h2 class="section-title reveal">Tell us what must work.</h2>
+          <p class="section-lead reveal">
+            Start with the operating facts. We will review the profile and contact you only when we understand the next useful step.
+          </p>
+          <div class="contact-side-note reveal">
+            Prefer a direct conversation?
+            <br>
+            <a class="telegram-link" href="https://t.me/Brain_Index" target="_blank" rel="noopener noreferrer">Open Telegram ↗</a>
+          </div>
+        </div>
+
+        <div class="lead-form reveal">
+          <form id="leadForm" novalidate>
+            <div class="form-head">
+              <div>
+                <h3>Merchant profile</h3>
+                <p>Required fields are marked with an asterisk.</p>
+              </div>
+              <div class="form-badge">Private intake</div>
+            </div>
+
+            <div class="form-grid">
+              <div class="field">
+                <label for="name">Your name *</label>
+                <input id="name" name="name" type="text" autocomplete="name" maxlength="120" required placeholder="Name and surname">
+              </div>
+              <div class="field">
+                <label for="work_email">Work email *</label>
+                <input id="work_email" name="work_email" type="email" autocomplete="email" maxlength="254" required placeholder="name@company.com">
+              </div>
+              <div class="field">
+                <label for="company">Company *</label>
+                <input id="company" name="company" type="text" autocomplete="organization" maxlength="160" required placeholder="Legal or trading name">
+              </div>
+              <div class="field">
+                <label for="company_url">Website <span>(optional)</span></label>
+                <input id="company_url" name="company_url" type="url" autocomplete="url" maxlength="500" placeholder="https://">
+              </div>
+              <div class="field">
+                <label for="vertical">Vertical *</label>
+                <select id="vertical" name="vertical" required>
+                  <option value="">Select vertical</option>
+                  <option value="iGaming">iGaming</option>
+                  <option value="High-risk eCommerce">High-risk eCommerce</option>
+                  <option value="Marketplace">Marketplace</option>
+                  <option value="Digital services">Digital services</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="monthly_volume">Expected monthly volume <span>(optional)</span></label>
+                <select id="monthly_volume" name="monthly_volume">
+                  <option value="">Select range</option>
+                  <option value="Pre-launch">Pre-launch</option>
+                  <option value="Under €100k">Under €100k</option>
+                  <option value="€100k–€500k">€100k–€500k</option>
+                  <option value="€500k–€2m">€500k–€2m</option>
+                  <option value="€2m–€10m">€2m–€10m</option>
+                  <option value="€10m+">€10m+</option>
+                </select>
+              </div>
+              <div class="field field-full">
+                <label for="geos">Target GEOs *</label>
+                <input id="geos" name="geos" type="text" maxlength="2000" required placeholder="Countries or regions you need to cover">
+              </div>
+              <div class="field">
+                <label for="methods">Required methods <span>(optional)</span></label>
+                <input id="methods" name="methods" type="text" maxlength="1000" placeholder="Cards, bank transfer, APMs, payouts…">
+              </div>
+              <div class="field">
+                <label for="telegram">Telegram <span>(optional)</span></label>
+                <input id="telegram" name="telegram" type="text" maxlength="100" placeholder="@username">
+              </div>
+              <div class="field field-full">
+                <label for="details">What must the new payment route solve? <span>(optional)</span></label>
+                <textarea id="details" name="details" maxlength="4000" placeholder="Current setup, licensing, constraints, timing or a specific problem…"></textarea>
+              </div>
+              <div class="honeypot" aria-hidden="true">
+                <label for="website_url">Leave this field empty</label>
+                <input id="website_url" name="website_url" type="text" tabindex="-1" autocomplete="off">
+              </div>
+            </div>
+
+            <label class="consent">
+              <input id="consent" name="consent" type="checkbox" required>
+              <span>I agree that OfferPSP may use the submitted information to assess this request and contact me about relevant PSP introductions. See the <a href="/privacy.html">Privacy Notice</a>.</span>
+            </label>
+
+            <div class="form-footer">
+              <button class="button submit-button" id="submitButton" type="submit">Submit private request</button>
+              <p class="form-status" id="formStatus" role="status" aria-live="polite"></p>
+            </div>
+          </form>
+
+          <div class="success-panel" id="successPanel">
+            <div>
+              <div class="success-icon" aria-hidden="true">✓</div>
+              <h3>Request received.</h3>
+              <p>Your merchant profile has been stored for private review. We will use the contact details you provided if there is a clear next step.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-top">
+        <div>
+          <a class="brand" href="#top" aria-label="OfferPSP home">
+            <span class="brand-mark" aria-hidden="true">OP</span>
+            <span>Offer<strong>PSP</strong></span>
+          </a>
+          <p class="footer-statement">Private payment-partner matching for complex merchant profiles. A Brain Index product.</p>
+        </div>
+        <nav class="footer-links" aria-label="Footer navigation">
+          <a href="#process">Process</a>
+          <a href="#coverage">Coverage</a>
+          <a href="/portal/">Client login</a>
+          <a href="/privacy.html">Privacy</a>
+          <a href="/terms.html">Terms</a>
+          <a href="https://t.me/Brain_Index" target="_blank" rel="noopener noreferrer">Telegram ↗</a>
+        </nav>
+      </div>
+      <div class="footer-bottom">
+        <p>OfferPSP is an introduction service, not a payment institution, acquirer or financial adviser. Provider availability, onboarding decisions and terms remain subject to independent due diligence.</p>
+        <span>© <span id="year">2026</span> OfferPSP</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const LEAD_ENDPOINT = "https://annoris--n8n-make--xjvz9xynmzwk.code.run/webhook/offerpsp-lead-v1";
+
+    const header = document.getElementById("siteHeader");
+    const menuToggle = document.getElementById("menuToggle");
+    const navLinks = document.getElementById("navLinks");
+    const leadForm = document.getElementById("leadForm");
+    const submitButton = document.getElementById("submitButton");
+    const formStatus = document.getElementById("formStatus");
+    const successPanel = document.getElementById("successPanel");
+
+    document.getElementById("year").textContent = new Date().getFullYear();
+
+    const updateHeader = () => {
+      header.classList.toggle("scrolled", window.scrollY > 18);
     };
-    console.log('Form submitted:', data);
-  }
 
-  // Smooth scroll for nav links
-  document.querySelectorAll('a[href^="#"]').forEach(a => {
-    a.addEventListener('click', e => {
-      const target = document.querySelector(a.getAttribute('href'));
-      if (target) {
-        e.preventDefault();
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    updateHeader();
+    window.addEventListener("scroll", updateHeader, { passive: true });
+
+    const closeMenu = () => {
+      document.body.classList.remove("menu-open");
+      menuToggle.setAttribute("aria-expanded", "false");
+      menuToggle.setAttribute("aria-label", "Open navigation");
+    };
+
+    menuToggle.addEventListener("click", () => {
+      const open = document.body.classList.toggle("menu-open");
+      menuToggle.setAttribute("aria-expanded", String(open));
+      menuToggle.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
+    });
+
+    navLinks.querySelectorAll("a").forEach((link) => link.addEventListener("click", closeMenu));
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeMenu();
+    });
+
+    const revealItems = document.querySelectorAll(".reveal");
+    if ("IntersectionObserver" in window && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: .12, rootMargin: "0px 0px -40px" });
+
+      revealItems.forEach((item) => observer.observe(item));
+    } else {
+      revealItems.forEach((item) => item.classList.add("visible"));
+    }
+
+    const params = new URLSearchParams(window.location.search);
+
+    leadForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      formStatus.className = "form-status";
+      formStatus.textContent = "";
+
+      if (!leadForm.checkValidity()) {
+        leadForm.reportValidity();
+        formStatus.classList.add("error");
+        formStatus.textContent = "Please complete the required fields.";
+        return;
+      }
+
+      const formData = new FormData(leadForm);
+      const payload = Object.fromEntries(formData.entries());
+      payload.consent = formData.get("consent") === "on";
+      payload.utm_source = params.get("utm_source") || "";
+      payload.utm_campaign = params.get("utm_campaign") || "";
+
+      submitButton.disabled = true;
+      submitButton.textContent = "Sending…";
+      formStatus.textContent = "Securely submitting your profile…";
+
+      try {
+        const response = await fetch(LEAD_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=UTF-8" },
+          body: JSON.stringify(payload)
+        });
+
+        let result = null;
+        try {
+          result = await response.json();
+        } catch {
+          result = null;
+        }
+
+        if (!response.ok || !result || result.success !== true) {
+          throw new Error("Submission was not confirmed");
+        }
+
+        leadForm.hidden = true;
+        successPanel.classList.add("visible");
+      } catch (error) {
+        formStatus.classList.add("error");
+        formStatus.textContent = "We could not confirm delivery. Please try again or contact us on Telegram.";
+        submitButton.disabled = false;
+        submitButton.textContent = "Submit private request";
       }
     });
-  });
-</script>
+  </script>
 </body>
 </html>
