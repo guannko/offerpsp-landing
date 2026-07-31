@@ -1,13 +1,13 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-07-31
+Updated: 2026-08-01
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
 ## Implemented locally
 
-Status: `PARTIAL` until the production rollout and real-account checks are complete.
+Status: `PARTIAL` until the grant hotfix and real-account production E2E are complete.
 
 ### Private PSP supply and offers
 
@@ -65,11 +65,20 @@ Status: `PARTIAL` until the production rollout and real-account checks are compl
 - [x] Batch route/anomaly counts and guarded publish action.
 - [x] Matching v2 and current pipeline statuses in the lead drawer.
 
+### Production grant hotfix
+
+- [x] Added `20260801_offerpsp_authenticated_lead_grants.sql` after production E2E
+  proved that staff UPDATE/DELETE policies existed without table privileges.
+- [x] The migration grants only UPDATE/DELETE to `authenticated`; existing RLS still
+  limits those operations to active OfferPSP staff.
+
 ## Verified locally
 
-Status: `VERIFIED` on 2026-07-31 in an ephemeral PostgreSQL-compatible PGlite database.
+Status: `VERIFIED` on 2026-08-01 in an ephemeral PostgreSQL-compatible PGlite database.
 
-- [x] All six existing migrations and the three new migrations apply in dependency order.
+- [x] All six existing migrations, the three platform migrations and the grant hotfix
+  apply in dependency order.
+- [x] `authenticated` has lead UPDATE/DELETE privileges while `anon` does not.
 - [x] BRPay parses and imports as exactly 15 draft routes.
 - [x] Antarex parses and imports as exactly 20 draft routes.
 - [x] Open error anomalies prevent draft publication.
@@ -87,28 +96,38 @@ Local verification does not replace testing with real Supabase staff and client 
 
 ## Implemented but not deployed
 
-Status: `BLOCKED` pending Boris approval after read-only production preflight.
+Status: `BLOCKED` pending approval for one new production DDL migration.
 
-- [ ] `20260731_offerpsp_private_supply.sql` is not applied to production.
-- [ ] `20260731_offerpsp_route_matching.sql` is not applied to production.
-- [ ] `20260731_offerpsp_introduction_pipeline.sql` is not applied to production.
-- [ ] BRPay and Antarex prepared payloads are not imported into production Supabase.
-- [ ] No BRPay or Antarex rate card has been published.
-- [ ] Antarex margin is intentionally unset pending a value from Boris.
-- [ ] Updated client and staff frontends are not deployed to production.
-- [ ] Production route matching still uses the previously deployed implementation until rollout.
-- [ ] A true production E2E with separate staff and client accounts has not been run.
+- [x] Production preflight and private DDL/data snapshot completed and verified.
+- [x] Production migration `offerpsp_private_supply` applied as version `20260731223317`.
+- [x] Production migration `offerpsp_route_matching` applied as version `20260731223422`.
+- [x] Production migration `offerpsp_introduction_pipeline` applied as version `20260731223603`.
+- [x] All three migration records, tables, RPCs, RLS boundaries and grants were checked.
+- [x] Legacy production data remained unchanged after the three platform migrations.
+- [x] BRPay imported as `PSP-000001`: 15 draft routes, 12 open errors, 18 warnings.
+- [x] Antarex imported as `PSP-000002`: 20 draft routes, 26 open errors, 29 warnings.
+- [x] BRPay and Antarex have zero published batches and routes.
+- [x] Antarex margin remains unset; margin policy count is zero.
+- [x] Frontend SHA `319160c4585f4f9783e2be778fe1cdadb0090b1c` promoted to production Vercel.
+- [x] Production landing, RU/EN client login and RU/EN staff login screens were visually checked.
+- [x] n8n inbound workflow remains active and validates with zero errors/warnings.
+- [ ] `20260801_offerpsp_authenticated_lead_grants.sql` is locally verified but not applied to production.
+- [ ] Production E2E with separate staff/client users reached auth separation and a clean
+  isolated route, then stopped at staff lead UPDATE with PostgreSQL `42501`.
+- [x] The failed E2E fixture was made inert: provider archived, route archived, batch
+  superseded, test lead closed and test staff deactivated.
 
-Production rollout order:
+Open production verification:
 
-1. read-only schema, RLS, function, n8n dependency, auth and Vercel preflight;
-2. explicit Boris approval;
-3. apply the three migrations in filename order;
-4. verify functions and privileges;
-5. import BRPay and Antarex as drafts only;
-6. deploy frontend;
-7. run separate-account staff/client E2E;
-8. keep every rate card with open error anomalies unpublished.
+1. approve and apply `20260801_offerpsp_authenticated_lead_grants.sql`;
+2. verify grants and confirm a non-staff client still cannot update leads;
+3. reactivate the isolated E2E staff account;
+4. rerun `route → matching → shortlist → client → dossier → PSP review → Telegram → Zoom → won`;
+5. archive the E2E fixture again and keep BRPay/Antarex unpublished.
+
+Security note: Supabase advisor reports `offerpsp_client_shortlist` as a
+`SECURITY DEFINER` view. Anonymous access is revoked and the view filters on
+`auth.uid()`, but separate-client isolation must be rechecked in the completed E2E.
 
 ## Truly not implemented
 

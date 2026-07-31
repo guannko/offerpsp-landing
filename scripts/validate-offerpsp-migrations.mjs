@@ -100,6 +100,7 @@ async function applyMigrations() {
     "20260731_offerpsp_private_supply.sql",
     "20260731_offerpsp_route_matching.sql",
     "20260731_offerpsp_introduction_pipeline.sql",
+    "20260801_offerpsp_authenticated_lead_grants.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -115,6 +116,19 @@ async function applyMigrations() {
       throw new Error(`Migration ${migrationName} failed: ${error.message}`);
     }
   }
+}
+
+async function verifyLeadGrants() {
+  const result = await query(`select
+    has_table_privilege('authenticated', 'public.offerpsp_leads', 'UPDATE') as authenticated_update,
+    has_table_privilege('authenticated', 'public.offerpsp_leads', 'DELETE') as authenticated_delete,
+    has_table_privilege('anon', 'public.offerpsp_leads', 'UPDATE') as anon_update,
+    has_table_privilege('anon', 'public.offerpsp_leads', 'DELETE') as anon_delete`);
+  const grants = result.rows[0];
+  if (!grants.authenticated_update || !grants.authenticated_delete || grants.anon_update || grants.anon_delete) {
+    throw new Error("OfferPSP lead table grants do not match the staff RLS model");
+  }
+  process.stdout.write("PASS authenticated lead UPDATE/DELETE grants with anon denied\n");
 }
 
 async function seedUsers() {
@@ -378,6 +392,7 @@ async function runEndToEndFixture() {
 try {
   await bootstrap();
   await applyMigrations();
+  await verifyLeadGrants();
   await seedUsers();
   await importPreparedDrafts();
   await runEndToEndFixture();
