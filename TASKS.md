@@ -7,7 +7,7 @@ Code or a passing local test is not evidence that production has been updated.
 
 ## Implemented locally
 
-Status: `PARTIAL` until the grant hotfix and real-account production E2E are complete.
+Status: `VERIFIED` for the rollout scope completed on 2026-08-01.
 
 ### Private PSP supply and offers
 
@@ -96,7 +96,7 @@ Local verification does not replace testing with real Supabase staff and client 
 
 ## Implemented but not deployed
 
-Status: `BLOCKED` pending approval for one new production DDL migration.
+Status: `VERIFIED` — no completed rollout item remains undeployed.
 
 - [x] Production preflight and private DDL/data snapshot completed and verified.
 - [x] Production migration `offerpsp_private_supply` applied as version `20260731223317`.
@@ -111,19 +111,16 @@ Status: `BLOCKED` pending approval for one new production DDL migration.
 - [x] Frontend SHA `319160c4585f4f9783e2be778fe1cdadb0090b1c` promoted to production Vercel.
 - [x] Production landing, RU/EN client login and RU/EN staff login screens were visually checked.
 - [x] n8n inbound workflow remains active and validates with zero errors/warnings.
-- [ ] `20260801_offerpsp_authenticated_lead_grants.sql` is locally verified but not applied to production.
-- [ ] Production E2E with separate staff/client users reached auth separation and a clean
-  isolated route, then stopped at staff lead UPDATE with PostgreSQL `42501`.
-- [x] The failed E2E fixture was made inert: provider archived, route archived, batch
-  superseded, test lead closed and test staff deactivated.
+- [x] Production migration `offerpsp_authenticated_lead_grants` applied as version `20260731230340`.
+- [x] `authenticated` has lead UPDATE/DELETE privileges; `anon` does not.
+- [x] Separate authenticated client UPDATE and DELETE attempts affected zero rows.
+- [x] Separate active staff UPDATE affected exactly one lead.
+- [x] Production E2E completed:
+  `route → matching → shortlist → client → dossier → PSP needs info → accepted → Telegram → Zoom → won`.
+- [x] The E2E fixture is inert again: provider and route archived, batch superseded,
+  test leads closed and unlinked, test shortlists archived and test staff deactivated.
 
-Open production verification:
-
-1. approve and apply `20260801_offerpsp_authenticated_lead_grants.sql`;
-2. verify grants and confirm a non-staff client still cannot update leads;
-3. reactivate the isolated E2E staff account;
-4. rerun `route → matching → shortlist → client → dossier → PSP review → Telegram → Zoom → won`;
-5. archive the E2E fixture again and keep BRPay/Antarex unpublished.
+Production rollout verification is complete. BRPay and Antarex remain draft-only.
 
 Security note: Supabase advisor reports `offerpsp_client_shortlist` as a
 `SECURITY DEFINER` view. Anonymous access is revoked and the view filters on
