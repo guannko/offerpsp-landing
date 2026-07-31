@@ -16,9 +16,18 @@ const i18n = window.offerPspI18n;
 const STATUS_LABELS = {
   new: "New",
   qualifying: "Qualifying",
+  needs_clarification: "Needs clarification",
   matching: "Matching",
   shortlist_ready: "Shortlist ready",
   shared: "Shared",
+  option_selected: "Option selected",
+  dossier_ready: "Dossier ready",
+  provider_reviewing: "PSP review",
+  provider_needs_info: "PSP needs info",
+  provider_accepted: "PSP accepted",
+  provider_declined: "PSP declined",
+  telegram_created: "Telegram introduction",
+  zoom_scheduled: "Zoom scheduled",
   negotiating: "Negotiating",
   won: "Won",
   lost: "Lost",
@@ -35,6 +44,11 @@ const state = {
   shortlists: [],
   conversationId: null,
   messages: [],
+  supply: {
+    providers: [],
+    batches: [],
+  },
+  rateCardPayload: null,
   lastUpdatedAt: null,
 };
 
@@ -77,6 +91,18 @@ const elements = {
   funnelMatchedBar: document.getElementById("funnelMatchedBar"),
   funnelIntroducedBar: document.getElementById("funnelIntroducedBar"),
   funnelWonBar: document.getElementById("funnelWonBar"),
+  providerCount: document.getElementById("providerCount"),
+  batchCount: document.getElementById("batchCount"),
+  rateCardImportForm: document.getElementById("rateCardImportForm"),
+  rateCardFileInput: document.getElementById("rateCardFileInput"),
+  rateCardPreview: document.getElementById("rateCardPreview"),
+  importRateCardButton: document.getElementById("importRateCardButton"),
+  supplyStatus: document.getElementById("supplyStatus"),
+  refreshSupplyButton: document.getElementById("refreshSupplyButton"),
+  supplyLoadingState: document.getElementById("supplyLoadingState"),
+  supplyEmptyState: document.getElementById("supplyEmptyState"),
+  providerList: document.getElementById("providerList"),
+  batchList: document.getElementById("batchList"),
   drawerBackdrop: document.getElementById("drawerBackdrop"),
   leadDrawer: document.getElementById("leadDrawer"),
   closeDrawerButton: document.getElementById("closeDrawerButton"),
@@ -117,6 +143,11 @@ function setAuthStatus(message = "", type = "") {
 function setDrawerStatus(message = "", type = "") {
   elements.drawerStatusMessage.textContent = message;
   elements.drawerStatusMessage.className = `form-status${type ? ` ${type}` : ""}`;
+}
+
+function setSupplyStatus(message = "", type = "") {
+  elements.supplyStatus.textContent = message;
+  elements.supplyStatus.className = `form-status${type ? ` ${type}` : ""}`;
 }
 
 function showToast(message) {
@@ -208,12 +239,186 @@ async function enterApp(session) {
     elements.userRole.textContent = state.staff.role;
     elements.authView.classList.add("is-hidden");
     elements.appView.classList.remove("is-hidden");
-    await loadLeads();
+    await Promise.all([loadLeads(), loadSupply()]);
   } catch (error) {
     setAuthStatus(error.message || "Could not verify access.", "error");
     elements.appView.classList.add("is-hidden");
     elements.authView.classList.remove("is-hidden");
   }
+}
+
+async function loadSupply() {
+  elements.supplyLoadingState.classList.remove("is-hidden");
+  elements.supplyEmptyState.classList.add("is-hidden");
+  elements.providerList.classList.add("is-hidden");
+  elements.refreshSupplyButton.disabled = true;
+
+  const { data, error } = await supabase.rpc("list_offerpsp_supply");
+
+  elements.refreshSupplyButton.disabled = false;
+  elements.supplyLoadingState.classList.add("is-hidden");
+  if (error) {
+    elements.providerCount.textContent = "—";
+    elements.batchCount.textContent = "—";
+    elements.supplyEmptyState.textContent = "Private supply is unavailable until its database migration is applied.";
+    elements.supplyEmptyState.classList.remove("is-hidden");
+    return;
+  }
+
+  state.supply = {
+    providers: Array.isArray(data?.providers) ? data.providers : [],
+    batches: Array.isArray(data?.batches) ? data.batches : [],
+  };
+  renderSupply();
+}
+
+function renderSupply() {
+  const { providers, batches } = state.supply;
+  elements.providerCount.textContent = String(providers.length);
+  elements.batchCount.textContent = String(batches.length);
+  elements.supplyEmptyState.classList.toggle("is-hidden", providers.length > 0);
+  elements.providerList.classList.toggle("is-hidden", providers.length === 0);
+  elements.providerList.innerHTML = providers.map((provider) => `
+    <article class="provider-card">
+      <div class="provider-card-head">
+        <div>
+          <strong>${escapeHtml(provider.brand_name)}</strong>
+          <small>${escapeHtml(provider.internal_code)}</small>
+        </div>
+        <span class="status-pill status-${escapeHtml(provider.relationship_status)}">${escapeHtml(provider.relationship_status)}</span>
+      </div>
+      <dl>
+        <div><dt>Rate cards</dt><dd>${Number(provider.batch_count || 0)}</dd></div>
+        <div><dt>Published routes</dt><dd>${Number(provider.published_route_count || 0)}</dd></div>
+        <div><dt>Client rate</dt><dd>${provider.margin_included_default ? "Included by PSP" : "Margin policy"}</dd></div>
+      </dl>
+    </article>
+  `).join("");
+
+  if (!batches.length) {
+    elements.batchList.innerHTML = '<div class="supply-empty">No import batches yet.</div>';
+    return;
+  }
+
+  elements.batchList.innerHTML = batches.map((batch) => {
+    const canPublish = ["draft", "review"].includes(batch.status);
+    return `
+      <article class="batch-card">
+        <div class="batch-main">
+          <div class="batch-title">
+            <strong>${escapeHtml(batch.provider_name)}</strong>
+            <span>v${Number(batch.batch_version || 0)}</span>
+            <span class="status-pill status-${escapeHtml(batch.status)}">${escapeHtml(batch.status)}</span>
+          </div>
+          <p>${escapeHtml(batch.source_reference || batch.source_type)} · ${formatDate(batch.source_effective_date || batch.received_at)}</p>
+        </div>
+        <div class="batch-metrics">
+          <span><strong>${Number(batch.route_count || 0)}</strong> routes</span>
+          <span class="${Number(batch.open_anomaly_count || 0) > 0 ? "has-warning" : ""}"><strong>${Number(batch.open_anomaly_count || 0)}</strong> open checks</span>
+        </div>
+        ${canPublish ? `<button class="button button-secondary button-compact publish-batch-button" type="button" data-batch-id="${escapeHtml(batch.id)}">Publish</button>` : ""}
+      </article>
+    `;
+  }).join("");
+
+  elements.batchList.querySelectorAll(".publish-batch-button").forEach((button) => {
+    button.addEventListener("click", () => publishRateCard(button.dataset.batchId, button));
+  });
+}
+
+function validateRateCardPayload(payload) {
+  if (!payload || typeof payload !== "object") throw new Error("The JSON payload is empty.");
+  if (!payload.provider?.brand_name) throw new Error("Provider brand_name is required.");
+  if (!payload.batch?.source_text) throw new Error("Original rate-card source text is required.");
+  if (!Array.isArray(payload.batch?.routes)) throw new Error("The rate-card routes must be an array.");
+  return payload;
+}
+
+async function readRateCardFile(file) {
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) throw new Error("The prepared JSON file must be smaller than 10 MB.");
+  const payload = validateRateCardPayload(JSON.parse(await file.text()));
+  state.rateCardPayload = payload;
+  elements.rateCardPreview.innerHTML = `
+    <strong>${escapeHtml(payload.provider.brand_name)}</strong>
+    <span>${payload.batch.routes.length} routes · ${escapeHtml(payload.batch.source_reference || payload.batch.source_type || "rate card")}</span>
+  `;
+  elements.rateCardPreview.classList.remove("is-hidden");
+  setSupplyStatus();
+}
+
+async function importRateCard(event) {
+  event.preventDefault();
+  if (!state.rateCardPayload) {
+    setSupplyStatus("Choose a valid prepared JSON file first.", "error");
+    return;
+  }
+
+  const { provider, batch } = state.rateCardPayload;
+  setButtonLoading(elements.importRateCardButton, true, "Importing…");
+  setSupplyStatus();
+
+  try {
+    const existing = state.supply.providers.find(
+      (item) => item.brand_name.toLowerCase() === provider.brand_name.toLowerCase(),
+    );
+    const { data: savedProvider, error: providerError } = await supabase.rpc("upsert_offerpsp_provider", {
+      p_brand_name: provider.brand_name,
+      p_internal_code: existing?.internal_code || null,
+      p_legal_name: provider.legal_name || null,
+      p_website: provider.website || null,
+      p_relationship_status: provider.relationship_status || "onboarding",
+      p_strategic_priority: provider.strategic_priority ?? 50,
+      p_margin_included_default: Boolean(provider.margin_included_default),
+      p_relationship_notes: provider.relationship_notes || "Imported from a prepared rate-card payload",
+    });
+    if (providerError) throw providerError;
+
+    const { data: imported, error: importError } = await supabase.rpc("import_offerpsp_rate_card", {
+      p_provider_code: savedProvider.internal_code,
+      p_source_type: batch.source_type || "document",
+      p_source_text: batch.source_text,
+      p_source_reference: batch.source_reference || null,
+      p_source_effective_date: batch.source_effective_date || null,
+      p_parser_version: batch.parser_version || "manual-v1",
+      p_parser_metadata: batch.parser_metadata || {},
+      p_routes: batch.routes,
+    });
+    if (importError) throw importError;
+
+    const message = imported.duplicate
+      ? "This exact source was already imported; no duplicate was created."
+      : `Private draft imported: ${imported.route_count} routes, ${imported.anomaly_count} checks.`;
+    setSupplyStatus(message, "success");
+    state.rateCardPayload = null;
+    elements.rateCardImportForm.reset();
+    elements.rateCardPreview.classList.add("is-hidden");
+    await loadSupply();
+  } catch (error) {
+    setSupplyStatus(error.message || "Could not import the rate card.", "error");
+  } finally {
+    setButtonLoading(elements.importRateCardButton, false);
+  }
+}
+
+async function publishRateCard(batchId, button) {
+  const batch = state.supply.batches.find((item) => item.id === batchId);
+  if (!batch) return;
+  const confirmed = window.confirm(
+    `Publish ${batch.provider_name} rate card v${batch.batch_version}? It will replace the provider's currently published routes.`,
+  );
+  if (!confirmed) return;
+
+  setButtonLoading(button, true, "Publishing…");
+  setSupplyStatus();
+  const { data, error } = await supabase.rpc("publish_offerpsp_rate_card", { p_batch_id: batchId });
+  setButtonLoading(button, false);
+  if (error) {
+    setSupplyStatus(error.message, "error");
+    return;
+  }
+  setSupplyStatus(`${data.provider_code} published with ${data.route_count} routes.`, "success");
+  await loadSupply();
 }
 
 async function loadLeads() {
@@ -490,29 +695,9 @@ function renderTasks() {
 }
 
 async function loadMatches(leadId) {
-  const { data, error } = await supabase
-    .from("offerpsp_matches")
-    .select(`
-      id,
-      score,
-      eligibility,
-      strengths,
-      risks,
-      explanation,
-      generated_at,
-      psp_providers (
-        id,
-        name,
-        website,
-        geo,
-        specialization,
-        methods,
-        provider_status
-      )
-    `)
-    .eq("lead_id", leadId)
-    .order("score", { ascending: false })
-    .limit(15);
+  const { data, error } = await supabase.rpc("list_offerpsp_route_matches", {
+    p_lead_id: leadId,
+  });
 
   if (error) {
     elements.matchSummary.textContent = "Could not load candidates";
@@ -527,7 +712,7 @@ async function loadMatches(leadId) {
 function renderMatches() {
   const currentShortlist = state.shortlists[0];
   elements.matchSummary.textContent = state.matches.length
-    ? `${state.matches.length} candidates · ${currentShortlist?.status === "shared" ? "shortlist shared" : "draft shortlist ready"}`
+    ? `${state.matches.length} candidates · ${currentShortlist?.status === "shared" ? "shortlist shared" : currentShortlist ? "draft shortlist ready" : "review eligible routes"}`
     : "No candidates generated yet";
   elements.shareShortlistButton.classList.toggle(
     "is-hidden",
@@ -540,14 +725,13 @@ function renderMatches() {
   }
 
   elements.matchesList.innerHTML = state.matches.slice(0, 5).map((match, index) => {
-    const provider = match.psp_providers || {};
     const strengths = Array.isArray(match.strengths) ? match.strengths.join(" · ") : "";
     return `
       <article class="match-card">
         <span class="match-rank">#${index + 1}</span>
         <div class="match-info">
-          <strong>${escapeHtml(cleanText(provider.name))}</strong>
-          <p>${escapeHtml(strengths || match.explanation || "Manual verification required")}</p>
+          <strong>${escapeHtml(cleanText(match.provider_name))} · ${escapeHtml(cleanText(match.client_title))}</strong>
+          <p>${escapeHtml(strengths || "Manual verification required")}</p>
         </div>
         <span class="match-score">${escapeHtml(match.score)}</span>
       </article>
@@ -576,7 +760,7 @@ async function runMatching() {
   setButtonLoading(elements.runMatchingButton, true, "Matching…");
   setDrawerStatus();
 
-  const { data, error } = await supabase.rpc("rebuild_offerpsp_matches", {
+  const { data, error } = await supabase.rpc("rebuild_offerpsp_route_matches", {
     p_lead_id: state.selectedLead.lead_id,
   });
 
@@ -584,6 +768,30 @@ async function runMatching() {
     setButtonLoading(elements.runMatchingButton, false);
     setDrawerStatus(error.message, "error");
     return;
+  }
+
+  if ((data?.match_count || 0) > 0) {
+    const { data: matches, error: matchesError } = await supabase.rpc("list_offerpsp_route_matches", {
+      p_lead_id: state.selectedLead.lead_id,
+    });
+    if (matchesError) {
+      setButtonLoading(elements.runMatchingButton, false);
+      setDrawerStatus(matchesError.message, "error");
+      return;
+    }
+
+    const selectedMatchIds = (matches || []).slice(0, 5).map((match) => match.match_id);
+    const { error: shortlistError } = await supabase.rpc("create_offerpsp_route_shortlist", {
+      p_lead_id: state.selectedLead.lead_id,
+      p_route_match_ids: selectedMatchIds,
+      p_title: "Recommended payment routes",
+      p_introduction: "These anonymous options passed the current eligibility checks and were reviewed by OfferPSP.",
+    });
+    if (shortlistError) {
+      setButtonLoading(elements.runMatchingButton, false);
+      setDrawerStatus(shortlistError.message, "error");
+      return;
+    }
   }
 
   await Promise.all([
@@ -603,7 +811,9 @@ async function runMatching() {
 
   setButtonLoading(elements.runMatchingButton, false);
   setDrawerStatus(
-    `Matching complete: ${data?.match_count ?? state.matches.length} candidates, grade ${data?.quality_grade ?? "—"}.`,
+    data?.status === "needs_clarification"
+      ? `Matching needs clarification: ${(data.missing_fields || []).join(", ")}.`
+      : `Matching complete: ${data?.match_count ?? state.matches.length} eligible routes.`,
     "success",
   );
 }
@@ -945,6 +1155,17 @@ elements.signOutButton.addEventListener("click", async () => {
 });
 
 elements.refreshButton.addEventListener("click", loadLeads);
+elements.refreshSupplyButton.addEventListener("click", loadSupply);
+elements.rateCardFileInput.addEventListener("change", async () => {
+  try {
+    await readRateCardFile(elements.rateCardFileInput.files?.[0]);
+  } catch (error) {
+    state.rateCardPayload = null;
+    elements.rateCardPreview.classList.add("is-hidden");
+    setSupplyStatus(error.message || "Could not read the prepared JSON file.", "error");
+  }
+});
+elements.rateCardImportForm.addEventListener("submit", importRateCard);
 elements.searchInput.addEventListener("input", renderLeads);
 elements.statusFilter.addEventListener("change", renderLeads);
 elements.closeDrawerButton.addEventListener("click", closeDrawer);
@@ -968,6 +1189,7 @@ window.addEventListener("offerpsp:languagechange", () => {
   }
   renderStats();
   renderLeads();
+  renderSupply();
   if (state.selectedLead) {
     renderProfile(state.selectedLead);
     renderActivities();

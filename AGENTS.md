@@ -13,8 +13,10 @@ Its job is to:
 2. collect and normalize current PSP offers;
 3. match a merchant request to suitable payment routes;
 4. show the merchant anonymous, client-safe options;
-5. organize a shared Telegram introduction with the selected PSP;
-6. help the parties reach a Zoom call and agree on cooperation.
+5. prepare a complete merchant dossier for the selected PSP;
+6. obtain the PSP's explicit approval of the merchant;
+7. organize a shared Telegram introduction only after approval;
+8. help the parties reach a Zoom call and agree on cooperation.
 
 OfferPSP is not a public PSP directory or an affiliate link catalogue.
 
@@ -54,6 +56,31 @@ Several PSPs may compete in the same niche.
 - Store separately: partner/base rate, OfferPSP markup and client rate.
 - Markup must support percentage points, relative percentage, fixed fee and hybrid rules,
   with provider defaults and per-offer overrides.
+
+## Merchant qualification and PSP approval
+
+- PSPs do not accept every merchant; matching an offer does not mean the provider accepts
+  the lead.
+- Before a selected merchant is introduced, staff must send the real PSP a structured
+  merchant dossier for review.
+- The minimum dossier includes the merchant/company and contact, product or casino URL,
+  operating and target GEOs, vertical, licence status and jurisdiction, expected monthly
+  processing volume with currency, requested payment methods and other material risk or
+  operational information.
+- A PSP can `accept`, `decline` or `request_more_information`.
+- Do not create the shared Telegram group or reveal the PSP to the merchant until the PSP
+  explicitly accepts.
+- If a PSP declines, keep its identity confidential and continue with another suitable
+  option.
+
+## Research references
+
+- PSP discovery and competitive research:
+  `https://www.aboutpayments.com/en-us/provider-selector`
+- Client-workflow UX reference:
+  `https://design-system.service.gov.uk/components/task-list/`
+
+The GOV.UK link is a task-list UX pattern, not a PSP directory.
 
 ## Sources
 
@@ -98,4 +125,3 @@ version and Vercel deployment.
   workflow stages.
 - A Telegram bot cannot create a group through the regular Bot API. Start with a hybrid
   flow: staff creates the group, adds AIBot and records the group link.
-

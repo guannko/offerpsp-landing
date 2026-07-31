@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14,25 +14,31 @@
 
   <main id="authView" class="auth-shell">
     <section class="auth-card">
-      <a class="brand" href="/">
-        <span class="brand-mark">OP</span>
-        <span>OfferPSP</span>
-      </a>
-      <p class="eyebrow">Client cabinet</p>
-      <h1>Your PSP shortlist, in one place.</h1>
-      <p class="auth-copy">Use the same work email that you submitted in your OfferPSP request.</p>
+      <div class="auth-topline">
+        <a class="brand" href="/">
+          <span class="brand-mark">OP</span>
+          <span>OfferPSP</span>
+        </a>
+        <div class="language-switch" aria-label="Language">
+          <button type="button" data-language="ru">RU</button>
+          <button type="button" data-language="en">EN</button>
+        </div>
+      </div>
+      <p class="eyebrow" data-i18n="clientCabinet">Кабинет клиента</p>
+      <h1 data-i18n="authTitle">Ваши платёжные варианты — в одном месте.</h1>
+      <p class="auth-copy" data-i18n="authCopy">Используйте рабочий email из заявки OfferPSP.</p>
       <form id="loginForm">
         <label>
-          Work email
+          <span data-i18n="workEmail">Рабочий email</span>
           <input id="emailInput" type="email" autocomplete="email" required placeholder="you@company.com">
         </label>
         <label>
-          Password <span>optional</span>
+          <span><span data-i18n="password">Пароль</span> <small data-i18n="optional">необязательно</small></span>
           <input id="passwordInput" type="password" autocomplete="current-password" placeholder="Existing account password">
         </label>
-        <button class="button primary" type="submit">Sign in</button>
-        <button id="googleLoginButton" class="button secondary" type="button">Continue with Google</button>
-        <button id="magicLinkButton" class="button secondary" type="button">Send secure login link</button>
+        <button class="button primary" type="submit" data-i18n="signIn">Войти</button>
+        <button id="googleLoginButton" class="button secondary" type="button" data-i18n="continueGoogle">Продолжить с Google</button>
+        <button id="magicLinkButton" class="button secondary" type="button" data-i18n="sendLoginLink">Отправить безопасную ссылку</button>
       </form>
       <p id="authStatus" class="status" role="status" aria-live="polite"></p>
     </section>
@@ -45,77 +51,75 @@
         <span>OfferPSP</span>
       </a>
       <div class="header-actions">
+        <div class="language-switch" aria-label="Language">
+          <button type="button" data-language="ru">RU</button>
+          <button type="button" data-language="en">EN</button>
+        </div>
         <span id="userEmail"></span>
-        <button id="signOutButton" class="text-button" type="button">Sign out</button>
+        <button id="signOutButton" class="text-button" type="button" data-i18n="signOut">Выйти</button>
       </div>
     </header>
 
     <div class="portal-main">
       <section id="noRequestState" class="empty-card is-hidden">
         <span class="empty-mark">◇</span>
-        <h1>No request is linked to this email yet.</h1>
-        <p>Submit a request using this work email or contact your OfferPSP manager.</p>
-        <a class="button primary" href="/#request">Submit a request</a>
+        <h1 data-i18n="noRequestTitle">Для этого email пока нет заявки.</h1>
+        <p data-i18n="noRequestCopy">Отправьте заявку с этим рабочим email или свяжитесь с менеджером OfferPSP.</p>
+        <a class="button primary" href="/#request" data-i18n="submitRequest">Отправить заявку</a>
       </section>
 
       <div id="requestView" class="is-hidden">
         <section class="hero-card">
           <div>
-            <p class="eyebrow">Payment partner search</p>
+            <p class="eyebrow" data-i18n="paymentSearch">Подбор платёжного решения</p>
             <h1 id="companyName">Your request</h1>
             <p id="requestMeta" class="hero-copy"></p>
           </div>
           <span id="statusPill" class="status-pill">In review</span>
         </section>
 
-        <section class="progress-card">
+        <section class="progress-card next-action-card">
           <div class="progress-head">
             <div>
-              <p class="eyebrow">Progress</p>
-              <h2>Where your request stands</h2>
+              <p class="eyebrow" data-i18n="nextStep">Следующий шаг</p>
+              <h2 id="nextActionTitle">Сверьте подходящие варианты</h2>
             </div>
-            <span id="progressLabel">Qualification</span>
+            <span id="progressLabel">OfferPSP</span>
           </div>
-          <div class="progress-track">
-            <span id="progressFill"></span>
-          </div>
-          <div class="progress-labels">
-            <span>Submitted</span>
-            <span>Qualified</span>
-            <span>Matched</span>
-            <span>Introductions</span>
-          </div>
+          <p id="nextActionText" class="next-action-copy"></p>
         </section>
 
         <section class="section-block">
           <div class="section-head">
             <div>
-              <p class="eyebrow">Curated for your profile</p>
-              <h2>Your PSP shortlist</h2>
+              <p class="eyebrow" data-i18n="curated">Подобрано под ваш профиль</p>
+              <h2 data-i18n="yourOptions">Ваши платёжные варианты</h2>
             </div>
             <span id="shortlistUpdated" class="muted"></span>
           </div>
           <div id="shortlistPending" class="pending-card">
             <span class="pulse"></span>
             <div>
-              <strong>Matching is in progress</strong>
-              <p>We are checking your requirements against the PSP database. Reviewed recommendations will appear here.</p>
+              <strong data-i18n="matchingProgress">Идёт подбор</strong>
+              <p data-i18n="matchingCopy">Мы сверяем требования с приватной базой PSP. Здесь появятся только проверенные варианты.</p>
             </div>
           </div>
           <div id="shortlistGrid" class="shortlist-grid is-hidden"></div>
+          <div id="selectedSummary" class="selected-summary is-hidden"></div>
+          <p id="optionStatus" class="status" role="status" aria-live="polite"></p>
         </section>
 
         <section class="section-block conversation-block">
           <div class="section-head">
             <div>
-              <p class="eyebrow">Direct line</p>
-              <h2>Conversation</h2>
+              <p class="eyebrow" data-i18n="directLine">Прямая связь</p>
+              <h2 data-i18n="conversation">Переписка</h2>
             </div>
           </div>
           <div id="messageList" class="message-list"></div>
           <form id="messageForm" class="message-form">
-            <textarea id="messageInput" rows="3" placeholder="Ask a question or share an update…" required></textarea>
-            <button class="button primary" type="submit">Send message</button>
+            <textarea id="messageInput" rows="3" data-i18n-placeholder="messagePlaceholder" placeholder="Задайте вопрос или сообщите обновление…" required></textarea>
+            <button class="button primary" type="submit" data-i18n="sendMessage">Отправить</button>
           </form>
           <p id="messageStatus" class="status" role="status" aria-live="polite"></p>
         </section>

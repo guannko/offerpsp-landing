@@ -1,113 +1,175 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-07-30
+Updated: 2026-07-31
 
-## Current verified production
+This file separates local implementation from local verification and production state.
+Code or a passing local test is not evidence that production has been updated.
 
-- `https://offerpsp.com` is deployed on Vercel.
-- `/admin/` supports staff authentication with Google.
-- Admin UI is RU-first with an RU/EN switch.
-- Merchant form saves leads and sends Telegram/email notifications through AIBot.
-- Lead quality scoring and deterministic provider-level matching run in Supabase.
-- Admin lead inbox, filters, lead drawer, notes, tasks, shortlist and messages load.
-- `/portal/` supports Google authentication and lead claiming by matching email.
-- Shortlist sharing updates the lead/shortlist state.
-- Provider-confidentiality hotfix is applied:
-  - client shortlist no longer exposes provider name, website or internal IDs;
-  - random client option codes are generated;
-  - non-owner authenticated users receive zero client shortlist rows;
-  - clients cannot read internal match or shortlist-item rows.
+## Implemented locally
 
-## Important current limitations
+Status: `PARTIAL` until the production rollout and real-account checks are complete.
 
-- Matching still uses legacy provider-level records, not normalized offer routes.
-- The client portal UX is not intuitive and remains EN-only.
-- The portal does not yet support interested/not-suitable/need-details actions.
-- There is no `Request introduction` workflow yet.
-- Introduction/Telegram/Zoom stages are not yet in the database pipeline.
-- PSP offer ingestion, versioning, markup and admin management are not implemented.
-- `psp_providers` is a legacy public table used by existing anonymous n8n REST workflows.
-  Provider supply must move to a private/staff-only model after n8n receives a service
-  credential.
-- A real client-login test must use a separate/private browser session; an admin Supabase
-  session on the same origin is not a client test.
-- This document describes the current platform checkpoint; verify the active GitHub branch and deployment before continuing.
+### Private PSP supply and offers
 
-## Next architecture implementation
+- [x] Private provider register with automatic `PSP-xxxxxx` internal codes.
+- [x] Provider contacts, relationship status and strategic priority.
+- [x] Immutable rate-card source batches with versions and source hashes.
+- [x] Normalized offer routes with automatic `OFF-xxxxxx` codes.
+- [x] GEO, currency, flow, method, traffic, vertical, integration, volume and limit dimensions.
+- [x] Separate PSP base fees, OfferPSP margin policies and calculated client fees.
+- [x] Fee components, transaction limits, settlement terms, risk fields and parser anomalies.
+- [x] Staff-only RPCs for provider upsert, private draft import, supply listing and guarded publication.
+- [x] Client-safe immutable route snapshots without provider identity, base fees or margin rules.
 
-### 1. Private supply model
+### Source ingestion
 
-- [ ] Create internal provider table and automatic internal codes.
-- [ ] Create provider contacts and relationship status.
-- [ ] Create rate-card batches with immutable raw source/versioning.
-- [ ] Create normalized offer routes and canonical niche dimensions.
-- [ ] Create fee components, limits, settlement and risk terms.
-- [ ] Create provider/route margin policies.
-- [ ] Create client offer snapshots without provider identity.
-- [ ] Migrate legacy providers safely.
+- [x] Deterministic text parser for the supplied BRPay and Antarex sources.
+- [x] One source can produce multiple normalized draft routes.
+- [x] Raw source and SHA-256 metadata are preserved in the private payload.
+- [x] Duplicate blocks, missing dimensions, malformed limits and ambiguous settlement rules are flagged.
+- [x] Exact-source imports are idempotent per provider.
+- [x] Prepared payloads are stored under gitignored `.private/` with mode `0600`.
 
-### 2. Offer ingestion
+### Matching v2
 
-- [ ] Paste/import raw Telegram offer.
-- [ ] Parse one source into multiple route drafts.
-- [ ] Detect duplicate blocks and previous-version changes.
-- [ ] Flag malformed or ambiguous fields.
-- [ ] Provide staff review and publish workflow.
-- [ ] Add CSV/Google Sheets import after the text workflow works.
-- [ ] Add n8n partner-update reminders and stale-offer alerts.
+- [x] Route-level hard gates for GEO, blocked GEO, currency, flow, method, traffic,
+  vertical, monthly volume and transaction limits.
+- [x] Structured merchant request fields and `needs_clarification` handling.
+- [x] Client-rate calculation through provider/route/merchant margin policies.
+- [x] Staff matching action uses private route matches instead of the legacy provider card.
+- [x] Draft shortlist creation uses client-safe snapshots and requires current published routes.
 
-### 3. Seed/reference partners
+### Client cabinet
 
-- [ ] Import BR-Pay rate card dated 2026-07-23 as a draft batch.
-- [ ] Set BR-Pay as strategic priority with margin normally included.
-- [ ] Import Antarex source as a draft batch.
-- [ ] Configure Antarex margin as not included.
-- [ ] Ask Boris for the default Antarex PayIn/PayOut markup before publication.
-- [ ] Ingest additional provider examples before finalizing parser edge cases.
+- [x] RU is the default language; RU/EN switch is available.
+- [x] Guided next action replaces the progress-heavy layout.
+- [x] Anonymous route details, limits, settlement and final client fees are shown.
+- [x] `Interested`, `Need details` and `Not suitable` responses.
+- [x] Selected-option summary and primary `Request introduction` action.
+- [x] Legacy shortlist items cannot request an introduction until reissued from the private route model.
 
-### 4. Matching v2
+### Merchant dossier and introductions
 
-- [ ] Match merchant request to active route niches.
-- [ ] Use hard GEO/currency/flow/method/traffic/limit gates.
-- [ ] Return `needs_clarification` when request data is insufficient.
-- [ ] Calculate final client rates through margin policies.
-- [ ] Rank by fit, freshness, economics, operations and strategic priority.
-- [ ] Require staff confirmation before sharing.
+- [x] Merchant dossier with qualification fields, verification state and missing-field list.
+- [x] Client option selection and introduction request.
+- [x] Staff dossier submission for private PSP review.
+- [x] PSP decisions: `accepted`, `declined`, `needs_info`, including multiple review rounds.
+- [x] Provider identity remains private until an accepted review and managed introduction.
+- [x] Telegram group, Zoom meeting and final `won`/`lost` result records.
+- [x] Pipeline statuses through dossier, PSP review, Telegram, Zoom and result.
 
-### 5. Admin supply desk
+### Current staff UI
 
-- [ ] Add PSP partners section.
-- [ ] Add rate-card inbox and parsing review.
-- [ ] Add GEO/niche coverage matrix.
-- [ ] Show base rate, margin and client rate separately.
-- [ ] Add publish/pause/archive and history.
-- [ ] Add offer freshness and last-verified indicators.
+- [x] Basic private supply register.
+- [x] Upload of a prepared JSON rate card as a private draft.
+- [x] Batch route/anomaly counts and guarded publish action.
+- [x] Matching v2 and current pipeline statuses in the lead drawer.
 
-### 6. Client portal redesign
+## Verified locally
 
-- [ ] Make RU default and add RU/EN.
-- [ ] Replace the current progress-heavy layout with a guided next action.
-- [ ] Show anonymous useful route details and client rates.
-- [ ] Add `Interested`, `Need details`, `Not suitable`.
-- [ ] Add selected-options summary.
-- [ ] Add primary `Request introduction` CTA.
-- [ ] Keep conversation compact and secondary.
+Status: `VERIFIED` on 2026-07-31 in an ephemeral PostgreSQL-compatible PGlite database.
 
-### 7. Introductions
+- [x] All six existing migrations and the three new migrations apply in dependency order.
+- [x] BRPay parses and imports as exactly 15 draft routes.
+- [x] Antarex parses and imports as exactly 20 draft routes.
+- [x] Open error anomalies prevent draft publication.
+- [x] A non-staff authenticated user cannot call the private supply API.
+- [x] Client shortlist output does not contain provider identity, internal route/provider IDs,
+  PSP base rates or margin mode.
+- [x] Rebuilding matching removes stale reviewed route matches without invalidating an existing client snapshot.
+- [x] Full E2E passes:
+  `route → matching → shortlist → client selection → dossier → PSP needs info → second review → PSP accepted → Telegram → Zoom → won`.
+- [x] A repeated Telegram call cannot move an introduction backwards after Zoom is scheduled.
+- [x] JavaScript syntax checks and `git diff --check` pass.
+- [x] Client and staff screens were visually checked at desktop and mobile widths without horizontal overflow.
 
-- [ ] Add `option_selected`, `provider_confirmed`, `telegram_created`,
-  `zoom_scheduled`, `won`, `lost`.
-- [ ] Store selected option, internal provider and responsible manager.
-- [ ] Generate Telegram group name and introduction message.
-- [ ] Store Telegram group link/date.
-- [ ] Store Zoom link/date.
-- [ ] Add AIBot reminders and follow-up.
-- [ ] Track final cooperation result.
+Local verification does not replace testing with real Supabase staff and client accounts.
 
-### 8. Search and PSP acquisition
+## Implemented but not deployed
 
-- [ ] Add `Become an OfferPSP partner` funnel.
-- [ ] Build sanitized SEO pages by GEO/method/vertical.
-- [ ] Generate public content from active routes without provider identity.
-- [ ] Add sitemap/schema/canonical strategy.
-- [ ] Measure search → request → shortlist → introduction → cooperation.
+Status: `BLOCKED` pending Boris approval after read-only production preflight.
+
+- [ ] `20260731_offerpsp_private_supply.sql` is not applied to production.
+- [ ] `20260731_offerpsp_route_matching.sql` is not applied to production.
+- [ ] `20260731_offerpsp_introduction_pipeline.sql` is not applied to production.
+- [ ] BRPay and Antarex prepared payloads are not imported into production Supabase.
+- [ ] No BRPay or Antarex rate card has been published.
+- [ ] Antarex margin is intentionally unset pending a value from Boris.
+- [ ] Updated client and staff frontends are not deployed to production.
+- [ ] Production route matching still uses the previously deployed implementation until rollout.
+- [ ] A true production E2E with separate staff and client accounts has not been run.
+
+Production rollout order:
+
+1. read-only schema, RLS, function, n8n dependency, auth and Vercel preflight;
+2. explicit Boris approval;
+3. apply the three migrations in filename order;
+4. verify functions and privileges;
+5. import BRPay and Antarex as drafts only;
+6. deploy frontend;
+7. run separate-account staff/client E2E;
+8. keep every rate card with open error anomalies unpublished.
+
+## Truly not implemented
+
+Status: `PARTIAL` — these are the actual next P1/P2 tasks after rollout.
+
+### P1 — PSP and route operations
+
+- [ ] Full PSP/contact editor in the staff cabinet.
+- [ ] Route, fee, limit, settlement and anomaly editor.
+- [ ] Anomaly resolution/acceptance UI with audit notes.
+- [ ] Pause, resume and archive controls for individual routes.
+- [ ] Visual version history and comparison between rate-card batches.
+- [ ] Freshness dashboard, last-confirmed controls and stale-offer alerts.
+- [ ] Partner reminders through n8n.
+- [ ] GEO/method/vertical coverage matrix.
+
+### P1 — Deal Desk
+
+- [ ] Staff UI for reviewing and editing the full merchant dossier.
+- [ ] Missing-information workflow linked to client conversation.
+- [ ] Staff controls for PSP submission and review decisions.
+- [ ] Telegram group preparation and stored introduction template.
+- [ ] Zoom scheduling UI and cooperation follow-up controls.
+- [ ] Deal history and result-quality tracking.
+
+The database functions for this pipeline exist locally; the complete operational UI does not.
+
+### P1 — Telegram ingestion
+
+- [ ] Receive a partner rate card directly from Telegram.
+- [ ] Attach the source message/file reference and start parsing automatically.
+- [ ] Send parser errors and duplicate warnings to a staff review queue.
+- [ ] Link Telegram ingestion to partner freshness reminders.
+
+The local parser accepts copied Telegram text, but no Telegram-triggered workflow exists.
+
+### P2 — Analytics
+
+- [ ] Acquisition and campaign attribution.
+- [ ] Lead quality by source, GEO and vertical.
+- [ ] Lead → shortlist → option selected → introduction conversion.
+- [ ] PSP review acceptance, decline and clarification rates.
+- [ ] Introduction → Telegram → Zoom → live cooperation conversion.
+- [ ] Time-to-match, time-to-PSP-decision and time-to-launch.
+- [ ] Processing volume and realized OfferPSP margin by PSP and route.
+
+### P2 — Search and PSP acquisition
+
+- [ ] `Become an OfferPSP partner` funnel.
+- [ ] Reviewed PSP-research source list, starting with AboutPayments and PaymentProviders.io.
+- [ ] Sanitized SEO pages by GEO, method and vertical.
+- [ ] Public content generated from active routes without provider identity.
+- [ ] Sitemap, schema and canonical strategy.
+
+## Production safety rules
+
+- Never treat local tests or documentation as proof of production state.
+- Do not apply production migrations from an uncommitted working tree.
+- Import source offers as drafts only.
+- Do not publish a batch with open `error` anomalies.
+- Do not configure or publish Antarex pricing without Boris providing the margin value.
+- A real client test must use a different authenticated account/session from staff.
+- The legacy public `psp_providers` table remains in place until n8n dependencies are
+  verified and migrated safely.

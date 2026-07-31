@@ -65,6 +65,10 @@
           Tasks
           <span class="soon">Soon</span>
         </button>
+        <button class="nav-item" type="button" data-scroll="supply">
+          <span class="nav-icon">▦</span>
+          PSP supply
+        </button>
         <button class="nav-item" type="button" data-scroll="analytics">
           <span class="nav-icon">↗</span>
           Analytics
@@ -142,9 +146,18 @@
               <option value="all">All statuses</option>
               <option value="new">New</option>
               <option value="qualifying">Qualifying</option>
+              <option value="needs_clarification">Needs clarification</option>
               <option value="matching">Matching</option>
               <option value="shortlist_ready">Shortlist ready</option>
               <option value="shared">Shared</option>
+              <option value="option_selected">Option selected</option>
+              <option value="dossier_ready">Dossier ready</option>
+              <option value="provider_reviewing">PSP review</option>
+              <option value="provider_needs_info">PSP needs info</option>
+              <option value="provider_accepted">PSP accepted</option>
+              <option value="provider_declined">PSP declined</option>
+              <option value="telegram_created">Telegram introduction</option>
+              <option value="zoom_scheduled">Zoom scheduled</option>
               <option value="negotiating">Negotiating</option>
               <option value="won">Won</option>
               <option value="lost">Lost</option>
@@ -176,6 +189,59 @@
             </thead>
             <tbody id="leadsTableBody"></tbody>
           </table>
+        </div>
+      </section>
+
+      <section id="supply" class="panel supply-panel">
+        <div class="panel-head">
+          <div>
+            <h2>Private PSP supply</h2>
+            <p>Import reviewed rate-card drafts without exposing PSP pricing to clients</p>
+          </div>
+          <div class="supply-summary" aria-label="PSP supply summary">
+            <span><strong id="providerCount">—</strong> PSP</span>
+            <span><strong id="batchCount">—</strong> rate cards</span>
+          </div>
+        </div>
+
+        <div class="supply-layout">
+          <form id="rateCardImportForm" class="supply-import-card">
+            <div>
+              <p class="eyebrow">Controlled import</p>
+              <h3>Upload prepared rate card</h3>
+              <p>The file creates or updates the PSP and stores the original source, routes and parser warnings as a private draft.</p>
+            </div>
+            <label class="file-field">
+              Prepared JSON file
+              <input id="rateCardFileInput" type="file" accept="application/json,.json" required>
+            </label>
+            <div id="rateCardPreview" class="rate-card-preview is-hidden"></div>
+            <button id="importRateCardButton" class="button button-primary" type="submit">Import private draft</button>
+            <p id="supplyStatus" class="form-status" role="status" aria-live="polite"></p>
+          </form>
+
+          <div class="supply-register">
+            <div class="supply-section-head">
+              <div>
+                <p class="eyebrow">Provider register</p>
+                <h3>PSP relationships</h3>
+              </div>
+              <button id="refreshSupplyButton" class="icon-button" type="button" aria-label="Refresh PSP supply">↻</button>
+            </div>
+            <div id="supplyLoadingState" class="supply-empty">Loading private supply…</div>
+            <div id="supplyEmptyState" class="supply-empty is-hidden">No PSP rate cards imported yet.</div>
+            <div id="providerList" class="provider-list is-hidden"></div>
+          </div>
+        </div>
+
+        <div class="batch-register">
+          <div class="supply-section-head">
+            <div>
+              <p class="eyebrow">Rate-card register</p>
+              <h3>Import batches</h3>
+            </div>
+          </div>
+          <div id="batchList" class="batch-list"></div>
         </div>
       </section>
 
@@ -241,9 +307,18 @@
             <select id="drawerStatus">
               <option value="new">New</option>
               <option value="qualifying">Qualifying</option>
+              <option value="needs_clarification">Needs clarification</option>
               <option value="matching">Matching</option>
               <option value="shortlist_ready">Shortlist ready</option>
               <option value="shared">Shared</option>
+              <option value="option_selected">Option selected</option>
+              <option value="dossier_ready">Dossier ready</option>
+              <option value="provider_reviewing">PSP review</option>
+              <option value="provider_needs_info">PSP needs info</option>
+              <option value="provider_accepted">PSP accepted</option>
+              <option value="provider_declined">PSP declined</option>
+              <option value="telegram_created">Telegram introduction</option>
+              <option value="zoom_scheduled">Zoom scheduled</option>
               <option value="negotiating">Negotiating</option>
               <option value="won">Won</option>
               <option value="lost">Lost</option>

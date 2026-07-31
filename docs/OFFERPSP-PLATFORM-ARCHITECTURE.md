@@ -43,7 +43,9 @@ Merchant request
 → offer-route matching
 → anonymous shortlist
 → merchant selects an option
-→ OfferPSP confirms availability with the PSP
+→ OfferPSP prepares and sends the merchant dossier
+→ PSP reviews the merchant
+→ PSP accepts, declines or requests more information
 → shared Telegram group is created
 → merchant and PSP meet
 → Zoom call
@@ -61,10 +63,12 @@ Recommended operational stages:
 4. `shortlist_ready`
 5. `shared`
 6. `option_selected`
-7. `provider_confirmed`
-8. `telegram_created`
-9. `zoom_scheduled`
-10. `won` or `lost`
+7. `dossier_ready`
+8. `provider_reviewing`
+9. `provider_needs_info`, `provider_accepted` or `provider_declined`
+10. `telegram_created`
+11. `zoom_scheduled`
+12. `won` or `lost`
 
 ## Runtime components
 
@@ -99,11 +103,43 @@ Future demand model should separate:
 - merchant contacts;
 - individual requests;
 - current and future payment needs;
+- merchant due-diligence and qualification dossier;
+- PSP review decisions and requested clarifications;
 - selected anonymous options;
 - introductions and results.
 
 `casino_leads` remains the outbound prospecting database and is not automatically merged with
 inbound OfferPSP requests.
+
+### Merchant dossier
+
+A route match is only an eligibility recommendation. The PSP makes the final decision whether
+to accept the merchant.
+
+Before an introduction, OfferPSP must prepare a structured dossier containing at least:
+
+- legal/company name, brand and responsible contact;
+- live product, merchant or online-casino URL;
+- company registration GEO and target/traffic GEOs;
+- vertical and business model;
+- licence status: licensed, pending or unlicensed;
+- licence jurisdiction, number and evidence URL when available;
+- expected monthly processing turnover and currency;
+- average transaction value when available;
+- required currencies, methods and PayIn/PayOut flows;
+- launch timeline, current processing setup and material risk notes;
+- source and verification status for every important claim.
+
+The dossier shown to the PSP must distinguish verified facts, merchant-provided statements and
+missing information. Missing mandatory fields produce `needs_clarification`.
+
+After the merchant selects an anonymous option:
+
+1. staff verifies the dossier and the current offer;
+2. the corresponding PSP receives the dossier through the approved private channel;
+3. the PSP returns `accept`, `decline` or `request_more_information`;
+4. a decline remains internal and does not reveal the provider to the merchant;
+5. only `accept` allows provider disclosure and creation of the shared working channel.
 
 ## Supply-side hierarchy
 
@@ -323,12 +359,15 @@ When a merchant requests an introduction:
 
 1. notify staff through AIBot;
 2. reveal the internal provider and contact to staff only;
-3. confirm the offer is current and the provider accepts the lead;
-4. generate a Telegram group title and introduction message;
-5. staff creates the group and adds merchant, PSP and AIBot;
-6. store group link and creation date;
-7. record Zoom date/link;
-8. follow up until `won` or `lost`.
+3. validate the mandatory merchant dossier;
+4. confirm the offer is current;
+5. send the dossier to the PSP for private review;
+6. record `accept`, `decline` or `request_more_information`;
+7. generate a Telegram group title and introduction message only after acceptance;
+8. staff creates the group and adds merchant, PSP and AIBot;
+9. store group link and creation date;
+10. record Zoom date/link;
+11. follow up until `won` or `lost`.
 
 The standard Telegram Bot API does not create groups. Start with the hybrid workflow above.
 
@@ -362,6 +401,14 @@ Primary acquisition paths:
 - email/CRM follow-up;
 - referrals and direct outreach.
 
+Research references:
+
+- `https://www.aboutpayments.com/en-us/provider-selector` — PSP discovery, market coverage
+  and competitor-flow research;
+- `https://paymentproviders.io/` — additional PSP discovery and offer taxonomy research;
+- `https://design-system.service.gov.uk/components/task-list/` — task-based client cabinet
+  UX; this is not a PSP directory.
+
 ## Success metrics
 
 - organic visitors by GEO/method page;
@@ -370,10 +417,12 @@ Primary acquisition paths:
 - time to relevant shortlist;
 - merchant option-selection rate;
 - introduction requests;
+- complete merchant dossier rate;
+- PSP review acceptance and clarification rates;
+- time from dossier submission to PSP decision;
 - PSP confirmations;
 - Telegram groups created;
 - Zoom calls scheduled;
 - cooperation agreements;
 - offer freshness and coverage gaps;
 - active PSP partners and active routes.
-

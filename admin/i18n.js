@@ -15,6 +15,7 @@
     "Lead desk": "Заявки",
     "Matching": "Подбор PSP",
     "Tasks": "Задачи",
+    "PSP supply": "База PSP",
     "Analytics": "Аналитика",
     "Soon": "Скоро",
     "Coming in the next delivery": "Появится в следующем обновлении",
@@ -40,8 +41,17 @@
     "All statuses": "Все статусы",
     "New": "Новая",
     "Qualifying": "Оценка",
+    "Needs clarification": "Нужны уточнения",
     "Shortlist ready": "Shortlist готов",
     "Shared": "Отправлен клиенту",
+    "Option selected": "Оффер выбран",
+    "Dossier ready": "Досье готово",
+    "PSP review": "Проверка PSP",
+    "PSP needs info": "PSP запросил данные",
+    "PSP accepted": "PSP согласовал",
+    "PSP declined": "PSP отказал",
+    "Telegram introduction": "Знакомство в Telegram",
+    "Zoom scheduled": "Zoom назначен",
     "Negotiating": "Переговоры",
     "Won": "Успешно",
     "Lost": "Потеряна",
@@ -55,6 +65,50 @@
     "Status": "Статус",
     "Received": "Получена",
     "Open": "Открыть",
+    "Private PSP supply": "Приватная база PSP",
+    "Import reviewed rate-card drafts without exposing PSP pricing to clients": "Импортируйте проверенные rate cards без раскрытия ставок PSP клиентам",
+    "PSP supply summary": "Сводка по базе PSP",
+    "rate cards": "rate cards",
+    "Controlled import": "Контролируемый импорт",
+    "Upload prepared rate card": "Загрузить подготовленный rate card",
+    "The file creates or updates the PSP and stores the original source, routes and parser warnings as a private draft.": "Файл создаёт или обновляет PSP и приватно сохраняет исходник, маршруты и предупреждения парсера как черновик.",
+    "Prepared JSON file": "Подготовленный JSON-файл",
+    "Import private draft": "Импортировать приватный черновик",
+    "Provider register": "Реестр провайдеров",
+    "PSP relationships": "Отношения с PSP",
+    "Refresh PSP supply": "Обновить базу PSP",
+    "Loading private supply…": "Загружаю приватную базу…",
+    "No PSP rate cards imported yet.": "Rate cards PSP ещё не импортированы.",
+    "Rate-card register": "Реестр rate cards",
+    "Import batches": "Пакеты импорта",
+    "Private supply is unavailable until its database migration is applied.": "Приватная база станет доступна после применения миграции.",
+    "Rate cards": "Rate cards",
+    "Published routes": "Опубликованные маршруты",
+    "Client rate": "Ставка клиенту",
+    "Included by PSP": "Включена PSP",
+    "Margin policy": "Правило маржи",
+    "No import batches yet.": "Пакетов импорта пока нет.",
+    "routes": "маршрутов",
+    "open checks": "открытых проверок",
+    "Publish": "Опубликовать",
+    "The JSON payload is empty.": "JSON-файл пуст.",
+    "Provider brand_name is required.": "В файле не указано название PSP.",
+    "Original rate-card source text is required.": "В файле отсутствует исходный текст rate card.",
+    "The rate-card routes must be an array.": "Маршруты rate card должны быть массивом.",
+    "The prepared JSON file must be smaller than 10 MB.": "Подготовленный JSON-файл должен быть меньше 10 МБ.",
+    "Choose a valid prepared JSON file first.": "Сначала выберите корректный подготовленный JSON-файл.",
+    "This exact source was already imported; no duplicate was created.": "Этот исходник уже импортирован; дубликат не создан.",
+    "Could not import the rate card.": "Не удалось импортировать rate card.",
+    "Could not read the prepared JSON file.": "Не удалось прочитать подготовленный JSON-файл.",
+    "draft": "черновик",
+    "review": "проверка",
+    "published": "опубликован",
+    "superseded": "заменён",
+    "archived": "архив",
+    "prospect": "потенциальный",
+    "onboarding": "подключение",
+    "active": "активный",
+    "paused": "приостановлен",
     "Conversion snapshot": "Конверсия",
     "Live funnel based on the current lead pipeline": "Актуальная воронка по текущим заявкам",
     "Submitted": "Получено",
@@ -116,6 +170,7 @@
     "No candidates generated yet": "Кандидаты пока не подобраны",
     "Run matching to compare this request with the PSP database.": "Запустите подбор, чтобы сравнить заявку с базой PSP.",
     "Manual verification required": "Требуется ручная проверка",
+    "review eligible routes": "проверьте подходящие маршруты",
     "Vertical fit": "Подходит по вертикали",
     "No client messages yet.": "Сообщений от клиента пока нет.",
     "Write a reply first.": "Сначала напишите ответ.",
@@ -155,7 +210,9 @@
     "Matching…": "Подбираю…",
     "Sharing…": "Отправляю…",
     "Adding…": "Добавляю…",
-    "Creating…": "Создаю…"
+    "Creating…": "Создаю…",
+    "Importing…": "Импортирую…",
+    "Publishing…": "Публикую…"
   };
 
   const RU_TO_EN = Object.fromEntries(
@@ -184,6 +241,12 @@
       if (match) {
         return `${match[1]} кандидатов · ${match[2] === "shortlist shared" ? "shortlist отправлен" : "черновик shortlist готов"}`;
       }
+      match = text.match(/^(\d+) candidates · review eligible routes$/);
+      if (match) return `${match[1]} кандидатов · проверьте подходящие маршруты`;
+      match = text.match(/^Matching complete: (\d+) eligible routes\.$/);
+      if (match) return `Подбор завершён: ${match[1]} подходящих маршрутов.`;
+      match = text.match(/^Matching needs clarification: (.+)\.$/);
+      if (match) return `Для подбора нужны уточнения: ${match[1]}.`;
       match = text.match(/^Open (.+)$/);
       if (match) return `Открыть ${match[1]}`;
       match = text.match(/^Status changed to (.+)$/);
