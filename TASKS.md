@@ -107,14 +107,19 @@ Local verification does not replace testing with real Supabase staff and client 
 
 ## Implemented but not deployed
 
-Status: `PARTIAL` — the portal active-request isolation fix is verified locally but has
-not yet been applied to production.
+Status: `VERIFIED` — no completed rollout item remains undeployed.
 
-- [ ] Apply `20260801_offerpsp_active_lead_claims.sql` to production and verify the
-  function definition, privileges and claim behavior.
-- [ ] Reconfirm the closed production E2E leads are detached after the migration.
-- [ ] Deploy the portal fix and visually verify `/portal/` with separate staff/client
-  behavior.
+- [x] Applied `20260801_offerpsp_active_lead_claims.sql` as production migration
+  `20260731233207 offerpsp_active_lead_claims`; function definition, ACL and RLS were
+  rechecked.
+- [x] Production auth regression with two separate non-staff users verified active
+  email claiming, repeated login isolation and foreign-client denial.
+- [x] All production E2E and regression leads are closed and unlinked after cleanup.
+- [x] Deployed commit `1c8eaf16db6a640af3c3fa07946967274a2e5b27` as Vercel production
+  deployment `dpl_Dab1JS9MwYr3jVpPoebUCc9mjFWH` (`READY`).
+- [x] `/portal/` was visually verified under `guannko@gmail.com`, the separate E2E
+  client and a temporary `lost` fixture; closed fixtures are absent and terminal copy
+  does not conflict with matching-in-progress copy.
 
 - [x] Production preflight and private DDL/data snapshot completed and verified.
 - [x] Production migration `offerpsp_private_supply` applied as version `20260731223317`.
