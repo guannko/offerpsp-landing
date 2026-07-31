@@ -1,4 +1,9 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+import {
+  PORTAL_INACTIVE_STATUSES,
+  isPortalTerminalStatus,
+  portalEmptyStateKeys,
+} from "/portal/request-state.js";
 
 const supabase = createClient(
   "https://xcizofpejsomjiflesbx.supabase.co",
@@ -31,6 +36,8 @@ const COPY = {
     yourOptions: "Ваши платёжные варианты",
     matchingProgress: "Идёт подбор",
     matchingCopy: "Мы сверяем требования с приватной базой PSP. Здесь появятся только проверенные варианты.",
+    matchingComplete: "Подбор завершён",
+    matchingCompleteCopy: "Результат по этой заявке зафиксирован. Новые варианты сейчас не подбираются.",
     directLine: "Прямая связь",
     conversation: "Переписка",
     messagePlaceholder: "Задайте вопрос или сообщите обновление…",
@@ -60,6 +67,8 @@ const COPY = {
     nextWaitCopy: "OfferPSP проверяет досье и согласует знакомство с PSP. Провайдер не раскрывается до его явного согласия.",
     nextTelegram: "Продолжайте общение в Telegram.",
     nextTelegramCopy: "Управляемое знакомство состоялось. Коммерческие и технические детали обсуждаются в общей группе.",
+    nextComplete: "Процесс завершён.",
+    nextCompleteCopy: "Результат зафиксирован. Если нужен новый подбор, отправьте новую заявку или напишите менеджеру.",
     option: "Вариант",
     confidentialRoute: "Конфиденциальный маршрут",
     interested: "Подходит",
@@ -105,6 +114,8 @@ const COPY = {
     yourOptions: "Your payment options",
     matchingProgress: "Matching is in progress",
     matchingCopy: "We are checking your requirements against the private PSP database. Reviewed options will appear here.",
+    matchingComplete: "Matching completed",
+    matchingCompleteCopy: "The result for this request is recorded. No new options are being matched now.",
     directLine: "Direct line",
     conversation: "Conversation",
     messagePlaceholder: "Ask a question or share an update…",
@@ -134,6 +145,8 @@ const COPY = {
     nextWaitCopy: "OfferPSP is verifying the dossier and obtaining PSP approval. Provider identity stays private until explicit acceptance.",
     nextTelegram: "Continue in Telegram.",
     nextTelegramCopy: "The managed introduction is complete. Commercial and technical discussion continues in the shared group.",
+    nextComplete: "Process completed.",
+    nextCompleteCopy: "The result is recorded. Submit a new request or contact your manager if you need another search.",
     option: "Option",
     confidentialRoute: "Confidential route",
     interested: "Interested",
@@ -177,7 +190,7 @@ const elements = Object.fromEntries([
   "authView", "portalView", "loginForm", "emailInput", "passwordInput", "googleLoginButton",
   "magicLinkButton", "authStatus", "signOutButton", "userEmail", "noRequestState", "requestView",
   "companyName", "requestMeta", "statusPill", "progressLabel", "nextActionTitle", "nextActionText",
-  "shortlistPending", "shortlistGrid", "shortlistUpdated", "selectedSummary", "optionStatus",
+  "shortlistPending", "pendingTitle", "pendingCopy", "shortlistGrid", "shortlistUpdated", "selectedSummary", "optionStatus",
   "messageList", "messageForm", "messageInput", "messageStatus",
 ].map((id) => [id, document.getElementById(id)]));
 
@@ -239,6 +252,7 @@ function resetPortalState() {
 
 function nextAction() {
   const status = state.lead?.status;
+  if (isPortalTerminalStatus(status)) return ["nextComplete", "nextCompleteCopy"];
   if (status === "needs_clarification" || status === "provider_needs_info") return ["nextClarify", "nextClarifyCopy"];
   if (["option_selected"].includes(status) || state.options.some((option) => option.client_response === "interested")) return ["nextRequest", "nextRequestCopy"];
   if (["dossier_ready", "provider_reviewing", "provider_accepted", "provider_declined"].includes(status)) return ["nextWait", "nextWaitCopy"];
@@ -261,6 +275,9 @@ function renderRequest() {
 
 function renderOptions() {
   if (!state.options.length) {
+    const [titleKey, copyKey] = portalEmptyStateKeys(state.lead?.status);
+    elements.pendingTitle.textContent = t(titleKey);
+    elements.pendingCopy.textContent = t(copyKey);
     elements.shortlistPending.classList.remove("is-hidden");
     elements.shortlistGrid.classList.add("is-hidden");
     elements.selectedSummary.classList.add("is-hidden");
@@ -342,6 +359,8 @@ async function enterPortal(session) {
 async function loadRequest() {
   const { data, error } = await supabase.from("offerpsp_leads")
     .select("lead_id, company, vertical, geos, methods, monthly_volume, status, submitted_at, updated_at")
+    .eq("client_user_id", state.user.id)
+    .not("status", "in", `(${PORTAL_INACTIVE_STATUSES.join(",")})`)
     .order("submitted_at", { ascending: false }).limit(1).maybeSingle();
   if (error || !data) {
     resetPortalState();

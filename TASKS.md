@@ -72,6 +72,15 @@ Status: `VERIFIED` for the rollout scope completed on 2026-08-01.
 - [x] The migration grants only UPDATE/DELETE to `authenticated`; existing RLS still
   limits those operations to active OfferPSP staff.
 
+### Client portal active-request isolation
+
+- [x] `claim_offerpsp_leads()` ignores `closed` and `spam` leads.
+- [x] The client portal explicitly selects leads linked to the current user instead of
+  relying on the broader staff RLS view.
+- [x] The portal excludes `closed` and `spam` requests from the current-request query.
+- [x] Empty `won` and `lost` requests show a completed state instead of a conflicting
+  matching-in-progress state.
+
 ## Verified locally
 
 Status: `VERIFIED` on 2026-08-01 in an ephemeral PostgreSQL-compatible PGlite database.
@@ -91,12 +100,21 @@ Status: `VERIFIED` on 2026-08-01 in an ephemeral PostgreSQL-compatible PGlite da
 - [x] A repeated Telegram call cannot move an introduction backwards after Zoom is scheduled.
 - [x] JavaScript syntax checks and `git diff --check` pass.
 - [x] Client and staff screens were visually checked at desktop and mobile widths without horizontal overflow.
+- [x] Portal regression checks cover active email claiming, repeated login with detached
+  closed/spam fixtures, explicit current-user selection and consistent terminal copy.
 
 Local verification does not replace testing with real Supabase staff and client accounts.
 
 ## Implemented but not deployed
 
-Status: `VERIFIED` — no completed rollout item remains undeployed.
+Status: `PARTIAL` — the portal active-request isolation fix is verified locally but has
+not yet been applied to production.
+
+- [ ] Apply `20260801_offerpsp_active_lead_claims.sql` to production and verify the
+  function definition, privileges and claim behavior.
+- [ ] Reconfirm the closed production E2E leads are detached after the migration.
+- [ ] Deploy the portal fix and visually verify `/portal/` with separate staff/client
+  behavior.
 
 - [x] Production preflight and private DDL/data snapshot completed and verified.
 - [x] Production migration `offerpsp_private_supply` applied as version `20260731223317`.

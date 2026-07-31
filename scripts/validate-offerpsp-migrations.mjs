@@ -15,6 +15,7 @@ const db = new PGlite();
 
 const STAFF_ID = "11111111-1111-4111-8111-111111111111";
 const CLIENT_ID = "22222222-2222-4222-8222-222222222222";
+const OTHER_CLIENT_ID = "33333333-3333-4333-8333-333333333333";
 
 async function query(sql, params = []) {
   return db.query(sql, params);
@@ -101,6 +102,7 @@ async function applyMigrations() {
     "20260731_offerpsp_route_matching.sql",
     "20260731_offerpsp_introduction_pipeline.sql",
     "20260801_offerpsp_authenticated_lead_grants.sql",
+    "20260801_offerpsp_active_lead_claims.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -133,8 +135,8 @@ async function verifyLeadGrants() {
 
 async function seedUsers() {
   await query(
-    "insert into auth.users (id, email) values ($1, 'staff@example.com'), ($2, 'client@example.com')",
-    [STAFF_ID, CLIENT_ID],
+    "insert into auth.users (id, email) values ($1, 'staff@example.com'), ($2, 'client@example.com'), ($3, 'other@example.com')",
+    [STAFF_ID, CLIENT_ID, OTHER_CLIENT_ID],
   );
   await setUser(STAFF_ID);
   await query(
@@ -152,6 +154,52 @@ async function seedUsers() {
       array['IN'], array['INR'], array['UPI', 'P2P'], array['IGAMING'], 'verified'
     )
   `);
+}
+
+async function verifyPortalLeadClaims() {
+  const fixtures = await query(`
+    insert into public.offerpsp_leads (
+      name, work_email, company, vertical, geos, source, status, consent
+    ) values
+      ('Active Client', 'client@example.com', 'Active Merchant', 'iGaming', 'India', 'portal-claim-regression', 'new', true),
+      ('Closed Client', 'client@example.com', 'Closed E2E Merchant', 'iGaming', 'India', 'production-e2e-regression', 'closed', true),
+      ('Spam Client', 'client@example.com', 'Spam Merchant', 'iGaming', 'India', 'portal-claim-regression', 'spam', true)
+    returning lead_id, company, status
+  `);
+  const activeLeadId = fixtures.rows.find((row) => row.company === "Active Merchant").lead_id;
+  const inactiveLeadIds = fixtures.rows
+    .filter((row) => row.company !== "Active Merchant")
+    .map((row) => row.lead_id);
+
+  await setUser(CLIENT_ID);
+  const firstClaim = await query("select * from public.claim_offerpsp_leads()");
+  if (firstClaim.rows.length !== 1 || firstClaim.rows[0].lead_id !== activeLeadId) {
+    throw new Error("Lead claim did not isolate the active email-matched request");
+  }
+
+  const linked = await query(
+    "select lead_id, status, client_user_id from public.offerpsp_leads where lead_id = any($1::uuid[]) order by status",
+    [[activeLeadId, ...inactiveLeadIds]],
+  );
+  const activeLink = linked.rows.find((row) => row.lead_id === activeLeadId);
+  const inactiveLinks = linked.rows.filter((row) => inactiveLeadIds.includes(row.lead_id));
+  if (activeLink?.client_user_id !== CLIENT_ID || inactiveLinks.some((row) => row.client_user_id !== null)) {
+    throw new Error(`Closed or spam lead was linked by the portal claim function: ${JSON.stringify(linked.rows)}`);
+  }
+
+  const repeatClaim = await query("select * from public.claim_offerpsp_leads()");
+  if (repeatClaim.rows.length !== 1 || repeatClaim.rows[0].lead_id !== activeLeadId) {
+    throw new Error("Repeated login changed inactive lead claim isolation");
+  }
+
+  await setUser(OTHER_CLIENT_ID);
+  const foreignClaim = await query("select * from public.claim_offerpsp_leads()");
+  if (foreignClaim.rows.length !== 0) {
+    throw new Error("A different authenticated email claimed another client's request");
+  }
+
+  await setUser(STAFF_ID);
+  process.stdout.write("PASS active email claim with closed/spam fixtures remaining detached\n");
 }
 
 async function importPreparedDrafts() {
@@ -394,6 +442,7 @@ try {
   await applyMigrations();
   await verifyLeadGrants();
   await seedUsers();
+  await verifyPortalLeadClaims();
   await importPreparedDrafts();
   await runEndToEndFixture();
   process.stdout.write("PASS all OfferPSP migration checks\n");
