@@ -105,6 +105,7 @@ async function applyMigrations() {
     "20260801_offerpsp_authenticated_lead_grants.sql",
     "20260801_offerpsp_active_lead_claims.sql",
     "20260801_offerpsp_client_workspace_agents.sql",
+    "20260801_offerpsp_workspace_grants.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -133,6 +134,35 @@ async function verifyLeadGrants() {
     throw new Error("OfferPSP lead table grants do not match the staff RLS model");
   }
   process.stdout.write("PASS authenticated lead UPDATE/DELETE grants with anon denied\n");
+}
+
+async function verifyWorkspaceGrants() {
+  const result = await query(`select
+    has_table_privilege('authenticated', 'public.offerpsp_organizations', 'SELECT') as organizations_select,
+    has_table_privilege('authenticated', 'public.offerpsp_organizations', 'INSERT') as organizations_insert,
+    has_table_privilege('authenticated', 'public.offerpsp_organizations', 'UPDATE') as organizations_update,
+    has_table_privilege('authenticated', 'public.offerpsp_organizations', 'DELETE') as organizations_delete,
+    has_table_privilege('authenticated', 'public.offerpsp_organizations', 'TRUNCATE') as organizations_truncate,
+    has_table_privilege('authenticated', 'public.offerpsp_organizations', 'TRIGGER') as organizations_trigger,
+    has_table_privilege('authenticated', 'public.offerpsp_organizations', 'REFERENCES') as organizations_references,
+    has_table_privilege('authenticated', 'public.offerpsp_client_shortlist', 'SELECT') as client_view_select,
+    has_table_privilege('authenticated', 'public.offerpsp_client_shortlist', 'INSERT') as client_view_insert,
+    has_table_privilege('authenticated', 'public.offerpsp_client_shortlist', 'UPDATE') as client_view_update,
+    has_table_privilege('authenticated', 'public.offerpsp_client_shortlist', 'DELETE') as client_view_delete,
+    has_table_privilege('authenticated', 'public.offerpsp_client_shortlist', 'TRUNCATE') as client_view_truncate
+  `);
+  const grants = result.rows[0];
+  if (
+    !grants.organizations_select || !grants.organizations_insert ||
+    !grants.organizations_update || !grants.organizations_delete ||
+    grants.organizations_truncate || grants.organizations_trigger ||
+    grants.organizations_references || !grants.client_view_select ||
+    grants.client_view_insert || grants.client_view_update ||
+    grants.client_view_delete || grants.client_view_truncate
+  ) {
+    throw new Error("Workspace table and view grants are broader than required");
+  }
+  process.stdout.write("PASS minimal workspace table and client-view grants\n");
 }
 
 async function verifyClientPolicyBoundary() {
@@ -607,6 +637,7 @@ try {
   await bootstrap();
   await applyMigrations();
   await verifyLeadGrants();
+  await verifyWorkspaceGrants();
   await verifyClientPolicyBoundary();
   await seedUsers();
   await verifyPortalLeadClaims();

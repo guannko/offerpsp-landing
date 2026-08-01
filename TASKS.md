@@ -5,9 +5,50 @@ Updated: 2026-08-01
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## Delivery layers — current source of truth
+
+### 1. Available through the production interface
+
+Status: `VERIFIED` for the production version deployed before the new workspace rollout.
+
+- The existing client portal supports authentication, one current active request, a shared
+  anonymous shortlist, option feedback, introduction request and conversation history when
+  those records have been prepared by staff.
+- The existing staff cabinet supports the lead desk, basic private supply register, prepared
+  draft upload, guarded publishing, route matching and current pipeline statuses.
+- There is no production UI yet for agent organizations, managed merchant portfolios, agent
+  margin policies or the commission ledger.
+
+### 2. Implemented in local database/API and frontend code, but not in production
+
+Status: `PARTIAL` — implemented and locally verified, but unavailable as a production feature.
+
+- `20260801_offerpsp_client_workspace_agents.sql` adds merchant/agent organizations,
+  memberships, explicit agent-to-merchant assignments, agent margin policies, commission
+  ledger and client-safe workspace RPCs.
+- The new `/portal/` frontend code adds a persistent multi-request workspace and can consume
+  those RPCs for direct merchants and assigned agents.
+- The frontend was visually checked locally and exists in a Vercel preview, but the preview
+  cannot provide a real end-to-end workspace until the production database migration is
+  applied. It is not a deployed user capability.
+
+### 3. Approved architecture foundation that still requires a separate UI
+
+Status: `PARTIAL` — the data model and access boundaries exist locally; the operational product
+screens and workflows below are not implemented.
+
+- Staff management of agent organizations, invitations, members, merchant assignments and
+  agent margin policies.
+- Agent portfolio management optimized for multiple merchants, onboarding and co-branding.
+- Commission review, approval, earned/paid processing, statements and reconciliation.
+- Full staff Deal Desk for dossier review, PSP decisions, Telegram, Zoom and cooperation result.
+
+Payment Workspace, agent organizations, agent margin and commission accounting remain approved
+scope. This separation prevents the architecture from being described as a finished UI feature.
+
 ## Implemented locally
 
-Status: `VERIFIED` for the rollout scope completed on 2026-08-01.
+Status: `VERIFIED` as local code and database behavior only; this is not a production UI status.
 
 ### Private PSP supply and offers
 
