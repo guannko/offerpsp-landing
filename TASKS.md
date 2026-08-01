@@ -123,7 +123,9 @@ Status: `VERIFIED` as local code and database behavior only; this is not a produ
 
 ### Operational workspace — local delivery 2026-08-01
 
-Status: `VERIFIED` locally; migration and frontend are not deployed to production yet.
+Status: `PARTIAL` production rollout. Migration
+`20260801113127 offerpsp_operational_workspaces` is `VERIFIED` in production; frontend commit
+`9ea9ca8` is not deployed yet because Vercel OAuth and local GitHub CLI authorization are unavailable.
 
 - [x] Full-width staff request workspace with overview, dossier, matching, Deal Desk,
   tasks, messages and section navigation.
@@ -137,6 +139,9 @@ Status: `VERIFIED` locally; migration and frontend are not deployed to productio
 - [x] Client portal loads options through a dedicated safe RPC instead of querying the legacy
   `SECURITY DEFINER` shortlist view directly.
 - [x] Local syntax, portal guards and all 14 migration/E2E fixtures pass.
+- [x] Production migration grants `EXECUTE` only to `authenticated`; all four RPCs are denied to `anon`.
+- [ ] Deploy frontend commit `9ea9ca8` and run separate real staff/client production E2E.
+- [ ] Revoke direct `authenticated` access to the legacy shortlist view after the new portal is verified.
 
 ### Production grant hotfix
 
