@@ -56,6 +56,18 @@ const COPY = {
     dossierReadyMessage: "Запрос принят. Мы проверим досье перед отправкой PSP.", missingPrefix: "Нужно дополнить:",
     telegram: "Открыть Telegram", zoom: "Открыть Zoom", managedByAgent: "Агентский кабинет",
     managedClients: "мерчей под управлением", global: "Все GEO", validThrough: "Актуально до",
+    completeProfile: "Дополнить профиль", pspReviewProfile: "Профиль для PSP review", companyDossier: "Досье компании",
+    dossierExplanation: "Это информация, по которой PSP решает, готов ли он знакомиться и обсуждать подключение.",
+    openCompanyProfile: "Открыть и обновить профиль компании", companyName: "Название компании", contactName: "Контактное лицо",
+    productUrl: "Ссылка на продукт", registrationGeo: "GEO регистрации", targetGeos: "Целевые GEO", vertical: "Вертикаль",
+    businessModel: "Бизнес-модель", licenseStatus: "Статус лицензии", unknown: "Не указано", licensed: "Есть лицензия",
+    unlicensed: "Без лицензии", pending: "В процессе", notRequired: "Не требуется", licenseJurisdiction: "Юрисдикция лицензии",
+    licenseNumber: "Номер лицензии", licenseEvidence: "Ссылка на подтверждение лицензии", expectedVolume: "Ожидаемый оборот в месяц",
+    volumeCurrency: "Валюта оборота", requestedCurrencies: "Валюты обработки", paymentMethods: "Платёжные методы",
+    paymentFlows: "Потоки", trafficTypes: "Тип трафика", minimumTransaction: "Минимальная транзакция",
+    maximumTransaction: "Максимальная транзакция", transactionCurrency: "Валюта транзакции", launchTimeline: "Когда нужен запуск",
+    processingSetup: "Текущий процессинг", saveProfile: "Сохранить профиль", profileComplete: "Профиль готов для PSP review",
+    profileSaved: "Профиль сохранён.", profileStillMissing: "Профиль сохранён. Заполните отмеченные пункты.",
   },
   en: {
     workspace: "Payment workspace", authTitle: "All your payment work, in one place.",
@@ -100,6 +112,18 @@ const COPY = {
     openingGoogle: "Opening Google…", saving: "Saving…", dossierReadyMessage: "Request accepted. We will verify the dossier before PSP review.",
     missingPrefix: "Please complete:", telegram: "Open Telegram", zoom: "Open Zoom", managedByAgent: "Agent workspace",
     managedClients: "managed merchants", global: "All GEOs", validThrough: "Valid through",
+    completeProfile: "Complete profile", pspReviewProfile: "PSP review profile", companyDossier: "Company dossier",
+    dossierExplanation: "This is the information a PSP uses to decide whether to meet and discuss the connection.",
+    openCompanyProfile: "Open and update company profile", companyName: "Company name", contactName: "Contact name",
+    productUrl: "Product URL", registrationGeo: "Registration GEO", targetGeos: "Target GEOs", vertical: "Vertical",
+    businessModel: "Business model", licenseStatus: "Licence status", unknown: "Unknown", licensed: "Licensed",
+    unlicensed: "Unlicensed", pending: "Pending", notRequired: "Not required", licenseJurisdiction: "Licence jurisdiction",
+    licenseNumber: "Licence number", licenseEvidence: "Licence evidence URL", expectedVolume: "Expected monthly volume",
+    volumeCurrency: "Volume currency", requestedCurrencies: "Processing currencies", paymentMethods: "Payment methods",
+    paymentFlows: "Flows", trafficTypes: "Traffic types", minimumTransaction: "Minimum transaction",
+    maximumTransaction: "Maximum transaction", transactionCurrency: "Transaction currency", launchTimeline: "Launch timeline",
+    processingSetup: "Current processing setup", saveProfile: "Save profile", profileComplete: "Profile is ready for PSP review",
+    profileSaved: "Profile saved.", profileStillMissing: "Profile saved. Complete the highlighted items.",
   },
 };
 
@@ -113,7 +137,7 @@ const STATUS_KEYS = {
 
 const state = {
   user: null, requests: [], lead: null, allOptions: [], options: [], allDeals: [], deals: [], organizations: [],
-  conversationId: null, messages: [], language: "ru",
+  profile: null, conversationId: null, messages: [], language: "ru",
 };
 const ids = [
   "authView", "portalView", "loginForm", "emailInput", "passwordInput", "googleLoginButton", "magicLinkButton",
@@ -121,7 +145,12 @@ const ids = [
   "activeRequestCount", "availableOptionCount", "liveConnectionCount", "agentBanner", "companyName", "requestMeta",
   "statusPill", "nextActionTitle", "nextActionText", "dealSection", "dealList", "shortlistPending", "pendingTitle",
   "pendingCopy", "shortlistGrid", "shortlistUpdated", "selectedSummary", "optionStatus", "messageList", "messageForm",
-  "messageInput", "messageStatus",
+  "messageInput", "messageStatus", "openDossierButton", "dossierSection", "clientDossierProgress", "clientDossierTasks",
+  "clientDossierEditor", "clientDossierForm", "clientCompany", "clientContactName", "clientTelegram", "clientCompanyUrl",
+  "clientRegistrationGeo", "clientTargetGeos", "clientVertical", "clientBusinessModel", "clientLicenseStatus",
+  "clientLicenseJurisdiction", "clientLicenseNumber", "clientLicenseEvidenceUrl", "clientMonthlyVolume", "clientVolumeCurrency",
+  "clientCurrencies", "clientMethods", "clientFlows", "clientTrafficTypes", "clientMinTransaction", "clientMaxTransaction",
+  "clientTransactionCurrency", "clientLaunchTimeline", "clientProcessingSetup", "clientDossierStatus",
 ];
 const elements = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
 
@@ -140,6 +169,20 @@ function setLoading(button, loading, label) {
   button.textContent = loading ? label : button.dataset.label;
 }
 function list(value) { return Array.isArray(value) ? value : []; }
+function parseList(value) { return String(value || "").split(",").map((item) => item.trim()).filter(Boolean); }
+function listInput(value) { return list(value).join(", "); }
+function friendlyError(error, fallback) {
+  const message = String(error?.message || "");
+  if (message.includes("request not found")) return state.language === "ru" ? "Заявка недоступна. Обновите страницу." : "The request is unavailable. Refresh the page.";
+  if (message.includes("can no longer be edited")) return state.language === "ru" ? "Завершённую заявку уже нельзя изменять." : "A completed request can no longer be edited.";
+  return fallback;
+}
+function friendlyAuthError(error) {
+  const message = String(error?.message || "").toLowerCase();
+  if (message.includes("invalid login credentials")) return state.language === "ru" ? "Неверный email или пароль." : "Invalid email or password.";
+  if (message.includes("rate limit")) return state.language === "ru" ? "Слишком много попыток. Подождите немного или войдите через Google." : "Too many attempts. Wait a moment or use Google sign-in.";
+  return state.language === "ru" ? "Не удалось войти. Попробуйте ещё раз." : "Could not sign in. Please try again.";
+}
 function formatDate(value) {
   if (!value) return "";
   return new Intl.DateTimeFormat(state.language === "ru" ? "ru-RU" : "en-GB", {
@@ -171,6 +214,71 @@ function nextAction(status) {
   if (["telegram_created", "zoom_scheduled", "negotiating"].includes(status)) return ["nextConnect", "nextConnectCopy"];
   if (status === "won") return ["nextWon", "nextWonCopy"];
   return ["nextLost", "nextLostCopy"];
+}
+
+const DOSSIER_LABELS = {
+  legal_name: { ru: "Название компании", en: "Company name" },
+  contact_name: { ru: "Контактное лицо", en: "Contact name" },
+  contact_email: { ru: "Рабочий email", en: "Work email" },
+  product_url: { ru: "Ссылка на казино или продукт", en: "Casino or product URL" },
+  target_geos: { ru: "Целевые GEO", en: "Target GEOs" },
+  vertical: { ru: "Вертикаль", en: "Vertical" },
+  license_status: { ru: "Статус лицензии", en: "Licence status" },
+  license_jurisdiction: { ru: "Юрисдикция лицензии", en: "Licence jurisdiction" },
+  expected_monthly_volume: { ru: "Ожидаемый месячный оборот", en: "Expected monthly volume" },
+  volume_currency: { ru: "Валюта оборота", en: "Volume currency" },
+  requested_methods: { ru: "Платёжные методы", en: "Payment methods" },
+  requested_flows: { ru: "PayIn / PayOut", en: "PayIn / PayOut" },
+};
+
+function dossierLabel(field) {
+  return DOSSIER_LABELS[field]?.[state.language] || field.replaceAll("_", " ");
+}
+
+function renderDossier() {
+  const profile = state.profile;
+  if (!profile) {
+    elements.clientDossierProgress.textContent = "—";
+    elements.clientDossierTasks.innerHTML = `<div class="client-task">${escapeHtml(state.language === "ru" ? "Профиль пока недоступен" : "Profile is currently unavailable")}</div>`;
+    return;
+  }
+  const missing = list(profile.missing_fields);
+  const pspRequest = String(profile.psp_requested_information || "").trim();
+  const total = 11 + (profile.license_status === "licensed" ? 1 : 0);
+  const progress = Math.round((Math.max(0, total - missing.length) / total) * 100);
+  elements.clientDossierProgress.textContent = `${progress}%`;
+  const tasks = [
+    ...(pspRequest ? [`<div class="client-task">${escapeHtml(state.language === "ru" ? `PSP запросил: ${pspRequest}` : `PSP requested: ${pspRequest}`)}</div>`] : []),
+    ...missing.map((field) => `<div class="client-task">${escapeHtml(dossierLabel(field))}</div>`),
+  ];
+  elements.clientDossierTasks.innerHTML = tasks.length
+    ? tasks.join("")
+    : `<div class="client-task complete">${escapeHtml(t("profileComplete"))}</div>`;
+  elements.openDossierButton.classList.toggle("is-hidden", missing.length === 0 && state.lead?.status !== "provider_needs_info");
+
+  elements.clientCompany.value = profile.company || "";
+  elements.clientContactName.value = profile.name || "";
+  elements.clientTelegram.value = profile.telegram || "";
+  elements.clientCompanyUrl.value = profile.company_url || "";
+  elements.clientRegistrationGeo.value = profile.registration_geo || "";
+  elements.clientTargetGeos.value = listInput(profile.target_geos);
+  elements.clientVertical.value = profile.vertical || "";
+  elements.clientBusinessModel.value = profile.business_model || "";
+  elements.clientLicenseStatus.value = profile.license_status || "unknown";
+  elements.clientLicenseJurisdiction.value = profile.license_jurisdiction || "";
+  elements.clientLicenseNumber.value = profile.license_number || "";
+  elements.clientLicenseEvidenceUrl.value = profile.license_evidence_url || "";
+  elements.clientMonthlyVolume.value = profile.expected_monthly_volume ?? "";
+  elements.clientVolumeCurrency.value = profile.volume_currency || "";
+  elements.clientCurrencies.value = listInput(profile.requested_currencies);
+  elements.clientMethods.value = listInput(profile.requested_methods);
+  elements.clientFlows.value = listInput(profile.requested_flows);
+  elements.clientTrafficTypes.value = listInput(profile.traffic_types);
+  elements.clientMinTransaction.value = profile.min_transaction_amount ?? "";
+  elements.clientMaxTransaction.value = profile.max_transaction_amount ?? "";
+  elements.clientTransactionCurrency.value = profile.transaction_currency || "";
+  elements.clientLaunchTimeline.value = profile.launch_timeline || "";
+  elements.clientProcessingSetup.value = profile.current_processing_setup || "";
 }
 
 function setLanguage(language) {
@@ -221,6 +329,7 @@ function renderRequest() {
   const [titleKey, copyKey] = nextAction(lead.status);
   elements.nextActionTitle.textContent = t(titleKey);
   elements.nextActionText.textContent = t(copyKey);
+  renderDossier();
   renderDeals();
   renderOptions();
   renderMessages();
@@ -308,12 +417,12 @@ async function enterPortal(session) {
 async function loadWorkspace(preferredLeadId = state.lead?.lead_id) {
   const [requestsResult, optionsResult, dealsResult, organizationsResult] = await Promise.all([
     supabase.rpc("list_offerpsp_workspace_requests"),
-    supabase.from("offerpsp_client_shortlist").select("*").order("rank", { ascending: true }),
+    supabase.rpc("list_offerpsp_client_options", { p_lead_id: null }),
     supabase.rpc("list_offerpsp_client_deals", { p_lead_id: null }),
     supabase.rpc("list_offerpsp_my_organizations"),
   ]);
   if (requestsResult.error) {
-    setStatus(elements.authStatus, requestsResult.error.message, "error");
+    setStatus(elements.authStatus, state.language === "ru" ? "Не удалось загрузить рабочий кабинет. Обновите страницу." : "Could not load the workspace. Refresh the page.", "error");
     state.requests = [];
   } else state.requests = requestsResult.data || [];
   state.allOptions = optionsResult.error ? [] : optionsResult.data || [];
@@ -327,19 +436,26 @@ async function selectRequest(leadId) {
   state.lead = state.requests.find((request) => request.lead_id === leadId) || null;
   state.options = state.allOptions.filter((option) => option.lead_id === leadId);
   state.deals = state.allDeals.filter((deal) => deal.lead_id === leadId);
+  state.profile = null;
   state.conversationId = null;
   state.messages = [];
-  if (state.lead) await loadConversation(leadId);
+  if (state.lead) {
+    const [profileResult] = await Promise.all([
+      supabase.rpc("get_offerpsp_client_request_profile", { p_lead_id: leadId }),
+      loadConversation(leadId),
+    ]);
+    state.profile = profileResult.error ? null : profileResult.data;
+  }
   renderWorkspace();
 }
 
 async function loadConversation(leadId) {
   const { data, error } = await supabase.rpc("ensure_offerpsp_portal_conversation", { p_lead_id: leadId });
-  if (error) { setStatus(elements.messageStatus, error.message, "error"); return; }
+  if (error) { setStatus(elements.messageStatus, friendlyError(error, state.language === "ru" ? "Рабочий чат пока недоступен." : "The workspace chat is currently unavailable."), "error"); return; }
   state.conversationId = data;
   const messages = await supabase.from("offerpsp_messages").select("id, sender_type, direction, body, sent_at")
     .eq("conversation_id", data).order("sent_at", { ascending: true });
-  if (messages.error) { setStatus(elements.messageStatus, messages.error.message, "error"); return; }
+  if (messages.error) { setStatus(elements.messageStatus, state.language === "ru" ? "Не удалось загрузить сообщения." : "Could not load messages.", "error"); return; }
   state.messages = messages.data || [];
 }
 
@@ -356,7 +472,7 @@ document.addEventListener("click", async (event) => {
       p_response: responseButton.dataset.optionResponse,
     });
     setLoading(responseButton, false);
-    if (error) { setStatus(elements.optionStatus, error.message, "error"); return; }
+    if (error) { setStatus(elements.optionStatus, friendlyError(error, state.language === "ru" ? "Не удалось сохранить выбор." : "Could not save the choice."), "error"); return; }
     await loadWorkspace(state.lead.lead_id);
     return;
   }
@@ -365,10 +481,61 @@ document.addEventListener("click", async (event) => {
     setLoading(introductionButton, true, t("sending"));
     const { data, error } = await supabase.rpc("request_offerpsp_introduction", { p_option_code: introductionButton.dataset.requestIntroduction });
     setLoading(introductionButton, false);
-    if (error) { setStatus(elements.optionStatus, error.message, "error"); return; }
-    setStatus(elements.optionStatus, data.status === "ready" ? t("dossierReadyMessage") : `${t("missingPrefix")} ${(data.missing_fields || []).join(", ")}`, data.status === "ready" ? "success" : "error");
+    if (error) { setStatus(elements.optionStatus, friendlyError(error, state.language === "ru" ? "Не удалось отправить запрос на знакомство." : "Could not request the introduction."), "error"); return; }
+    setStatus(elements.optionStatus, data.status === "ready" ? t("dossierReadyMessage") : `${t("missingPrefix")} ${(data.missing_fields || []).map(dossierLabel).join(", ")}`, data.status === "ready" ? "success" : "error");
     await loadWorkspace(state.lead.lead_id);
+    if (data.status !== "ready") {
+      elements.clientDossierEditor.open = true;
+      elements.dossierSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   }
+});
+
+elements.openDossierButton.addEventListener("click", () => {
+  elements.clientDossierEditor.open = true;
+  elements.dossierSection.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+elements.clientDossierForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!state.lead) return;
+  const button = elements.clientDossierForm.querySelector('button[type="submit"]');
+  setLoading(button, true, t("saving"));
+  setStatus(elements.clientDossierStatus);
+  const profile = {
+    company: elements.clientCompany.value.trim(),
+    name: elements.clientContactName.value.trim(),
+    telegram: elements.clientTelegram.value.trim(),
+    company_url: elements.clientCompanyUrl.value.trim(),
+    registration_geo: elements.clientRegistrationGeo.value.trim(),
+    target_geos: parseList(elements.clientTargetGeos.value),
+    vertical: elements.clientVertical.value.trim(),
+    business_model: elements.clientBusinessModel.value.trim(),
+    license_status: elements.clientLicenseStatus.value,
+    license_jurisdiction: elements.clientLicenseJurisdiction.value.trim(),
+    license_number: elements.clientLicenseNumber.value.trim(),
+    license_evidence_url: elements.clientLicenseEvidenceUrl.value.trim(),
+    expected_monthly_volume: elements.clientMonthlyVolume.value.trim(),
+    volume_currency: elements.clientVolumeCurrency.value.trim(),
+    requested_currencies: parseList(elements.clientCurrencies.value),
+    requested_methods: parseList(elements.clientMethods.value),
+    requested_flows: parseList(elements.clientFlows.value),
+    traffic_types: parseList(elements.clientTrafficTypes.value),
+    min_transaction_amount: elements.clientMinTransaction.value.trim(),
+    max_transaction_amount: elements.clientMaxTransaction.value.trim(),
+    transaction_currency: elements.clientTransactionCurrency.value.trim(),
+    launch_timeline: elements.clientLaunchTimeline.value.trim(),
+    current_processing_setup: elements.clientProcessingSetup.value.trim(),
+  };
+  const leadId = state.lead.lead_id;
+  const { data, error } = await supabase.rpc("update_offerpsp_client_dossier", { p_lead_id: leadId, p_profile: profile });
+  setLoading(button, false);
+  if (error) {
+    setStatus(elements.clientDossierStatus, friendlyError(error, state.language === "ru" ? "Не удалось сохранить профиль." : "Could not save the profile."), "error");
+    return;
+  }
+  await loadWorkspace(leadId);
+  setStatus(elements.clientDossierStatus, data.complete ? t("profileSaved") : t("profileStillMissing"), data.complete ? "success" : "error");
 });
 
 elements.loginForm.addEventListener("submit", async (event) => {
@@ -379,7 +546,7 @@ elements.loginForm.addEventListener("submit", async (event) => {
   setLoading(button, true, t("signingIn"));
   const { data, error } = await supabase.auth.signInWithPassword({ email: elements.emailInput.value.trim(), password });
   setLoading(button, false);
-  if (error) { setStatus(elements.authStatus, error.message, "error"); return; }
+  if (error) { setStatus(elements.authStatus, friendlyAuthError(error), "error"); return; }
   await enterPortal(data.session);
 });
 
@@ -389,13 +556,13 @@ elements.magicLinkButton.addEventListener("click", async () => {
   setLoading(elements.magicLinkButton, true, t("sending"));
   const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: `${window.location.origin}/portal/`, shouldCreateUser: true } });
   setLoading(elements.magicLinkButton, false);
-  setStatus(elements.authStatus, error ? error.message : t("linkSent"), error ? "error" : "success");
+  setStatus(elements.authStatus, error ? friendlyAuthError(error) : t("linkSent"), error ? "error" : "success");
 });
 
 elements.googleLoginButton.addEventListener("click", async () => {
   setLoading(elements.googleLoginButton, true, t("openingGoogle"));
   const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/portal/` } });
-  if (error) { setLoading(elements.googleLoginButton, false); setStatus(elements.authStatus, error.message, "error"); }
+  if (error) { setLoading(elements.googleLoginButton, false); setStatus(elements.authStatus, friendlyAuthError(error), "error"); }
 });
 
 elements.messageForm.addEventListener("submit", async (event) => {
@@ -408,7 +575,7 @@ elements.messageForm.addEventListener("submit", async (event) => {
     conversation_id: state.conversationId, sender_type: "client", sender_user_id: state.user.id, direction: "inbound", body,
   });
   setLoading(button, false);
-  if (error) { setStatus(elements.messageStatus, error.message, "error"); return; }
+  if (error) { setStatus(elements.messageStatus, state.language === "ru" ? "Не удалось отправить сообщение. Текст сохранён в поле — попробуйте ещё раз." : "Could not send the message. Your text is still here; try again.", "error"); return; }
   try {
     await fetch(MESSAGE_NOTIFICATION_ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ company: state.lead.company, sender_email: state.user.email, message: body }) });
   } catch { /* The database message is already saved. */ }

@@ -121,6 +121,23 @@ Status: `VERIFIED` as local code and database behavior only; this is not a produ
 - [x] Batch route/anomaly counts and guarded publish action.
 - [x] Matching v2 and current pipeline statuses in the lead drawer.
 
+### Operational workspace — local delivery 2026-08-01
+
+Status: `VERIFIED` locally; migration and frontend are not deployed to production yet.
+
+- [x] Full-width staff request workspace with overview, dossier, matching, Deal Desk,
+  tasks, messages and section navigation.
+- [x] Request owner assignment, dossier completeness, next action, deadlines and pipeline counters.
+- [x] Structured staff and client dossier editing through a field-limited RPC.
+- [x] PSP `needs_info` requests become an explicit client task and can be resubmitted for review.
+- [x] Matching no longer creates and sends a shortlist automatically; staff selects routes manually,
+  creates a client-safe preview and reviews it before sharing.
+- [x] Staff-only route/provider context remains separate from the anonymous client snapshot.
+- [x] Operational Deal Desk controls cover PSP submission and decision, Telegram, Zoom and won/lost.
+- [x] Client portal loads options through a dedicated safe RPC instead of querying the legacy
+  `SECURITY DEFINER` shortlist view directly.
+- [x] Local syntax, portal guards and all 14 migration/E2E fixtures pass.
+
 ### Production grant hotfix
 
 - [x] Added `20260801_offerpsp_authenticated_lead_grants.sql` after production E2E
@@ -246,14 +263,15 @@ Status: `PARTIAL` — these are the actual next P1/P2 tasks after rollout.
 
 ### P1 — Deal Desk
 
-- [ ] Staff UI for reviewing and editing the full merchant dossier.
-- [ ] Missing-information workflow linked to client conversation.
-- [ ] Staff controls for PSP submission and review decisions.
-- [ ] Telegram group preparation and stored introduction template.
-- [ ] Zoom scheduling UI and cooperation follow-up controls.
+- [x] Staff UI for reviewing and editing the merchant dossier — locally verified, rollout pending.
+- [x] Missing-information workflow linked to the client dossier — locally verified, rollout pending.
+- [x] Staff controls for PSP submission and review decisions — locally verified, rollout pending.
+- [x] Telegram group recording and transition — locally verified, rollout pending.
+- [x] Zoom scheduling and won/lost controls — locally verified, rollout pending.
+- [ ] Stored introduction templates and automated Telegram/Zoom preparation.
 - [ ] Deal history and result-quality tracking.
 
-The database functions for this pipeline exist locally; the complete operational UI does not.
+The first operational UI is implemented locally. Production rollout and daily-use refinement remain.
 
 ### P1 — Agent operations
 

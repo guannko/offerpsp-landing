@@ -99,6 +99,46 @@
               <h2 id="nextActionTitle"></h2>
               <p id="nextActionText"></p>
             </div>
+            <button id="openDossierButton" class="button primary is-hidden" type="button" data-i18n="completeProfile">Дополнить профиль</button>
+          </section>
+
+          <section id="dossierSection" class="section-block dossier-section">
+            <div class="section-head">
+              <div><p class="eyebrow" data-i18n="pspReviewProfile">Профиль для PSP review</p><h2 data-i18n="companyDossier">Досье компании</h2></div>
+              <span id="clientDossierProgress" class="dossier-progress">0%</span>
+            </div>
+            <p class="section-intro" data-i18n="dossierExplanation">Это информация, по которой PSP решает, готов ли он знакомиться и обсуждать подключение.</p>
+            <div id="clientDossierTasks" class="client-task-list"></div>
+            <details id="clientDossierEditor" class="dossier-editor">
+              <summary data-i18n="openCompanyProfile">Открыть и обновить профиль компании</summary>
+              <form id="clientDossierForm" class="client-dossier-form">
+                <label><span data-i18n="companyName">Название компании</span><input id="clientCompany" type="text" required></label>
+                <label><span data-i18n="contactName">Контактное лицо</span><input id="clientContactName" type="text" required></label>
+                <label>Telegram<input id="clientTelegram" type="text" placeholder="@username"></label>
+                <label class="span-2"><span data-i18n="productUrl">Ссылка на продукт</span><input id="clientCompanyUrl" type="url" placeholder="https://" required></label>
+                <label><span data-i18n="registrationGeo">GEO регистрации</span><input id="clientRegistrationGeo" type="text" placeholder="CY"></label>
+                <label><span data-i18n="targetGeos">Целевые GEO</span><input id="clientTargetGeos" type="text" placeholder="IN, BR, MX" required></label>
+                <label><span data-i18n="vertical">Вертикаль</span><input id="clientVertical" type="text" placeholder="iGaming" required></label>
+                <label><span data-i18n="businessModel">Бизнес-модель</span><input id="clientBusinessModel" type="text" placeholder="Online casino"></label>
+                <label><span data-i18n="licenseStatus">Статус лицензии</span><select id="clientLicenseStatus"><option value="unknown" data-i18n="unknown">Не указано</option><option value="licensed" data-i18n="licensed">Есть лицензия</option><option value="unlicensed" data-i18n="unlicensed">Без лицензии</option><option value="pending" data-i18n="pending">В процессе</option><option value="not_required" data-i18n="notRequired">Не требуется</option></select></label>
+                <label><span data-i18n="licenseJurisdiction">Юрисдикция лицензии</span><input id="clientLicenseJurisdiction" type="text" placeholder="Curaçao"></label>
+                <label><span data-i18n="licenseNumber">Номер лицензии</span><input id="clientLicenseNumber" type="text"></label>
+                <label class="span-2"><span data-i18n="licenseEvidence">Ссылка на подтверждение лицензии</span><input id="clientLicenseEvidenceUrl" type="url" placeholder="https://"></label>
+                <label><span data-i18n="expectedVolume">Ожидаемый оборот в месяц</span><input id="clientMonthlyVolume" type="number" min="0" step="any" required></label>
+                <label><span data-i18n="volumeCurrency">Валюта оборота</span><input id="clientVolumeCurrency" type="text" placeholder="EUR" required></label>
+                <label><span data-i18n="requestedCurrencies">Валюты обработки</span><input id="clientCurrencies" type="text" placeholder="INR, USDT"></label>
+                <label><span data-i18n="paymentMethods">Платёжные методы</span><input id="clientMethods" type="text" placeholder="UPI, Cards" required></label>
+                <label><span data-i18n="paymentFlows">Потоки</span><input id="clientFlows" type="text" placeholder="PayIn, PayOut" required></label>
+                <label><span data-i18n="trafficTypes">Тип трафика</span><input id="clientTrafficTypes" type="text" placeholder="FTD, Rebill"></label>
+                <label><span data-i18n="minimumTransaction">Минимальная транзакция</span><input id="clientMinTransaction" type="number" min="0" step="any"></label>
+                <label><span data-i18n="maximumTransaction">Максимальная транзакция</span><input id="clientMaxTransaction" type="number" min="0" step="any"></label>
+                <label><span data-i18n="transactionCurrency">Валюта транзакции</span><input id="clientTransactionCurrency" type="text" placeholder="INR"></label>
+                <label><span data-i18n="launchTimeline">Когда нужен запуск</span><input id="clientLaunchTimeline" type="text" placeholder="В течение 2 недель"></label>
+                <label class="span-2"><span data-i18n="processingSetup">Текущий процессинг</span><textarea id="clientProcessingSetup" rows="3"></textarea></label>
+                <button class="button primary" type="submit" data-i18n="saveProfile">Сохранить профиль</button>
+              </form>
+              <p id="clientDossierStatus" class="status" role="status" aria-live="polite"></p>
+            </details>
           </section>
 
           <section id="dealSection" class="section-block is-hidden">

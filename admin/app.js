@@ -36,12 +36,15 @@ const STATUS_LABELS = {
 const state = {
   user: null,
   staff: null,
+  staffMembers: [],
   leads: [],
   selectedLead: null,
   activities: [],
   tasks: [],
   matches: [],
+  selectedMatchIds: new Set(),
   shortlists: [],
+  requestWorkspace: null,
   conversationId: null,
   messages: [],
   supply: {
@@ -112,11 +115,45 @@ const elements = {
   drawerStatus: document.getElementById("drawerStatus"),
   drawerScore: document.getElementById("drawerScore"),
   drawerGrade: document.getElementById("drawerGrade"),
+  drawerOwner: document.getElementById("drawerOwner"),
+  workspaceNextAction: document.getElementById("workspaceNextAction"),
+  dossierCompleteness: document.getElementById("dossierCompleteness"),
+  workspaceSummary: document.getElementById("workspaceSummary"),
   profileDetails: document.getElementById("profileDetails"),
+  dossierStatus: document.getElementById("dossierStatus"),
+  dossierMissing: document.getElementById("dossierMissing"),
+  dossierCompany: document.getElementById("dossierCompany"),
+  dossierContactName: document.getElementById("dossierContactName"),
+  dossierTelegram: document.getElementById("dossierTelegram"),
+  dossierCompanyUrl: document.getElementById("dossierCompanyUrl"),
+  dossierRegistrationGeo: document.getElementById("dossierRegistrationGeo"),
+  dossierTargetGeos: document.getElementById("dossierTargetGeos"),
+  dossierVertical: document.getElementById("dossierVertical"),
+  dossierBusinessModel: document.getElementById("dossierBusinessModel"),
+  dossierLicenseStatus: document.getElementById("dossierLicenseStatus"),
+  dossierLicenseJurisdiction: document.getElementById("dossierLicenseJurisdiction"),
+  dossierLicenseNumber: document.getElementById("dossierLicenseNumber"),
+  dossierLicenseEvidenceUrl: document.getElementById("dossierLicenseEvidenceUrl"),
+  dossierMonthlyVolume: document.getElementById("dossierMonthlyVolume"),
+  dossierVolumeCurrency: document.getElementById("dossierVolumeCurrency"),
+  dossierCurrencies: document.getElementById("dossierCurrencies"),
+  dossierMethods: document.getElementById("dossierMethods"),
+  dossierFlows: document.getElementById("dossierFlows"),
+  dossierTrafficTypes: document.getElementById("dossierTrafficTypes"),
+  dossierMinTransaction: document.getElementById("dossierMinTransaction"),
+  dossierMaxTransaction: document.getElementById("dossierMaxTransaction"),
+  dossierTransactionCurrency: document.getElementById("dossierTransactionCurrency"),
+  dossierLaunchTimeline: document.getElementById("dossierLaunchTimeline"),
+  dossierProcessingSetup: document.getElementById("dossierProcessingSetup"),
+  saveDossierButton: document.getElementById("saveDossierButton"),
+  dossierSaveStatus: document.getElementById("dossierSaveStatus"),
   runMatchingButton: document.getElementById("runMatchingButton"),
+  createShortlistButton: document.getElementById("createShortlistButton"),
   shareShortlistButton: document.getElementById("shareShortlistButton"),
   matchSummary: document.getElementById("matchSummary"),
   matchesList: document.getElementById("matchesList"),
+  shortlistPreview: document.getElementById("shortlistPreview"),
+  dealDeskList: document.getElementById("dealDeskList"),
   saveLeadButton: document.getElementById("saveLeadButton"),
   drawerStatusMessage: document.getElementById("drawerStatusMessage"),
   noteInput: document.getElementById("noteInput"),
@@ -143,6 +180,11 @@ function setAuthStatus(message = "", type = "") {
 function setDrawerStatus(message = "", type = "") {
   elements.drawerStatusMessage.textContent = message;
   elements.drawerStatusMessage.className = `form-status${type ? ` ${type}` : ""}`;
+}
+
+function setDossierSaveStatus(message = "", type = "") {
+  elements.dossierSaveStatus.textContent = message;
+  elements.dossierSaveStatus.className = `form-status${type ? ` ${type}` : ""}`;
 }
 
 function setSupplyStatus(message = "", type = "") {
@@ -191,6 +233,30 @@ function formatDate(value, withTime = false) {
 function cleanText(value) {
   const text = String(value ?? "").trim();
   return text || "—";
+}
+
+function listValue(value) {
+  if (Array.isArray(value)) return value;
+  return String(value ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function listInput(value) {
+  return Array.isArray(value) ? value.join(", ") : String(value ?? "");
+}
+
+function friendlyError(error, fallback = "The action could not be completed.") {
+  const message = String(error?.message || "");
+  const known = [
+    ["Merchant dossier is incomplete", "Complete the highlighted merchant dossier fields first."],
+    ["Select at least one eligible route match", "Select at least one route for the shortlist."],
+    ["Every selected route must be a current eligible match", "One of the selected routes is no longer current. Run matching again."],
+    ["PSP acceptance is required", "The PSP must accept the merchant before the introduction."],
+    ["Telegram introduction must exist", "Create the Telegram introduction before scheduling Zoom."],
+  ];
+  return known.find(([needle]) => message.includes(needle))?.[1] || fallback;
 }
 
 function isShareableShortlist(shortlist) {
@@ -258,12 +324,23 @@ async function enterApp(session) {
     elements.userRole.textContent = state.staff.role;
     elements.authView.classList.add("is-hidden");
     elements.appView.classList.remove("is-hidden");
+    await loadStaffMembers();
     await Promise.all([loadLeads(), loadSupply()]);
   } catch (error) {
     setAuthStatus(error.message || "Could not verify access.", "error");
     elements.appView.classList.add("is-hidden");
     elements.authView.classList.remove("is-hidden");
   }
+}
+
+async function loadStaffMembers() {
+  const { data, error } = await supabase
+    .from("offerpsp_staff_members")
+    .select("user_id, display_name, role, active")
+    .eq("active", true)
+    .order("display_name", { ascending: true });
+  state.staffMembers = error ? [] : data || [];
+  elements.drawerOwner.innerHTML = `<option value="">${escapeHtml(i18n?.t("Unassigned") || "Unassigned")}</option>${state.staffMembers.map((member) => `<option value="${escapeHtml(member.user_id)}">${escapeHtml(member.display_name || member.role)}</option>`).join("")}`;
 }
 
 async function loadSupply() {
@@ -471,6 +548,7 @@ async function loadLeads() {
   ).format(state.lastUpdatedAt)}`;
   renderStats();
   renderLeads();
+  renderRequestWorkspace();
 }
 
 function filteredLeads() {
@@ -592,6 +670,169 @@ function renderProfile(lead) {
   `).join("");
 }
 
+const DOSSIER_REQUIRED_FIELDS = [
+  "legal_name", "contact_name", "contact_email", "product_url", "target_geos",
+  "vertical", "license_status", "expected_monthly_volume", "volume_currency",
+  "requested_methods", "requested_flows",
+];
+
+const DOSSIER_FIELD_LABELS = {
+  legal_name: "Company name",
+  contact_name: "Contact name",
+  contact_email: "Contact email",
+  product_url: "Product URL",
+  target_geos: "Target GEOs",
+  vertical: "Vertical",
+  license_status: "Licence status",
+  license_jurisdiction: "Licence jurisdiction",
+  expected_monthly_volume: "Expected monthly volume",
+  volume_currency: "Volume currency",
+  requested_methods: "Payment methods",
+  requested_flows: "Payment flows",
+};
+
+function renderRequestWorkspace() {
+  const lead = state.selectedLead;
+  if (!lead) return;
+  const workspace = state.requestWorkspace || {};
+  const dossier = workspace.dossier || {};
+  const missing = Array.isArray(dossier.missing_fields) ? dossier.missing_fields : DOSSIER_REQUIRED_FIELDS.filter((field) => {
+    const fallback = {
+      legal_name: lead.company,
+      contact_name: lead.name,
+      contact_email: lead.work_email,
+      product_url: lead.company_url,
+      target_geos: lead.target_geos,
+      vertical: lead.vertical,
+      license_status: lead.license_status && lead.license_status !== "unknown" ? lead.license_status : null,
+      expected_monthly_volume: lead.expected_monthly_volume,
+      volume_currency: lead.volume_currency,
+      requested_methods: lead.requested_methods,
+      requested_flows: lead.requested_flows,
+    }[field];
+    return Array.isArray(fallback) ? fallback.length === 0 : !fallback;
+  });
+  const requiredCount = DOSSIER_REQUIRED_FIELDS.length + (lead.license_status === "licensed" ? 1 : 0);
+  const completeness = Math.round((Math.max(0, requiredCount - missing.length) / requiredCount) * 100);
+  const requestedItems = (workspace.shortlist_items || []).filter((item) => item.introduction_requested_at);
+  const activeReviews = (workspace.reviews || []).filter((item) => ["pending", "reviewing", "needs_info", "accepted"].includes(item.status));
+  const introductions = workspace.introductions || [];
+  const openTasks = state.tasks.filter((task) => !["done", "cancelled"].includes(task.status));
+  const nextDue = openTasks.filter((task) => task.due_at).sort((a, b) => new Date(a.due_at) - new Date(b.due_at))[0];
+  const isRu = i18n?.getLanguage() === "ru";
+  const owner = state.staffMembers.find((member) => member.user_id === lead.assigned_to);
+
+  elements.dossierCompleteness.textContent = `${completeness}% ${isRu ? "досье" : "dossier"}`;
+  elements.workspaceNextAction.textContent = missing.length
+    ? (isRu ? `Заполните поля досье: ${missing.length}` : `Complete ${missing.length} dossier field${missing.length === 1 ? "" : "s"}`)
+    : requestedItems.length && activeReviews.length === 0
+      ? (isRu ? "Отправьте выбранный маршрут на проверку PSP" : "Send the selected merchant route to PSP review")
+      : activeReviews.some((review) => review.status === "needs_info")
+        ? (isRu ? "Ответьте на запрос данных от PSP" : "Resolve the PSP information request")
+        : activeReviews.some((review) => review.status === "accepted") && introductions.length === 0
+          ? (isRu ? "Создайте контролируемое знакомство в Telegram" : "Create the controlled Telegram introduction")
+          : introductions.some((item) => item.status === "telegram_created")
+            ? (isRu ? "Назначьте встречу в Zoom" : "Schedule the Zoom meeting")
+            : (isRu ? "Проверьте заявку и выполните следующий реальный шаг" : "Review the request and move the next real step");
+  elements.workspaceSummary.innerHTML = [
+    [isRu ? "Ответственный" : "Owner", owner?.display_name || (lead.assigned_to ? (isRu ? "Назначен" : "Assigned") : (isRu ? "Не назначен" : "Unassigned"))],
+    [isRu ? "Задачи / ближайший срок" : "Tasks / next deadline", `${openTasks.length}${nextDue ? ` · ${formatDate(nextDue.due_at)}` : ""}`],
+    [isRu ? "Выбор клиента" : "Client choices", String(requestedItems.length)],
+    [isRu ? "PSP review / знакомство" : "PSP review / intro", `${activeReviews.length} / ${introductions.length}`],
+  ].map(([label, value]) => `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`).join("");
+
+  elements.dossierStatus.textContent = dossier.status === "ready"
+    ? statusLabel("dossier_ready")
+    : dossier.status === "needs_clarification"
+      ? statusLabel("needs_clarification")
+      : i18n?.t(dossier.status || (missing.length ? "Needs clarification" : "Dossier ready"));
+  elements.dossierStatus.className = `status-pill status-${escapeHtml(dossier.status || (missing.length ? "needs_clarification" : "dossier_ready"))}`;
+  elements.dossierMissing.innerHTML = missing.length
+    ? missing.map((field) => `<span>${escapeHtml(i18n?.t(DOSSIER_FIELD_LABELS[field] || field.replaceAll("_", " ")))}</span>`).join("")
+    : '<span class="is-complete">Required PSP review information is complete</span>';
+
+  elements.dossierCompany.value = lead.company || "";
+  elements.dossierContactName.value = lead.name || "";
+  elements.dossierTelegram.value = lead.telegram || "";
+  elements.dossierCompanyUrl.value = lead.company_url || "";
+  elements.dossierRegistrationGeo.value = lead.registration_geo || "";
+  elements.dossierTargetGeos.value = listInput(lead.target_geos);
+  elements.dossierVertical.value = lead.vertical || "";
+  elements.dossierBusinessModel.value = lead.business_model || "";
+  elements.dossierLicenseStatus.value = lead.license_status || "unknown";
+  elements.dossierLicenseJurisdiction.value = lead.license_jurisdiction || "";
+  elements.dossierLicenseNumber.value = lead.license_number || "";
+  elements.dossierLicenseEvidenceUrl.value = lead.license_evidence_url || "";
+  elements.dossierMonthlyVolume.value = lead.expected_monthly_volume ?? "";
+  elements.dossierVolumeCurrency.value = lead.volume_currency || "";
+  elements.dossierCurrencies.value = listInput(lead.requested_currencies);
+  elements.dossierMethods.value = listInput(lead.requested_methods);
+  elements.dossierFlows.value = listInput(lead.requested_flows);
+  elements.dossierTrafficTypes.value = listInput(lead.traffic_types);
+  elements.dossierMinTransaction.value = lead.min_transaction_amount ?? "";
+  elements.dossierMaxTransaction.value = lead.max_transaction_amount ?? "";
+  elements.dossierTransactionCurrency.value = lead.transaction_currency || "";
+  elements.dossierLaunchTimeline.value = lead.launch_timeline || "";
+  elements.dossierProcessingSetup.value = lead.current_processing_setup || "";
+  renderDealDesk();
+}
+
+async function loadRequestWorkspace(leadId) {
+  const { data, error } = await supabase.rpc("get_offerpsp_staff_request_workspace", { p_lead_id: leadId });
+  if (error) {
+    state.requestWorkspace = { dossier: {}, shortlist_items: [], reviews: [], introductions: [] };
+    elements.dealDeskList.innerHTML = '<p class="form-status">Deal desk will become available after the operational workspace migration.</p>';
+    return;
+  }
+  state.requestWorkspace = data || { dossier: {}, shortlist_items: [], reviews: [], introductions: [] };
+  renderRequestWorkspace();
+}
+
+async function saveDossier() {
+  if (!state.selectedLead) return;
+  setButtonLoading(elements.saveDossierButton, true, "Saving…");
+  setDossierSaveStatus();
+  const profile = {
+    company: elements.dossierCompany.value.trim(),
+    name: elements.dossierContactName.value.trim(),
+    telegram: elements.dossierTelegram.value.trim(),
+    company_url: elements.dossierCompanyUrl.value.trim(),
+    registration_geo: elements.dossierRegistrationGeo.value.trim(),
+    target_geos: listValue(elements.dossierTargetGeos.value),
+    vertical: elements.dossierVertical.value.trim(),
+    business_model: elements.dossierBusinessModel.value.trim(),
+    license_status: elements.dossierLicenseStatus.value,
+    license_jurisdiction: elements.dossierLicenseJurisdiction.value.trim(),
+    license_number: elements.dossierLicenseNumber.value.trim(),
+    license_evidence_url: elements.dossierLicenseEvidenceUrl.value.trim(),
+    expected_monthly_volume: elements.dossierMonthlyVolume.value.trim(),
+    volume_currency: elements.dossierVolumeCurrency.value.trim(),
+    requested_currencies: listValue(elements.dossierCurrencies.value),
+    requested_methods: listValue(elements.dossierMethods.value),
+    requested_flows: listValue(elements.dossierFlows.value),
+    traffic_types: listValue(elements.dossierTrafficTypes.value),
+    min_transaction_amount: elements.dossierMinTransaction.value.trim(),
+    max_transaction_amount: elements.dossierMaxTransaction.value.trim(),
+    transaction_currency: elements.dossierTransactionCurrency.value.trim(),
+    launch_timeline: elements.dossierLaunchTimeline.value.trim(),
+    current_processing_setup: elements.dossierProcessingSetup.value.trim(),
+  };
+  const { data, error } = await supabase.rpc("update_offerpsp_client_dossier", {
+    p_lead_id: state.selectedLead.lead_id,
+    p_profile: profile,
+  });
+  setButtonLoading(elements.saveDossierButton, false);
+  if (error) {
+    setDossierSaveStatus(friendlyError(error, "Could not save the merchant dossier."), "error");
+    return;
+  }
+  await Promise.all([loadLeads(), loadRequestWorkspace(state.selectedLead.lead_id), loadActivities(state.selectedLead.lead_id)]);
+  const refreshed = state.leads.find((lead) => lead.lead_id === state.selectedLead.lead_id);
+  if (refreshed) state.selectedLead = refreshed;
+  renderRequestWorkspace();
+  setDossierSaveStatus(data.complete ? "Dossier saved and ready for PSP review." : "Dossier saved. Complete the highlighted fields before PSP review.", data.complete ? "success" : "error");
+}
+
 async function openLead(leadId) {
   const lead = state.leads.find((item) => item.lead_id === leadId);
   if (!lead) return;
@@ -600,7 +841,9 @@ async function openLead(leadId) {
   state.activities = [];
   state.tasks = [];
   state.matches = [];
+  state.selectedMatchIds = new Set();
   state.shortlists = [];
+  state.requestWorkspace = null;
   state.conversationId = null;
   state.messages = [];
   elements.drawerCompany.textContent = cleanText(lead.company);
@@ -609,6 +852,7 @@ async function openLead(leadId) {
   elements.drawerStatus.value = lead.status || "new";
   elements.drawerScore.value = lead.quality_score ?? "";
   elements.drawerGrade.value = lead.quality_grade || "";
+  elements.drawerOwner.value = lead.assigned_to || "";
   elements.noteInput.value = "";
   elements.taskTitleInput.value = "";
   elements.taskPriorityInput.value = "normal";
@@ -619,6 +863,9 @@ async function openLead(leadId) {
   elements.taskList.innerHTML = "";
   elements.matchSummary.textContent = "Loading candidates…";
   elements.matchesList.innerHTML = "";
+  elements.shortlistPreview.classList.add("is-hidden");
+  elements.shortlistPreview.innerHTML = "";
+  elements.dealDeskList.innerHTML = '<div class="state-card">Loading deal desk…</div>';
   elements.adminMessageList.innerHTML = '<p class="form-status">Loading conversation…</p>';
   elements.adminMessageInput.value = "";
   elements.drawerBackdrop.classList.remove("is-hidden");
@@ -631,8 +878,10 @@ async function openLead(leadId) {
     loadTasks(leadId),
     loadMatches(leadId),
     loadShortlists(leadId),
+    loadRequestWorkspace(leadId),
     loadAdminConversation(leadId),
   ]);
+  renderRequestWorkspace();
 }
 
 function closeDrawer() {
@@ -641,6 +890,8 @@ function closeDrawer() {
   elements.drawerBackdrop.classList.add("is-hidden");
   document.body.style.overflow = "";
   state.selectedLead = null;
+  state.requestWorkspace = null;
+  state.selectedMatchIds = new Set();
 }
 
 async function loadActivities(leadId) {
@@ -744,25 +995,61 @@ function renderMatches() {
     "is-hidden",
     !currentShortlist || currentShortlist.status === "shared" || !shareable,
   );
+  elements.createShortlistButton.classList.toggle("is-hidden", state.selectedMatchIds.size === 0);
+  renderShortlistPreview();
 
   if (!state.matches.length) {
     elements.matchesList.innerHTML = '<p class="form-status">Run matching to compare this request with the PSP database.</p>';
     return;
   }
 
-  elements.matchesList.innerHTML = state.matches.slice(0, 5).map((match, index) => {
-    const strengths = Array.isArray(match.strengths) ? match.strengths.join(" · ") : "";
+  elements.matchesList.innerHTML = state.matches.slice(0, 20).map((match, index) => {
+    const strengths = Array.isArray(match.strengths) ? match.strengths.map((item) => i18n?.t(item)).join(" · ") : "";
+    const risks = Array.isArray(match.risks) ? match.risks.map((item) => i18n?.t(item)).join(" · ") : "";
+    const pricing = Array.isArray(match.client_pricing)
+      ? match.client_pricing.map((price) => price.client_percent != null ? `${price.client_percent}%` : price.client_fixed != null ? String(price.client_fixed) : "").filter(Boolean).join(" · ")
+      : "";
+    const selected = state.selectedMatchIds.has(match.match_id);
     return `
-      <article class="match-card">
+      <article class="match-card${selected ? " is-selected" : ""}">
+        <input class="match-select" type="checkbox" data-match-id="${escapeHtml(match.match_id)}" ${selected ? "checked" : ""} aria-label="Select ${escapeHtml(cleanText(match.client_title))}">
         <span class="match-rank">#${index + 1}</span>
         <div class="match-info">
           <strong>${escapeHtml(cleanText(match.provider_name))} · ${escapeHtml(cleanText(match.client_title))}</strong>
           <p>${escapeHtml(strengths || "Manual verification required")}</p>
+          <div class="match-meta">${escapeHtml([listInput(match.geos), listInput(match.currencies), String(match.flow || "").toUpperCase(), listInput(match.methods), pricing].filter(Boolean).join(" · "))}</div>
+          ${risks ? `<div class="match-risks">${escapeHtml(i18n?.t("Risk"))}: ${escapeHtml(risks)}</div>` : ""}
         </div>
         <span class="match-score">${escapeHtml(match.score)}</span>
       </article>
     `;
   }).join("");
+
+  elements.matchesList.querySelectorAll("[data-match-id]").forEach((checkbox) => {
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) state.selectedMatchIds.add(checkbox.dataset.matchId);
+      else state.selectedMatchIds.delete(checkbox.dataset.matchId);
+      renderMatches();
+    });
+  });
+}
+
+function renderShortlistPreview() {
+  const shortlist = state.shortlists[0];
+  const items = shortlist?.offerpsp_shortlist_items || [];
+  if (!shortlist || !items.length) {
+    elements.shortlistPreview.classList.add("is-hidden");
+    elements.shortlistPreview.innerHTML = "";
+    return;
+  }
+  elements.shortlistPreview.classList.remove("is-hidden");
+  elements.shortlistPreview.innerHTML = `
+    <div><div><p class="eyebrow">Client preview</p><h4>${escapeHtml(shortlist.title)} · v${escapeHtml(shortlist.version)}</h4></div><span class="status-pill status-${escapeHtml(shortlist.status)}">${escapeHtml(shortlist.status)}</span></div>
+    <div class="preview-options">${items.map((item, index) => {
+      const snapshot = item.client_snapshot || {};
+      const fees = (snapshot.client_fees || []).map((fee) => fee.client_percent != null ? `${fee.client_percent}%` : fee.client_fixed != null ? String(fee.client_fixed) : "").filter(Boolean).join(" · ") || "—";
+      return `<article class="preview-option"><div><strong>${escapeHtml(i18n?.t("Option"))} ${index + 1}: ${escapeHtml(snapshot.title || i18n?.t("Incomplete legacy option"))}</strong><p>${escapeHtml([listInput(snapshot.geos), listInput(snapshot.currencies), listInput(snapshot.methods)].filter(Boolean).join(" · ") || i18n?.t("Missing normalized route details"))}</p></div><strong>${escapeHtml(fees)}</strong></article>`;
+    }).join("")}</div>`;
 }
 
 async function loadShortlists(leadId) {
@@ -796,29 +1083,7 @@ async function runMatching() {
     return;
   }
 
-  if ((data?.match_count || 0) > 0) {
-    const { data: matches, error: matchesError } = await supabase.rpc("list_offerpsp_route_matches", {
-      p_lead_id: state.selectedLead.lead_id,
-    });
-    if (matchesError) {
-      setButtonLoading(elements.runMatchingButton, false);
-      setDrawerStatus(matchesError.message, "error");
-      return;
-    }
-
-    const selectedMatchIds = (matches || []).slice(0, 5).map((match) => match.match_id);
-    const { error: shortlistError } = await supabase.rpc("create_offerpsp_route_shortlist", {
-      p_lead_id: state.selectedLead.lead_id,
-      p_route_match_ids: selectedMatchIds,
-      p_title: "Recommended payment routes",
-      p_introduction: "These anonymous options passed the current eligibility checks and were reviewed by OfferPSP.",
-    });
-    if (shortlistError) {
-      setButtonLoading(elements.runMatchingButton, false);
-      setDrawerStatus(shortlistError.message, "error");
-      return;
-    }
-  }
+  state.selectedMatchIds = new Set();
 
   await Promise.all([
     loadMatches(state.selectedLead.lead_id),
@@ -839,9 +1104,34 @@ async function runMatching() {
   setDrawerStatus(
     data?.status === "needs_clarification"
       ? `Matching needs clarification: ${(data.missing_fields || []).join(", ")}.`
-      : `Matching complete: ${data?.match_count ?? state.matches.length} eligible routes.`,
-    "success",
+      : `Matching complete: ${data?.match_count ?? state.matches.length} eligible routes. Review and select the routes manually.`,
+    data?.status === "needs_clarification" ? "error" : "success",
   );
+}
+
+async function createShortlist() {
+  if (!state.selectedLead || state.selectedMatchIds.size === 0) return;
+  setButtonLoading(elements.createShortlistButton, true, "Creating preview…");
+  setDrawerStatus();
+  const { error } = await supabase.rpc("create_offerpsp_route_shortlist", {
+    p_lead_id: state.selectedLead.lead_id,
+    p_route_match_ids: [...state.selectedMatchIds],
+    p_title: "Recommended payment routes",
+    p_introduction: "These anonymous routes were checked against your payment profile and reviewed by OfferPSP.",
+  });
+  setButtonLoading(elements.createShortlistButton, false);
+  if (error) {
+    setDrawerStatus(friendlyError(error, "Could not create the shortlist preview."), "error");
+    return;
+  }
+  state.selectedMatchIds = new Set();
+  await Promise.all([
+    loadShortlists(state.selectedLead.lead_id),
+    loadRequestWorkspace(state.selectedLead.lead_id),
+    loadActivities(state.selectedLead.lead_id),
+    loadLeads(),
+  ]);
+  setDrawerStatus("Shortlist preview created. Check the client-facing terms before sharing.", "success");
 }
 
 async function shareShortlist() {
@@ -860,17 +1150,145 @@ async function shareShortlist() {
 
   if (error) {
     setButtonLoading(elements.shareShortlistButton, false);
-    setDrawerStatus(error.message, "error");
+    setDrawerStatus(friendlyError(error, "Could not share the shortlist."), "error");
     return;
   }
 
   await Promise.all([
     loadShortlists(state.selectedLead.lead_id),
     loadActivities(state.selectedLead.lead_id),
+    loadRequestWorkspace(state.selectedLead.lead_id),
     loadLeads(),
   ]);
   setButtonLoading(elements.shareShortlistButton, false);
   setDrawerStatus("Shortlist shared in the client cabinet.", "success");
+}
+
+function dealDeskStatusLabel(status) {
+  const labels = {
+    dossier_ready: ["ready for review", "готово к проверке"], pending: ["pending", "ожидает"],
+    reviewing: ["PSP reviewing", "PSP рассматривает"], needs_info: ["needs information", "нужны данные"],
+    accepted: ["PSP accepted", "PSP согласовал"], declined: ["PSP declined", "PSP отказал"],
+    telegram_created: ["Telegram created", "Telegram создан"], zoom_scheduled: ["Zoom scheduled", "Zoom назначен"],
+    won: ["won", "успешно"], lost: ["lost", "потеряно"],
+  };
+  return labels[status]?.[i18n?.getLanguage() === "ru" ? 1 : 0] || status;
+}
+
+function renderDealDesk() {
+  const workspace = state.requestWorkspace || {};
+  const requestedItems = (workspace.shortlist_items || []).filter((item) => item.introduction_requested_at);
+  const reviews = workspace.reviews || [];
+  const introductions = workspace.introductions || [];
+  if (!requestedItems.length) {
+    elements.dealDeskList.innerHTML = '<div class="state-card">The Deal Desk starts when the client selects an option and requests an introduction.</div>';
+    return;
+  }
+
+  elements.dealDeskList.innerHTML = requestedItems.map((item) => {
+    const review = reviews.find((candidate) => candidate.shortlist_item_id === item.item_id);
+    const introduction = review ? introductions.find((candidate) => candidate.review_id === review.review_id) : null;
+    let controls = "";
+    if (!review) {
+      controls = `<div class="deal-form">
+        <label>Review channel<select data-field="review-channel"><option value="telegram">Telegram</option><option value="email">Email</option><option value="portal">Portal</option><option value="other">Other</option></select></label>
+        <label>External reference<input data-field="review-reference" type="text" placeholder="Chat, ticket or message reference"></label>
+      </div><div class="deal-actions-admin"><button class="button button-primary button-compact" type="button" data-deal-action="submit-review" data-item-id="${escapeHtml(item.item_id)}">Send dossier to PSP review</button></div>`;
+    } else if (["reviewing", "pending", "needs_info"].includes(review.status)) {
+      controls = `<div class="deal-form">
+        <label class="span-2">Internal decision note<textarea data-field="review-note" rows="2">${escapeHtml(review.internal_notes || "")}</textarea></label>
+        <label class="span-2">Information requested from merchant<textarea data-field="requested-information" rows="2">${escapeHtml(review.requested_information || "")}</textarea></label>
+      </div><div class="deal-actions-admin">
+        ${review.status === "needs_info" ? `<button class="button button-secondary button-compact" type="button" data-deal-action="submit-review" data-item-id="${escapeHtml(item.item_id)}">Resubmit updated dossier</button>` : ""}
+        <button class="button button-primary button-compact" type="button" data-deal-action="review-decision" data-decision="accepted" data-review-id="${escapeHtml(review.review_id)}">PSP accepted</button>
+        <button class="button button-secondary button-compact" type="button" data-deal-action="review-decision" data-decision="needs_info" data-review-id="${escapeHtml(review.review_id)}">Request information</button>
+        <button class="button button-secondary button-compact" type="button" data-deal-action="review-decision" data-decision="declined" data-review-id="${escapeHtml(review.review_id)}">PSP declined</button>
+      </div>`;
+    } else if (review.status === "accepted" && !introduction) {
+      controls = `<div class="deal-form">
+        <label>Telegram group title<input data-field="telegram-title" type="text" placeholder="Merchant × PSP × OfferPSP"></label>
+        <label>Telegram group URL<input data-field="telegram-url" type="url" placeholder="https://t.me/..."></label>
+      </div><div class="deal-actions-admin"><button class="button button-primary button-compact" type="button" data-deal-action="create-telegram" data-review-id="${escapeHtml(review.review_id)}">Record Telegram introduction</button></div>`;
+    } else if (introduction?.status === "telegram_created") {
+      controls = `<div class="deal-form">
+        <label>Zoom URL<input data-field="zoom-url" type="url" placeholder="https://zoom.us/..."></label>
+        <label>Meeting date and time<input data-field="zoom-date" type="datetime-local"></label>
+      </div><div class="deal-actions-admin"><button class="button button-primary button-compact" type="button" data-deal-action="schedule-zoom" data-introduction-id="${escapeHtml(introduction.introduction_id)}">Schedule Zoom</button></div>`;
+    } else if (introduction?.status === "zoom_scheduled") {
+      controls = `<div class="deal-form"><label class="span-2">Outcome note<textarea data-field="result-note" rows="2"></textarea></label></div><div class="deal-actions-admin">
+        <button class="button button-primary button-compact" type="button" data-deal-action="close-introduction" data-result="won" data-introduction-id="${escapeHtml(introduction.introduction_id)}">Mark live / won</button>
+        <button class="button button-secondary button-compact" type="button" data-deal-action="close-introduction" data-result="lost" data-introduction-id="${escapeHtml(introduction.introduction_id)}">Mark lost</button>
+      </div>`;
+    }
+    return `<article class="deal-card-admin">
+      <div class="deal-card-admin-head"><div><strong>${escapeHtml(item.provider_name || "Unknown PSP")} · ${escapeHtml(item.route_title || item.option_code)}</strong><p>${escapeHtml(item.provider_code || "—")} · ${escapeHtml(item.route_code || "—")} · ${escapeHtml(i18n?.getLanguage() === "ru" ? "вариант клиента" : "client option")} ${escapeHtml(item.option_code)}</p></div><span class="status-pill status-${escapeHtml(introduction?.status || review?.status || "dossier_ready")}">${escapeHtml(dealDeskStatusLabel(introduction?.status || review?.status || "dossier_ready"))}</span></div>
+      ${review?.requested_information ? `<p class="match-risks">PSP requested: ${escapeHtml(review.requested_information)}</p>` : ""}
+      ${introduction?.telegram_group_url ? `<p><a href="${escapeHtml(introduction.telegram_group_url)}" target="_blank" rel="noopener">Open Telegram group</a>${introduction.zoom_url ? ` · <a href="${escapeHtml(introduction.zoom_url)}" target="_blank" rel="noopener">Open Zoom</a>` : ""}</p>` : ""}
+      ${controls}
+    </article>`;
+  }).join("");
+}
+
+async function refreshOperationalWorkspace() {
+  if (!state.selectedLead) return;
+  const leadId = state.selectedLead.lead_id;
+  await Promise.all([loadLeads(), loadRequestWorkspace(leadId), loadActivities(leadId)]);
+  const refreshed = state.leads.find((lead) => lead.lead_id === leadId);
+  if (refreshed) {
+    state.selectedLead = refreshed;
+    elements.drawerStatus.value = refreshed.status;
+    renderProfile(refreshed);
+  }
+  renderRequestWorkspace();
+}
+
+async function handleDealDeskAction(button) {
+  const card = button.closest(".deal-card-admin");
+  const field = (name) => card?.querySelector(`[data-field="${name}"]`)?.value.trim() || null;
+  const action = button.dataset.dealAction;
+  setButtonLoading(button, true, "Saving…");
+  setDrawerStatus();
+  let result;
+  if (action === "submit-review") {
+    result = await supabase.rpc("submit_offerpsp_dossier_for_review", {
+      p_shortlist_item_id: button.dataset.itemId,
+      p_channel: field("review-channel") || "telegram",
+      p_external_reference: field("review-reference"),
+    });
+  } else if (action === "review-decision") {
+    result = await supabase.rpc("record_offerpsp_provider_review", {
+      p_review_id: button.dataset.reviewId,
+      p_decision: button.dataset.decision,
+      p_notes: field("review-note"),
+      p_requested_information: field("requested-information"),
+    });
+  } else if (action === "create-telegram") {
+    result = await supabase.rpc("record_offerpsp_telegram_introduction", {
+      p_review_id: button.dataset.reviewId,
+      p_group_title: field("telegram-title"),
+      p_group_url: field("telegram-url"),
+    });
+  } else if (action === "schedule-zoom") {
+    const scheduledAt = field("zoom-date");
+    result = await supabase.rpc("record_offerpsp_zoom", {
+      p_introduction_id: button.dataset.introductionId,
+      p_zoom_url: field("zoom-url"),
+      p_scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+    });
+  } else if (action === "close-introduction") {
+    result = await supabase.rpc("close_offerpsp_introduction", {
+      p_introduction_id: button.dataset.introductionId,
+      p_result: button.dataset.result,
+      p_notes: field("result-note"),
+    });
+  }
+  setButtonLoading(button, false);
+  if (result?.error) {
+    setDrawerStatus(friendlyError(result.error, "The Deal Desk action could not be completed."), "error");
+    return;
+  }
+  await refreshOperationalWorkspace();
+  setDrawerStatus("Deal Desk updated.", "success");
 }
 
 async function loadAdminConversation(leadId) {
@@ -969,10 +1387,12 @@ async function saveLeadChanges() {
   }
 
   const previousStatus = state.selectedLead.status;
+  const previousOwner = state.selectedLead.assigned_to || null;
   const updates = {
     status: elements.drawerStatus.value,
     quality_score: score,
     quality_grade: elements.drawerGrade.value || null,
+    assigned_to: elements.drawerOwner.value || null,
   };
 
   const { data, error } = await supabase
@@ -1003,6 +1423,8 @@ async function saveLeadChanges() {
       status: updates.status,
       quality_score: score,
       quality_grade: updates.quality_grade,
+      previous_assigned_to: previousOwner,
+      assigned_to: updates.assigned_to,
     },
   });
 
@@ -1010,6 +1432,7 @@ async function saveLeadChanges() {
   state.leads = state.leads.map((lead) => lead.lead_id === data.lead_id ? data : lead);
   renderStats();
   renderLeads();
+  renderRequestWorkspace();
   await loadActivities(data.lead_id);
   setButtonLoading(elements.saveLeadButton, false);
   setDrawerStatus(activityError ? "Lead saved, but the activity record failed." : "Changes saved.", activityError ? "error" : "success");
@@ -1062,6 +1485,7 @@ async function addTask() {
     .from("offerpsp_tasks")
     .insert({
       lead_id: state.selectedLead.lead_id,
+      assigned_to: state.selectedLead.assigned_to || state.user.id,
       created_by: state.user.id,
       source: "staff",
       title,
@@ -1201,11 +1625,22 @@ elements.statusFilter.addEventListener("change", renderLeads);
 elements.closeDrawerButton.addEventListener("click", closeDrawer);
 elements.drawerBackdrop.addEventListener("click", closeDrawer);
 elements.saveLeadButton.addEventListener("click", saveLeadChanges);
+elements.saveDossierButton.addEventListener("click", saveDossier);
 elements.addNoteButton.addEventListener("click", addNote);
 elements.addTaskButton.addEventListener("click", addTask);
 elements.runMatchingButton.addEventListener("click", runMatching);
+elements.createShortlistButton.addEventListener("click", createShortlist);
 elements.shareShortlistButton.addEventListener("click", shareShortlist);
 elements.sendAdminMessageButton.addEventListener("click", sendAdminMessage);
+elements.dealDeskList.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-deal-action]");
+  if (button) handleDealDeskAction(button);
+});
+document.querySelectorAll("[data-workspace-target]").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.getElementById(button.dataset.workspaceTarget)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+});
 elements.menuButton.addEventListener("click", () => elements.sidebar.classList.toggle("is-open"));
 window.addEventListener("offerpsp:languagechange", () => {
   document.querySelectorAll("[data-default-label]").forEach((button) => {
@@ -1225,6 +1660,7 @@ window.addEventListener("offerpsp:languagechange", () => {
     renderActivities();
     renderTasks();
     renderMatches();
+    renderRequestWorkspace();
     renderAdminMessages();
   }
   i18n?.translate();
@@ -1242,11 +1678,7 @@ document.addEventListener("keydown", (event) => {
 
 const { data: { session } } = await supabase.auth.getSession();
 await enterApp(session);
-
 supabase.auth.onAuthStateChange((event, nextSession) => {
-  if (event === "SIGNED_OUT") {
-    enterApp(null);
-  } else if (event === "SIGNED_IN" && nextSession?.user && nextSession.user.id !== state.user?.id) {
-    enterApp(nextSession);
-  }
+  if (event === "SIGNED_OUT") enterApp(null);
+  else if (event === "SIGNED_IN" && nextSession?.user && nextSession.user.id !== state.user?.id) enterApp(nextSession);
 });

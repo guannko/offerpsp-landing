@@ -285,7 +285,7 @@
   </div>
 
   <div id="drawerBackdrop" class="drawer-backdrop is-hidden"></div>
-  <aside id="leadDrawer" class="lead-drawer" aria-hidden="true" aria-label="Lead details">
+  <aside id="leadDrawer" class="lead-drawer" aria-hidden="true" aria-label="Request workspace">
     <div class="drawer-head">
       <div>
         <p class="eyebrow">Merchant request</p>
@@ -296,6 +296,25 @@
     </div>
 
     <div class="drawer-body">
+      <nav class="workspace-tabs" aria-label="Request sections">
+        <button type="button" data-workspace-target="workspaceOverview">Overview</button>
+        <button type="button" data-workspace-target="workspaceDossier">Dossier</button>
+        <button type="button" data-workspace-target="workspaceMatching">Matching</button>
+        <button type="button" data-workspace-target="workspaceDealDesk">Deal desk</button>
+        <button type="button" data-workspace-target="workspaceCollaboration">Tasks & messages</button>
+      </nav>
+
+      <section id="workspaceOverview" class="detail-section workspace-overview">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Current operation</p>
+            <h3 id="workspaceNextAction">Loading next action…</h3>
+          </div>
+          <span id="dossierCompleteness" class="completion-pill">0% dossier</span>
+        </div>
+        <div id="workspaceSummary" class="workspace-summary"></div>
+      </section>
+
       <section class="detail-section">
         <div class="section-head">
           <h3>Pipeline</h3>
@@ -338,6 +357,10 @@
               <option value="D">D — low fit</option>
             </select>
           </label>
+          <label>
+            Owner
+            <select id="drawerOwner"><option value="">Unassigned</option></select>
+          </label>
         </div>
         <button id="saveLeadButton" class="button button-primary button-compact" type="button">Save changes</button>
         <p id="drawerStatusMessage" class="form-status" role="status" aria-live="polite"></p>
@@ -348,7 +371,53 @@
         <dl id="profileDetails" class="details-grid"></dl>
       </section>
 
-      <section class="detail-section">
+      <section id="workspaceDossier" class="detail-section">
+        <div class="section-head">
+          <div>
+            <h3>Merchant dossier</h3>
+            <p class="section-copy">Information the PSP needs before it decides whether to meet the merchant.</p>
+          </div>
+          <span id="dossierStatus" class="status-pill">draft</span>
+        </div>
+        <div id="dossierMissing" class="dossier-missing"></div>
+        <div class="dossier-form">
+          <label>Legal / company name<input id="dossierCompany" type="text"></label>
+          <label>Contact name<input id="dossierContactName" type="text"></label>
+          <label>Telegram<input id="dossierTelegram" type="text" placeholder="@username"></label>
+          <label class="span-2">Product URL<input id="dossierCompanyUrl" type="url" placeholder="https://"></label>
+          <label>Registration GEO<input id="dossierRegistrationGeo" type="text" placeholder="CY"></label>
+          <label>Target GEOs<input id="dossierTargetGeos" type="text" placeholder="IN, BR, MX"></label>
+          <label>Vertical<input id="dossierVertical" type="text" placeholder="iGaming"></label>
+          <label>Business model<input id="dossierBusinessModel" type="text" placeholder="Online casino"></label>
+          <label>Licence status
+            <select id="dossierLicenseStatus">
+              <option value="unknown">Unknown</option>
+              <option value="licensed">Licensed</option>
+              <option value="unlicensed">Unlicensed</option>
+              <option value="pending">Pending</option>
+              <option value="not_required">Not required</option>
+            </select>
+          </label>
+          <label>Licence jurisdiction<input id="dossierLicenseJurisdiction" type="text" placeholder="Curaçao"></label>
+          <label>Licence number<input id="dossierLicenseNumber" type="text"></label>
+          <label class="span-2">Licence evidence URL<input id="dossierLicenseEvidenceUrl" type="url" placeholder="https://"></label>
+          <label>Expected monthly volume<input id="dossierMonthlyVolume" type="number" min="0" step="any"></label>
+          <label>Volume currency<input id="dossierVolumeCurrency" type="text" placeholder="EUR"></label>
+          <label>Requested currencies<input id="dossierCurrencies" type="text" placeholder="INR, USDT"></label>
+          <label>Payment methods<input id="dossierMethods" type="text" placeholder="UPI, Cards"></label>
+          <label>Flows<input id="dossierFlows" type="text" placeholder="PayIn, PayOut"></label>
+          <label>Traffic types<input id="dossierTrafficTypes" type="text" placeholder="FTD, Rebill"></label>
+          <label>Minimum transaction<input id="dossierMinTransaction" type="number" min="0" step="any"></label>
+          <label>Maximum transaction<input id="dossierMaxTransaction" type="number" min="0" step="any"></label>
+          <label>Transaction currency<input id="dossierTransactionCurrency" type="text" placeholder="INR"></label>
+          <label>Launch timeline<input id="dossierLaunchTimeline" type="text" placeholder="Within 2 weeks"></label>
+          <label class="span-3">Current processing setup<textarea id="dossierProcessingSetup" rows="3"></textarea></label>
+        </div>
+        <button id="saveDossierButton" class="button button-primary button-compact" type="button">Save dossier</button>
+        <p id="dossierSaveStatus" class="form-status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section id="workspaceMatching" class="detail-section">
         <div class="section-head">
           <div>
             <h3>PSP matching</h3>
@@ -356,13 +425,25 @@
           </div>
           <div class="section-actions">
             <button id="runMatchingButton" class="button button-secondary button-compact" type="button">Run matching</button>
+            <button id="createShortlistButton" class="button button-secondary button-compact is-hidden" type="button">Create shortlist preview</button>
             <button id="shareShortlistButton" class="button button-primary button-compact is-hidden" type="button">Share shortlist</button>
           </div>
         </div>
         <div id="matchesList" class="matches-list"></div>
+        <div id="shortlistPreview" class="shortlist-preview is-hidden"></div>
       </section>
 
-      <section class="detail-section">
+      <section id="workspaceDealDesk" class="detail-section">
+        <div class="section-head">
+          <div>
+            <h3>Deal desk</h3>
+            <p class="section-copy">PSP review → Telegram introduction → Zoom → result.</p>
+          </div>
+        </div>
+        <div id="dealDeskList" class="deal-desk-list"></div>
+      </section>
+
+      <section id="workspaceCollaboration" class="detail-section">
         <h3>Internal note</h3>
         <textarea id="noteInput" rows="4" placeholder="Add qualification context, PSP requirements or next steps…"></textarea>
         <button id="addNoteButton" class="button button-secondary button-compact" type="button">Add to history</button>

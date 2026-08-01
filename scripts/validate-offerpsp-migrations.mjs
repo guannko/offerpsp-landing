@@ -106,6 +106,7 @@ async function applyMigrations() {
     "20260801_offerpsp_active_lead_claims.sql",
     "20260801_offerpsp_client_workspace_agents.sql",
     "20260801_offerpsp_workspace_grants.sql",
+    "20260801_offerpsp_operational_workspaces.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -462,12 +463,44 @@ async function runEndToEndFixture() {
     [],
     "OfferPSP staff access required",
   );
-  const clientOptions = await query("select * from public.offerpsp_client_shortlist where lead_id = $1", [leadId]);
+  const clientOptions = await query("select * from public.list_offerpsp_client_options($1)", [leadId]);
   if (clientOptions.rows.length !== 1) throw new Error("Client shortlist did not return one option");
   const clientPayload = JSON.stringify(clientOptions.rows[0]);
   if (/Validation PSP|validation\.invalid|provider_id|offer_route_id|base_percent|margin_mode/i.test(clientPayload)) {
     throw new Error("Client shortlist leaked internal provider or pricing data");
   }
+  const dossierUpdate = await query(
+    "select public.update_offerpsp_client_dossier($1, $2::jsonb) as value",
+    [leadId, JSON.stringify({
+      launch_timeline: "Within two weeks",
+      requested_methods: ["UPI"],
+      requested_flows: ["PAYIN"],
+    })],
+  );
+  if (!dossierUpdate.rows[0].value.complete) {
+    throw new Error(`Client dossier update unexpectedly became incomplete: ${JSON.stringify(dossierUpdate.rows[0].value)}`);
+  }
+  const clientProfile = await query(
+    "select public.get_offerpsp_client_request_profile($1) as value",
+    [leadId],
+  );
+  if (!clientProfile.rows[0].value.complete || clientProfile.rows[0].value.launch_timeline !== "Within two weeks") {
+    throw new Error(`Client-safe profile projection is incomplete: ${JSON.stringify(clientProfile.rows[0].value)}`);
+  }
+  await setUser(OTHER_CLIENT_ID);
+  const foreignOptions = await query("select * from public.list_offerpsp_client_options($1)", [leadId]);
+  if (foreignOptions.rows.length !== 0) throw new Error("Foreign client can read another merchant's shortlist");
+  await expectQueryFailure(
+    "select public.update_offerpsp_client_dossier($1, '{}'::jsonb)",
+    [leadId],
+    "OfferPSP request not found",
+  );
+  await expectQueryFailure(
+    "select public.get_offerpsp_client_request_profile($1)",
+    [leadId],
+    "OfferPSP request not found",
+  );
+  await setUser(CLIENT_ID);
   const optionCode = clientOptions.rows[0].option_code;
   await query("select public.respond_offerpsp_option($1, 'interested')", [optionCode]);
   const requestResult = await query(
@@ -479,6 +512,14 @@ async function runEndToEndFixture() {
   }
 
   await setUser(STAFF_ID);
+  const staffWorkspace = await query(
+    "select public.get_offerpsp_staff_request_workspace($1) as value",
+    [leadId],
+  );
+  if (staffWorkspace.rows[0].value.shortlist_items.length < 2
+      || !staffWorkspace.rows[0].value.shortlist_items.some((item) => item.provider_name === "Validation PSP")) {
+    throw new Error(`Staff request workspace is incomplete: ${JSON.stringify(staffWorkspace.rows[0].value)}`);
+  }
   const item = await query(
     "select id from public.offerpsp_shortlist_items where public_code = $1",
     [optionCode],
@@ -492,6 +533,15 @@ async function runEndToEndFixture() {
     "select public.record_offerpsp_provider_review($1, 'needs_info', 'Clarification requested', 'Confirm processing history')",
     [firstReviewId],
   );
+  await setUser(CLIENT_ID);
+  const clarificationProfile = await query(
+    "select public.get_offerpsp_client_request_profile($1) as value",
+    [leadId],
+  );
+  if (clarificationProfile.rows[0].value.psp_requested_information !== "Confirm processing history") {
+    throw new Error("PSP information request did not reach the client task projection");
+  }
+  await setUser(STAFF_ID);
   const secondReviewResult = await query(
     "select public.submit_offerpsp_dossier_for_review($1, 'telegram', 'validation-round-2') as value",
     [item.rows[0].id],
@@ -532,8 +582,13 @@ async function runEndToEndFixture() {
   await setUser(OTHER_CLIENT_ID);
   const foreignDeals = await query("select * from public.list_offerpsp_client_deals($1)", [leadId]);
   if (foreignDeals.rows.length !== 0) throw new Error("Foreign client can read another merchant's deal");
+  await expectQueryFailure(
+    "select public.get_offerpsp_staff_request_workspace($1)",
+    [leadId],
+    "OfferPSP staff access required",
+  );
 
-  process.stdout.write("PASS end-to-end private offer → match → shortlist → dossier → PSP review → Telegram → Zoom → won\n");
+  process.stdout.write("PASS end-to-end private offer → manual shortlist → client dossier → PSP review → Telegram → Zoom → won\n");
 }
 
 async function verifyAgentWorkspaceAndPricing() {
