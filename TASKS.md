@@ -9,32 +9,34 @@ Code or a passing local test is not evidence that production has been updated.
 
 ### 1. Available through the production interface
 
-Status: `VERIFIED` for the production version deployed before the new workspace rollout.
+Status: `VERIFIED` for production deployment
+`dpl_B1LUdb36EoWqFKhkTLHD5DZQ5Ky3` at SHA
+`02aee090f50b0ed037615099bcaf6d5bc0c3b02f`.
 
-- The existing client portal supports authentication, one current active request, a shared
-  anonymous shortlist, option feedback, introduction request and conversation history when
-  those records have been prepared by staff.
+- The client portal is a persistent RU/EN multi-request Payment Workspace with counters,
+  request navigation, recurring `New payment request` action, anonymous safe route options,
+  option feedback, introduction request and client-visible deal progress.
 - The existing staff cabinet supports the lead desk, basic private supply register, prepared
   draft upload, guarded publishing, route matching and current pipeline statuses.
 - There is no production UI yet for agent organizations, managed merchant portfolios, agent
   margin policies or the commission ledger.
 
-### 2. Implemented in local database/API and frontend code, but not in production
+### 2. Implemented in the production database/API
 
-Status: `PARTIAL` — implemented and locally verified, but unavailable as a production feature.
+Status: `VERIFIED` for schema, RPC access boundaries and role-isolation behavior; this does not
+mean every capability has a dedicated user interface.
 
 - `20260801_offerpsp_client_workspace_agents.sql` adds merchant/agent organizations,
   memberships, explicit agent-to-merchant assignments, agent margin policies, commission
   ledger and client-safe workspace RPCs.
-- The new `/portal/` frontend code adds a persistent multi-request workspace and can consume
-  those RPCs for direct merchants and assigned agents.
-- The frontend was visually checked locally and exists in a Vercel preview, but the preview
-  cannot provide a real end-to-end workspace until the production database migration is
-  applied. It is not a deployed user capability.
+- `20260801_offerpsp_workspace_grants.sql` limits `authenticated` to DML on the three new
+  organization tables and SELECT-only on the client-safe view. `anon` receives no access.
+- Direct clients and assigned agents can use the same client-safe workspace RPCs. Staff/client/
+  agent/unrelated-client isolation was verified with separate production accounts.
 
 ### 3. Approved architecture foundation that still requires a separate UI
 
-Status: `PARTIAL` — the data model and access boundaries exist locally; the operational product
+Status: `PARTIAL` — the data model and access boundaries exist in production; the operational product
 screens and workflows below are not implemented.
 
 - Staff management of agent organizations, invitations, members, merchant assignments and
@@ -43,8 +45,8 @@ screens and workflows below are not implemented.
 - Commission review, approval, earned/paid processing, statements and reconciliation.
 - Full staff Deal Desk for dossier review, PSP decisions, Telegram, Zoom and cooperation result.
 
-Payment Workspace, agent organizations, agent margin and commission accounting remain approved
-scope. This separation prevents the architecture from being described as a finished UI feature.
+Agent organizations, agent margin and commission accounting remain approved scope. Their
+database/API foundation is deployed, but they are not finished UI features.
 
 ## Implemented locally
 
@@ -139,7 +141,7 @@ Status: `VERIFIED` as local code and database behavior only; this is not a produ
 
 Status: `VERIFIED` on 2026-08-01 in an ephemeral PostgreSQL-compatible PGlite database.
 
-- [x] All 12 migrations, including active-claim isolation and the new workspace/agent migration,
+- [x] All 13 migrations, including active-claim isolation, workspace/agent and minimal-grant migrations,
   apply in dependency order.
 - [x] `authenticated` has lead UPDATE/DELETE privileges while `anon` does not.
 - [x] BRPay parses and imports as exactly 15 draft routes.
@@ -163,22 +165,29 @@ Status: `VERIFIED` on 2026-08-01 in an ephemeral PostgreSQL-compatible PGlite da
 
 Local verification does not replace testing with real Supabase staff and client accounts.
 
-## Implemented but not deployed
+## Deployed and verified in production
 
-Status: `PARTIAL` — the following new workspace version exists only in the local branch.
+Status: `VERIFIED` on 2026-08-01.
 
-- [ ] Apply `20260801_offerpsp_client_workspace_agents.sql` to production after a new read-only
-  preflight, snapshot and explicit rollout confirmation.
-- [ ] Deploy the new `/portal/` payment workspace and admin legacy-shortlist guard.
-- [ ] Run production regression with separate staff, direct-client, agent and unrelated-client accounts.
-- [ ] Confirm the old shared generic shortlist is no longer visible after migration, then rebuild it
-  only from a valid published normalized route when real data is ready.
+- [x] Closed snapshot and rollback script are readable under gitignored `.private/`; the snapshot
+  includes the previous shortlist view definition, constraints, policies and grants.
+- [x] Applied `offerpsp_client_workspace_agents` as migration `20260801064235`.
+- [x] Applied minimal grant hotfix `offerpsp_workspace_grants` as migration `20260801065351`.
+- [x] `authenticated` has only SELECT/INSERT/UPDATE/DELETE on the three new tables and only
+  SELECT on the client view; `anon` has no access and `service_role` remains unchanged.
+- [x] Production regression passed with separate staff, direct-client, agent and unrelated-client accounts.
+- [x] Full production business E2E passed through `won`; all technical fixtures were archived,
+  superseded, closed/unlinked or deactivated afterward.
+- [x] Production portal was visually checked in RU and EN with a separate client account; the
+  persistent empty workspace has a clear next action and no closed technical merchant.
+- [x] Vercel production deployment `dpl_B1LUdb36EoWqFKhkTLHD5DZQ5Ky3` is `READY` at exact SHA
+  `02aee090f50b0ed037615099bcaf6d5bc0c3b02f`; no runtime errors were reported in the post-rollout window.
 
-BRPay and Antarex remain draft-only. This new local work does not publish either provider.
+BRPay and Antarex remain draft-only and were not published by this rollout.
 
-## Production baseline already deployed
+## Earlier production baseline
 
-Status: `VERIFIED` — factual baseline before the new workspace migration above.
+Status: `VERIFIED` — factual baseline retained for rollout history.
 
 - [x] Applied `20260801_offerpsp_active_lead_claims.sql` as production migration
   `20260731233207 offerpsp_active_lead_claims`; function definition, ACL and RLS were
@@ -217,8 +226,8 @@ Status: `VERIFIED` — factual baseline before the new workspace migration above
 Production rollout verification is complete. BRPay and Antarex remain draft-only.
 
 Security note: Supabase advisor reports `offerpsp_client_shortlist` as a
-`SECURITY DEFINER` view. Anonymous access is revoked and the view filters on
-`auth.uid()`, but separate-client isolation must be rechecked in the completed E2E.
+`SECURITY DEFINER` view. Anonymous access is revoked, the view filters on
+`auth.uid()`, and direct-client/agent/unrelated-client isolation passed production E2E.
 
 ## Truly not implemented
 
