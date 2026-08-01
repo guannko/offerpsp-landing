@@ -193,6 +193,25 @@ function cleanText(value) {
   return text || "—";
 }
 
+function isShareableShortlist(shortlist) {
+  const items = shortlist?.offerpsp_shortlist_items;
+  if (!Array.isArray(items) || !items.length) return false;
+  return items.every((item) => {
+    const snapshot = item.client_snapshot;
+    const hasGeos = snapshot?.coverage_scope !== "specific"
+      || (Array.isArray(snapshot?.geos) && snapshot.geos.length > 0);
+    return Boolean(
+      item.private_provider_id
+      && item.offer_route_id
+      && snapshot?.title?.trim()
+      && Array.isArray(snapshot?.currencies) && snapshot.currencies.length
+      && Array.isArray(snapshot?.methods) && snapshot.methods.length
+      && Array.isArray(snapshot?.client_fees) && snapshot.client_fees.length
+      && hasGeos
+    );
+  });
+}
+
 function linkValue(value) {
   const raw = String(value ?? "").trim();
   if (!raw) return "—";
@@ -711,12 +730,19 @@ async function loadMatches(leadId) {
 
 function renderMatches() {
   const currentShortlist = state.shortlists[0];
+  const shareable = isShareableShortlist(currentShortlist);
   elements.matchSummary.textContent = state.matches.length
-    ? `${state.matches.length} candidates · ${currentShortlist?.status === "shared" ? "shortlist shared" : currentShortlist ? "draft shortlist ready" : "review eligible routes"}`
+    ? `${state.matches.length} candidates · ${currentShortlist?.status === "shared" && shareable
+      ? "shortlist shared"
+      : currentShortlist && shareable
+        ? "normalized shortlist ready"
+        : currentShortlist
+          ? "legacy shortlist blocked — run matching to rebuild"
+          : "review eligible routes"}`
     : "No candidates generated yet";
   elements.shareShortlistButton.classList.toggle(
     "is-hidden",
-    !currentShortlist || currentShortlist.status === "shared",
+    !currentShortlist || currentShortlist.status === "shared" || !shareable,
   );
 
   if (!state.matches.length) {
@@ -742,7 +768,7 @@ function renderMatches() {
 async function loadShortlists(leadId) {
   const { data, error } = await supabase
     .from("offerpsp_shortlists")
-    .select("id, lead_id, version, title, status, shared_at, created_at")
+    .select("id, lead_id, version, title, status, shared_at, created_at, offerpsp_shortlist_items(id, offer_route_id, private_provider_id, client_snapshot)")
     .eq("lead_id", leadId)
     .order("version", { ascending: false });
 
@@ -821,6 +847,10 @@ async function runMatching() {
 async function shareShortlist() {
   const shortlist = state.shortlists[0];
   if (!shortlist || !state.selectedLead) return;
+  if (!isShareableShortlist(shortlist)) {
+    setDrawerStatus("This is a legacy or incomplete shortlist. Run matching to rebuild it from normalized routes.", "error");
+    return;
+  }
 
   setButtonLoading(elements.shareShortlistButton, true, "Sharing…");
   setDrawerStatus();

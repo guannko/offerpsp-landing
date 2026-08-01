@@ -42,11 +42,24 @@ Status: `VERIFIED` for the rollout scope completed on 2026-08-01.
 ### Client cabinet
 
 - [x] RU is the default language; RU/EN switch is available.
-- [x] Guided next action replaces the progress-heavy layout.
+- [x] Persistent multi-request payment workspace replaces the one-request shortlist viewer.
+- [x] Request rail, workspace counters, recurring `New payment request` action and clear guided next action.
 - [x] Anonymous route details, limits, settlement and final client fees are shown.
 - [x] `Interested`, `Need details` and `Not suitable` responses.
 - [x] Selected-option summary and primary `Request introduction` action.
-- [x] Legacy shortlist items cannot request an introduction until reissued from the private route model.
+- [x] Client-safe Telegram/Zoom/result projection keeps the deal usable after the shortlist stage.
+- [x] Legacy or incomplete shortlist items are hidden from the client projection and cannot be shared.
+- [x] Sharing a new normalized shortlist archives the previous shared version for that request.
+
+### Organizations and subagents
+
+- [x] Merchant and agent organizations, memberships and agent-to-merchant ownership.
+- [x] Agent access is restricted to explicitly assigned active merchant relationships.
+- [x] Separate pricing chain: PSP base → OfferPSP margin → agent margin → final merchant rate.
+- [x] An agent-managed route cannot produce a client snapshot until its agent margin policy exists.
+- [x] Private projected-to-paid agent commission ledger.
+- [x] Agent members can view and act on assigned merchant workspaces without seeing provider identity,
+  PSP base fees or either internal margin layer.
 
 ### Merchant dossier and introductions
 
@@ -75,9 +88,9 @@ Status: `VERIFIED` for the rollout scope completed on 2026-08-01.
 ### Client portal active-request isolation
 
 - [x] `claim_offerpsp_leads()` ignores `closed` and `spam` leads.
-- [x] The client portal explicitly selects leads linked to the current user instead of
+- [x] The client portal loads only rows returned by the client-safe workspace RPC instead of
   relying on the broader staff RLS view.
-- [x] The portal excludes `closed` and `spam` requests from the current-request query.
+- [x] The workspace access helper excludes `closed` and `spam` requests.
 - [x] Empty `won` and `lost` requests show a completed state instead of a conflicting
   matching-in-progress state.
 
@@ -85,7 +98,7 @@ Status: `VERIFIED` for the rollout scope completed on 2026-08-01.
 
 Status: `VERIFIED` on 2026-08-01 in an ephemeral PostgreSQL-compatible PGlite database.
 
-- [x] All six existing migrations, the three platform migrations and the grant hotfix
+- [x] All 12 migrations, including active-claim isolation and the new workspace/agent migration,
   apply in dependency order.
 - [x] `authenticated` has lead UPDATE/DELETE privileges while `anon` does not.
 - [x] BRPay parses and imports as exactly 15 draft routes.
@@ -97,17 +110,34 @@ Status: `VERIFIED` on 2026-08-01 in an ephemeral PostgreSQL-compatible PGlite da
 - [x] Rebuilding matching removes stale reviewed route matches without invalidating an existing client snapshot.
 - [x] Full E2E passes:
   `route → matching → shortlist → client selection → dossier → PSP needs info → second review → PSP accepted → Telegram → Zoom → won`.
+- [x] Legacy/incomplete shortlist publication fails without changing shortlist or lead state.
+- [x] Client-safe deal output contains Telegram/Zoom/result data and excludes provider/route/internal notes.
+- [x] Agent regression covers missing-margin rejection, final resale calculation, authorized action
+  and isolation from an unrelated authenticated user.
 - [x] A repeated Telegram call cannot move an introduction backwards after Zoom is scheduled.
 - [x] JavaScript syntax checks and `git diff --check` pass.
-- [x] Client and staff screens were visually checked at desktop and mobile widths without horizontal overflow.
+- [x] New payment workspace was visually checked locally at desktop and 390px mobile width without horizontal overflow.
 - [x] Portal regression checks cover active email claiming, repeated login with detached
-  closed/spam fixtures, explicit current-user selection and consistent terminal copy.
+  closed/spam fixtures, safe workspace RPC selection and consistent terminal copy.
 
 Local verification does not replace testing with real Supabase staff and client accounts.
 
 ## Implemented but not deployed
 
-Status: `VERIFIED` — no completed rollout item remains undeployed.
+Status: `PARTIAL` — the following new workspace version exists only in the local branch.
+
+- [ ] Apply `20260801_offerpsp_client_workspace_agents.sql` to production after a new read-only
+  preflight, snapshot and explicit rollout confirmation.
+- [ ] Deploy the new `/portal/` payment workspace and admin legacy-shortlist guard.
+- [ ] Run production regression with separate staff, direct-client, agent and unrelated-client accounts.
+- [ ] Confirm the old shared generic shortlist is no longer visible after migration, then rebuild it
+  only from a valid published normalized route when real data is ready.
+
+BRPay and Antarex remain draft-only. This new local work does not publish either provider.
+
+## Production baseline already deployed
+
+Status: `VERIFIED` — factual baseline before the new workspace migration above.
 
 - [x] Applied `20260801_offerpsp_active_lead_claims.sql` as production migration
   `20260731233207 offerpsp_active_lead_claims`; function definition, ACL and RLS were
@@ -174,6 +204,13 @@ Status: `PARTIAL` — these are the actual next P1/P2 tasks after rollout.
 - [ ] Deal history and result-quality tracking.
 
 The database functions for this pipeline exist locally; the complete operational UI does not.
+
+### P1 — Agent operations
+
+- [ ] Staff editor for agent organizations, members, merchant assignments and agent margin policies.
+- [ ] Agent onboarding/invitation flow and managed-client switcher optimized for larger portfolios.
+- [ ] Agent commission approval, earned/paid workflow and downloadable statements.
+- [ ] Co-branded agent workspace settings; white-label domains remain a later product decision.
 
 ### P1 — Telegram ingestion
 

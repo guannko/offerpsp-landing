@@ -1,6 +1,6 @@
 # OfferPSP platform architecture
 
-Updated: 2026-07-30
+Updated: 2026-08-01
 
 ## Product definition
 
@@ -17,8 +17,9 @@ specific route.
 
 The core promise is:
 
-> A merchant submits one request, receives a relevant anonymous shortlist and gets a
-> controlled introduction to an appropriate PSP.
+> A merchant keeps its payment work in one workspace: it can open recurring requests,
+> compare anonymous routes, complete managed introductions and retain the history of live
+> connections. An authorized subagent can manage assigned merchants with a separate markup.
 
 ## Strategic objective
 
@@ -76,7 +77,7 @@ Recommended operational stages:
 |---|---|
 | `offerpsp.com` | Search-facing content, merchant intake and PSP partner acquisition |
 | `/admin/` | Staff-only lead desk, offer supply, matching, introductions and analytics |
-| `/portal/` | Short merchant flow: understand options, select and request an introduction |
+| `/portal/` | Persistent merchant/agent workspace for requests, comparisons, introductions and live connections |
 | Supabase Auth | Staff, merchant and later PSP identities |
 | Supabase Postgres | Source of truth for demand, supply, matching and introductions |
 | n8n / AIBot | Telegram/email notifications, parsing, reminders and operational jobs |
@@ -97,7 +98,7 @@ Current tables:
 - `offerpsp_notifications`: notification audit;
 - `offerpsp_staff_members`: staff authorization.
 
-Future demand model should separate:
+The workspace demand model separates or is being extended to separate:
 
 - merchant organization;
 - merchant contacts;
@@ -192,13 +193,13 @@ only provider-level records.
 BR-Pay is the primary strategic partner, but strategic priority must never override hard
 eligibility.
 
-- BR-Pay offer rates normally include the agent margin.
+- BR-Pay offer rates normally include the existing OfferPSP commercial margin.
 - Antarex source rates do not include OfferPSP's margin.
 - Both providers publish multi-route rate cards containing different GEOs, methods, flows,
   traffic types, limits and settlement conditions.
 - A route must be selected and scored independently from other routes in the same rate card.
 
-## Rates and OfferPSP margin
+## Rates, OfferPSP margin and agent margin
 
 Never modify or lose the partner's source rate.
 
@@ -207,12 +208,14 @@ Store:
 ```text
 partner/base rate
 + OfferPSP markup
-= client rate
+= OfferPSP direct-client rate
++ optional agent markup
+= final merchant rate
 ```
 
 Markup policies:
 
-- `included`: partner confirms the agent margin is already included;
+- `included`: partner confirms the OfferPSP commercial margin is already included;
 - `percentage_points`: add, for example, 1 percentage point;
 - `relative_percent`: multiply the source fee;
 - `fixed`: add a fixed amount and currency;
@@ -227,7 +230,17 @@ Allow separate rules for:
 - fixed transaction fee;
 - merchant-specific pricing.
 
-The admin interface shows all three layers. The client sees only the final client rate.
+The staff interface may show all internal layers. The merchant sees only the final merchant
+rate. An agent must never receive the PSP source rate or OfferPSP margin merely because it
+manages the merchant.
+
+Agent markup is stored separately from OfferPSP margin and can be scoped to an agent,
+merchant organization, lead, route and flow. If an agent-managed lead has no applicable
+agent margin policy, the client snapshot is blocked instead of silently assuming zero.
+
+Agent commissions use a separate ledger with `projected`, `approved`, `earned`, `paid` and
+`void` states. A commission record is an accounting result, not a replacement for the
+immutable route pricing snapshot.
 
 ## Offer ingestion and updating
 
@@ -332,26 +345,46 @@ capability or rate.
 If required information is missing, the result should be `needs_clarification`, not a set of
 generic identical candidates.
 
-## Client cabinet
+## Client payment workspace
 
-The client cabinet is a short guided workflow, not a full CRM.
+The client cabinet is a persistent payment workspace. It is intentionally not a generic CRM,
+but it must remain useful after the first shortlist and support multiple requests over time.
 
 Required structure:
 
-1. clear current state and next action;
-2. anonymous client-safe options;
-3. useful comparison of GEO, methods, limits, settlement and final rate;
+1. request list for new GEOs, methods, backup PSPs and live-route issues;
+2. clear current state and one non-contradictory next action per request;
+3. anonymous client-safe route comparison by GEO, currency, flow, method, limits,
+   settlement, integration and final rate;
 4. actions: `Interested`, `Need details`, `Not suitable`;
-5. selected-option summary;
-6. primary CTA: `Request introduction`;
-7. compact conversation/help channel.
+5. selected-option summary and primary `Request introduction` CTA;
+6. client-safe PSP review, Telegram, Zoom and result state;
+7. persistent conversation and reusable merchant history;
+8. recurring `New payment request` action.
 
 RU is the default; EN is optional.
 
-After introduction:
+After introduction, Telegram and Zoom links remain visible in the relevant request. A `won`
+route stays in history and the next expansion starts as another request instead of replacing
+the previous one.
 
-> The introduction has been organized. Further discussion continues in the shared Telegram
-> channel.
+### Subagents
+
+An agent workspace is co-branded with OfferPSP first; full white-label operation is a later
+product decision. Access requires an active organization membership and an explicit active
+agent-to-merchant relationship. Staff owns assignments and private pricing configuration.
+
+Pricing order is fixed:
+
+```text
+PSP base
+→ OfferPSP markup
+→ agent markup
+→ final merchant rate
+```
+
+The merchant never sees the internal layers. An unrelated agent or client receives no row,
+not a redacted copy of another merchant's data.
 
 ## Introduction workflow
 

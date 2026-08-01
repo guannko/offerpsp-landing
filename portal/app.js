@@ -1,9 +1,5 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
-import {
-  PORTAL_INACTIVE_STATUSES,
-  isPortalTerminalStatus,
-  portalEmptyStateKeys,
-} from "/portal/request-state.js";
+import { isPortalTerminalStatus, portalEmptyStateKeys } from "/portal/request-state.js";
 
 const supabase = createClient(
   "https://xcizofpejsomjiflesbx.supabase.co",
@@ -17,182 +13,117 @@ const LANGUAGE_STORAGE_KEY = "offerpsp-portal-language";
 
 const COPY = {
   ru: {
-    clientCabinet: "Кабинет клиента",
-    authTitle: "Ваши платёжные варианты — в одном месте.",
-    authCopy: "Используйте рабочий email из заявки OfferPSP.",
-    workEmail: "Рабочий email",
-    password: "Пароль",
-    optional: "необязательно",
-    signIn: "Войти",
-    continueGoogle: "Продолжить с Google",
-    sendLoginLink: "Отправить безопасную ссылку",
-    signOut: "Выйти",
-    noRequestTitle: "Для этого email пока нет заявки.",
-    noRequestCopy: "Отправьте заявку с этим рабочим email или свяжитесь с менеджером OfferPSP.",
-    submitRequest: "Отправить заявку",
-    paymentSearch: "Подбор платёжного решения",
-    nextStep: "Следующий шаг",
-    curated: "Подобрано под ваш профиль",
-    yourOptions: "Ваши платёжные варианты",
-    matchingProgress: "Идёт подбор",
-    matchingCopy: "Мы сверяем требования с приватной базой PSP. Здесь появятся только проверенные варианты.",
-    matchingComplete: "Подбор завершён",
-    matchingCompleteCopy: "Результат по этой заявке зафиксирован. Новые варианты сейчас не подбираются.",
-    directLine: "Прямая связь",
-    conversation: "Переписка",
-    messagePlaceholder: "Задайте вопрос или сообщите обновление…",
-    sendMessage: "Отправить",
-    requestReceived: "Заявка получена",
-    qualification: "Уточнение заявки",
-    matching: "Подбор вариантов",
-    shortlistReady: "Варианты готовы",
-    shared: "Ожидаем ваш выбор",
-    optionSelected: "Вариант выбран",
-    dossierReady: "Досье готово",
-    providerReviewing: "PSP рассматривает заявку",
-    providerNeedsInfo: "Нужна дополнительная информация",
-    providerAccepted: "PSP подтвердил знакомство",
-    providerDeclined: "Подбираем следующий вариант",
-    telegramCreated: "Знакомство организовано",
-    zoomScheduled: "Zoom запланирован",
-    won: "Сотрудничество подтверждено",
-    lost: "Процесс завершён",
-    nextCompare: "Сравните варианты и отметьте подходящие.",
-    nextCompareCopy: "Название PSP остаётся конфиденциальным до согласия провайдера. Вы видите маршрут, лимиты и итоговую ставку для клиента.",
-    nextClarify: "Дополните данные заявки.",
-    nextClarifyCopy: "Для точного matching или PSP review не хватает обязательной информации. Менеджер уточнит её в переписке.",
-    nextRequest: "Запросите знакомство.",
-    nextRequestCopy: "Вы выбрали подходящий вариант. Отправьте запрос — OfferPSP подготовит досье и передаст его PSP на предварительное рассмотрение.",
-    nextWait: "Мы ведём процесс дальше.",
-    nextWaitCopy: "OfferPSP проверяет досье и согласует знакомство с PSP. Провайдер не раскрывается до его явного согласия.",
-    nextTelegram: "Продолжайте общение в Telegram.",
-    nextTelegramCopy: "Управляемое знакомство состоялось. Коммерческие и технические детали обсуждаются в общей группе.",
-    nextComplete: "Процесс завершён.",
-    nextCompleteCopy: "Результат зафиксирован. Если нужен новый подбор, отправьте новую заявку или напишите менеджеру.",
-    option: "Вариант",
-    confidentialRoute: "Конфиденциальный маршрут",
-    interested: "Подходит",
-    needDetails: "Нужны детали",
-    notSuitable: "Не подходит",
-    clientRate: "Ставка клиенту",
-    limits: "Лимиты",
-    settlement: "Расчёты",
-    methods: "Методы",
-    selectedOptions: "Выбранные варианты",
-    requestIntroduction: "Запросить знакомство",
-    legacyUpdating: "Менеджер обновляет детали этого варианта перед запросом знакомства.",
-    sharedAt: "Опубликовано",
-    noMessages: "Сообщений пока нет. Здесь можно задать вопрос или передать обновление.",
-    sent: "Сообщение отправлено.",
-    loginPassword: "Введите пароль или используйте безопасную ссылку.",
-    loginEmail: "Сначала введите рабочий email.",
-    linkSent: "Ссылка отправлена. Проверьте почту.",
-    signingIn: "Входим…",
-    sending: "Отправляем…",
-    openingGoogle: "Открываем Google…",
-    saving: "Сохраняем…",
-    dossierReadyMessage: "Запрос принят. OfferPSP проверит досье перед отправкой PSP.",
-    missingPrefix: "Нужно дополнить:",
+    workspace: "Платёжный кабинет", authTitle: "Ваши платёжные задачи — в одном месте.",
+    authCopy: "Войдите с рабочим email из заявки OfferPSP.", workEmail: "Рабочий email", password: "Пароль",
+    signIn: "Войти", continueGoogle: "Продолжить с Google", sendLoginLink: "Отправить безопасную ссылку", signOut: "Выйти",
+    workspaceTitle: "Управляйте подключениями, а не перепиской по кругу.",
+    workspaceCopy: "Новые рынки, маршруты, знакомства и действующие подключения собраны в одном процессе.",
+    newRequest: "Новая платёжная задача", activeRequests: "Активные задачи", availableOptions: "Варианты к выбору",
+    liveConnections: "Подключения и знакомства", noRequestTitle: "Пока нет платёжных задач.",
+    noRequestCopy: "Создайте первую задачу — мы сохраним её здесь и проведём до результата.", requests: "Задачи",
+    yourRequests: "Ваши запросы", selectedRequest: "Выбранная задача", nextStep: "Следующее действие",
+    connections: "Знакомства и подключения", dealProgress: "Ход сделки", comparison: "Сравнение",
+    yourOptions: "Подобранные маршруты", directLine: "Прямая связь", conversation: "Рабочий чат с OfferPSP",
+    messagePlaceholder: "Задайте вопрос или сообщите об изменении…", sendMessage: "Отправить",
+    requestReceived: "Заявка получена", qualification: "Уточняем профиль", matching: "Идёт подбор",
+    shortlistReady: "Варианты готовы", shared: "Ожидаем ваш выбор", optionSelected: "Вариант выбран",
+    dossierReady: "Готовим досье", providerReviewing: "PSP рассматривает", providerNeedsInfo: "Нужны данные",
+    providerAccepted: "PSP согласовал знакомство", providerDeclined: "Подбираем замену", telegramCreated: "Telegram создан",
+    zoomScheduled: "Zoom запланирован", won: "Подключение подтверждено", lost: "Процесс завершён",
+    nextClarify: "Дополните профиль в рабочем чате.",
+    nextClarifyCopy: "Для точного подбора или PSP review не хватает данных. Менеджер уточнит конкретные пункты.",
+    nextWait: "Мы проверяем рынок и готовим варианты.",
+    nextWaitCopy: "Новых действий от вас сейчас не требуется. Обновления появятся здесь и в рабочем чате.",
+    nextCompare: "Сравните маршруты и отметьте решение.",
+    nextCompareCopy: "Сравнивайте GEO, валюту, метод, лимиты и финальную ставку. Название PSP раскроем после его согласия.",
+    nextRequest: "Запросите знакомство по выбранному маршруту.",
+    nextRequestCopy: "OfferPSP соберёт досье и передаст его PSP на предварительное рассмотрение.",
+    nextReview: "Следите за PSP review.", nextReviewCopy: "Мы ведём рассмотрение. Если PSP запросит данные, задача появится здесь.",
+    nextInfo: "Ответьте на запрос PSP в рабочем чате.", nextInfoCopy: "После уточнения мы продолжим review без новой заявки.",
+    nextConnect: "Перейдите к знакомству и встрече.", nextConnectCopy: "Ссылки на Telegram и Zoom находятся в блоке сделки.",
+    nextWon: "Маршрут сохранён. Создавайте следующую задачу при расширении.",
+    nextWonCopy: "Используйте кабинет для нового GEO, метода, резервного PSP или проблемы с действующим маршрутом.",
+    nextLost: "Создайте новую задачу или попросите альтернативу.", nextLostCopy: "История сохранена — повторно описывать весь контекст не нужно.",
+    matchingProgress: "Мы готовим нормализованные варианты", matchingCopy: "В кабинете появятся только маршруты с понятными условиями.",
+    matchingComplete: "По этой задаче нет активных вариантов", matchingCompleteCopy: "Результат сохранён. Можно создать новую задачу.",
+    option: "Маршрут", clientRate: "Итоговая ставка", methods: "Методы", limits: "Лимиты", settlement: "Расчёты",
+    integration: "Интеграция", whyMatched: "Почему подходит", interested: "Интересно", needDetails: "Нужны детали",
+    notSuitable: "Не подходит", selectedOptions: "Выбрано", requestIntroduction: "Запросить знакомство с PSP",
+    sharedAt: "Обновлено", noMessages: "Сообщений пока нет. Здесь сохраняется весь рабочий контекст.",
+    sent: "Сообщение отправлено.", loginPassword: "Введите пароль или используйте безопасную ссылку.",
+    loginEmail: "Сначала введите рабочий email.", linkSent: "Ссылка отправлена. Проверьте почту.",
+    signingIn: "Входим…", sending: "Отправляем…", openingGoogle: "Открываем Google…", saving: "Сохраняем…",
+    dossierReadyMessage: "Запрос принят. Мы проверим досье перед отправкой PSP.", missingPrefix: "Нужно дополнить:",
+    telegram: "Открыть Telegram", zoom: "Открыть Zoom", managedByAgent: "Агентский кабинет",
+    managedClients: "мерчей под управлением", global: "Все GEO", validThrough: "Актуально до",
   },
   en: {
-    clientCabinet: "Client cabinet",
-    authTitle: "Your payment options, in one place.",
-    authCopy: "Use the work email from your OfferPSP request.",
-    workEmail: "Work email",
-    password: "Password",
-    optional: "optional",
-    signIn: "Sign in",
-    continueGoogle: "Continue with Google",
-    sendLoginLink: "Send secure login link",
-    signOut: "Sign out",
-    noRequestTitle: "No request is linked to this email yet.",
-    noRequestCopy: "Submit a request with this work email or contact your OfferPSP manager.",
-    submitRequest: "Submit a request",
-    paymentSearch: "Payment solution search",
-    nextStep: "Next step",
-    curated: "Curated for your profile",
-    yourOptions: "Your payment options",
-    matchingProgress: "Matching is in progress",
-    matchingCopy: "We are checking your requirements against the private PSP database. Reviewed options will appear here.",
-    matchingComplete: "Matching completed",
-    matchingCompleteCopy: "The result for this request is recorded. No new options are being matched now.",
-    directLine: "Direct line",
-    conversation: "Conversation",
-    messagePlaceholder: "Ask a question or share an update…",
-    sendMessage: "Send message",
-    requestReceived: "Request received",
-    qualification: "Request clarification",
-    matching: "Option matching",
-    shortlistReady: "Options ready",
-    shared: "Waiting for your choice",
-    optionSelected: "Option selected",
-    dossierReady: "Dossier ready",
-    providerReviewing: "PSP is reviewing",
-    providerNeedsInfo: "More information required",
-    providerAccepted: "PSP approved the introduction",
-    providerDeclined: "Selecting another option",
-    telegramCreated: "Introduction organized",
-    zoomScheduled: "Zoom scheduled",
-    won: "Cooperation confirmed",
-    lost: "Process completed",
-    nextCompare: "Compare the options and mark suitable ones.",
-    nextCompareCopy: "The PSP name remains confidential until provider approval. You can compare the route, limits and final client rate.",
-    nextClarify: "Complete the request details.",
-    nextClarifyCopy: "Required information is missing for accurate matching or PSP review. Your manager will clarify it in the conversation.",
-    nextRequest: "Request an introduction.",
-    nextRequestCopy: "You selected a suitable option. Submit the request and OfferPSP will prepare the dossier for preliminary PSP review.",
-    nextWait: "We are managing the next steps.",
-    nextWaitCopy: "OfferPSP is verifying the dossier and obtaining PSP approval. Provider identity stays private until explicit acceptance.",
-    nextTelegram: "Continue in Telegram.",
-    nextTelegramCopy: "The managed introduction is complete. Commercial and technical discussion continues in the shared group.",
-    nextComplete: "Process completed.",
-    nextCompleteCopy: "The result is recorded. Submit a new request or contact your manager if you need another search.",
-    option: "Option",
-    confidentialRoute: "Confidential route",
-    interested: "Interested",
-    needDetails: "Need details",
-    notSuitable: "Not suitable",
-    clientRate: "Client rate",
-    limits: "Limits",
-    settlement: "Settlement",
-    methods: "Methods",
-    selectedOptions: "Selected options",
-    requestIntroduction: "Request introduction",
-    legacyUpdating: "Your manager is updating this option before an introduction can be requested.",
-    sharedAt: "Shared",
-    noMessages: "No messages yet. Use this channel for questions and updates.",
-    sent: "Message sent.",
-    loginPassword: "Enter your password or use a secure login link.",
-    loginEmail: "Enter your work email first.",
-    linkSent: "Secure link sent. Check your inbox.",
-    signingIn: "Signing in…",
-    sending: "Sending…",
-    openingGoogle: "Opening Google…",
-    saving: "Saving…",
-    dossierReadyMessage: "Request received. OfferPSP will verify the dossier before sending it to the PSP.",
-    missingPrefix: "Please complete:",
+    workspace: "Payment workspace", authTitle: "All your payment work, in one place.",
+    authCopy: "Sign in with the work email used for your OfferPSP request.", workEmail: "Work email", password: "Password",
+    signIn: "Sign in", continueGoogle: "Continue with Google", sendLoginLink: "Send secure login link", signOut: "Sign out",
+    workspaceTitle: "Manage payment connections, not scattered conversations.",
+    workspaceCopy: "New markets, routes, introductions and live connections follow one reusable process.",
+    newRequest: "New payment request", activeRequests: "Active requests", availableOptions: "Options to review",
+    liveConnections: "Connections and introductions", noRequestTitle: "No payment requests yet.",
+    noRequestCopy: "Create the first request and we will keep its progress and history here.", requests: "Requests",
+    yourRequests: "Your requests", selectedRequest: "Selected request", nextStep: "Next action",
+    connections: "Introductions and connections", dealProgress: "Deal progress", comparison: "Comparison",
+    yourOptions: "Matched routes", directLine: "Direct line", conversation: "OfferPSP workspace chat",
+    messagePlaceholder: "Ask a question or share an update…", sendMessage: "Send",
+    requestReceived: "Request received", qualification: "Profile clarification", matching: "Matching in progress",
+    shortlistReady: "Options ready", shared: "Waiting for your choice", optionSelected: "Option selected",
+    dossierReady: "Preparing dossier", providerReviewing: "PSP reviewing", providerNeedsInfo: "Information needed",
+    providerAccepted: "PSP approved introduction", providerDeclined: "Finding an alternative", telegramCreated: "Telegram created",
+    zoomScheduled: "Zoom scheduled", won: "Connection confirmed", lost: "Process completed",
+    nextClarify: "Complete the profile in the workspace chat.",
+    nextClarifyCopy: "Specific information is missing for matching or PSP review. Your manager will identify what is needed.",
+    nextWait: "We are checking the market and preparing options.",
+    nextWaitCopy: "No action is required now. Updates will appear here and in the workspace chat.",
+    nextCompare: "Compare the routes and record your decision.",
+    nextCompareCopy: "Compare GEO, currency, method, limits and final rate. PSP identity is disclosed after provider approval.",
+    nextRequest: "Request an introduction for the selected route.",
+    nextRequestCopy: "OfferPSP will assemble the dossier and send it to the PSP for preliminary review.",
+    nextReview: "Follow the PSP review.", nextReviewCopy: "We manage the review. Any required action will appear here.",
+    nextInfo: "Answer the PSP request in the workspace chat.", nextInfoCopy: "We will continue the same review after clarification.",
+    nextConnect: "Continue to the introduction and meeting.", nextConnectCopy: "Telegram and Zoom links are available in the deal section.",
+    nextWon: "Route saved. Create the next request when you expand.",
+    nextWonCopy: "Use this workspace for a new GEO, method, backup PSP or an issue with a live route.",
+    nextLost: "Create a new request or ask for an alternative.", nextLostCopy: "The history is saved, so you do not need to repeat the full context.",
+    matchingProgress: "We are preparing normalized options", matchingCopy: "Only routes with clear comparable terms will appear here.",
+    matchingComplete: "No active options for this request", matchingCompleteCopy: "The result is saved. You can create a new request.",
+    option: "Route", clientRate: "Final rate", methods: "Methods", limits: "Limits", settlement: "Settlement",
+    integration: "Integration", whyMatched: "Why it fits", interested: "Interested", needDetails: "Need details",
+    notSuitable: "Not suitable", selectedOptions: "Selected", requestIntroduction: "Request PSP introduction",
+    sharedAt: "Updated", noMessages: "No messages yet. The full working context stays here.", sent: "Message sent.",
+    loginPassword: "Enter a password or use a secure link.", loginEmail: "Enter your work email first.",
+    linkSent: "Secure link sent. Check your inbox.", signingIn: "Signing in…", sending: "Sending…",
+    openingGoogle: "Opening Google…", saving: "Saving…", dossierReadyMessage: "Request accepted. We will verify the dossier before PSP review.",
+    missingPrefix: "Please complete:", telegram: "Open Telegram", zoom: "Open Zoom", managedByAgent: "Agent workspace",
+    managedClients: "managed merchants", global: "All GEOs", validThrough: "Valid through",
   },
 };
 
 const STATUS_KEYS = {
-  new: "requestReceived", reviewing: "qualification", qualifying: "qualification",
-  needs_clarification: "providerNeedsInfo", qualified: "qualification", matching: "matching",
-  matched: "matching", shortlist_ready: "shortlistReady", shared: "shared",
-  option_selected: "optionSelected", dossier_ready: "dossierReady",
-  provider_reviewing: "providerReviewing", provider_needs_info: "providerNeedsInfo",
-  provider_accepted: "providerAccepted", provider_declined: "providerDeclined",
-  telegram_created: "telegramCreated", zoom_scheduled: "zoomScheduled",
-  negotiating: "telegramCreated", won: "won", closed: "lost", lost: "lost",
+  new: "requestReceived", reviewing: "qualification", qualified: "qualification", qualifying: "qualification",
+  needs_clarification: "providerNeedsInfo", matching: "matching", matched: "matching", shortlist_ready: "shortlistReady",
+  shared: "shared", option_selected: "optionSelected", dossier_ready: "dossierReady", provider_reviewing: "providerReviewing",
+  provider_needs_info: "providerNeedsInfo", provider_accepted: "providerAccepted", provider_declined: "providerDeclined",
+  telegram_created: "telegramCreated", zoom_scheduled: "zoomScheduled", negotiating: "telegramCreated", won: "won", lost: "lost",
 };
 
-const state = { user: null, lead: null, options: [], conversationId: null, messages: [], language: "ru" };
-const elements = Object.fromEntries([
-  "authView", "portalView", "loginForm", "emailInput", "passwordInput", "googleLoginButton",
-  "magicLinkButton", "authStatus", "signOutButton", "userEmail", "noRequestState", "requestView",
-  "companyName", "requestMeta", "statusPill", "progressLabel", "nextActionTitle", "nextActionText",
-  "shortlistPending", "pendingTitle", "pendingCopy", "shortlistGrid", "shortlistUpdated", "selectedSummary", "optionStatus",
-  "messageList", "messageForm", "messageInput", "messageStatus",
-].map((id) => [id, document.getElementById(id)]));
+const state = {
+  user: null, requests: [], lead: null, allOptions: [], options: [], allDeals: [], deals: [], organizations: [],
+  conversationId: null, messages: [], language: "ru",
+};
+const ids = [
+  "authView", "portalView", "loginForm", "emailInput", "passwordInput", "googleLoginButton", "magicLinkButton",
+  "authStatus", "signOutButton", "userEmail", "noRequestState", "workspaceView", "requestList", "requestView",
+  "activeRequestCount", "availableOptionCount", "liveConnectionCount", "agentBanner", "companyName", "requestMeta",
+  "statusPill", "nextActionTitle", "nextActionText", "dealSection", "dealList", "shortlistPending", "pendingTitle",
+  "pendingCopy", "shortlistGrid", "shortlistUpdated", "selectedSummary", "optionStatus", "messageList", "messageForm",
+  "messageInput", "messageStatus",
+];
+const elements = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
 
 function t(key) { return COPY[state.language]?.[key] || COPY.en[key] || key; }
 function escapeHtml(value) {
@@ -208,142 +139,160 @@ function setLoading(button, loading, label) {
   button.disabled = loading;
   button.textContent = loading ? label : button.dataset.label;
 }
+function list(value) { return Array.isArray(value) ? value : []; }
 function formatDate(value) {
   if (!value) return "";
   return new Intl.DateTimeFormat(state.language === "ru" ? "ru-RU" : "en-GB", {
     day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
   }).format(new Date(value));
 }
-function arrayValue(value) { return Array.isArray(value) ? value : []; }
-function formatMoney(value, currency) {
-  if (value == null) return "";
-  return `${new Intl.NumberFormat(state.language === "ru" ? "ru-RU" : "en-GB").format(value)} ${currency || ""}`.trim();
+function formatNumber(value) {
+  return value == null ? "" : new Intl.NumberFormat(state.language === "ru" ? "ru-RU" : "en-GB").format(value);
 }
 function formatFee(fee) {
-  const parts = [];
-  if (fee.client_percent != null) parts.push(`${fee.client_percent}%`);
-  if (fee.client_fixed != null) parts.push(formatMoney(fee.client_fixed, fee.client_fixed_currency));
-  return `${fee.flow || ""}${fee.traffic_tier ? ` · ${fee.traffic_tier}` : ""}: ${parts.join(" + ")}`;
+  const result = [];
+  if (fee.client_percent != null) result.push(`${formatNumber(fee.client_percent)}%`);
+  if (fee.client_fixed != null) result.push(`${formatNumber(fee.client_fixed)} ${fee.client_fixed_currency || ""}`.trim());
+  return result.join(" + ") || "—";
 }
-function applyTranslations() {
+function statusLabel(status) { return t(STATUS_KEYS[status] || status); }
+function requestSummary(lead) {
+  const parts = [list(lead.target_geos).join(", "), list(lead.requested_currencies).join(", "), list(lead.requested_methods).join(", ")];
+  if (lead.expected_monthly_volume != null) parts.push(`${formatNumber(lead.expected_monthly_volume)} ${lead.volume_currency || ""}`.trim());
+  return parts.filter(Boolean).join(" · ") || lead.vertical || "OfferPSP";
+}
+function nextAction(status) {
+  if (["new", "reviewing", "qualified", "qualifying", "needs_clarification"].includes(status)) return ["nextClarify", "nextClarifyCopy"];
+  if (["matching", "matched", "shortlist_ready", "provider_declined"].includes(status)) return ["nextWait", "nextWaitCopy"];
+  if (status === "shared") return ["nextCompare", "nextCompareCopy"];
+  if (status === "option_selected") return ["nextRequest", "nextRequestCopy"];
+  if (["dossier_ready", "provider_reviewing", "provider_accepted"].includes(status)) return ["nextReview", "nextReviewCopy"];
+  if (status === "provider_needs_info") return ["nextInfo", "nextInfoCopy"];
+  if (["telegram_created", "zoom_scheduled", "negotiating"].includes(status)) return ["nextConnect", "nextConnectCopy"];
+  if (status === "won") return ["nextWon", "nextWonCopy"];
+  return ["nextLost", "nextLostCopy"];
+}
+
+function setLanguage(language) {
+  state.language = COPY[language] ? language : "ru";
+  localStorage.setItem(LANGUAGE_STORAGE_KEY, state.language);
   document.documentElement.lang = state.language;
+  document.querySelectorAll("[data-language]").forEach((button) => button.classList.toggle("active", button.dataset.language === state.language));
   document.querySelectorAll("[data-i18n]").forEach((node) => { node.textContent = t(node.dataset.i18n); });
   document.querySelectorAll("[data-i18n-placeholder]").forEach((node) => { node.placeholder = t(node.dataset.i18nPlaceholder); });
-  document.querySelectorAll("[data-language]").forEach((button) => button.classList.toggle("active", button.dataset.language === state.language));
-}
-function setLanguage(language) {
-  state.language = language === "en" ? "en" : "ru";
-  localStorage.setItem(LANGUAGE_STORAGE_KEY, state.language);
-  document.querySelectorAll("[data-label]").forEach((button) => { delete button.dataset.label; });
-  applyTranslations();
-  if (state.lead) renderRequest();
-  renderMessages();
+  renderWorkspace();
 }
 
-function resetPortalState() {
-  state.lead = null;
-  state.options = [];
-  state.conversationId = null;
-  state.messages = [];
-  elements.shortlistGrid.innerHTML = "";
-  elements.selectedSummary.innerHTML = "";
-  elements.messageList.innerHTML = "";
-}
+function renderWorkspace() {
+  const active = state.requests.filter((request) => !isPortalTerminalStatus(request.status)).length;
+  elements.activeRequestCount.textContent = active;
+  elements.availableOptionCount.textContent = state.allOptions.filter((option) => {
+    const request = state.requests.find((item) => item.lead_id === option.lead_id);
+    return request && !isPortalTerminalStatus(request.status) && option.client_response !== "not_suitable";
+  }).length;
+  elements.liveConnectionCount.textContent = state.allDeals.length;
 
-function nextAction() {
-  const status = state.lead?.status;
-  if (isPortalTerminalStatus(status)) return ["nextComplete", "nextCompleteCopy"];
-  if (status === "needs_clarification" || status === "provider_needs_info") return ["nextClarify", "nextClarifyCopy"];
-  if (["option_selected"].includes(status) || state.options.some((option) => option.client_response === "interested")) return ["nextRequest", "nextRequestCopy"];
-  if (["dossier_ready", "provider_reviewing", "provider_accepted", "provider_declined"].includes(status)) return ["nextWait", "nextWaitCopy"];
-  if (["telegram_created", "zoom_scheduled", "negotiating", "won"].includes(status)) return ["nextTelegram", "nextTelegramCopy"];
-  return ["nextCompare", "nextCompareCopy"];
+  const agent = state.organizations.find((organization) => organization.organization_type === "agent");
+  elements.agentBanner.classList.toggle("is-hidden", !agent);
+  if (agent) {
+    elements.agentBanner.innerHTML = `<strong>${escapeHtml(t("managedByAgent"))}: ${escapeHtml(agent.name)}</strong><span>${escapeHtml(agent.managed_merchants)} ${escapeHtml(t("managedClients"))}</span>`;
+  }
+
+  elements.noRequestState.classList.toggle("is-hidden", state.requests.length > 0);
+  elements.workspaceView.classList.toggle("is-hidden", state.requests.length === 0);
+  if (!state.requests.length) return;
+
+  elements.requestList.innerHTML = state.requests.map((request) => `
+    <button type="button" class="request-item${request.lead_id === state.lead?.lead_id ? " active" : ""}" data-request-id="${escapeHtml(request.lead_id)}">
+      <span class="request-dot status-${escapeHtml(request.status)}"></span>
+      <span><strong>${escapeHtml(request.company)}</strong><small>${escapeHtml(requestSummary(request))}</small></span>
+      <em>${escapeHtml(statusLabel(request.status))}</em>
+    </button>`).join("");
+  renderRequest();
 }
 
 function renderRequest() {
-  if (!state.lead) return;
-  elements.companyName.textContent = state.lead.company;
-  elements.requestMeta.textContent = [state.lead.vertical, state.lead.geos, state.lead.monthly_volume].filter(Boolean).join(" · ");
-  const statusKey = STATUS_KEYS[state.lead.status] || "qualification";
-  elements.statusPill.textContent = t(statusKey);
-  elements.progressLabel.textContent = t(statusKey);
-  const [titleKey, copyKey] = nextAction();
+  const lead = state.lead;
+  if (!lead) return;
+  elements.companyName.textContent = lead.company;
+  elements.requestMeta.textContent = requestSummary(lead);
+  elements.statusPill.textContent = statusLabel(lead.status);
+  elements.statusPill.className = `status-pill status-${lead.status}`;
+  const [titleKey, copyKey] = nextAction(lead.status);
   elements.nextActionTitle.textContent = t(titleKey);
   elements.nextActionText.textContent = t(copyKey);
+  renderDeals();
   renderOptions();
+  renderMessages();
+}
+
+function renderDeals() {
+  elements.dealSection.classList.toggle("is-hidden", state.deals.length === 0);
+  elements.dealList.innerHTML = state.deals.map((deal) => `
+    <article class="deal-card">
+      <div><span>${escapeHtml(deal.option_code)}</span><strong>${escapeHtml(statusLabel(deal.status))}</strong></div>
+      <div class="deal-actions">
+        ${deal.telegram_group_url ? `<a class="button secondary" href="${escapeHtml(deal.telegram_group_url)}" target="_blank" rel="noopener">${escapeHtml(t("telegram"))}</a>` : ""}
+        ${deal.zoom_url ? `<a class="button secondary" href="${escapeHtml(deal.zoom_url)}" target="_blank" rel="noopener">${escapeHtml(t("zoom"))}${deal.zoom_scheduled_at ? ` · ${escapeHtml(formatDate(deal.zoom_scheduled_at))}` : ""}</a>` : ""}
+      </div>
+    </article>`).join("");
 }
 
 function renderOptions() {
-  if (!state.options.length) {
-    const [titleKey, copyKey] = portalEmptyStateKeys(state.lead?.status);
-    elements.pendingTitle.textContent = t(titleKey);
-    elements.pendingCopy.textContent = t(copyKey);
-    elements.shortlistPending.classList.remove("is-hidden");
-    elements.shortlistGrid.classList.add("is-hidden");
-    elements.selectedSummary.classList.add("is-hidden");
-    return;
-  }
-  elements.shortlistPending.classList.add("is-hidden");
-  elements.shortlistGrid.classList.remove("is-hidden");
-  const firstSharedAt = state.options[0].shared_at;
-  elements.shortlistUpdated.textContent = firstSharedAt ? `${t("sharedAt")} ${formatDate(firstSharedAt)}` : "";
+  const hasOptions = state.options.length > 0;
+  elements.shortlistPending.classList.toggle("is-hidden", hasOptions);
+  elements.shortlistGrid.classList.toggle("is-hidden", !hasOptions);
+  const [pendingTitle, pendingCopy] = portalEmptyStateKeys(state.lead.status);
+  elements.pendingTitle.textContent = t(pendingTitle);
+  elements.pendingCopy.textContent = t(pendingCopy);
+  elements.shortlistUpdated.textContent = hasOptions ? `${t("sharedAt")}: ${formatDate(state.options[0].shared_at)}` : "";
   elements.shortlistGrid.innerHTML = state.options.map((option) => {
-    const fees = arrayValue(option.client_fees);
-    const limits = arrayValue(option.limits);
-    const settlements = arrayValue(option.settlement);
-    const detailsReady = Boolean(option.route_title);
-    return `
-      <article class="psp-card${option.client_response ? " responded" : ""}">
-        <div class="psp-card-head">
-          <div>
-            <span class="psp-rank">${escapeHtml(t("option"))} ${escapeHtml(option.rank)}</span>
-            <h3>${escapeHtml(option.option_code)}</h3>
-          </div>
-          ${option.client_response ? `<span class="response-pill">${escapeHtml(t({ interested: "interested", need_details: "needDetails", not_suitable: "notSuitable" }[option.client_response]))}</span>` : ""}
-        </div>
-        <strong class="route-title">${escapeHtml(option.route_title || t("confidentialRoute"))}</strong>
-        <p>${escapeHtml(option.client_note)}</p>
-        ${fees.length ? `<div class="offer-detail"><span>${escapeHtml(t("clientRate"))}</span><strong>${fees.map(formatFee).map(escapeHtml).join("<br>")}</strong></div>` : ""}
-        ${limits.length ? `<div class="offer-detail"><span>${escapeHtml(t("limits"))}</span><strong>${limits.slice(0, 3).map((limit) => `${limit.flow}: ${formatMoney(limit.minimum_amount, limit.currency)}–${formatMoney(limit.maximum_amount, limit.currency)}`).map(escapeHtml).join("<br>")}</strong></div>` : ""}
-        ${settlements.length ? `<div class="offer-detail"><span>${escapeHtml(t("settlement"))}</span><strong>${settlements.slice(0, 2).map((item) => [item.period, item.currency].filter(Boolean).join(" · ")).map(escapeHtml).join("<br>")}</strong></div>` : ""}
-        <div class="psp-tags">${arrayValue(option.methods).map((method) => `<span>${escapeHtml(method)}</span>`).join("")}${arrayValue(option.currencies).map((currency) => `<span>${escapeHtml(currency)}</span>`).join("")}</div>
-        <div class="option-actions">
-          <button type="button" data-option-response="interested" data-option-code="${escapeHtml(option.option_code)}" class="option-button${option.client_response === "interested" ? " active" : ""}">${escapeHtml(t("interested"))}</button>
-          <button type="button" data-option-response="need_details" data-option-code="${escapeHtml(option.option_code)}" class="option-button${option.client_response === "need_details" ? " active" : ""}">${escapeHtml(t("needDetails"))}</button>
-          <button type="button" data-option-response="not_suitable" data-option-code="${escapeHtml(option.option_code)}" class="option-button${option.client_response === "not_suitable" ? " active" : ""}">${escapeHtml(t("notSuitable"))}</button>
-        </div>
-        ${!detailsReady && option.client_response === "interested" ? `<p class="legacy-note">${escapeHtml(t("legacyUpdating"))}</p>` : ""}
-      </article>`;
+    const geos = option.coverage_scope === "global" ? t("global") : list(option.geos).join(", ");
+    const facts = [geos, list(option.currencies).join(", "), option.flow?.toUpperCase()].filter(Boolean);
+    const fees = list(option.client_fees).map(formatFee).join(" · ") || "—";
+    const limits = list(option.limits).map((limit) => {
+      const range = [limit.minimum_amount, limit.maximum_amount].filter((value) => value != null).map(formatNumber).join("–");
+      return `${range} ${limit.currency || ""}`.trim();
+    }).filter(Boolean).join(" · ") || "—";
+    const settlement = list(option.settlement).map((item) => [item.currency, item.period].filter(Boolean).join(" · ")).filter(Boolean).join("; ") || "—";
+    return `<article class="option-card">
+      <div class="option-top"><span>${escapeHtml(t("option"))} ${escapeHtml(option.rank)}</span><code>${escapeHtml(option.option_code)}</code></div>
+      <h3>${escapeHtml(option.route_title)}</h3>
+      <div class="route-tags">${facts.map((fact) => `<span>${escapeHtml(fact)}</span>`).join("")}</div>
+      <dl class="option-facts">
+        <div class="rate-fact"><dt>${escapeHtml(t("clientRate"))}</dt><dd>${escapeHtml(fees)}</dd></div>
+        <div><dt>${escapeHtml(t("methods"))}</dt><dd>${escapeHtml(list(option.methods).join(", ") || "—")}</dd></div>
+        <div><dt>${escapeHtml(t("limits"))}</dt><dd>${escapeHtml(limits)}</dd></div>
+        <div><dt>${escapeHtml(t("settlement"))}</dt><dd>${escapeHtml(settlement)}</dd></div>
+        <div><dt>${escapeHtml(t("integration"))}</dt><dd>${escapeHtml(list(option.integrations).join(", ") || "—")}</dd></div>
+      </dl>
+      <p class="match-reason"><span>${escapeHtml(t("whyMatched"))}</span>${escapeHtml(option.client_note)}</p>
+      ${option.valid_through ? `<small class="validity">${escapeHtml(t("validThrough"))}: ${escapeHtml(formatDate(option.valid_through))}</small>` : ""}
+      <div class="option-actions">
+        <button type="button" data-option-response="interested" data-option-code="${escapeHtml(option.option_code)}" class="option-button${option.client_response === "interested" ? " active" : ""}">${escapeHtml(t("interested"))}</button>
+        <button type="button" data-option-response="need_details" data-option-code="${escapeHtml(option.option_code)}" class="option-button${option.client_response === "need_details" ? " active" : ""}">${escapeHtml(t("needDetails"))}</button>
+        <button type="button" data-option-response="not_suitable" data-option-code="${escapeHtml(option.option_code)}" class="option-button${option.client_response === "not_suitable" ? " active" : ""}">${escapeHtml(t("notSuitable"))}</button>
+      </div>
+    </article>`;
   }).join("");
 
   const selected = state.options.filter((option) => option.client_response === "interested");
-  if (!selected.length) {
-    elements.selectedSummary.classList.add("is-hidden");
-  } else {
-    elements.selectedSummary.classList.remove("is-hidden");
-    elements.selectedSummary.innerHTML = `
-      <div><span>${escapeHtml(t("selectedOptions"))}</span><strong>${selected.map((option) => option.option_code).join(", ")}</strong></div>
-      ${selected.filter((option) => option.route_title).map((option) => `<button class="button primary" type="button" data-request-introduction="${escapeHtml(option.option_code)}">${escapeHtml(t("requestIntroduction"))} · ${escapeHtml(option.option_code)}</button>`).join("")}`;
-  }
+  elements.selectedSummary.classList.toggle("is-hidden", selected.length === 0);
+  elements.selectedSummary.innerHTML = selected.length ? `
+    <div><span>${escapeHtml(t("selectedOptions"))}</span><strong>${selected.map((option) => escapeHtml(option.option_code)).join(", ")}</strong></div>
+    ${selected.map((option) => `<button class="button primary" type="button" data-request-introduction="${escapeHtml(option.option_code)}">${escapeHtml(t("requestIntroduction"))} · ${escapeHtml(option.option_code)}</button>`).join("")}` : "";
 }
 
 function renderMessages() {
-  if (!elements.messageList) return;
-  if (!state.messages.length) {
-    elements.messageList.innerHTML = `<p class="status">${escapeHtml(t("noMessages"))}</p>`;
-    return;
-  }
-  elements.messageList.innerHTML = state.messages.map((message) => `
-    <article class="message${message.sender_type === "client" ? " client" : ""}">
-      ${escapeHtml(message.body)}<small>${escapeHtml(formatDate(message.sent_at))}</small>
-    </article>`).join("");
+  elements.messageList.innerHTML = state.messages.length ? state.messages.map((message) => `
+    <article class="message${message.sender_type === "client" ? " client" : ""}">${escapeHtml(message.body)}<small>${escapeHtml(formatDate(message.sent_at))}</small></article>`).join("")
+    : `<p class="status">${escapeHtml(t("noMessages"))}</p>`;
   elements.messageList.scrollTop = elements.messageList.scrollHeight;
 }
 
 async function enterPortal(session) {
   if (!session?.user) {
-    state.user = null;
-    resetPortalState();
+    state.user = null; state.requests = []; state.lead = null;
     elements.portalView.classList.add("is-hidden");
     elements.authView.classList.remove("is-hidden");
     return;
@@ -353,54 +302,52 @@ async function enterPortal(session) {
   elements.authView.classList.add("is-hidden");
   elements.portalView.classList.remove("is-hidden");
   await supabase.rpc("claim_offerpsp_leads");
-  await loadRequest();
+  await loadWorkspace();
 }
 
-async function loadRequest() {
-  const { data, error } = await supabase.from("offerpsp_leads")
-    .select("lead_id, company, vertical, geos, methods, monthly_volume, status, submitted_at, updated_at")
-    .eq("client_user_id", state.user.id)
-    .not("status", "in", `(${PORTAL_INACTIVE_STATUSES.join(",")})`)
-    .order("submitted_at", { ascending: false }).limit(1).maybeSingle();
-  if (error || !data) {
-    resetPortalState();
-    elements.noRequestState.classList.remove("is-hidden");
-    elements.requestView.classList.add("is-hidden");
-    return;
-  }
-  state.lead = data;
-  elements.noRequestState.classList.add("is-hidden");
-  elements.requestView.classList.remove("is-hidden");
-  await Promise.all([loadShortlist(data.lead_id), loadConversation(data.lead_id)]);
-  renderRequest();
+async function loadWorkspace(preferredLeadId = state.lead?.lead_id) {
+  const [requestsResult, optionsResult, dealsResult, organizationsResult] = await Promise.all([
+    supabase.rpc("list_offerpsp_workspace_requests"),
+    supabase.from("offerpsp_client_shortlist").select("*").order("rank", { ascending: true }),
+    supabase.rpc("list_offerpsp_client_deals", { p_lead_id: null }),
+    supabase.rpc("list_offerpsp_my_organizations"),
+  ]);
+  if (requestsResult.error) {
+    setStatus(elements.authStatus, requestsResult.error.message, "error");
+    state.requests = [];
+  } else state.requests = requestsResult.data || [];
+  state.allOptions = optionsResult.error ? [] : optionsResult.data || [];
+  state.allDeals = dealsResult.error ? [] : dealsResult.data || [];
+  state.organizations = organizationsResult.error ? [] : organizationsResult.data || [];
+  const selected = state.requests.find((request) => request.lead_id === preferredLeadId) || state.requests[0] || null;
+  await selectRequest(selected?.lead_id);
 }
 
-async function loadShortlist(leadId) {
-  const { data, error } = await supabase.from("offerpsp_client_shortlist").select("*")
-    .eq("lead_id", leadId).order("rank", { ascending: true });
-  state.options = error ? [] : data || [];
+async function selectRequest(leadId) {
+  state.lead = state.requests.find((request) => request.lead_id === leadId) || null;
+  state.options = state.allOptions.filter((option) => option.lead_id === leadId);
+  state.deals = state.allDeals.filter((deal) => deal.lead_id === leadId);
+  state.conversationId = null;
+  state.messages = [];
+  if (state.lead) await loadConversation(leadId);
+  renderWorkspace();
 }
 
 async function loadConversation(leadId) {
   const { data, error } = await supabase.rpc("ensure_offerpsp_portal_conversation", { p_lead_id: leadId });
   if (error) { setStatus(elements.messageStatus, error.message, "error"); return; }
   state.conversationId = data;
-  await loadMessages();
-}
-
-async function loadMessages() {
-  if (!state.conversationId) return;
-  const { data, error } = await supabase.from("offerpsp_messages")
-    .select("id, sender_type, direction, body, sent_at")
-    .eq("conversation_id", state.conversationId).order("sent_at", { ascending: true });
-  if (error) { setStatus(elements.messageStatus, error.message, "error"); return; }
-  state.messages = data || [];
-  renderMessages();
+  const messages = await supabase.from("offerpsp_messages").select("id, sender_type, direction, body, sent_at")
+    .eq("conversation_id", data).order("sent_at", { ascending: true });
+  if (messages.error) { setStatus(elements.messageStatus, messages.error.message, "error"); return; }
+  state.messages = messages.data || [];
 }
 
 document.addEventListener("click", async (event) => {
   const languageButton = event.target.closest("[data-language]");
   if (languageButton) { setLanguage(languageButton.dataset.language); return; }
+  const requestButton = event.target.closest("[data-request-id]");
+  if (requestButton) { await selectRequest(requestButton.dataset.requestId); return; }
   const responseButton = event.target.closest("[data-option-response]");
   if (responseButton) {
     setLoading(responseButton, true, t("saving"));
@@ -410,33 +357,27 @@ document.addEventListener("click", async (event) => {
     });
     setLoading(responseButton, false);
     if (error) { setStatus(elements.optionStatus, error.message, "error"); return; }
-    await loadRequest();
+    await loadWorkspace(state.lead.lead_id);
     return;
   }
   const introductionButton = event.target.closest("[data-request-introduction]");
   if (introductionButton) {
     setLoading(introductionButton, true, t("sending"));
-    const { data, error } = await supabase.rpc("request_offerpsp_introduction", {
-      p_option_code: introductionButton.dataset.requestIntroduction,
-    });
+    const { data, error } = await supabase.rpc("request_offerpsp_introduction", { p_option_code: introductionButton.dataset.requestIntroduction });
     setLoading(introductionButton, false);
     if (error) { setStatus(elements.optionStatus, error.message, "error"); return; }
-    const message = data.status === "ready"
-      ? t("dossierReadyMessage")
-      : `${t("missingPrefix")} ${(data.missing_fields || []).join(", ")}`;
-    setStatus(elements.optionStatus, message, data.status === "ready" ? "success" : "error");
-    await loadRequest();
+    setStatus(elements.optionStatus, data.status === "ready" ? t("dossierReadyMessage") : `${t("missingPrefix")} ${(data.missing_fields || []).join(", ")}`, data.status === "ready" ? "success" : "error");
+    await loadWorkspace(state.lead.lead_id);
   }
 });
 
 elements.loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const email = elements.emailInput.value.trim();
   const password = elements.passwordInput.value;
-  const button = elements.loginForm.querySelector('button[type="submit"]');
   if (!password) { setStatus(elements.authStatus, t("loginPassword"), "error"); return; }
+  const button = elements.loginForm.querySelector('button[type="submit"]');
   setLoading(button, true, t("signingIn"));
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email: elements.emailInput.value.trim(), password });
   setLoading(button, false);
   if (error) { setStatus(elements.authStatus, error.message, "error"); return; }
   await enterPortal(data.session);
@@ -459,23 +400,22 @@ elements.googleLoginButton.addEventListener("click", async () => {
 
 elements.messageForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  if (!state.conversationId) return;
   const body = elements.messageInput.value.trim();
-  if (!body) return;
+  if (!body || !state.conversationId) return;
   const button = elements.messageForm.querySelector("button");
   setLoading(button, true, t("sending"));
   const { error } = await supabase.from("offerpsp_messages").insert({
-    conversation_id: state.conversationId, sender_type: "client", sender_user_id: state.user.id,
-    direction: "inbound", body,
+    conversation_id: state.conversationId, sender_type: "client", sender_user_id: state.user.id, direction: "inbound", body,
   });
   setLoading(button, false);
   if (error) { setStatus(elements.messageStatus, error.message, "error"); return; }
   try {
-    await fetch(MESSAGE_NOTIFICATION_ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ company: state.lead?.company || "OfferPSP client", sender_email: state.user.email, message: body }) });
+    await fetch(MESSAGE_NOTIFICATION_ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ company: state.lead.company, sender_email: state.user.email, message: body }) });
   } catch { /* The database message is already saved. */ }
   elements.messageInput.value = "";
   setStatus(elements.messageStatus, t("sent"), "success");
-  await loadMessages();
+  await loadConversation(state.lead.lead_id);
+  renderMessages();
 });
 
 elements.signOutButton.addEventListener("click", async () => { await supabase.auth.signOut(); await enterPortal(null); });

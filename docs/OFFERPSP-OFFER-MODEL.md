@@ -53,7 +53,7 @@ Suggested fields:
 | `website` | Internal-only website |
 | `strategic_priority` | Commercial priority, never a hard eligibility override |
 | `relationship_status` | prospect, active, paused, archived |
-| `margin_included_default` | Whether source rates normally include agent margin |
+| `margin_included_default` | Whether source rates normally include OfferPSP commercial margin |
 | `default_margin_policy_id` | Provider-wide fallback |
 | `owner_user_id` | Internal relationship owner |
 | `last_verified_at` | Relationship verification |
@@ -163,7 +163,7 @@ Calculation examples:
 ```text
 Base 6% + 1 percentage point = client 7%
 Base 6% + €0.30 + markup €0.20 = client 6% + €0.50
-BR-Pay margin included = client rate equals approved source/client rate
+BR-Pay OfferPSP margin included = direct-client rate equals approved source/client rate
 ```
 
 The generated client offer must retain a calculation audit:
@@ -173,6 +173,26 @@ The generated client offer must retain a calculation audit:
 - base values;
 - calculated client values;
 - calculation timestamp and version.
+
+## Subagent resale layer
+
+For an agent-managed merchant, calculate pricing in a fixed order:
+
+```text
+PSP source rate
++ OfferPSP margin policy
+= OfferPSP direct-client rate
++ agent margin policy
+= final merchant rate
+```
+
+Agent margin policies are separate private records and may be scoped to the agent,
+merchant organization, lead, route and flow. A missing agent policy blocks snapshot creation;
+it must never silently fall back to zero. The client snapshot strips the source fee ID,
+OfferPSP margin mode and agent margin mode and contains only the final merchant rate.
+
+Agent commission accounting is a separate ledger with projected, approved, earned, paid and
+void states. It does not modify historical shortlist snapshots.
 
 ## Limits
 
@@ -267,7 +287,7 @@ It demonstrates:
 - risk fees and blocked GEOs;
 - ambiguous/malformed numeric values requiring review.
 
-BR-Pay is the primary partner and rates normally include the agent percentage.
+BR-Pay is the primary partner and rates normally include the existing OfferPSP percentage.
 
 ### Antarex offer
 
@@ -310,4 +330,3 @@ It must not contain:
 - margin values or rules;
 - partner contacts;
 - unique internal notes that reveal the provider.
-

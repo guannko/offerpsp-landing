@@ -16,6 +16,7 @@ const db = new PGlite();
 const STAFF_ID = "11111111-1111-4111-8111-111111111111";
 const CLIENT_ID = "22222222-2222-4222-8222-222222222222";
 const OTHER_CLIENT_ID = "33333333-3333-4333-8333-333333333333";
+const AGENT_ID = "44444444-4444-4444-8444-444444444444";
 
 async function query(sql, params = []) {
   return db.query(sql, params);
@@ -103,6 +104,7 @@ async function applyMigrations() {
     "20260731_offerpsp_introduction_pipeline.sql",
     "20260801_offerpsp_authenticated_lead_grants.sql",
     "20260801_offerpsp_active_lead_claims.sql",
+    "20260801_offerpsp_client_workspace_agents.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -133,10 +135,24 @@ async function verifyLeadGrants() {
   process.stdout.write("PASS authenticated lead UPDATE/DELETE grants with anon denied\n");
 }
 
+async function verifyClientPolicyBoundary() {
+  const policy = await query(`
+    select count(*)::integer as client_item_policies
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'offerpsp_shortlist_items'
+      and policyname <> 'offerpsp_shortlist_items_staff_all'
+  `);
+  if (policy.rows[0].client_item_policies !== 0) {
+    throw new Error("Client or agent has a direct shortlist-item RLS policy that can expose private IDs");
+  }
+  process.stdout.write("PASS shortlist items remain staff-only; clients and agents use the safe projection\n");
+}
+
 async function seedUsers() {
   await query(
-    "insert into auth.users (id, email) values ($1, 'staff@example.com'), ($2, 'client@example.com'), ($3, 'other@example.com')",
-    [STAFF_ID, CLIENT_ID, OTHER_CLIENT_ID],
+    "insert into auth.users (id, email) values ($1, 'staff@example.com'), ($2, 'client@example.com'), ($3, 'other@example.com'), ($4, 'agent@example.com')",
+    [STAFF_ID, CLIENT_ID, OTHER_CLIENT_ID, AGENT_ID],
   );
   await setUser(STAFF_ID);
   await query(
@@ -154,6 +170,33 @@ async function seedUsers() {
       array['IN'], array['INR'], array['UPI', 'P2P'], array['IGAMING'], 'verified'
     )
   `);
+}
+
+async function verifyLegacyShortlistBlocked() {
+  await setUser(STAFF_ID);
+  const lead = await query(`
+    insert into public.offerpsp_leads (
+      name, work_email, company, vertical, geos, source, status, consent
+    ) values (
+      'Legacy Fixture', 'legacy@example.com', 'Legacy Fixture Merchant',
+      'iGaming', 'India', 'legacy-shortlist-regression', 'new', true
+    ) returning lead_id
+  `);
+  const shortlist = await query(
+    "select id from public.offerpsp_shortlists where lead_id = $1 and status = 'draft' order by version desc limit 1",
+    [lead.rows[0].lead_id],
+  );
+  if (!shortlist.rows.length) throw new Error("Legacy matching fixture did not create its draft shortlist");
+  await expectQueryFailure(
+    "select public.share_offerpsp_shortlist($1)",
+    [shortlist.rows[0].id],
+    "Shortlist contains legacy or incomplete options",
+  );
+  const status = await query("select status, shared_at from public.offerpsp_shortlists where id = $1", [shortlist.rows[0].id]);
+  if (status.rows[0].status !== "draft" || status.rows[0].shared_at !== null) {
+    throw new Error("Blocked legacy shortlist was mutated while sharing failed");
+  }
+  process.stdout.write("PASS legacy/incomplete shortlist blocked without mutation\n");
 }
 
 async function verifyPortalLeadClaims() {
@@ -370,6 +413,18 @@ async function runEndToEndFixture() {
     throw new Error("Route matching retained stale reviewed matches after rebuild");
   }
   await query("select public.share_offerpsp_shortlist($1)", [shortlistId]);
+  const replacementShortlist = await query(
+    "select public.create_offerpsp_route_shortlist($1, array[$2::uuid]) as value",
+    [leadId, refreshedMatches.rows[0].value[0].match_id],
+  );
+  await query("select public.share_offerpsp_shortlist($1)", [replacementShortlist.rows[0].value.shortlist_id]);
+  const shortlistVersions = await query(
+    "select id, status from public.offerpsp_shortlists where id = any($1::uuid[]) order by version",
+    [[shortlistId, replacementShortlist.rows[0].value.shortlist_id]],
+  );
+  if (shortlistVersions.rows[0].status !== "archived" || shortlistVersions.rows[1].status !== "shared") {
+    throw new Error(`Sharing a replacement did not archive the previous shortlist: ${JSON.stringify(shortlistVersions.rows)}`);
+  }
 
   await setUser(CLIENT_ID);
   await expectQueryFailure(
@@ -434,17 +489,131 @@ async function runEndToEndFixture() {
   const finalLead = await query("select status from public.offerpsp_leads where lead_id = $1", [leadId]);
   if (finalLead.rows[0].status !== "won") throw new Error("Introduction pipeline did not finish as won");
 
+  await setUser(CLIENT_ID);
+  const deals = await query("select * from public.list_offerpsp_client_deals($1)", [leadId]);
+  if (deals.rows.length !== 1 || deals.rows[0].status !== "won"
+      || deals.rows[0].telegram_group_url !== "https://t.me/validation"
+      || deals.rows[0].zoom_url !== "https://zoom.invalid/meeting") {
+    throw new Error(`Client-safe deal projection is incomplete: ${JSON.stringify(deals.rows)}`);
+  }
+  if (/provider_id|route_id|result_notes|internal_notes/i.test(JSON.stringify(deals.fields))) {
+    throw new Error("Client-safe deal projection exposes private field names");
+  }
+  await setUser(OTHER_CLIENT_ID);
+  const foreignDeals = await query("select * from public.list_offerpsp_client_deals($1)", [leadId]);
+  if (foreignDeals.rows.length !== 0) throw new Error("Foreign client can read another merchant's deal");
+
   process.stdout.write("PASS end-to-end private offer → match → shortlist → dossier → PSP review → Telegram → Zoom → won\n");
+}
+
+async function verifyAgentWorkspaceAndPricing() {
+  await setUser(STAFF_ID);
+  const organizations = await query(`
+    insert into public.offerpsp_organizations (organization_type, name, status, created_by)
+    values
+      ('agent', 'Validation Agent', 'active', $1),
+      ('merchant', 'Agent Merchant Org', 'active', $1)
+    returning id, organization_type
+  `, [STAFF_ID]);
+  const agentOrgId = organizations.rows.find((row) => row.organization_type === "agent").id;
+  const merchantOrgId = organizations.rows.find((row) => row.organization_type === "merchant").id;
+  await query(`
+    insert into public.offerpsp_organization_members (organization_id, user_id, role, active, created_by)
+    values ($1, $2, 'owner', true, $3)
+  `, [agentOrgId, AGENT_ID, STAFF_ID]);
+  await query(`
+    insert into public.offerpsp_agent_clients (
+      agent_organization_id, merchant_organization_id, status, created_by
+    ) values ($1, $2, 'active', $3)
+  `, [agentOrgId, merchantOrgId, STAFF_ID]);
+
+  const lead = await query(`
+    insert into public.offerpsp_leads (
+      name, work_email, telegram, company, company_url, vertical, monthly_volume,
+      geos, methods, details, source, status, consent,
+      target_geos, requested_currencies, requested_flows, requested_methods,
+      traffic_types, expected_monthly_volume, volume_currency,
+      min_transaction_amount, max_transaction_amount, transaction_currency,
+      registration_geo, business_model, license_status, license_jurisdiction,
+      launch_timeline, current_processing_setup,
+      merchant_organization_id, agent_organization_id
+    ) values (
+      'Agent Merchant', 'managed@example.com', '@managed', 'Managed Merchant Ltd',
+      'https://managed.invalid', 'iGaming', '400000 USD', 'India', 'UPI',
+      'Agent-managed validation lead', 'agent-validation', 'new', true,
+      array['IN'], array['INR'], array['PAYIN'], array['UPI'], array['FTD'],
+      400000, 'USD', 500, 50000, 'INR', 'CY', 'Online casino',
+      'licensed', 'CY', 'Immediate', 'Existing processing', $1, $2
+    ) returning lead_id
+  `, [merchantOrgId, agentOrgId]);
+  const leadId = lead.rows[0].lead_id;
+  await query("select public.rebuild_offerpsp_route_matches($1)", [leadId]);
+  const matches = await query("select public.list_offerpsp_route_matches($1) as value", [leadId]);
+  const matchId = matches.rows[0].value[0].match_id;
+  await expectQueryFailure(
+    "select public.create_offerpsp_route_shortlist($1, array[$2::uuid])",
+    [leadId, matchId],
+    "OfferPSP or agent margin is missing",
+  );
+
+  const route = await query(`
+    select r.id
+    from private.offerpsp_offer_routes r
+    where r.client_title = 'India · INR · UPI PayIn'
+      and r.status = 'published'
+    order by r.created_at desc
+    limit 1
+  `);
+  await query(`
+    insert into private.offerpsp_agent_margin_policies (
+      agent_organization_id, merchant_organization_id, route_id, flow,
+      mode, percent_value, notes, created_by
+    ) values ($1, $2, $3, 'payin', 'percentage_points', 1, 'Validation agent markup', $4)
+  `, [agentOrgId, merchantOrgId, route.rows[0].id, STAFF_ID]);
+  const shortlist = await query(
+    "select public.create_offerpsp_route_shortlist($1, array[$2::uuid]) as value",
+    [leadId, matchId],
+  );
+  await query("select public.share_offerpsp_shortlist($1)", [shortlist.rows[0].value.shortlist_id]);
+
+  await setUser(AGENT_ID);
+  const workspace = await query("select * from public.list_offerpsp_workspace_requests()");
+  if (!workspace.rows.some((row) => row.lead_id === leadId && row.access_mode === "agent")) {
+    throw new Error("Active agent cannot see the assigned merchant workspace");
+  }
+  const options = await query("select * from public.offerpsp_client_shortlist where lead_id = $1", [leadId]);
+  if (options.rows.length !== 1 || Number(options.rows[0].client_fees[0].client_percent) !== 7) {
+    throw new Error(`Agent final merchant rate is incorrect: ${JSON.stringify(options.rows)}`);
+  }
+  if (/agent_margin|margin_mode|base_percent|provider_id|offer_route_id/i.test(JSON.stringify(options.rows[0]))) {
+    throw new Error("Agent/client shortlist leaks private pricing or provider fields");
+  }
+  await query("select public.respond_offerpsp_option($1, 'interested')", [options.rows[0].option_code]);
+  const agentLead = await query("select status from public.offerpsp_leads where lead_id = $1", [leadId]);
+  if (agentLead.rows[0].status !== "option_selected") {
+    throw new Error("Authorized agent cannot act on behalf of the assigned merchant");
+  }
+
+  await setUser(OTHER_CLIENT_ID);
+  const foreignWorkspace = await query("select * from public.list_offerpsp_workspace_requests()");
+  const foreignOptions = await query("select * from public.offerpsp_client_shortlist where lead_id = $1", [leadId]);
+  if (foreignWorkspace.rows.some((row) => row.lead_id === leadId) || foreignOptions.rows.length) {
+    throw new Error("Foreign client can access an agent-managed merchant");
+  }
+  process.stdout.write("PASS agent ownership, missing-margin gate, final resale rate and foreign isolation\n");
 }
 
 try {
   await bootstrap();
   await applyMigrations();
   await verifyLeadGrants();
+  await verifyClientPolicyBoundary();
   await seedUsers();
   await verifyPortalLeadClaims();
+  await verifyLegacyShortlistBlocked();
   await importPreparedDrafts();
   await runEndToEndFixture();
+  await verifyAgentWorkspaceAndPricing();
   process.stdout.write("PASS all OfferPSP migration checks\n");
 } catch (error) {
   process.stderr.write(`FAIL ${error.message}\n`);

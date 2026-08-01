@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#080a13">
-  <title>OfferPSP Client Cabinet</title>
+  <title>OfferPSP Payment Workspace</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/portal/styles.css">
 </head>
@@ -15,27 +15,18 @@
   <main id="authView" class="auth-shell">
     <section class="auth-card">
       <div class="auth-topline">
-        <a class="brand" href="/">
-          <span class="brand-mark">OP</span>
-          <span>OfferPSP</span>
-        </a>
+        <a class="brand" href="/"><span class="brand-mark">OP</span><span>OfferPSP</span></a>
         <div class="language-switch" aria-label="Language">
           <button type="button" data-language="ru">RU</button>
           <button type="button" data-language="en">EN</button>
         </div>
       </div>
-      <p class="eyebrow" data-i18n="clientCabinet">Кабинет клиента</p>
-      <h1 data-i18n="authTitle">Ваши платёжные варианты — в одном месте.</h1>
-      <p class="auth-copy" data-i18n="authCopy">Используйте рабочий email из заявки OfferPSP.</p>
+      <p class="eyebrow" data-i18n="workspace">Платёжный кабинет</p>
+      <h1 data-i18n="authTitle">Ваши платёжные задачи — в одном месте.</h1>
+      <p class="auth-copy" data-i18n="authCopy">Войдите с рабочим email из заявки OfferPSP.</p>
       <form id="loginForm">
-        <label>
-          <span data-i18n="workEmail">Рабочий email</span>
-          <input id="emailInput" type="email" autocomplete="email" required placeholder="you@company.com">
-        </label>
-        <label>
-          <span><span data-i18n="password">Пароль</span> <small data-i18n="optional">необязательно</small></span>
-          <input id="passwordInput" type="password" autocomplete="current-password" placeholder="Existing account password">
-        </label>
+        <label><span data-i18n="workEmail">Рабочий email</span><input id="emailInput" type="email" autocomplete="email" required placeholder="you@company.com"></label>
+        <label><span data-i18n="password">Пароль</span><input id="passwordInput" type="password" autocomplete="current-password" placeholder="••••••••"></label>
         <button class="button primary" type="submit" data-i18n="signIn">Войти</button>
         <button id="googleLoginButton" class="button secondary" type="button" data-i18n="continueGoogle">Продолжить с Google</button>
         <button id="magicLinkButton" class="button secondary" type="button" data-i18n="sendLoginLink">Отправить безопасную ссылку</button>
@@ -46,10 +37,7 @@
 
   <main id="portalView" class="portal is-hidden">
     <header class="portal-header">
-      <a class="brand" href="/">
-        <span class="brand-mark">OP</span>
-        <span>OfferPSP</span>
-      </a>
+      <a class="brand" href="/"><span class="brand-mark">OP</span><span>OfferPSP</span></a>
       <div class="header-actions">
         <div class="language-switch" aria-label="Language">
           <button type="button" data-language="ru">RU</button>
@@ -61,68 +49,87 @@
     </header>
 
     <div class="portal-main">
-      <section id="noRequestState" class="empty-card is-hidden">
-        <span class="empty-mark">◇</span>
-        <h1 data-i18n="noRequestTitle">Для этого email пока нет заявки.</h1>
-        <p data-i18n="noRequestCopy">Отправьте заявку с этим рабочим email или свяжитесь с менеджером OfferPSP.</p>
-        <a class="button primary" href="/#request" data-i18n="submitRequest">Отправить заявку</a>
+      <section class="workspace-head">
+        <div>
+          <p class="eyebrow" data-i18n="workspace">Платёжный кабинет</p>
+          <h1 data-i18n="workspaceTitle">Управляйте подключениями, а не перепиской по кругу.</h1>
+          <p data-i18n="workspaceCopy">Новые рынки, маршруты, знакомства и действующие подключения собраны в одном процессе.</p>
+        </div>
+        <a class="button primary" href="/#request" data-i18n="newRequest">Новая платёжная задача</a>
       </section>
 
-      <div id="requestView" class="is-hidden">
-        <section class="hero-card">
-          <div>
-            <p class="eyebrow" data-i18n="paymentSearch">Подбор платёжного решения</p>
-            <h1 id="companyName">Your request</h1>
-            <p id="requestMeta" class="hero-copy"></p>
-          </div>
-          <span id="statusPill" class="status-pill">In review</span>
-        </section>
+      <section id="workspaceStats" class="stats-grid">
+        <article><span id="activeRequestCount">0</span><small data-i18n="activeRequests">Активные задачи</small></article>
+        <article><span id="availableOptionCount">0</span><small data-i18n="availableOptions">Варианты к выбору</small></article>
+        <article><span id="liveConnectionCount">0</span><small data-i18n="liveConnections">Подключения и знакомства</small></article>
+      </section>
 
-        <section class="progress-card next-action-card">
-          <div class="progress-head">
-            <div>
-              <p class="eyebrow" data-i18n="nextStep">Следующий шаг</p>
-              <h2 id="nextActionTitle">Сверьте подходящие варианты</h2>
-            </div>
-            <span id="progressLabel">OfferPSP</span>
-          </div>
-          <p id="nextActionText" class="next-action-copy"></p>
-        </section>
+      <div id="agentBanner" class="agent-banner is-hidden"></div>
 
-        <section class="section-block">
-          <div class="section-head">
-            <div>
-              <p class="eyebrow" data-i18n="curated">Подобрано под ваш профиль</p>
-              <h2 data-i18n="yourOptions">Ваши платёжные варианты</h2>
-            </div>
-            <span id="shortlistUpdated" class="muted"></span>
-          </div>
-          <div id="shortlistPending" class="pending-card">
-            <span class="pulse"></span>
-            <div>
-              <strong id="pendingTitle" data-i18n="matchingProgress">Идёт подбор</strong>
-              <p id="pendingCopy" data-i18n="matchingCopy">Мы сверяем требования с приватной базой PSP. Здесь появятся только проверенные варианты.</p>
-            </div>
-          </div>
-          <div id="shortlistGrid" class="shortlist-grid is-hidden"></div>
-          <div id="selectedSummary" class="selected-summary is-hidden"></div>
-          <p id="optionStatus" class="status" role="status" aria-live="polite"></p>
-        </section>
+      <section id="noRequestState" class="empty-card is-hidden">
+        <span class="empty-mark">◇</span>
+        <h2 data-i18n="noRequestTitle">Пока нет платёжных задач.</h2>
+        <p data-i18n="noRequestCopy">Создайте первую задачу — мы сохраним её здесь и проведём до результата.</p>
+        <a class="button primary" href="/#request" data-i18n="newRequest">Новая платёжная задача</a>
+      </section>
 
-        <section class="section-block conversation-block">
-          <div class="section-head">
-            <div>
-              <p class="eyebrow" data-i18n="directLine">Прямая связь</p>
-              <h2 data-i18n="conversation">Переписка</h2>
-            </div>
+      <div id="workspaceView" class="workspace-grid is-hidden">
+        <aside class="request-rail">
+          <div class="rail-head">
+            <div><p class="eyebrow" data-i18n="requests">Задачи</p><h2 data-i18n="yourRequests">Ваши запросы</h2></div>
+            <a href="/#request" class="rail-add" aria-label="New request">+</a>
           </div>
-          <div id="messageList" class="message-list"></div>
-          <form id="messageForm" class="message-form">
-            <textarea id="messageInput" rows="3" data-i18n-placeholder="messagePlaceholder" placeholder="Задайте вопрос или сообщите обновление…" required></textarea>
-            <button class="button primary" type="submit" data-i18n="sendMessage">Отправить</button>
-          </form>
-          <p id="messageStatus" class="status" role="status" aria-live="polite"></p>
-        </section>
+          <div id="requestList" class="request-list"></div>
+        </aside>
+
+        <div id="requestView" class="request-content">
+          <section class="hero-card">
+            <div>
+              <p class="eyebrow" data-i18n="selectedRequest">Выбранная задача</p>
+              <h2 id="companyName">Payment request</h2>
+              <p id="requestMeta" class="hero-copy"></p>
+            </div>
+            <span id="statusPill" class="status-pill"></span>
+          </section>
+
+          <section class="next-action-card">
+            <div class="next-number">→</div>
+            <div>
+              <p class="eyebrow" data-i18n="nextStep">Следующее действие</p>
+              <h2 id="nextActionTitle"></h2>
+              <p id="nextActionText"></p>
+            </div>
+          </section>
+
+          <section id="dealSection" class="section-block is-hidden">
+            <div class="section-head"><div><p class="eyebrow" data-i18n="connections">Знакомства и подключения</p><h2 data-i18n="dealProgress">Ход сделки</h2></div></div>
+            <div id="dealList" class="deal-list"></div>
+          </section>
+
+          <section class="section-block">
+            <div class="section-head">
+              <div><p class="eyebrow" data-i18n="comparison">Сравнение</p><h2 data-i18n="yourOptions">Подобранные маршруты</h2></div>
+              <span id="shortlistUpdated" class="muted"></span>
+            </div>
+            <div id="shortlistPending" class="pending-card">
+              <span class="pulse"></span>
+              <div><strong id="pendingTitle"></strong><p id="pendingCopy"></p></div>
+            </div>
+            <div id="shortlistGrid" class="shortlist-grid is-hidden"></div>
+            <div id="selectedSummary" class="selected-summary is-hidden"></div>
+            <p id="optionStatus" class="status" role="status" aria-live="polite"></p>
+          </section>
+
+          <section class="section-block conversation-block">
+            <div class="section-head"><div><p class="eyebrow" data-i18n="directLine">Прямая связь</p><h2 data-i18n="conversation">Рабочий чат с OfferPSP</h2></div></div>
+            <div id="messageList" class="message-list"></div>
+            <form id="messageForm" class="message-form">
+              <textarea id="messageInput" rows="3" data-i18n-placeholder="messagePlaceholder" placeholder="Задайте вопрос или сообщите об изменении…" required></textarea>
+              <button class="button primary" type="submit" data-i18n="sendMessage">Отправить</button>
+            </form>
+            <p id="messageStatus" class="status" role="status" aria-live="polite"></p>
+          </section>
+        </div>
       </div>
     </div>
   </main>
