@@ -1,3 +1,11 @@
 psp_database.csv
 Gemini_Generated_Image_kiu4hckiu4hckiu4.jpeg
 logo.jpg
+AGENTS.md
+TASKS.md
+docs/
+scripts/
+supabase/
+.gitignore
+.private/
+.vercel/
