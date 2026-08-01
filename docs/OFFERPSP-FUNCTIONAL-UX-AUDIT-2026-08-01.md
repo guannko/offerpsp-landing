@@ -30,9 +30,14 @@ OfferPSP уже имеет серьёзный backend-фундамент, но �
 по запросу PSP. Клиентские варианты теперь загружаются через безопасный RPC без прямой
 зависимости frontend от legacy `SECURITY DEFINER` view.
 
-`PARTIAL`: изменения ещё не развёрнуты в production. Редактор PSP supply, Telegram ingestion,
-полный кабинет субагента, commission operations и расширенная аналитика остаются следующими
-блоками.
+`VERIFIED` локально: второй операционный блок добавил PSP supply workspace — редактирование
+профиля и контактов PSP, нормализованных маршрутов, ставок, лимитов, settlement, маржи и
+аномалий; pause/resume/archive, freshness, версии и неизменяемую историю действий. Возобновление
+маршрута повторно проверяет ошибки, актуальность условий, pricing, лимиты и маржу.
+
+`PARTIAL`: оба frontend-блока и новая supply migration ещё не развёрнуты в production. Telegram
+ingestion, автоматические reminders, coverage matrix, сравнение версий, полный кабинет субагента,
+commission operations и расширенная аналитика остаются следующими блоками.
 
 ## 2. Как проводился аудит
 
@@ -504,14 +509,14 @@ RBAC должен следовать принципу минимальных п�
 | Matching Workbench | `MISSING` | Видны только top-5, score и общий текст |
 | Ручной выбор/исключение candidates | `MISSING` | Код автоматически берёт первые пять |
 | Shortlist preview | `MISSING` | Staff не видит точный client output до отправки |
-| PSP register | `PARTIAL` | Read-only cards; editor и contacts отсутствуют |
+| PSP register | `VERIFIED` local | Profile/contact workspace реализован; rollout pending |
 | Rate-card import | `PARTIAL` | Только заранее подготовленный JSON |
 | Telegram ingestion | `MISSING` | Активного workflow нет |
-| Route/anomaly editor | `MISSING` | 38 production errors нельзя разбирать в UI |
-| Margin editor | `MISSING` | Политики есть в БД, UI нет |
+| Route/anomaly editor | `VERIFIED` local | Routes, fees, limits, settlement и anomaly resolution реализованы; rollout pending |
+| Margin editor | `VERIFIED` local | Provider/route margin policies реализованы; rollout pending |
 | Publish guard | `VERIFIED` | Error anomalies блокируют публикацию |
-| Version diff/history | `MISSING` | Данные есть, визуального diff нет |
-| Pause/archive/freshness | `MISSING` | Staff controls и reminders отсутствуют |
+| Version diff/history | `PARTIAL` local | Реестр версий и audit history есть; field-by-field diff ещё отсутствует |
+| Pause/archive/freshness | `PARTIAL` local | Controls и freshness есть; автоматические reminders отсутствуют |
 | Coverage matrix | `MISSING` | Нет обзора ниш и пробелов supply |
 | Deal Desk | `MISSING` UI | Dossier/review/Telegram/Zoom/won есть только в RPC/БД |
 | Agent management | `MISSING` UI | Только backend foundation |
@@ -667,10 +672,10 @@ Supabase advisor отмечает:
 
 ### P1 — supply и ежедневные операции
 
-1. Route/anomaly/margin editor.
-2. Version diff, publish/pause/archive и freshness.
+1. Задеплоить готовый route/anomaly/margin workspace.
+2. Добавить field-by-field version diff и coverage matrix.
 3. Общий Tasks/Inbox/Notifications.
-4. n8n reminders и pipeline automation.
+4. n8n ingestion, reminders и pipeline automation.
 5. Нормальная новая payment request внутри client workspace с reusable profile.
 6. Deal Room и live connections.
 7. Google branding и `api.offerpsp.com`.

@@ -17,6 +17,7 @@ assert.deepEqual(portalEmptyStateKeys("matching"), ["matchingProgress", "matchin
 const appSource = await readFile(new URL("../portal/app.js", import.meta.url), "utf8");
 const htmlSource = await readFile(new URL("../portal/index.html", import.meta.url), "utf8");
 const adminSource = await readFile(new URL("../admin/app.js", import.meta.url), "utf8");
+const adminHtmlSource = await readFile(new URL("../admin/index.html", import.meta.url), "utf8");
 assert.match(appSource, /rpc\("list_offerpsp_workspace_requests"\)/);
 assert.match(appSource, /rpc\("list_offerpsp_client_deals"/);
 assert.match(appSource, /rpc\("list_offerpsp_client_options"/);
@@ -38,5 +39,13 @@ const matchingSource = adminSource.slice(
   adminSource.indexOf("async function createShortlist()"),
 );
 assert.doesNotMatch(matchingSource, /create_offerpsp_route_shortlist/);
+assert.match(adminSource, /rpc\("get_offerpsp_supply_workspace"/);
+assert.match(adminSource, /rpc\("save_offerpsp_provider"/);
+assert.match(adminSource, /rpc\("save_offerpsp_route"/);
+assert.match(adminSource, /rpc\("resolve_offerpsp_route_anomaly"/);
+assert.match(adminSource, /rpc\("set_offerpsp_margin_policy"/);
+assert.match(adminHtmlSource, /id="supplyDrawer"/);
+assert.match(adminHtmlSource, /id="supplyRouteForm"/);
+assert.match(adminHtmlSource, /id="supplyAnomalyList"/);
 
-process.stdout.write("PASS persistent portal, structured dossier, manual shortlist and operational Deal Desk guards\n");
+process.stdout.write("PASS persistent portal, operational Deal Desk and PSP supply workspace guards\n");

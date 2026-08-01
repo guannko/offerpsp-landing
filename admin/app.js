@@ -51,6 +51,9 @@ const state = {
     providers: [],
     batches: [],
   },
+  supplyWorkspace: null,
+  selectedSupplyProviderId: null,
+  selectedSupplyRouteId: null,
   rateCardPayload: null,
   lastUpdatedAt: null,
 };
@@ -106,6 +109,81 @@ const elements = {
   supplyEmptyState: document.getElementById("supplyEmptyState"),
   providerList: document.getElementById("providerList"),
   batchList: document.getElementById("batchList"),
+  supplyDrawerBackdrop: document.getElementById("supplyDrawerBackdrop"),
+  supplyDrawer: document.getElementById("supplyDrawer"),
+  closeSupplyDrawerButton: document.getElementById("closeSupplyDrawerButton"),
+  supplyDrawerTitle: document.getElementById("supplyDrawerTitle"),
+  supplyDrawerCode: document.getElementById("supplyDrawerCode"),
+  supplyWorkspaceSummary: document.getElementById("supplyWorkspaceSummary"),
+  supplyWorkspaceStatus: document.getElementById("supplyWorkspaceStatus"),
+  confirmSupplyFreshnessButton: document.getElementById("confirmSupplyFreshnessButton"),
+  supplyBrandName: document.getElementById("supplyBrandName"),
+  supplyLegalName: document.getElementById("supplyLegalName"),
+  supplyWebsite: document.getElementById("supplyWebsite"),
+  supplyRelationshipStatus: document.getElementById("supplyRelationshipStatus"),
+  supplyPriority: document.getElementById("supplyPriority"),
+  supplyMarginIncluded: document.getElementById("supplyMarginIncluded"),
+  supplyRelationshipNotes: document.getElementById("supplyRelationshipNotes"),
+  saveSupplyProviderButton: document.getElementById("saveSupplyProviderButton"),
+  supplyContactList: document.getElementById("supplyContactList"),
+  supplyContactForm: document.getElementById("supplyContactForm"),
+  supplyContactId: document.getElementById("supplyContactId"),
+  supplyContactName: document.getElementById("supplyContactName"),
+  supplyContactRole: document.getElementById("supplyContactRole"),
+  supplyContactRegion: document.getElementById("supplyContactRegion"),
+  supplyContactTelegram: document.getElementById("supplyContactTelegram"),
+  supplyContactEmail: document.getElementById("supplyContactEmail"),
+  supplyContactPhone: document.getElementById("supplyContactPhone"),
+  supplyContactChannel: document.getElementById("supplyContactChannel"),
+  supplyContactActive: document.getElementById("supplyContactActive"),
+  supplyContactNotes: document.getElementById("supplyContactNotes"),
+  resetSupplyContactButton: document.getElementById("resetSupplyContactButton"),
+  supplyMarginList: document.getElementById("supplyMarginList"),
+  supplyMarginForm: document.getElementById("supplyMarginForm"),
+  supplyMarginRoute: document.getElementById("supplyMarginRoute"),
+  supplyMarginFlow: document.getElementById("supplyMarginFlow"),
+  supplyMarginMode: document.getElementById("supplyMarginMode"),
+  supplyMarginPercent: document.getElementById("supplyMarginPercent"),
+  supplyMarginFixed: document.getElementById("supplyMarginFixed"),
+  supplyMarginCurrency: document.getElementById("supplyMarginCurrency"),
+  supplyMarginNotes: document.getElementById("supplyMarginNotes"),
+  supplyRouteList: document.getElementById("supplyRouteList"),
+  supplyRouteForm: document.getElementById("supplyRouteForm"),
+  supplyRouteId: document.getElementById("supplyRouteId"),
+  supplyRouteCode: document.getElementById("supplyRouteCode"),
+  supplyRouteHeading: document.getElementById("supplyRouteHeading"),
+  supplyRouteStatus: document.getElementById("supplyRouteStatus"),
+  supplyRouteTitle: document.getElementById("supplyRouteTitle"),
+  supplyRouteFlow: document.getElementById("supplyRouteFlow"),
+  supplyRouteCoverage: document.getElementById("supplyRouteCoverage"),
+  supplyRouteGeos: document.getElementById("supplyRouteGeos"),
+  supplyRouteBlockedGeos: document.getElementById("supplyRouteBlockedGeos"),
+  supplyRouteCurrencies: document.getElementById("supplyRouteCurrencies"),
+  supplyRouteMethods: document.getElementById("supplyRouteMethods"),
+  supplyRouteTraffic: document.getElementById("supplyRouteTraffic"),
+  supplyRouteVerticals: document.getElementById("supplyRouteVerticals"),
+  supplyRouteIntegrations: document.getElementById("supplyRouteIntegrations"),
+  supplyRouteMinVolume: document.getElementById("supplyRouteMinVolume"),
+  supplyRouteMaxVolume: document.getElementById("supplyRouteMaxVolume"),
+  supplyRouteVolumeCurrency: document.getElementById("supplyRouteVolumeCurrency"),
+  supplyRouteFreshness: document.getElementById("supplyRouteFreshness"),
+  supplyRouteEffectiveFrom: document.getElementById("supplyRouteEffectiveFrom"),
+  supplyRouteExpiresAt: document.getElementById("supplyRouteExpiresAt"),
+  supplyRouteNotes: document.getElementById("supplyRouteNotes"),
+  supplyFeeRows: document.getElementById("supplyFeeRows"),
+  addSupplyFeeButton: document.getElementById("addSupplyFeeButton"),
+  supplyLimitRows: document.getElementById("supplyLimitRows"),
+  addSupplyLimitButton: document.getElementById("addSupplyLimitButton"),
+  supplySettlementRows: document.getElementById("supplySettlementRows"),
+  addSupplySettlementButton: document.getElementById("addSupplySettlementButton"),
+  saveSupplyRouteButton: document.getElementById("saveSupplyRouteButton"),
+  pauseSupplyRouteButton: document.getElementById("pauseSupplyRouteButton"),
+  resumeSupplyRouteButton: document.getElementById("resumeSupplyRouteButton"),
+  archiveSupplyRouteButton: document.getElementById("archiveSupplyRouteButton"),
+  supplyOpenChecks: document.getElementById("supplyOpenChecks"),
+  supplyAnomalyList: document.getElementById("supplyAnomalyList"),
+  supplyBatchHistory: document.getElementById("supplyBatchHistory"),
+  supplyActivityList: document.getElementById("supplyActivityList"),
   drawerBackdrop: document.getElementById("drawerBackdrop"),
   leadDrawer: document.getElementById("leadDrawer"),
   closeDrawerButton: document.getElementById("closeDrawerButton"),
@@ -388,8 +466,13 @@ function renderSupply() {
         <div><dt>Published routes</dt><dd>${Number(provider.published_route_count || 0)}</dd></div>
         <div><dt>Client rate</dt><dd>${provider.margin_included_default ? "Included by PSP" : "Margin policy"}</dd></div>
       </dl>
+      <button class="button button-secondary button-compact open-supply-button" type="button" data-provider-id="${escapeHtml(provider.id)}">Open workspace</button>
     </article>
   `).join("");
+
+  elements.providerList.querySelectorAll(".open-supply-button").forEach((button) => {
+    button.addEventListener("click", () => openSupplyWorkspace(button.dataset.providerId));
+  });
 
   if (!batches.length) {
     elements.batchList.innerHTML = '<div class="supply-empty">No import batches yet.</div>';
@@ -420,6 +503,407 @@ function renderSupply() {
   elements.batchList.querySelectorAll(".publish-batch-button").forEach((button) => {
     button.addEventListener("click", () => publishRateCard(button.dataset.batchId, button));
   });
+}
+
+function setSupplyWorkspaceStatus(message = "", tone = "") {
+  elements.supplyWorkspaceStatus.textContent = message;
+  elements.supplyWorkspaceStatus.className = `form-status${tone ? ` ${tone}` : ""}`;
+}
+
+function closeSupplyWorkspace() {
+  elements.supplyDrawer.classList.remove("is-open");
+  elements.supplyDrawer.setAttribute("aria-hidden", "true");
+  elements.supplyDrawerBackdrop.classList.add("is-hidden");
+  state.supplyWorkspace = null;
+  state.selectedSupplyProviderId = null;
+  state.selectedSupplyRouteId = null;
+  document.body.classList.remove("drawer-open");
+}
+
+async function openSupplyWorkspace(providerId) {
+  state.selectedSupplyProviderId = providerId;
+  state.selectedSupplyRouteId = null;
+  elements.supplyDrawerBackdrop.classList.remove("is-hidden");
+  elements.supplyDrawer.classList.add("is-open");
+  elements.supplyDrawer.setAttribute("aria-hidden", "false");
+  document.body.classList.add("drawer-open");
+  elements.supplyDrawerTitle.textContent = "Loading PSP…";
+  elements.supplyDrawerCode.textContent = "—";
+  setSupplyWorkspaceStatus("Loading private supply workspace…");
+  await loadSupplyWorkspace(providerId);
+}
+
+async function loadSupplyWorkspace(providerId = state.selectedSupplyProviderId) {
+  if (!providerId) return;
+  const { data, error } = await supabase.rpc("get_offerpsp_supply_workspace", { p_provider_id: providerId });
+  if (error) {
+    setSupplyWorkspaceStatus(friendlyError(error, "Could not load the PSP workspace."), "error");
+    return;
+  }
+  state.supplyWorkspace = data;
+  if (state.selectedSupplyRouteId && !(data.routes || []).some((route) => route.id === state.selectedSupplyRouteId)) {
+    state.selectedSupplyRouteId = null;
+  }
+  renderSupplyWorkspace();
+  setSupplyWorkspaceStatus();
+}
+
+function renderSupplyWorkspace() {
+  const workspace = state.supplyWorkspace;
+  if (!workspace?.provider) return;
+  const provider = workspace.provider;
+  const routes = workspace.routes || [];
+  const batches = workspace.batches || [];
+  const contacts = workspace.contacts || [];
+  const policies = workspace.margin_policies || [];
+  const openAnomalies = routes.flatMap((route) => (route.anomalies || []).map((anomaly) => ({ ...anomaly, route })));
+  const openErrors = openAnomalies.filter((item) => item.status === "open" && item.severity === "error").length;
+  const openWarnings = openAnomalies.filter((item) => item.status === "open" && item.severity === "warning").length;
+  const published = routes.filter((route) => route.status === "published").length;
+  const stale = routes.filter((route) => route.is_stale && !["archived", "expired"].includes(route.status)).length;
+
+  elements.supplyDrawerTitle.textContent = provider.brand_name;
+  elements.supplyDrawerCode.textContent = provider.internal_code;
+  elements.supplyWorkspaceSummary.innerHTML = [
+    ["Published routes", String(published)],
+    ["Open errors / warnings", `${openErrors} / ${openWarnings}`],
+    ["Stale routes", String(stale)],
+    ["Last confirmed", provider.last_verified_at ? formatDate(provider.last_verified_at, true) : "Never"],
+  ].map(([label, value]) => `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`).join("");
+
+  elements.supplyBrandName.value = provider.brand_name || "";
+  elements.supplyLegalName.value = provider.legal_name || "";
+  elements.supplyWebsite.value = provider.website || "";
+  elements.supplyRelationshipStatus.value = provider.relationship_status || "prospect";
+  elements.supplyPriority.value = provider.strategic_priority ?? 50;
+  elements.supplyMarginIncluded.checked = Boolean(provider.margin_included_default);
+  elements.supplyRelationshipNotes.value = provider.relationship_notes || "";
+
+  renderSupplyContacts(contacts);
+  renderSupplyMargins(policies, routes);
+  renderSupplyRoutes(routes);
+  renderSupplyAnomalies(openAnomalies);
+  renderSupplyHistory(batches, workspace.activity || []);
+}
+
+function renderSupplyContacts(contacts) {
+  elements.supplyContactList.innerHTML = contacts.length ? contacts.map((contact) => `
+    <article class="contact-card${contact.active ? "" : " is-inactive"}">
+      <div><strong>${escapeHtml(contact.full_name)}</strong><span>${escapeHtml(contact.role_title || "Contact")}${contact.region ? ` · ${escapeHtml(contact.region)}` : ""}</span></div>
+      <div class="contact-channels">${[contact.telegram, contact.email, contact.phone].filter(Boolean).map((value) => `<span>${escapeHtml(value)}</span>`).join("")}</div>
+      <button class="text-button edit-supply-contact" type="button" data-contact-id="${escapeHtml(contact.id)}">Edit</button>
+    </article>
+  `).join("") : '<p class="supply-empty">No working contacts yet.</p>';
+  elements.supplyContactList.querySelectorAll(".edit-supply-contact").forEach((button) => {
+    button.addEventListener("click", () => editSupplyContact(button.dataset.contactId));
+  });
+}
+
+function resetSupplyContactForm() {
+  elements.supplyContactForm.reset();
+  elements.supplyContactId.value = "";
+  elements.supplyContactActive.checked = true;
+}
+
+function editSupplyContact(contactId) {
+  const contact = (state.supplyWorkspace?.contacts || []).find((item) => item.id === contactId);
+  if (!contact) return;
+  elements.supplyContactId.value = contact.id;
+  elements.supplyContactName.value = contact.full_name || "";
+  elements.supplyContactRole.value = contact.role_title || "";
+  elements.supplyContactRegion.value = contact.region || "";
+  elements.supplyContactTelegram.value = contact.telegram || "";
+  elements.supplyContactEmail.value = contact.email || "";
+  elements.supplyContactPhone.value = contact.phone || "";
+  elements.supplyContactChannel.value = contact.preferred_channel || "";
+  elements.supplyContactActive.checked = Boolean(contact.active);
+  elements.supplyContactNotes.value = contact.notes || "";
+  elements.supplyContactName.focus();
+}
+
+function marginDescription(policy) {
+  if (policy.mode === "included") return "Included by PSP";
+  const parts = [];
+  if (policy.percent_value !== null && policy.percent_value !== undefined) parts.push(`${Number(policy.percent_value)}%`);
+  if (policy.fixed_value !== null && policy.fixed_value !== undefined) parts.push(`${Number(policy.fixed_value)} ${policy.fixed_currency || ""}`.trim());
+  return parts.join(" + ") || policy.mode;
+}
+
+function renderSupplyMargins(policies, routes) {
+  const active = policies.filter((policy) => policy.active);
+  elements.supplyMarginList.innerHTML = active.length ? active.map((policy) => {
+    const route = routes.find((item) => item.id === policy.route_id);
+    return `<article class="margin-card"><div><strong>${escapeHtml(route?.client_title || "All PSP routes")}</strong><span>${escapeHtml(policy.flow)} · ${escapeHtml(policy.mode)}</span></div><b>${escapeHtml(marginDescription(policy))}</b></article>`;
+  }).join("") : '<p class="supply-empty">No active margin policy. Publication is blocked unless the PSP rate already includes commission.</p>';
+  elements.supplyMarginRoute.innerHTML = `<option value="">All PSP routes</option>${routes.filter((route) => route.status !== "archived").map((route) => `<option value="${escapeHtml(route.id)}">${escapeHtml(route.internal_code)} · ${escapeHtml(route.client_title)}</option>`).join("")}`;
+}
+
+function renderSupplyRoutes(routes) {
+  elements.supplyRouteList.innerHTML = routes.length ? routes.map((route) => `
+    <button class="route-list-item${state.selectedSupplyRouteId === route.id ? " is-active" : ""}" type="button" data-route-id="${escapeHtml(route.id)}">
+      <span><strong>${escapeHtml(route.client_title)}</strong><small>${escapeHtml(route.internal_code)} · v${Number(route.batch_version || 0)}</small></span>
+      <span class="route-health"><i class="status-pill status-${escapeHtml(route.status)}">${escapeHtml(route.status)}</i>${Number(route.open_error_count || 0) ? `<b>${Number(route.open_error_count)} errors</b>` : route.is_stale ? "<b>stale</b>" : ""}</span>
+    </button>
+  `).join("") : '<p class="supply-empty">No normalized routes.</p>';
+  elements.supplyRouteList.querySelectorAll(".route-list-item").forEach((button) => {
+    button.addEventListener("click", () => selectSupplyRoute(button.dataset.routeId));
+  });
+  if (state.selectedSupplyRouteId) renderSupplyRouteEditor();
+}
+
+function selectSupplyRoute(routeId) {
+  state.selectedSupplyRouteId = routeId;
+  renderSupplyRoutes(state.supplyWorkspace?.routes || []);
+  renderSupplyRouteEditor();
+}
+
+function inputDate(value) {
+  return value ? String(value).slice(0, 10) : "";
+}
+
+function renderSupplyRouteEditor() {
+  const route = (state.supplyWorkspace?.routes || []).find((item) => item.id === state.selectedSupplyRouteId);
+  if (!route) {
+    elements.supplyRouteForm.classList.add("is-hidden");
+    return;
+  }
+  elements.supplyRouteForm.classList.remove("is-hidden");
+  elements.supplyRouteId.value = route.id;
+  elements.supplyRouteCode.textContent = `${route.internal_code} · rate card v${Number(route.batch_version || 0)}`;
+  elements.supplyRouteHeading.textContent = route.client_title;
+  elements.supplyRouteStatus.textContent = route.status;
+  elements.supplyRouteStatus.className = `status-pill status-${escapeHtml(route.status)}`;
+  elements.supplyRouteTitle.value = route.client_title || "";
+  elements.supplyRouteFlow.value = route.flow;
+  elements.supplyRouteCoverage.value = route.coverage_scope;
+  elements.supplyRouteGeos.value = listInput(route.geos);
+  elements.supplyRouteBlockedGeos.value = listInput(route.blocked_geos);
+  elements.supplyRouteCurrencies.value = listInput(route.currencies);
+  elements.supplyRouteMethods.value = listInput(route.methods);
+  elements.supplyRouteTraffic.value = listInput(route.traffic_types);
+  elements.supplyRouteVerticals.value = listInput(route.verticals);
+  elements.supplyRouteIntegrations.value = listInput(route.integrations);
+  elements.supplyRouteMinVolume.value = route.min_monthly_volume ?? "";
+  elements.supplyRouteMaxVolume.value = route.max_monthly_volume ?? "";
+  elements.supplyRouteVolumeCurrency.value = route.volume_currency || "";
+  elements.supplyRouteFreshness.value = route.freshness_days ?? 30;
+  elements.supplyRouteEffectiveFrom.value = inputDate(route.effective_from);
+  elements.supplyRouteExpiresAt.value = inputDate(route.expires_at);
+  elements.supplyRouteNotes.value = route.operational_notes || "";
+  elements.supplyFeeRows.replaceChildren(...(route.fees || []).map(createSupplyFeeRow));
+  elements.supplyLimitRows.replaceChildren(...(route.limits || []).map(createSupplyLimitRow));
+  elements.supplySettlementRows.replaceChildren(...(route.settlements || []).map(createSupplySettlementRow));
+  const editable = !["published", "paused"].includes(route.status);
+  elements.saveSupplyRouteButton.disabled = !editable;
+  elements.pauseSupplyRouteButton.classList.toggle("is-hidden", route.status !== "published");
+  elements.resumeSupplyRouteButton.classList.toggle("is-hidden", route.status !== "paused");
+  elements.archiveSupplyRouteButton.classList.toggle("is-hidden", !["draft", "review", "paused"].includes(route.status));
+}
+
+function componentRemoveButton(row) {
+  const button = row.querySelector(".remove-component");
+  button?.addEventListener("click", () => row.remove());
+  return row;
+}
+
+function createSupplyFeeRow(fee = {}) {
+  const row = document.createElement("div");
+  row.className = "component-row fee-row";
+  row.innerHTML = `
+    <select data-field="flow"><option value="payin">Pay-in</option><option value="payout">Pay-out</option><option value="settlement">Settlement</option><option value="refund">Refund</option><option value="chargeback">Chargeback</option><option value="decline">Decline</option></select>
+    <select data-field="fee_type"><option value="percent">Percent</option><option value="fixed">Fixed</option><option value="percent_plus_fixed">Percent + fixed</option></select>
+    <input data-field="base_percent" type="number" step="0.01" placeholder="%">
+    <input data-field="base_fixed" type="number" step="0.01" placeholder="Fixed">
+    <input data-field="base_fixed_currency" type="text" placeholder="Currency">
+    <select data-field="applies_on"><option value="success">Success</option><option value="decline">Decline</option><option value="both">Both</option><option value="event">Event</option></select>
+    <button class="remove-component" type="button" aria-label="Remove fee">×</button>`;
+  for (const [key, value] of Object.entries(fee)) {
+    const input = row.querySelector(`[data-field="${key}"]`);
+    if (input && value !== null) input.value = value;
+  }
+  return componentRemoveButton(row);
+}
+
+function createSupplyLimitRow(limit = {}) {
+  const row = document.createElement("div");
+  row.className = "component-row limit-row";
+  row.innerHTML = `
+    <select data-field="flow"><option value="payin">Pay-in</option><option value="payout">Pay-out</option><option value="both">Both</option></select>
+    <input data-field="currency" type="text" placeholder="Currency">
+    <input data-field="minimum_amount" type="number" step="any" placeholder="Minimum">
+    <input data-field="maximum_amount" type="number" step="any" placeholder="Maximum">
+    <input data-field="maximum_count" type="number" step="1" placeholder="Max count">
+    <button class="remove-component" type="button" aria-label="Remove limit">×</button>`;
+  for (const [key, value] of Object.entries(limit)) {
+    const input = row.querySelector(`[data-field="${key}"]`);
+    if (input && value !== null) input.value = value;
+  }
+  return componentRemoveButton(row);
+}
+
+function createSupplySettlementRow(term = {}) {
+  const row = document.createElement("div");
+  row.className = "component-row settlement-row";
+  row.innerHTML = `
+    <input data-field="currency" type="text" placeholder="Currency">
+    <input data-field="fee_percent" type="number" step="0.01" placeholder="Fee %">
+    <input data-field="period" type="text" placeholder="T+1 / Weekly">
+    <input data-field="minimum_amount" type="number" step="any" placeholder="Minimum">
+    <input data-field="exchange_rule" type="text" placeholder="Exchange rule">
+    <button class="remove-component" type="button" aria-label="Remove settlement">×</button>`;
+  for (const [key, value] of Object.entries(term)) {
+    const input = row.querySelector(`[data-field="${key}"]`);
+    if (input && value !== null) input.value = value;
+  }
+  return componentRemoveButton(row);
+}
+
+function collectComponentRows(container) {
+  return [...container.querySelectorAll(".component-row")].map((row) => Object.fromEntries(
+    [...row.querySelectorAll("[data-field]")].map((input) => [input.dataset.field, input.value.trim() || null]),
+  ));
+}
+
+function renderSupplyAnomalies(anomalies) {
+  const open = anomalies.filter((item) => item.status === "open");
+  elements.supplyOpenChecks.textContent = `${open.length} open`;
+  elements.supplyAnomalyList.innerHTML = anomalies.length ? anomalies.map((item) => `
+    <article class="anomaly-card severity-${escapeHtml(item.severity)}${item.status === "open" ? "" : " is-resolved"}">
+      <div class="anomaly-head"><div><strong>${escapeHtml(item.message)}</strong><span>${escapeHtml(item.route.internal_code)} · ${escapeHtml(item.field_name || item.anomaly_code)}</span></div><span class="status-pill">${escapeHtml(item.severity)} · ${escapeHtml(item.status)}</span></div>
+      ${item.source_excerpt ? `<blockquote>${escapeHtml(item.source_excerpt)}</blockquote>` : ""}
+      ${item.resolution_note ? `<p>${escapeHtml(item.resolution_note)}</p>` : ""}
+      ${item.status === "open" ? `<div class="section-actions"><button class="text-button resolve-anomaly" type="button" data-id="${escapeHtml(item.id)}" data-status="resolved">Resolved after correction</button><button class="text-button resolve-anomaly" type="button" data-id="${escapeHtml(item.id)}" data-status="accepted">Accept as confirmed</button><button class="text-button resolve-anomaly" type="button" data-id="${escapeHtml(item.id)}" data-status="ignored">Ignore duplicate/noise</button></div>` : ""}
+    </article>
+  `).join("") : '<p class="supply-empty">No parser checks for this PSP.</p>';
+  elements.supplyAnomalyList.querySelectorAll(".resolve-anomaly").forEach((button) => {
+    button.addEventListener("click", () => resolveSupplyAnomaly(button.dataset.id, button.dataset.status, button));
+  });
+}
+
+function renderSupplyHistory(batches, activity) {
+  elements.supplyBatchHistory.innerHTML = batches.length ? batches.map((batch) => `
+    <article class="batch-card"><div class="batch-main"><div class="batch-title"><strong>Rate card v${Number(batch.batch_version)}</strong><span class="status-pill status-${escapeHtml(batch.status)}">${escapeHtml(batch.status)}</span></div><p>${escapeHtml(batch.source_reference || batch.source_type)} · ${formatDate(batch.received_at, true)}</p></div><div class="batch-metrics"><span><strong>${Number(batch.route_count || 0)}</strong> routes</span><span class="${Number(batch.open_error_count || 0) ? "has-warning" : ""}"><strong>${Number(batch.open_error_count || 0)}</strong> errors</span><span><strong>${Number(batch.open_warning_count || 0)}</strong> warnings</span></div></article>
+  `).join("") : '<p class="supply-empty">No rate-card versions.</p>';
+  elements.supplyActivityList.innerHTML = activity.length ? activity.map((item) => `<article><span>${formatDate(item.created_at, true)}</span><div><strong>${escapeHtml(item.summary)}</strong><p>${escapeHtml(item.action_type.replaceAll("_", " "))}</p></div></article>`).join("") : '<p class="supply-empty">No operational changes recorded yet.</p>';
+}
+
+async function saveSupplyProvider() {
+  if (!state.selectedSupplyProviderId) return;
+  setButtonLoading(elements.saveSupplyProviderButton, true, "Saving…");
+  const { error } = await supabase.rpc("save_offerpsp_provider", {
+    p_provider_id: state.selectedSupplyProviderId,
+    p_payload: {
+      brand_name: elements.supplyBrandName.value.trim(), legal_name: elements.supplyLegalName.value.trim(),
+      website: elements.supplyWebsite.value.trim(), relationship_status: elements.supplyRelationshipStatus.value,
+      strategic_priority: elements.supplyPriority.value, margin_included_default: elements.supplyMarginIncluded.checked,
+      relationship_notes: elements.supplyRelationshipNotes.value.trim(),
+    },
+  });
+  setButtonLoading(elements.saveSupplyProviderButton, false);
+  if (error) return setSupplyWorkspaceStatus(friendlyError(error, "Could not save the PSP profile."), "error");
+  await Promise.all([loadSupply(), loadSupplyWorkspace()]);
+  setSupplyWorkspaceStatus("PSP profile saved.", "success");
+}
+
+async function saveSupplyContact(event) {
+  event.preventDefault();
+  const submit = elements.supplyContactForm.querySelector('button[type="submit"]');
+  setButtonLoading(submit, true, "Saving…");
+  const { error } = await supabase.rpc("save_offerpsp_provider_contact", {
+    p_provider_id: state.selectedSupplyProviderId,
+    p_contact_id: elements.supplyContactId.value || null,
+    p_payload: {
+      full_name: elements.supplyContactName.value.trim(), role_title: elements.supplyContactRole.value.trim(),
+      region: elements.supplyContactRegion.value.trim(), telegram: elements.supplyContactTelegram.value.trim(),
+      email: elements.supplyContactEmail.value.trim(), phone: elements.supplyContactPhone.value.trim(),
+      preferred_channel: elements.supplyContactChannel.value, active: elements.supplyContactActive.checked,
+      notes: elements.supplyContactNotes.value.trim(),
+    },
+  });
+  setButtonLoading(submit, false);
+  if (error) return setSupplyWorkspaceStatus(friendlyError(error, "Could not save the PSP contact."), "error");
+  resetSupplyContactForm();
+  await loadSupplyWorkspace();
+  setSupplyWorkspaceStatus("PSP contact saved.", "success");
+}
+
+function optionalNumber(input) {
+  return input.value.trim() === "" ? null : Number(input.value);
+}
+
+async function saveSupplyMargin(event) {
+  event.preventDefault();
+  const submit = elements.supplyMarginForm.querySelector('button[type="submit"]');
+  setButtonLoading(submit, true, "Saving…");
+  const { error } = await supabase.rpc("set_offerpsp_margin_policy", {
+    p_provider_id: state.selectedSupplyProviderId, p_route_id: elements.supplyMarginRoute.value || null,
+    p_flow: elements.supplyMarginFlow.value, p_mode: elements.supplyMarginMode.value,
+    p_percent_value: optionalNumber(elements.supplyMarginPercent), p_fixed_value: optionalNumber(elements.supplyMarginFixed),
+    p_fixed_currency: elements.supplyMarginCurrency.value.trim() || null, p_notes: elements.supplyMarginNotes.value.trim() || null,
+  });
+  setButtonLoading(submit, false);
+  if (error) return setSupplyWorkspaceStatus(friendlyError(error, "Could not save the margin policy."), "error");
+  elements.supplyMarginForm.reset();
+  await loadSupplyWorkspace();
+  setSupplyWorkspaceStatus("New margin policy is active. Previous policy for this scope was closed.", "success");
+}
+
+async function saveSupplyRoute(event) {
+  event.preventDefault();
+  const routeId = elements.supplyRouteId.value;
+  if (!routeId) return;
+  setButtonLoading(elements.saveSupplyRouteButton, true, "Saving…");
+  const { error } = await supabase.rpc("save_offerpsp_route", {
+    p_route_id: routeId,
+    p_payload: {
+      client_title: elements.supplyRouteTitle.value.trim(), flow: elements.supplyRouteFlow.value,
+      coverage_scope: elements.supplyRouteCoverage.value, geos: listValue(elements.supplyRouteGeos.value),
+      blocked_geos: listValue(elements.supplyRouteBlockedGeos.value), currencies: listValue(elements.supplyRouteCurrencies.value),
+      methods: listValue(elements.supplyRouteMethods.value), traffic_types: listValue(elements.supplyRouteTraffic.value),
+      verticals: listValue(elements.supplyRouteVerticals.value), integrations: listValue(elements.supplyRouteIntegrations.value),
+      min_monthly_volume: elements.supplyRouteMinVolume.value, max_monthly_volume: elements.supplyRouteMaxVolume.value,
+      volume_currency: elements.supplyRouteVolumeCurrency.value.trim(), freshness_days: elements.supplyRouteFreshness.value,
+      effective_from: elements.supplyRouteEffectiveFrom.value, expires_at: elements.supplyRouteExpiresAt.value,
+      operational_notes: elements.supplyRouteNotes.value.trim(), fees: collectComponentRows(elements.supplyFeeRows),
+      limits: collectComponentRows(elements.supplyLimitRows), settlements: collectComponentRows(elements.supplySettlementRows),
+    },
+  });
+  setButtonLoading(elements.saveSupplyRouteButton, false);
+  if (error) return setSupplyWorkspaceStatus(friendlyError(error, "Could not save the normalized route."), "error");
+  await loadSupplyWorkspace();
+  setSupplyWorkspaceStatus("Route saved and moved to review.", "success");
+}
+
+async function setSupplyRouteStatus(status, button) {
+  if (!state.selectedSupplyRouteId) return;
+  if (status === "archived" && !window.confirm("Archive this route? It will be excluded from future matching.")) return;
+  setButtonLoading(button, true, "Saving…");
+  const { error } = await supabase.rpc("set_offerpsp_route_status", { p_route_id: state.selectedSupplyRouteId, p_status: status });
+  setButtonLoading(button, false);
+  if (error) return setSupplyWorkspaceStatus(friendlyError(error, "Could not change the route status."), "error");
+  await Promise.all([loadSupply(), loadSupplyWorkspace()]);
+  setSupplyWorkspaceStatus(`Route ${status}.`, "success");
+}
+
+async function resolveSupplyAnomaly(anomalyId, status, button) {
+  const note = window.prompt("Explain what was checked and why this decision is safe:");
+  if (!note?.trim()) return;
+  setButtonLoading(button, true, "Saving…");
+  const { error } = await supabase.rpc("resolve_offerpsp_route_anomaly", { p_anomaly_id: anomalyId, p_status: status, p_resolution_note: note.trim() });
+  setButtonLoading(button, false);
+  if (error) return setSupplyWorkspaceStatus(friendlyError(error, "Could not resolve the parser check."), "error");
+  await Promise.all([loadSupply(), loadSupplyWorkspace()]);
+  setSupplyWorkspaceStatus(`Parser check marked ${status}.`, "success");
+}
+
+async function confirmSupplyFreshness() {
+  if (!state.selectedSupplyProviderId || !window.confirm("Confirm that the PSP terms were checked and are current today?")) return;
+  setButtonLoading(elements.confirmSupplyFreshnessButton, true, "Confirming…");
+  const { error } = await supabase.rpc("confirm_offerpsp_provider_freshness", { p_provider_id: state.selectedSupplyProviderId });
+  setButtonLoading(elements.confirmSupplyFreshnessButton, false);
+  if (error) return setSupplyWorkspaceStatus(friendlyError(error, "Could not confirm PSP terms."), "error");
+  await Promise.all([loadSupply(), loadSupplyWorkspace()]);
+  setSupplyWorkspaceStatus("PSP terms confirmed as current.", "success");
 }
 
 function validateRateCardPayload(payload) {
@@ -1605,6 +2089,7 @@ elements.googleLoginButton.addEventListener("click", async () => {
 elements.signOutButton.addEventListener("click", async () => {
   await supabase.auth.signOut();
   closeDrawer();
+  closeSupplyWorkspace();
   await enterApp(null);
 });
 
@@ -1620,6 +2105,20 @@ elements.rateCardFileInput.addEventListener("change", async () => {
   }
 });
 elements.rateCardImportForm.addEventListener("submit", importRateCard);
+elements.closeSupplyDrawerButton.addEventListener("click", closeSupplyWorkspace);
+elements.supplyDrawerBackdrop.addEventListener("click", closeSupplyWorkspace);
+elements.saveSupplyProviderButton.addEventListener("click", saveSupplyProvider);
+elements.confirmSupplyFreshnessButton.addEventListener("click", confirmSupplyFreshness);
+elements.supplyContactForm.addEventListener("submit", saveSupplyContact);
+elements.resetSupplyContactButton.addEventListener("click", resetSupplyContactForm);
+elements.supplyMarginForm.addEventListener("submit", saveSupplyMargin);
+elements.supplyRouteForm.addEventListener("submit", saveSupplyRoute);
+elements.addSupplyFeeButton.addEventListener("click", () => elements.supplyFeeRows.append(createSupplyFeeRow()));
+elements.addSupplyLimitButton.addEventListener("click", () => elements.supplyLimitRows.append(createSupplyLimitRow()));
+elements.addSupplySettlementButton.addEventListener("click", () => elements.supplySettlementRows.append(createSupplySettlementRow()));
+elements.pauseSupplyRouteButton.addEventListener("click", () => setSupplyRouteStatus("paused", elements.pauseSupplyRouteButton));
+elements.resumeSupplyRouteButton.addEventListener("click", () => setSupplyRouteStatus("published", elements.resumeSupplyRouteButton));
+elements.archiveSupplyRouteButton.addEventListener("click", () => setSupplyRouteStatus("archived", elements.archiveSupplyRouteButton));
 elements.searchInput.addEventListener("input", renderLeads);
 elements.statusFilter.addEventListener("change", renderLeads);
 elements.closeDrawerButton.addEventListener("click", closeDrawer);
@@ -1641,6 +2140,11 @@ document.querySelectorAll("[data-workspace-target]").forEach((button) => {
     document.getElementById(button.dataset.workspaceTarget)?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 });
+document.querySelectorAll("[data-supply-target]").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.getElementById(button.dataset.supplyTarget)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+});
 elements.menuButton.addEventListener("click", () => elements.sidebar.classList.toggle("is-open"));
 window.addEventListener("offerpsp:languagechange", () => {
   document.querySelectorAll("[data-default-label]").forEach((button) => {
@@ -1655,6 +2159,7 @@ window.addEventListener("offerpsp:languagechange", () => {
   renderStats();
   renderLeads();
   renderSupply();
+  if (state.supplyWorkspace) renderSupplyWorkspace();
   if (state.selectedLead) {
     renderProfile(state.selectedLead);
     renderActivities();
@@ -1673,7 +2178,9 @@ document.querySelectorAll("[data-scroll]").forEach((button) => {
 });
 
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && state.selectedLead) closeDrawer();
+  if (event.key !== "Escape") return;
+  if (state.selectedSupplyProviderId) closeSupplyWorkspace();
+  else if (state.selectedLead) closeDrawer();
 });
 
 const { data: { session } } = await supabase.auth.getSession();

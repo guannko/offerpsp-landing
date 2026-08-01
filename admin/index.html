@@ -489,6 +489,146 @@
     </div>
   </aside>
 
+  <div id="supplyDrawerBackdrop" class="drawer-backdrop is-hidden"></div>
+  <aside id="supplyDrawer" class="lead-drawer supply-workspace-drawer" aria-hidden="true" aria-label="PSP supply workspace">
+    <div class="drawer-head">
+      <div>
+        <p class="eyebrow">Private PSP operations</p>
+        <h2 id="supplyDrawerTitle">—</h2>
+        <p id="supplyDrawerCode" class="drawer-contact">—</p>
+      </div>
+      <button id="closeSupplyDrawerButton" class="icon-button" type="button" aria-label="Close">×</button>
+    </div>
+
+    <div class="drawer-body">
+      <nav class="workspace-tabs" aria-label="PSP supply sections">
+        <button type="button" data-supply-target="supplyOverview">PSP & contacts</button>
+        <button type="button" data-supply-target="supplyRoutes">Routes & pricing</button>
+        <button type="button" data-supply-target="supplyAnomalies">Review queue</button>
+        <button type="button" data-supply-target="supplyHistory">Versions & history</button>
+      </nav>
+
+      <section id="supplyOverview" class="detail-section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Relationship owner view</p>
+            <h3>PSP profile</h3>
+          </div>
+          <button id="confirmSupplyFreshnessButton" class="button button-secondary button-compact" type="button">Confirm terms are current</button>
+        </div>
+        <div id="supplyWorkspaceSummary" class="workspace-summary"></div>
+        <div class="dossier-form supply-provider-form">
+          <label>Brand name<input id="supplyBrandName" type="text"></label>
+          <label>Legal name<input id="supplyLegalName" type="text"></label>
+          <label class="span-2">Website<input id="supplyWebsite" type="url" placeholder="https://"></label>
+          <label>Relationship
+            <select id="supplyRelationshipStatus">
+              <option value="prospect">Prospect</option><option value="onboarding">Onboarding</option>
+              <option value="active">Active</option><option value="paused">Paused</option><option value="archived">Archived</option>
+            </select>
+          </label>
+          <label>Strategic priority<input id="supplyPriority" type="number" min="0" max="100"></label>
+          <label class="checkbox-field span-2"><input id="supplyMarginIncluded" type="checkbox"> PSP rate already includes our commission</label>
+          <label class="span-3">Relationship notes<textarea id="supplyRelationshipNotes" rows="3"></textarea></label>
+        </div>
+        <button id="saveSupplyProviderButton" class="button button-primary button-compact" type="button">Save PSP profile</button>
+        <p id="supplyWorkspaceStatus" class="form-status" role="status" aria-live="polite"></p>
+
+        <div class="supply-subsection">
+          <div class="section-head"><div><h3>Contacts</h3><p class="section-copy">People we actually work with at this PSP.</p></div></div>
+          <div id="supplyContactList" class="contact-list"></div>
+          <form id="supplyContactForm" class="inline-editor">
+            <input id="supplyContactId" type="hidden">
+            <div class="dossier-form">
+              <label>Name<input id="supplyContactName" type="text" required></label>
+              <label>Role<input id="supplyContactRole" type="text"></label>
+              <label>Region<input id="supplyContactRegion" type="text"></label>
+              <label>Telegram<input id="supplyContactTelegram" type="text" placeholder="@username"></label>
+              <label>Email<input id="supplyContactEmail" type="email"></label>
+              <label>Phone<input id="supplyContactPhone" type="text"></label>
+              <label>Preferred channel
+                <select id="supplyContactChannel"><option value="">Not specified</option><option value="telegram">Telegram</option><option value="email">Email</option><option value="phone">Phone</option><option value="other">Other</option></select>
+              </label>
+              <label class="checkbox-field"><input id="supplyContactActive" type="checkbox" checked> Active contact</label>
+              <label class="span-3">Notes<input id="supplyContactNotes" type="text"></label>
+            </div>
+            <div class="section-actions"><button class="button button-primary button-compact" type="submit">Save contact</button><button id="resetSupplyContactButton" class="button button-secondary button-compact" type="button">New contact</button></div>
+          </form>
+        </div>
+
+        <div class="supply-subsection">
+          <div class="section-head"><div><h3>Our margin</h3><p class="section-copy">PSP base rate stays private; the merchant sees only the final rate.</p></div></div>
+          <div id="supplyMarginList" class="margin-list"></div>
+          <form id="supplyMarginForm" class="inline-editor compact-editor">
+            <div class="dossier-form">
+              <label>Scope<select id="supplyMarginRoute"><option value="">All PSP routes</option></select></label>
+              <label>Flow<select id="supplyMarginFlow"><option value="all">All</option><option value="payin">Pay-in</option><option value="payout">Pay-out</option><option value="settlement">Settlement</option></select></label>
+              <label>Mode<select id="supplyMarginMode"><option value="percentage_points">Add percentage points</option><option value="relative_percent">Relative percent</option><option value="fixed">Fixed fee</option><option value="hybrid">Percent + fixed</option><option value="included">Already included</option></select></label>
+              <label>Percent<input id="supplyMarginPercent" type="number" step="0.01"></label>
+              <label>Fixed amount<input id="supplyMarginFixed" type="number" step="0.01"></label>
+              <label>Currency<input id="supplyMarginCurrency" type="text" placeholder="EUR"></label>
+              <label class="span-3">Internal note<input id="supplyMarginNotes" type="text"></label>
+            </div>
+            <button class="button button-primary button-compact" type="submit">Save new margin policy</button>
+          </form>
+        </div>
+      </section>
+
+      <section id="supplyRoutes" class="detail-section supply-routes-workspace">
+        <div class="section-head"><div><h3>Normalized routes</h3><p class="section-copy">Edit working fields without changing the original partner message.</p></div></div>
+        <div class="route-workbench">
+          <div id="supplyRouteList" class="route-list"></div>
+          <form id="supplyRouteForm" class="route-editor is-hidden">
+            <input id="supplyRouteId" type="hidden">
+            <div class="section-head"><div><p id="supplyRouteCode" class="eyebrow">—</p><h3 id="supplyRouteHeading">Select a route</h3></div><span id="supplyRouteStatus" class="status-pill">—</span></div>
+            <div class="dossier-form">
+              <label class="span-2">Client title<input id="supplyRouteTitle" type="text"></label>
+              <label>Flow<select id="supplyRouteFlow"><option value="payin">Pay-in</option><option value="payout">Pay-out</option><option value="both">Both</option></select></label>
+              <label>Coverage<select id="supplyRouteCoverage"><option value="specific">Specific GEOs</option><option value="regional">Regional</option><option value="global">Global</option></select></label>
+              <label>GEOs<input id="supplyRouteGeos" type="text" placeholder="IN, BR"></label>
+              <label>Blocked GEOs<input id="supplyRouteBlockedGeos" type="text"></label>
+              <label>Currencies<input id="supplyRouteCurrencies" type="text" placeholder="INR, USDT"></label>
+              <label>Methods<input id="supplyRouteMethods" type="text" placeholder="UPI, Cards"></label>
+              <label>Traffic<input id="supplyRouteTraffic" type="text" placeholder="FTD, Rebill"></label>
+              <label>Verticals<input id="supplyRouteVerticals" type="text" placeholder="iGaming"></label>
+              <label>Integrations<input id="supplyRouteIntegrations" type="text" placeholder="API, H2H"></label>
+              <label>Minimum monthly volume<input id="supplyRouteMinVolume" type="number" step="any"></label>
+              <label>Maximum monthly volume<input id="supplyRouteMaxVolume" type="number" step="any"></label>
+              <label>Volume currency<input id="supplyRouteVolumeCurrency" type="text"></label>
+              <label>Fresh for days<input id="supplyRouteFreshness" type="number" min="1"></label>
+              <label>Effective from<input id="supplyRouteEffectiveFrom" type="date"></label>
+              <label>Expires<input id="supplyRouteExpiresAt" type="date"></label>
+              <label class="span-3">Operational notes<textarea id="supplyRouteNotes" rows="2"></textarea></label>
+            </div>
+
+            <div class="component-editor"><div class="section-head"><h4>Fees</h4><button id="addSupplyFeeButton" class="text-button" type="button">+ Add fee</button></div><div id="supplyFeeRows" class="component-rows"></div></div>
+            <div class="component-editor"><div class="section-head"><h4>Limits</h4><button id="addSupplyLimitButton" class="text-button" type="button">+ Add limit</button></div><div id="supplyLimitRows" class="component-rows"></div></div>
+            <div class="component-editor"><div class="section-head"><h4>Settlement</h4><button id="addSupplySettlementButton" class="text-button" type="button">+ Add term</button></div><div id="supplySettlementRows" class="component-rows"></div></div>
+
+            <div class="section-actions route-status-actions">
+              <button id="saveSupplyRouteButton" class="button button-primary button-compact" type="submit">Save route</button>
+              <button id="pauseSupplyRouteButton" class="button button-secondary button-compact" type="button">Pause</button>
+              <button id="resumeSupplyRouteButton" class="button button-secondary button-compact" type="button">Resume</button>
+              <button id="archiveSupplyRouteButton" class="button button-danger button-compact" type="button">Archive</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section id="supplyAnomalies" class="detail-section">
+        <div class="section-head"><div><h3>Review queue</h3><p class="section-copy">Every parser error must be corrected or consciously accepted before publication.</p></div><span id="supplyOpenChecks" class="completion-pill">0 open</span></div>
+        <div id="supplyAnomalyList" class="anomaly-list"></div>
+      </section>
+
+      <section id="supplyHistory" class="detail-section">
+        <div class="section-head"><div><h3>Rate-card versions</h3><p class="section-copy">Immutable sources and the operational changes made after parsing.</p></div></div>
+        <div id="supplyBatchHistory" class="batch-list"></div>
+        <div class="section-head history-heading"><h3>Change history</h3></div>
+        <div id="supplyActivityList" class="timeline"></div>
+      </section>
+    </div>
+  </aside>
+
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="/admin/i18n.js"></script>
   <script type="module" src="/admin/app.js"></script>

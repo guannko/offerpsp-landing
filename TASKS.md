@@ -138,10 +138,30 @@ Status: `PARTIAL` production rollout. Migration
 - [x] Operational Deal Desk controls cover PSP submission and decision, Telegram, Zoom and won/lost.
 - [x] Client portal loads options through a dedicated safe RPC instead of querying the legacy
   `SECURITY DEFINER` shortlist view directly.
-- [x] Local syntax, portal guards and all 14 migration/E2E fixtures pass.
+- [x] Local syntax, portal guards and all 15 migration/E2E fixtures pass.
 - [x] Production migration grants `EXECUTE` only to `authenticated`; all four RPCs are denied to `anon`.
 - [ ] Deploy frontend commit `9ea9ca8` and run separate real staff/client production E2E.
 - [ ] Revoke direct `authenticated` access to the legacy shortlist view after the new portal is verified.
+
+### PSP supply workspace — local delivery 2026-08-01
+
+Status: `VERIFIED` locally; migration and frontend are not deployed to production.
+
+- [x] Staff PSP profile and working-contact editor.
+- [x] Normalized route editor for GEOs, currencies, methods, traffic, verticals, integrations,
+  volume, fees, limits and settlement terms without changing the immutable source message.
+- [x] Parser error/warning queue with required resolution notes and audit history.
+- [x] Provider-wide or route-specific OfferPSP margin policies; PSP base rate remains private.
+- [x] Guarded pause, resume and archive controls. Resume revalidates current PSP confirmation,
+  blocking errors, pricing, dimensions, limits, expiry and margin.
+- [x] Rate-card version register and operational change history.
+- [x] Last-confirmed action, configurable freshness period and stale-route indicators.
+- [x] Staff-only RPC grants; clients, agents and anonymous users cannot load or mutate supply data.
+- [x] Desktop and 390px mobile visual verification without horizontal overflow.
+- [x] All 15 migration/E2E fixtures and frontend regression guards pass.
+- [ ] Visual field-by-field diff between two rate-card versions.
+- [ ] Automated stale-offer alerts and partner reminders through n8n.
+- [ ] GEO/method/vertical coverage matrix.
 
 ### Production grant hotfix
 
@@ -163,7 +183,7 @@ Status: `PARTIAL` production rollout. Migration
 
 Status: `VERIFIED` on 2026-08-01 in an ephemeral PostgreSQL-compatible PGlite database.
 
-- [x] All 13 migrations, including active-claim isolation, workspace/agent and minimal-grant migrations,
+- [x] All 15 migrations, including operational request and PSP supply workspaces,
   apply in dependency order.
 - [x] `authenticated` has lead UPDATE/DELETE privileges while `anon` does not.
 - [x] BRPay parses and imports as exactly 15 draft routes.
@@ -257,12 +277,12 @@ Status: `PARTIAL` — these are the actual next P1/P2 tasks after rollout.
 
 ### P1 — PSP and route operations
 
-- [ ] Full PSP/contact editor in the staff cabinet.
-- [ ] Route, fee, limit, settlement and anomaly editor.
-- [ ] Anomaly resolution/acceptance UI with audit notes.
-- [ ] Pause, resume and archive controls for individual routes.
-- [ ] Visual version history and comparison between rate-card batches.
-- [ ] Freshness dashboard, last-confirmed controls and stale-offer alerts.
+- [x] Full PSP/contact editor in the staff cabinet — locally verified, rollout pending.
+- [x] Route, fee, limit, settlement and anomaly editor — locally verified, rollout pending.
+- [x] Anomaly resolution/acceptance UI with audit notes — locally verified, rollout pending.
+- [x] Pause, resume and archive controls for individual routes — locally verified, rollout pending.
+- [x] Visual version history — locally verified; field-by-field batch comparison remains open.
+- [x] Freshness dashboard and last-confirmed controls — locally verified; automated alerts remain open.
 - [ ] Partner reminders through n8n.
 - [ ] GEO/method/vertical coverage matrix.
 

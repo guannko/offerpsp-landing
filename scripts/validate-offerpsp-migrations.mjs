@@ -107,6 +107,7 @@ async function applyMigrations() {
     "20260801_offerpsp_client_workspace_agents.sql",
     "20260801_offerpsp_workspace_grants.sql",
     "20260801_offerpsp_operational_workspaces.sql",
+    "20260801_offerpsp_supply_operations.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -178,6 +179,22 @@ async function verifyClientPolicyBoundary() {
     throw new Error("Client or agent has a direct shortlist-item RLS policy that can expose private IDs");
   }
   process.stdout.write("PASS shortlist items remain staff-only; clients and agents use the safe projection\n");
+}
+
+async function verifySupplyOperationGrants() {
+  const result = await query(`select
+    has_function_privilege('authenticated', 'public.get_offerpsp_supply_workspace(uuid)', 'EXECUTE') as authenticated_list,
+    has_function_privilege('anon', 'public.get_offerpsp_supply_workspace(uuid)', 'EXECUTE') as anon_list,
+    has_function_privilege('authenticated', 'public.save_offerpsp_route(uuid,jsonb)', 'EXECUTE') as authenticated_save,
+    has_function_privilege('anon', 'public.save_offerpsp_route(uuid,jsonb)', 'EXECUTE') as anon_save,
+    has_function_privilege('authenticated', 'public.resolve_offerpsp_route_anomaly(uuid,text,text)', 'EXECUTE') as authenticated_resolve,
+    has_function_privilege('anon', 'public.resolve_offerpsp_route_anomaly(uuid,text,text)', 'EXECUTE') as anon_resolve
+  `);
+  const grants = result.rows[0];
+  if (!grants.authenticated_list || !grants.authenticated_save || !grants.authenticated_resolve || grants.anon_list || grants.anon_save || grants.anon_resolve) {
+    throw new Error("Supply operation RPC grants do not match the staff-only API model");
+  }
+  process.stdout.write("PASS staff-only supply operation RPC grants with anon denied\n");
 }
 
 async function seedUsers() {
@@ -333,6 +350,43 @@ async function importPreparedDrafts() {
   }
 }
 
+async function verifySupplyOperations() {
+  await setUser(STAFF_ID);
+  const providerResult = await query("select id from private.offerpsp_providers where replace(lower(brand_name), '-', '') like 'brpay%' limit 1");
+  const providerId = providerResult.rows[0]?.id;
+  if (!providerId) throw new Error("BRPay provider fixture is missing");
+
+  const initial = await query("select public.get_offerpsp_supply_workspace($1) as value", [providerId]);
+  if (initial.rows[0].value.routes.length !== 15 || initial.rows[0].value.batches.length !== 1) {
+    throw new Error("Supply workspace does not expose the imported BRPay routes and version");
+  }
+
+  await query("select public.save_offerpsp_provider($1, $2::jsonb)", [providerId, JSON.stringify({ relationship_notes: "Validated through staff workspace", strategic_priority: 91 })]);
+  const contact = await query("select public.save_offerpsp_provider_contact($1, null, $2::jsonb) as value", [providerId, JSON.stringify({ full_name: "Validation Contact", telegram: "@validation", preferred_channel: "telegram", active: true })]);
+  await query("select public.save_offerpsp_provider_contact($1, $2, $3::jsonb)", [providerId, contact.rows[0].value.id, JSON.stringify({ full_name: "Validation Contact", role_title: "Account manager", telegram: "@validation", preferred_channel: "telegram", active: true })]);
+
+  const route = initial.rows[0].value.routes[0];
+  await query("select public.save_offerpsp_route($1, $2::jsonb)", [route.id, JSON.stringify({ operational_notes: "Route checked in supply workspace", freshness_days: 21 })]);
+  await query("select public.set_offerpsp_margin_policy($1, $2, 'payin', 'percentage_points', 1.25, null, null, 'Validation route margin')", [providerId, route.id]);
+  const anomaly = route.anomalies.find((item) => item.status === "open" && item.severity !== "error") || route.anomalies.find((item) => item.status === "open");
+  if (anomaly) {
+    await query("select public.resolve_offerpsp_route_anomaly($1, 'accepted', 'Confirmed against the original partner message')", [anomaly.id]);
+  }
+  await query("select public.confirm_offerpsp_provider_freshness($1)", [providerId]);
+
+  const updated = await query("select public.get_offerpsp_supply_workspace($1) as value", [providerId]);
+  const value = updated.rows[0].value;
+  const savedRoute = value.routes.find((item) => item.id === route.id);
+  if (value.provider.strategic_priority !== 91 || value.contacts.length !== 1 || savedRoute.freshness_days !== 21 || !value.margin_policies.some((item) => item.route_id === route.id && item.active) || value.activity.length < 5) {
+    throw new Error("Supply workspace mutations or audit history were not persisted correctly");
+  }
+
+  await setUser(OTHER_CLIENT_ID);
+  await expectQueryFailure("select public.get_offerpsp_supply_workspace($1)", [providerId], "OfferPSP staff access required");
+  await setUser(STAFF_ID);
+  process.stdout.write("PASS PSP profile, contact, route, anomaly, margin, freshness and audit operations\n");
+}
+
 async function runEndToEndFixture() {
   const providerResult = await query(
     `select public.upsert_offerpsp_provider(
@@ -402,6 +456,16 @@ async function runEndToEndFixture() {
   if (publishResult.rows[0].value.status !== "published") {
     throw new Error("Validation rate card was not published");
   }
+  const publishedRoute = await query("select id, provider_id from private.offerpsp_offer_routes where batch_id = $1", [batchId]);
+  await query("select public.set_offerpsp_route_status($1, 'paused')", [publishedRoute.rows[0].id]);
+  await query("update private.offerpsp_providers set last_verified_at = now() - interval '100 days' where id = $1", [publishedRoute.rows[0].provider_id]);
+  await expectQueryFailure(
+    "select public.set_offerpsp_route_status($1, 'published')",
+    [publishedRoute.rows[0].id],
+    "Confirm current PSP terms before resuming",
+  );
+  await query("select public.confirm_offerpsp_provider_freshness($1)", [publishedRoute.rows[0].provider_id]);
+  await query("select public.set_offerpsp_route_status($1, 'published')", [publishedRoute.rows[0].id]);
 
   const leadResult = await query(
     `insert into public.offerpsp_leads (
@@ -694,10 +758,12 @@ try {
   await verifyLeadGrants();
   await verifyWorkspaceGrants();
   await verifyClientPolicyBoundary();
+  await verifySupplyOperationGrants();
   await seedUsers();
   await verifyPortalLeadClaims();
   await verifyLegacyShortlistBlocked();
   await importPreparedDrafts();
+  await verifySupplyOperations();
   await runEndToEndFixture();
   await verifyAgentWorkspaceAndPricing();
   process.stdout.write("PASS all OfferPSP migration checks\n");
