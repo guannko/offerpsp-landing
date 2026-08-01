@@ -123,9 +123,10 @@ Status: `VERIFIED` as local code and database behavior only; this is not a produ
 
 ### Operational workspace — local delivery 2026-08-01
 
-Status: `PARTIAL` production rollout. Migration
-`20260801113127 offerpsp_operational_workspaces` is `VERIFIED` in production; frontend commit
-`9ea9ca8` is not deployed yet because Vercel OAuth and local GitHub CLI authorization are unavailable.
+Status: `PARTIAL` production verification. Migration
+`20260801113127 offerpsp_operational_workspaces` and frontend are deployed in production through
+deployment `dpl_6pAtfuaFqPJAiDpS5eoz9G7A7KTa`. Static production routes and the new client/staff
+assets are verified; a separate real staff/client mutation E2E remains open.
 
 - [x] Full-width staff request workspace with overview, dossier, matching, Deal Desk,
   tasks, messages and section navigation.
@@ -140,12 +141,15 @@ Status: `PARTIAL` production rollout. Migration
   `SECURITY DEFINER` shortlist view directly.
 - [x] Local syntax, portal guards and all 15 migration/E2E fixtures pass.
 - [x] Production migration grants `EXECUTE` only to `authenticated`; all four RPCs are denied to `anon`.
-- [ ] Deploy frontend commit `9ea9ca8` and run separate real staff/client production E2E.
+- [x] Deploy the operational frontend to `offerpsp.com`.
+- [ ] Run separate real staff/client production mutation E2E.
 - [ ] Revoke direct `authenticated` access to the legacy shortlist view after the new portal is verified.
 
 ### PSP supply workspace — local delivery 2026-08-01
 
-Status: `VERIFIED` locally; migration and frontend are not deployed to production.
+Status: `PARTIAL` production verification. Migration `20260801125700 offerpsp_supply_operations`
+and frontend commit `7fb08b7` are deployed. The production staff RPC returned the 15 BRPay routes;
+a normal authenticated user was denied. Mutation E2E remains locally verified only.
 
 - [x] Staff PSP profile and working-contact editor.
 - [x] Normalized route editor for GEOs, currencies, methods, traffic, verticals, integrations,
@@ -159,6 +163,8 @@ Status: `VERIFIED` locally; migration and frontend are not deployed to productio
 - [x] Staff-only RPC grants; clients, agents and anonymous users cannot load or mutate supply data.
 - [x] Desktop and 390px mobile visual verification without horizontal overflow.
 - [x] All 15 migration/E2E fixtures and frontend regression guards pass.
+- [x] Production deployment is `READY`; `/admin/`, `/portal/` and their new assets return 200.
+- [x] Internal `TASKS.md` and `supabase/migrations/` are excluded from Vercel and return 404.
 - [ ] Visual field-by-field diff between two rate-card versions.
 - [ ] Automated stale-offer alerts and partner reminders through n8n.
 - [ ] GEO/method/vertical coverage matrix.

@@ -35,9 +35,12 @@ OfferPSP уже имеет серьёзный backend-фундамент, но �
 аномалий; pause/resume/archive, freshness, версии и неизменяемую историю действий. Возобновление
 маршрута повторно проверяет ошибки, актуальность условий, pricing, лимиты и маржу.
 
-`PARTIAL`: оба frontend-блока и новая supply migration ещё не развёрнуты в production. Telegram
-ingestion, автоматические reminders, coverage matrix, сравнение версий, полный кабинет субагента,
-commission operations и расширенная аналитика остаются следующими блоками.
+`PARTIAL` production verification: оба frontend-блока и supply migration развёрнуты на
+`offerpsp.com`. Production staff RPC вернул 15 маршрутов BRPay, обычный authenticated user был
+заблокирован, внутренние документы исключены из Vercel. Реальный mutation E2E через отдельные
+staff/client аккаунты ещё не выполнен. Telegram ingestion, автоматические reminders, coverage
+matrix, сравнение версий, полный кабинет субагента, commission operations и расширенная аналитика
+остаются следующими блоками.
 
 ## 2. Как проводился аудит
 
