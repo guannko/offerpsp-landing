@@ -112,6 +112,7 @@ async function applyMigrations() {
     "20260802_offerpsp_route_level_publication.sql",
     "20260802_offerpsp_supply_coverage_matrix.sql",
     "20260802_offerpsp_entity_lifecycle.sql",
+    "20260802_offerpsp_entity_lifecycle_grants.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
