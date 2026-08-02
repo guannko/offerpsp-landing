@@ -451,6 +451,14 @@ textarea::placeholder {
   letter-spacing: -.045em;
 }
 
+.topbar-description {
+  max-width: 680px;
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .topbar-actions {
   display: flex;
   align-items: center;
@@ -598,9 +606,38 @@ textarea::placeholder {
 }
 
 .supply-layout {
-  display: grid;
-  grid-template-columns: minmax(270px, .8fr) minmax(400px, 1.2fr);
+  display: block;
+}
+
+.section-tabs {
+  display: flex;
+  gap: 7px;
+  padding: 14px 22px;
+  overflow-x: auto;
   border-bottom: 1px solid var(--line);
+}
+
+.section-tabs button {
+  min-height: 36px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 0 13px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.section-tabs button.is-active {
+  border-color: rgba(255, 77, 122, .48);
+  color: var(--paper);
+  background: rgba(255, 77, 122, .09);
+}
+
+.supply-page {
+  min-height: min(620px, calc(100vh - 250px));
 }
 
 .supply-import-card,
@@ -727,7 +764,7 @@ textarea::placeholder {
   display: grid;
   align-content: start;
   gap: 16px;
-  border-right: 1px solid var(--line);
+  border-right: 0;
   background: rgba(255, 77, 122, .025);
 }
 
@@ -1041,6 +1078,18 @@ textarea::placeholder {
 
 .table-wrap {
   overflow-x: auto;
+}
+
+.lead-panel .table-wrap {
+  max-height: max(330px, calc(100vh - 390px));
+  overflow: auto;
+}
+
+.lead-panel thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #111522;
 }
 
 table {

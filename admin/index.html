@@ -55,25 +55,15 @@
           <span class="nav-icon">⌁</span>
           Lead desk
         </button>
-        <button class="nav-item" type="button" disabled title="Coming in the next delivery">
-          <span class="nav-icon">◇</span>
-          Matching
-          <span class="soon">Soon</span>
-        </button>
-        <button class="nav-item" type="button" disabled title="Coming in the next delivery">
-          <span class="nav-icon">✓</span>
-          Tasks
-          <span class="soon">Soon</span>
-        </button>
-        <button class="nav-item" type="button" data-scroll="supply">
+        <button class="nav-item" type="button" data-view="supply">
           <span class="nav-icon">▦</span>
           PSP supply
         </button>
-        <button class="nav-item" type="button" data-scroll="management">
+        <button class="nav-item" type="button" data-view="management">
           <span class="nav-icon">◎</span>
           Control center
         </button>
-        <button class="nav-item" type="button" data-scroll="analytics">
+        <button class="nav-item" type="button" data-view="analytics">
           <span class="nav-icon">↗</span>
           Analytics
         </button>
@@ -94,8 +84,9 @@
       <header class="topbar">
         <button id="menuButton" class="menu-button" type="button" aria-label="Open menu">☰</button>
         <div>
-          <p class="eyebrow">Operations</p>
-          <h1>Merchant requests</h1>
+          <p id="topbarEyebrow" class="eyebrow">Operations</p>
+          <h1 id="topbarTitle">Merchant requests</h1>
+          <p id="topbarDescription" class="topbar-description">Review requests and move each merchant to the next action.</p>
         </div>
         <div class="topbar-actions">
           <div class="language-switch" aria-label="Язык интерфейса">
@@ -107,7 +98,7 @@
         </div>
       </header>
 
-      <section class="stats-grid" aria-label="Lead summary">
+      <section class="stats-grid app-page" data-app-view="leads" aria-label="Lead summary">
         <article class="stat-card stat-total">
           <span>Total requests</span>
           <strong id="statTotal">—</strong>
@@ -135,7 +126,7 @@
         </article>
       </section>
 
-      <section class="panel lead-panel">
+      <section class="panel lead-panel app-page" data-app-view="leads">
         <div class="panel-head">
           <div>
             <h2>Lead inbox</h2>
@@ -196,7 +187,7 @@
         </div>
       </section>
 
-      <section id="management" class="panel management-panel">
+      <section id="management" class="panel management-panel app-page is-hidden" data-app-view="management">
         <div class="panel-head">
           <div>
             <p class="eyebrow">Operations control center</p>
@@ -295,7 +286,7 @@
         <p id="managementStatus" class="form-status" role="status" aria-live="polite"></p>
       </section>
 
-      <section id="supply" class="panel supply-panel">
+      <section id="supply" class="panel supply-panel app-page is-hidden" data-app-view="supply">
         <div class="panel-head">
           <div>
             <h2>Private PSP supply</h2>
@@ -307,8 +298,15 @@
           </div>
         </div>
 
+        <nav class="section-tabs supply-page-tabs" aria-label="PSP supply sections">
+          <button class="is-active" type="button" data-supply-page="providers">PSP register</button>
+          <button type="button" data-supply-page="coverage">Offer catalog</button>
+          <button type="button" data-supply-page="import">Import rate card</button>
+          <button type="button" data-supply-page="history">Versions & history</button>
+        </nav>
+
         <div class="supply-layout">
-          <form id="rateCardImportForm" class="supply-import-card">
+          <form id="rateCardImportForm" class="supply-import-card supply-page is-hidden" data-supply-page-panel="import">
             <div>
               <p class="eyebrow">Controlled import</p>
               <h3>Upload prepared rate card</h3>
@@ -323,7 +321,7 @@
             <p id="supplyStatus" class="form-status" role="status" aria-live="polite"></p>
           </form>
 
-          <div class="supply-register">
+          <div class="supply-register supply-page" data-supply-page-panel="providers">
             <div class="supply-section-head">
               <div>
                 <p class="eyebrow">Provider register</p>
@@ -337,7 +335,7 @@
           </div>
         </div>
 
-        <div class="coverage-register">
+        <div class="coverage-register supply-page is-hidden" data-supply-page-panel="coverage">
           <div class="supply-section-head coverage-head">
             <div>
               <p class="eyebrow">Coverage matrix</p>
@@ -365,7 +363,7 @@
           </div>
         </div>
 
-        <div class="batch-register">
+        <div class="batch-register supply-page is-hidden" data-supply-page-panel="history">
           <div class="supply-section-head">
             <div>
               <p class="eyebrow">Rate-card register</p>
@@ -376,7 +374,7 @@
         </div>
       </section>
 
-      <section id="analytics" class="panel analytics-panel">
+      <section id="analytics" class="panel analytics-panel app-page is-hidden" data-app-view="analytics">
         <div class="panel-head">
           <div>
             <h2>Commercial analytics</h2>

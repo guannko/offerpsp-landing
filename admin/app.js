@@ -70,6 +70,8 @@ const state = {
   },
   rateCardPayload: null,
   lastUpdatedAt: null,
+  activeAppView: "leads",
+  activeSupplyPage: "providers",
 };
 
 const elements = {
@@ -87,6 +89,9 @@ const elements = {
   userRole: document.getElementById("userRole"),
   refreshButton: document.getElementById("refreshButton"),
   lastUpdated: document.getElementById("lastUpdated"),
+  topbarEyebrow: document.getElementById("topbarEyebrow"),
+  topbarTitle: document.getElementById("topbarTitle"),
+  topbarDescription: document.getElementById("topbarDescription"),
   searchInput: document.getElementById("searchInput"),
   statusFilter: document.getElementById("statusFilter"),
   refreshManagementButton: document.getElementById("refreshManagementButton"),
@@ -481,6 +486,62 @@ function statusLabel(status) {
   return i18n?.t(STATUS_LABELS[status] || status || "New") || STATUS_LABELS[status] || status || "New";
 }
 
+const APP_VIEW_COPY = {
+  leads: {
+    ru: ["Операции", "Заявки мерчантов", "Разбирайте входящие запросы и двигайте каждого мерчанта к следующему действию."],
+    en: ["Operations", "Merchant requests", "Review incoming requests and move every merchant to the next action."],
+  },
+  supply: {
+    ru: ["Приватная база", "PSP и офферы", "Управляйте партнёрами, маршрутами, ставками и актуальностью условий."],
+    en: ["Private supply", "PSPs and offers", "Manage partners, routes, pricing and offer freshness."],
+  },
+  management: {
+    ru: ["Справочники", "Управление сетью", "Редактируйте мерчантов, PSP, офферы, агентов и связи между ними."],
+    en: ["Control center", "Network management", "Edit merchants, PSPs, offers, agents and their relationships."],
+  },
+  analytics: {
+    ru: ["Коммерческий контроль", "Аналитика", "Находите узкое место воронки, рабочие источники и зависшие сделки."],
+    en: ["Commercial control", "Analytics", "Find funnel bottlenecks, productive sources and stalled deals."],
+  },
+};
+
+function activateAppView(view, { resetScroll = true } = {}) {
+  const selected = APP_VIEW_COPY[view] ? view : "leads";
+  state.activeAppView = selected;
+  document.querySelectorAll("[data-app-view]").forEach((panel) => {
+    panel.classList.toggle("is-hidden", panel.dataset.appView !== selected);
+  });
+  document.querySelectorAll("[data-view]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.view === selected);
+  });
+  const language = i18n?.getLanguage() === "ru" ? "ru" : "en";
+  const [eyebrow, title, description] = APP_VIEW_COPY[selected][language];
+  elements.topbarEyebrow.textContent = eyebrow;
+  elements.topbarTitle.textContent = title;
+  elements.topbarDescription.textContent = description;
+  elements.refreshButton.setAttribute("aria-label", language === "ru" ? "Обновить текущий раздел" : "Refresh current section");
+  elements.sidebar.classList.remove("is-open");
+  if (resetScroll) window.scrollTo({ top: 0, behavior: "auto" });
+}
+
+function activateSupplyPage(page) {
+  const allowed = new Set(["providers", "coverage", "import", "history"]);
+  const selected = allowed.has(page) ? page : "providers";
+  state.activeSupplyPage = selected;
+  document.querySelectorAll("[data-supply-page-panel]").forEach((panel) => {
+    panel.classList.toggle("is-hidden", panel.dataset.supplyPagePanel !== selected);
+  });
+  document.querySelectorAll("[data-supply-page]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.supplyPage === selected);
+  });
+}
+
+async function refreshActiveView() {
+  if (state.activeAppView === "supply") await loadSupply();
+  else if (state.activeAppView === "management") await loadManagement();
+  else await loadLeads();
+}
+
 async function verifyStaff(user) {
   const { data, error } = await supabase
     .from("offerpsp_staff_members")
@@ -516,6 +577,8 @@ async function enterApp(session) {
     elements.userRole.textContent = state.staff.role;
     elements.authView.classList.add("is-hidden");
     elements.appView.classList.remove("is-hidden");
+    activateAppView("leads", { resetScroll: false });
+    activateSupplyPage("providers");
     await loadStaffMembers();
     await Promise.all([loadLeads(), loadSupply(), loadManagement()]);
   } catch (error) {
@@ -2846,7 +2909,7 @@ elements.signOutButton.addEventListener("click", async () => {
   await enterApp(null);
 });
 
-elements.refreshButton.addEventListener("click", loadLeads);
+elements.refreshButton.addEventListener("click", refreshActiveView);
 elements.refreshSupplyButton.addEventListener("click", loadSupply);
 elements.refreshManagementButton.addEventListener("click", loadManagement);
 elements.managementMerchantSearch.addEventListener("input", renderManagementMerchants);
@@ -2922,6 +2985,12 @@ document.querySelectorAll("[data-management-tab]").forEach((button) => {
     document.getElementById(`management${selected.charAt(0).toUpperCase()}${selected.slice(1)}`)?.classList.remove("is-hidden");
   });
 });
+document.querySelectorAll("[data-view]").forEach((button) => {
+  button.addEventListener("click", () => activateAppView(button.dataset.view));
+});
+document.querySelectorAll("[data-supply-page]").forEach((button) => {
+  button.addEventListener("click", () => activateSupplyPage(button.dataset.supplyPage));
+});
 elements.menuButton.addEventListener("click", () => elements.sidebar.classList.toggle("is-open"));
 window.addEventListener("offerpsp:languagechange", () => {
   document.querySelectorAll("[data-default-label]").forEach((button) => {
@@ -2947,12 +3016,7 @@ window.addEventListener("offerpsp:languagechange", () => {
     renderAdminMessages();
   }
   i18n?.translate();
-});
-document.querySelectorAll("[data-scroll]").forEach((button) => {
-  button.addEventListener("click", () => {
-    document.getElementById(button.dataset.scroll)?.scrollIntoView({ behavior: "smooth" });
-    elements.sidebar.classList.remove("is-open");
-  });
+  activateAppView(state.activeAppView, { resetScroll: false });
 });
 
 document.addEventListener("keydown", (event) => {
