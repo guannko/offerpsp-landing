@@ -108,6 +108,7 @@ async function applyMigrations() {
     "20260801_offerpsp_workspace_grants.sql",
     "20260801_offerpsp_operational_workspaces.sql",
     "20260801_offerpsp_supply_operations.sql",
+    "20260802_offerpsp_rate_card_reparse.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -319,6 +320,22 @@ async function importPreparedDrafts() {
       ],
     );
     const providerCode = providerResult.rows[0].value.internal_code;
+    const legacyPayload = JSON.parse(await readFile(resolve(`.private/imports/${providerKey === "brpay" ? "brpay-2026-07-23.json" : "antarex-2026-07-30.json"}`), "utf8"));
+    await query(
+      `select public.import_offerpsp_rate_card(
+        $1, $2, $3, $4, $5::date, $6, $7::jsonb, $8::jsonb
+      )`,
+      [
+        providerCode,
+        legacyPayload.batch.source_type,
+        legacyPayload.batch.source_text,
+        legacyPayload.batch.source_reference,
+        legacyPayload.batch.source_effective_date,
+        legacyPayload.batch.parser_version,
+        JSON.stringify(legacyPayload.batch.parser_metadata),
+        JSON.stringify(legacyPayload.batch.routes),
+      ],
+    );
     const importResult = await query(
       `select public.import_offerpsp_rate_card(
         $1, $2, $3, $4, $5::date, $6, $7::jsonb, $8::jsonb
@@ -349,6 +366,23 @@ async function importPreparedDrafts() {
     if (counts.rows[0].errors !== payload.batch.parser_metadata.blocking_anomaly_count) {
       throw new Error(`${providerKey} blocking anomaly count changed during import`);
     }
+    const versionState = await query(
+      `select
+        count(distinct b.id) filter (where b.status = 'superseded')::integer as superseded_batches,
+        count(*) filter (where r.status = 'archived')::integer as archived_routes,
+        count(*) filter (where b.id = $2 and r.status in ('draft', 'review'))::integer as current_routes
+      from private.offerpsp_rate_card_batches b
+      join private.offerpsp_offer_routes r on r.batch_id = b.id
+      where b.provider_id = (select id from private.offerpsp_providers where internal_code = $1)`,
+      [providerCode, imported.batch_id],
+    );
+    if (
+      versionState.rows[0].superseded_batches !== 1
+      || versionState.rows[0].archived_routes !== legacyPayload.batch.routes.length
+      || versionState.rows[0].current_routes !== expected.routes
+    ) {
+      throw new Error(`${providerKey} parser reparse did not supersede the previous draft cleanly: ${JSON.stringify(versionState.rows[0])}`);
+    }
     await expectQueryFailure(
       "select public.publish_offerpsp_rate_card($1)",
       [imported.batch_id],
@@ -365,7 +399,8 @@ async function verifySupplyOperations() {
   if (!providerId) throw new Error("BRPay provider fixture is missing");
 
   const initial = await query("select public.get_offerpsp_supply_workspace($1) as value", [providerId]);
-  if (initial.rows[0].value.routes.length !== 14 || initial.rows[0].value.batches.length !== 1) {
+  const activeRoutes = initial.rows[0].value.routes.filter((route) => route.status !== "archived");
+  if (activeRoutes.length !== 14 || initial.rows[0].value.batches.length !== 2) {
     throw new Error("Supply workspace does not expose the imported BRPay routes and version");
   }
 
@@ -373,7 +408,7 @@ async function verifySupplyOperations() {
   const contact = await query("select public.save_offerpsp_provider_contact($1, null, $2::jsonb) as value", [providerId, JSON.stringify({ full_name: "Validation Contact", telegram: "@validation", preferred_channel: "telegram", active: true })]);
   await query("select public.save_offerpsp_provider_contact($1, $2, $3::jsonb)", [providerId, contact.rows[0].value.id, JSON.stringify({ full_name: "Validation Contact", role_title: "Account manager", telegram: "@validation", preferred_channel: "telegram", active: true })]);
 
-  const route = initial.rows[0].value.routes[0];
+  const route = activeRoutes[0];
   await query("select public.save_offerpsp_route($1, $2::jsonb)", [route.id, JSON.stringify({ operational_notes: "Route checked in supply workspace", freshness_days: 21 })]);
   await query("select public.set_offerpsp_margin_policy($1, $2, 'payin', 'percentage_points', 1.25, null, null, 'Validation route margin')", [providerId, route.id]);
   const anomaly = route.anomalies.find((item) => item.status === "open" && item.severity !== "error") || route.anomalies.find((item) => item.status === "open");

@@ -541,7 +541,7 @@ async function loadSupplyWorkspace(providerId = state.selectedSupplyProviderId) 
     return;
   }
   state.supplyWorkspace = data;
-  if (state.selectedSupplyRouteId && !(data.routes || []).some((route) => route.id === state.selectedSupplyRouteId)) {
+  if (state.selectedSupplyRouteId && !(data.routes || []).some((route) => route.id === state.selectedSupplyRouteId && route.status !== "archived")) {
     state.selectedSupplyRouteId = null;
   }
   renderSupplyWorkspace();
@@ -553,14 +553,15 @@ function renderSupplyWorkspace() {
   if (!workspace?.provider) return;
   const provider = workspace.provider;
   const routes = workspace.routes || [];
+  const activeRoutes = routes.filter((route) => route.status !== "archived");
   const batches = workspace.batches || [];
   const contacts = workspace.contacts || [];
   const policies = workspace.margin_policies || [];
-  const openAnomalies = routes.flatMap((route) => (route.anomalies || []).map((anomaly) => ({ ...anomaly, route })));
+  const openAnomalies = activeRoutes.flatMap((route) => (route.anomalies || []).map((anomaly) => ({ ...anomaly, route })));
   const openErrors = openAnomalies.filter((item) => item.status === "open" && item.severity === "error").length;
   const openWarnings = openAnomalies.filter((item) => item.status === "open" && item.severity === "warning").length;
-  const published = routes.filter((route) => route.status === "published").length;
-  const stale = routes.filter((route) => route.is_stale && !["archived", "expired"].includes(route.status)).length;
+  const published = activeRoutes.filter((route) => route.status === "published").length;
+  const stale = activeRoutes.filter((route) => route.is_stale && route.status !== "expired").length;
 
   elements.supplyDrawerTitle.textContent = provider.brand_name;
   elements.supplyDrawerCode.textContent = provider.internal_code;
@@ -580,8 +581,8 @@ function renderSupplyWorkspace() {
   elements.supplyRelationshipNotes.value = provider.relationship_notes || "";
 
   renderSupplyContacts(contacts);
-  renderSupplyMargins(policies, routes);
-  renderSupplyRoutes(routes);
+  renderSupplyMargins(policies, activeRoutes);
+  renderSupplyRoutes(activeRoutes);
   renderSupplyAnomalies(openAnomalies);
   renderSupplyHistory(batches, workspace.activity || []);
 }
@@ -653,7 +654,7 @@ function renderSupplyRoutes(routes) {
 
 function selectSupplyRoute(routeId) {
   state.selectedSupplyRouteId = routeId;
-  renderSupplyRoutes(state.supplyWorkspace?.routes || []);
+  renderSupplyRoutes((state.supplyWorkspace?.routes || []).filter((route) => route.status !== "archived"));
   renderSupplyRouteEditor();
 }
 

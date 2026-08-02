@@ -159,7 +159,7 @@ create table if not exists private.offerpsp_rate_card_batches (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (provider_id, batch_version),
-  unique (provider_id, source_hash),
+  unique (provider_id, source_hash, parser_version),
   check (length(source_text) > 0)
 );
 
@@ -205,7 +205,7 @@ alter table private.offerpsp_offer_routes
 alter table private.offerpsp_offer_routes
   add constraint offerpsp_offer_routes_publishable_dimensions_check
   check (
-    status in ('draft', 'review')
+    status in ('draft', 'review', 'archived', 'expired')
     or (
       (coverage_scope <> 'specific' or cardinality(geos) > 0)
       and cardinality(currencies) > 0
@@ -506,7 +506,8 @@ begin
   into v_existing_batch_id
   from private.offerpsp_rate_card_batches
   where provider_id = v_provider.id
-    and source_hash = md5(p_source_text);
+    and source_hash = md5(p_source_text)
+    and parser_version = coalesce(nullif(trim(p_parser_version), ''), 'manual-v1');
 
   if v_existing_batch_id is not null then
     return jsonb_build_object(
@@ -544,6 +545,22 @@ begin
     auth.uid()
   )
   returning * into v_batch;
+
+  update private.offerpsp_rate_card_batches
+  set status = 'superseded',
+      superseded_at = now()
+  where provider_id = v_provider.id
+    and id <> v_batch.id
+    and status in ('draft', 'review');
+
+  update private.offerpsp_offer_routes r
+  set status = 'archived',
+      updated_at = now()
+  from private.offerpsp_rate_card_batches b
+  where r.batch_id = b.id
+    and b.provider_id = v_provider.id
+    and b.status = 'superseded'
+    and r.status in ('draft', 'review');
 
   for v_route_input in
     select value from jsonb_array_elements(coalesce(p_routes, '[]'::jsonb))
