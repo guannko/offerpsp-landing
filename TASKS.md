@@ -10,16 +10,19 @@ Code or a passing local test is not evidence that production has been updated.
 ### 1. Available through the production interface
 
 Status: `VERIFIED` for production deployment
-`dpl_EeuotqpGK4qWuf2w94NDLHfK3msS` at SHA
-`c750c8c7f382318c22992c8ecf40bf44b0453aa8`.
+`dpl_B6iRxCeWnCkXE3cymvJw9N1c3XWJ` at exact repository HEAD
+`0e1ca9a32b55bccb13e5c5c28c5572d105717550`.
 
 - The client portal is a persistent RU/EN multi-request Payment Workspace with counters,
   request navigation, recurring `New payment request` action, anonymous safe route options,
   option feedback, introduction request and client-visible deal progress.
-- The staff cabinet supports the lead desk, the private PSP workspace, prepared draft upload,
-  guarded publishing, route matching, the current pipeline and a cross-provider coverage matrix.
-- There is no production UI yet for agent organizations, managed merchant portfolios, agent
-  margin policies or the commission ledger.
+- The staff cabinet supports the lead desk, merchant edit/archive/purge controls, the private PSP
+  workspace, generic PSP and manual-offer creation, relationship tiers, prepared draft upload,
+  guarded publishing, versioned OfferPSP and agent margins, route matching, the Deal Desk,
+  agent/merchant organizations and a cross-provider coverage matrix.
+- Production role E2E verified a separate client workspace, client denial from the staff cabinet,
+  staff registry loading and the PSP/offer/organization management tabs. The temporary staff
+  fixture was deactivated again after the check.
 
 ### 2. Implemented in the production database/API
 
@@ -33,22 +36,24 @@ mean every capability has a dedicated user interface.
   organization tables and SELECT-only on the client-safe view. `anon` receives no access.
 - Direct clients and assigned agents can use the same client-safe workspace RPCs. Staff/client/
   agent/unrelated-client isolation was verified with separate production accounts.
+- Production migration `20260802205834 offerpsp_entity_lifecycle` adds generic entity lifecycle,
+  revision, audit and management RPCs. Migration `20260802210227
+  offerpsp_entity_lifecycle_grants` removes Supabase's automatic `anon` EXECUTE grants from all
+  11 management RPCs. `authenticated` retains 11/11 RPC grants, `anon` retains 0/11.
 
-### 3. Approved architecture foundation that still requires a separate UI
+### 3. Remaining agent/commission product work
 
-Status: `PARTIAL` — the data model and access boundaries exist in production; the operational product
-screens and workflows below are not implemented.
+Status: `PARTIAL` — the data model, access boundaries and first staff management UI exist in
+production; the larger agent-facing workflows below are not implemented.
 
-- Staff management of agent organizations, invitations, members, merchant assignments and
-  agent margin policies.
-- Agent portfolio management optimized for multiple merchants, onboarding and co-branding.
+- Organization invitations and member/role management.
+- Agent portfolio management optimized for larger portfolios, onboarding and co-branding.
 - Commission review, approval, earned/paid processing, statements and reconciliation.
-- Full staff Deal Desk for dossier review, PSP decisions, Telegram, Zoom and cooperation result.
 
-Agent organizations, agent margin and commission accounting remain approved scope. Their
-database/API foundation is deployed, but they are not finished UI features.
+Agent organizations and agent margin are manageable by staff. Commission accounting remains an
+API/data foundation rather than a finished operations UI.
 
-## Implemented locally
+## Implemented in source and verified locally
 
 Status: `VERIFIED` as local code and database behavior only; this is not a production UI status.
 
@@ -346,20 +351,20 @@ Status: `PARTIAL` — these are the actual next P1/P2 tasks after rollout.
 
 ### P1 — Deal Desk
 
-- [x] Staff UI for reviewing and editing the merchant dossier — locally verified, rollout pending.
-- [x] Missing-information workflow linked to the client dossier — locally verified, rollout pending.
-- [x] Staff controls for PSP submission and review decisions — locally verified, rollout pending.
-- [x] Telegram group recording and transition — locally verified, rollout pending.
-- [x] Zoom scheduling and won/lost controls — locally verified, rollout pending.
+- [x] Staff UI for reviewing and editing the merchant dossier in production.
+- [x] Missing-information workflow linked to the client dossier in production.
+- [x] Staff controls for PSP submission and review decisions in production.
+- [x] Telegram group recording and transition in production.
+- [x] Zoom scheduling and won/lost controls in production.
 - [ ] Stored introduction templates and automated Telegram/Zoom preparation.
 - [ ] Deal history and result-quality tracking.
 
-The first operational UI is implemented locally. Production rollout and daily-use refinement remain.
+The first operational UI is deployed. Daily-use refinement remains.
 
 ### P1 — Agent operations
 
 - [x] Staff editor for agent/merchant organizations, relationship tier/status, merchant assignments
-  and versioned agent margin policies — locally verified; production rollout pending.
+  and versioned agent margin policies in production.
 - [ ] Organization-member and role management UI.
 - [ ] Agent onboarding/invitation flow and managed-client switcher optimized for larger portfolios.
 - [ ] Agent commission approval, earned/paid workflow and downloadable statements.
