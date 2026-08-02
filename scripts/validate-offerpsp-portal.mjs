@@ -40,12 +40,25 @@ const matchingSource = adminSource.slice(
 );
 assert.doesNotMatch(matchingSource, /create_offerpsp_route_shortlist/);
 assert.match(adminSource, /rpc\("get_offerpsp_supply_workspace"/);
-assert.match(adminSource, /rpc\("save_offerpsp_provider"/);
+assert.match(adminSource, /rpc\("save_offerpsp_managed_provider"/);
 assert.match(adminSource, /rpc\("save_offerpsp_route"/);
 assert.match(adminSource, /rpc\("resolve_offerpsp_route_anomaly"/);
 assert.match(adminSource, /rpc\("set_offerpsp_margin_policy"/);
+assert.match(adminSource, /rpc\("get_offerpsp_management_registry"/);
+assert.match(adminSource, /rpc\("save_offerpsp_managed_merchant"/);
+assert.match(adminSource, /rpc\("set_offerpsp_merchant_record_state"/);
+assert.match(adminSource, /rpc\("purge_offerpsp_merchant"/);
+assert.match(adminSource, /rpc\("create_offerpsp_manual_route"/);
+assert.match(adminSource, /rpc\("revise_offerpsp_route"/);
+assert.match(adminSource, /rpc\("save_offerpsp_organization"/);
+assert.match(adminSource, /rpc\("set_offerpsp_agent_assignment"/);
+assert.match(adminSource, /rpc\("set_offerpsp_agent_margin_policy"/);
 assert.match(adminHtmlSource, /id="supplyDrawer"/);
 assert.match(adminHtmlSource, /id="supplyRouteForm"/);
 assert.match(adminHtmlSource, /id="supplyAnomalyList"/);
+assert.match(adminHtmlSource, /id="management"/);
+assert.match(adminHtmlSource, /id="merchantRecordForm"/);
+assert.match(adminHtmlSource, /id="manualOfferForm"/);
+assert.match(adminHtmlSource, /id="organizationForm"/);
 
 process.stdout.write("PASS persistent portal, operational Deal Desk and PSP supply workspace guards\n");

@@ -1856,6 +1856,93 @@ tbody tr:last-child td {
 .history-heading { margin-top: 24px; }
 #supplyActivityList { margin-top: 12px; }
 
+.management-panel { scroll-margin-top: 18px; }
+.management-panel > .panel-head p:not(.eyebrow) { margin: 6px 0 0; color: var(--muted); font-size: 11px; }
+.management-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 9px;
+  margin-bottom: 18px;
+}
+.management-summary article {
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, .025);
+}
+.management-summary span,
+.management-summary strong { display: block; }
+.management-summary span { color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .06em; }
+.management-summary strong { margin-top: 8px; font-size: 24px; }
+.management-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+}
+.management-tabs button {
+  min-height: 36px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 0 12px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 750;
+}
+.management-tabs button.is-active { border-color: rgba(255, 77, 122, .48); color: var(--paper); background: rgba(255, 77, 122, .09); }
+.management-view { min-width: 0; }
+.management-toolbar { display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 12px; }
+.management-toolbar .search-field { width: min(100%, 420px); }
+.management-toolbar select { width: 170px; }
+.split-management { display: grid; grid-template-columns: minmax(320px, .8fr) minmax(0, 1.2fr); gap: 14px; align-items: start; }
+.management-editor {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .018);
+}
+.management-editor h3 { margin: 0; font-size: 15px; }
+.registry-list { display: grid; gap: 7px; }
+.registry-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(160px, .7fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 13px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, .018);
+}
+.registry-row strong,
+.registry-row span { display: block; }
+.registry-row strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.registry-row div > span { margin-top: 4px; color: var(--muted); font-size: 9px; }
+.registry-meta { min-width: 0; }
+.registry-meta .status-pill { width: fit-content; margin: 0; }
+.registry-actions { display: flex; align-items: center; gap: 8px; }
+.registry-actions .text-button { margin: 0; }
+.text-button.danger { color: var(--danger); }
+.lifecycle-guide { display: grid; gap: 9px; }
+.lifecycle-guide article { padding: 15px; border: 1px solid var(--line); border-radius: 13px; background: rgba(255, 255, 255, .018); }
+.lifecycle-guide strong { font-size: 12px; }
+.lifecycle-guide p { margin: 6px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.relationship-tools { display: grid; grid-template-columns: .8fr 1.2fr; gap: 14px; margin-top: 14px; }
+.relationship-list { margin-top: 14px; }
+.margin-card.is-inactive { opacity: .48; }
+.margin-card .text-button { margin: 0; }
+.merchant-record-section { border-color: rgba(167, 243, 208, .15); }
+.merchant-lifecycle-actions { justify-content: flex-start; }
+
 @media (max-width: 1120px) {
   .stats-grid {
     grid-template-columns: repeat(3, 1fr);
@@ -1874,6 +1961,8 @@ tbody tr:last-child td {
   .coverage-filters { width: 100%; }
 
   .route-workbench { grid-template-columns: 270px minmax(0, 1fr); }
+  .split-management,
+  .relationship-tools { grid-template-columns: 1fr; }
   .component-row.fee-row,
   .component-row.limit-row,
   .component-row.settlement-row { grid-template-columns: repeat(3, 1fr); }
@@ -1994,6 +2083,13 @@ tbody tr:last-child td {
   .provider-list {
     grid-template-columns: 1fr;
   }
+
+  .management-summary { grid-template-columns: repeat(2, 1fr); }
+  .management-toolbar { align-items: stretch; flex-direction: column; }
+  .management-toolbar .search-field,
+  .management-toolbar select { width: 100%; }
+  .registry-row { grid-template-columns: 1fr; }
+  .registry-actions { justify-content: flex-start; }
 
   .coverage-filters,
   .coverage-summary { grid-template-columns: 1fr; }

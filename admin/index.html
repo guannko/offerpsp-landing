@@ -69,6 +69,10 @@
           <span class="nav-icon">▦</span>
           PSP supply
         </button>
+        <button class="nav-item" type="button" data-scroll="management">
+          <span class="nav-icon">◎</span>
+          Control center
+        </button>
         <button class="nav-item" type="button" data-scroll="analytics">
           <span class="nav-icon">↗</span>
           Analytics
@@ -190,6 +194,105 @@
             <tbody id="leadsTableBody"></tbody>
           </table>
         </div>
+      </section>
+
+      <section id="management" class="panel management-panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Operations control center</p>
+            <h2>Manage the whole network</h2>
+            <p>Merchants, PSPs, offers and agents stay editable as relationships change.</p>
+          </div>
+          <button id="refreshManagementButton" class="icon-button" type="button" aria-label="Refresh control center">↻</button>
+        </div>
+        <div id="managementSummary" class="management-summary"></div>
+        <nav class="management-tabs" aria-label="Managed entities">
+          <button class="is-active" type="button" data-management-tab="merchants">Merchants</button>
+          <button type="button" data-management-tab="providers">PSPs</button>
+          <button type="button" data-management-tab="offers">Offers</button>
+          <button type="button" data-management-tab="organizations">Agents & organizations</button>
+        </nav>
+
+        <div id="managementMerchants" class="management-view">
+          <div class="management-toolbar">
+            <label class="search-field"><span>⌕</span><input id="managementMerchantSearch" type="search" placeholder="Search merchant or contact"></label>
+            <select id="managementMerchantState" aria-label="Merchant record state"><option value="active">Active</option><option value="archived">Archived</option><option value="all">All records</option></select>
+          </div>
+          <div id="managementMerchantList" class="registry-list"></div>
+        </div>
+
+        <div id="managementProviders" class="management-view is-hidden">
+          <div class="split-management">
+            <form id="managedProviderForm" class="management-editor">
+              <input id="managedProviderId" type="hidden">
+              <div><p class="eyebrow">PSP record</p><h3 id="managedProviderHeading">Add PSP</h3></div>
+              <div class="dossier-form">
+                <label>Brand name<input id="managedProviderName" type="text" required></label>
+                <label>Legal name<input id="managedProviderLegalName" type="text"></label>
+                <label class="span-2">Website<input id="managedProviderWebsite" type="url" placeholder="https://"></label>
+                <label>Relationship<select id="managedProviderStatus"><option value="prospect">Prospect</option><option value="onboarding">Onboarding</option><option value="active">Active</option><option value="paused">Paused</option><option value="archived">Archived</option></select></label>
+                <label>Tier<select id="managedProviderTier"><option value="top">Top</option><option value="core">Core</option><option value="standard" selected>Standard</option><option value="watchlist">Watchlist</option></select></label>
+                <label>Priority<input id="managedProviderPriority" type="number" min="0" max="100" value="50"></label>
+                <label class="checkbox-field"><input id="managedProviderMarginIncluded" type="checkbox"> Margin included by PSP</label>
+                <label class="span-3">Relationship notes<textarea id="managedProviderNotes" rows="3"></textarea></label>
+              </div>
+              <div class="section-actions"><button class="button button-primary button-compact" type="submit">Save PSP</button><button id="resetManagedProviderButton" class="button button-secondary button-compact" type="button">New PSP</button></div>
+              <p id="managedProviderStatusMessage" class="form-status" role="status"></p>
+            </form>
+            <div><div class="section-head"><div><p class="eyebrow">Relationship register</p><h3>All PSPs</h3></div></div><div id="managementProviderList" class="registry-list"></div></div>
+          </div>
+        </div>
+
+        <div id="managementOffers" class="management-view is-hidden">
+          <div class="split-management">
+            <form id="manualOfferForm" class="management-editor">
+              <div><p class="eyebrow">Manual offer</p><h3>Add an offer from any PSP</h3><p class="section-copy">Creates an editable private draft. The PSP identity stays hidden from clients.</p></div>
+              <div class="dossier-form">
+                <label>PSP<select id="manualOfferProvider" required></select></label>
+                <label class="span-2">Client-safe title<input id="manualOfferTitle" type="text" required placeholder="India · INR · UPI Pay-in"></label>
+                <label>Flow<select id="manualOfferFlow"><option value="payin">Pay-in</option><option value="payout">Pay-out</option><option value="both">Both</option></select></label>
+                <label>GEOs<input id="manualOfferGeos" type="text" placeholder="IN, BR"></label>
+                <label>Currencies<input id="manualOfferCurrencies" type="text" placeholder="INR, USDT"></label>
+                <label>Methods<input id="manualOfferMethods" type="text" placeholder="UPI, Cards"></label>
+                <label>Verticals<input id="manualOfferVerticals" type="text" placeholder="iGaming"></label>
+                <label>Base rate, %<input id="manualOfferRate" type="number" step="0.01"></label>
+                <label>Minimum transaction<input id="manualOfferMin" type="number" step="any"></label>
+                <label>Maximum transaction<input id="manualOfferMax" type="number" step="any"></label>
+                <label>Limit currency<input id="manualOfferLimitCurrency" type="text"></label>
+                <label class="span-3">Source / internal note<textarea id="manualOfferSource" rows="3" required></textarea></label>
+              </div>
+              <button class="button button-primary button-compact" type="submit">Create private draft</button>
+              <p id="manualOfferStatus" class="form-status" role="status"></p>
+            </form>
+            <div><div class="section-head"><div><p class="eyebrow">Offer lifecycle</p><h3>How changes work</h3></div></div><div class="lifecycle-guide"><article><strong>Draft / review</strong><p>Edit rates, GEOs, methods, limits and settlement directly.</p></article><article><strong>Published</strong><p>Create a revision; the live offer stays unchanged until the replacement is approved.</p></article><article><strong>Margin</strong><p>Every change creates a new effective version and preserves the previous rate.</p></article><article><strong>Leave the market</strong><p>Pause or archive the route without losing deal history.</p></article></div></div>
+          </div>
+        </div>
+
+        <div id="managementOrganizations" class="management-view is-hidden">
+          <div class="split-management">
+            <form id="organizationForm" class="management-editor">
+              <input id="organizationId" type="hidden">
+              <div><p class="eyebrow">Organization record</p><h3 id="organizationHeading">Add agent or merchant company</h3></div>
+              <div class="dossier-form">
+                <label>Type<select id="organizationType"><option value="agent">Agent / affiliate</option><option value="merchant">Merchant organization</option></select></label>
+                <label>Name<input id="organizationName" type="text" required></label>
+                <label>Legal name<input id="organizationLegalName" type="text"></label>
+                <label>Status<select id="organizationStatus"><option value="pending">Pending</option><option value="active" selected>Active</option><option value="paused">Paused</option><option value="archived">Archived</option></select></label>
+                <label>Tier<select id="organizationTier"><option value="top">Top</option><option value="core">Core</option><option value="standard" selected>Standard</option><option value="watchlist">Watchlist</option></select></label>
+                <label class="span-3">Notes<textarea id="organizationNotes" rows="3"></textarea></label>
+              </div>
+              <div class="section-actions"><button class="button button-primary button-compact" type="submit">Save organization</button><button id="resetOrganizationButton" class="button button-secondary button-compact" type="button">New organization</button></div>
+              <p id="organizationStatusMessage" class="form-status" role="status"></p>
+            </form>
+            <div><div class="section-head"><div><p class="eyebrow">Portfolio register</p><h3>Agents and merchant organizations</h3></div></div><div id="organizationList" class="registry-list"></div></div>
+          </div>
+          <div class="relationship-tools">
+            <form id="agentAssignmentForm" class="management-editor compact-editor"><h3>Assign merchant to agent</h3><div class="dossier-form"><label>Agent<select id="assignmentAgent"></select></label><label>Merchant organization<select id="assignmentMerchant"></select></label><label>Status<select id="assignmentStatus"><option value="active">Active</option><option value="pending">Pending</option><option value="paused">Paused</option><option value="ended">Ended</option></select></label></div><button class="button button-secondary button-compact" type="submit">Save assignment</button></form>
+            <form id="agentMarginForm" class="management-editor compact-editor"><h3>Agent resale margin</h3><div class="dossier-form"><label>Agent<select id="agentMarginAgent"></select></label><label>Merchant scope<select id="agentMarginMerchant"><option value="">All assigned merchants</option></select></label><label>Flow<select id="agentMarginFlow"><option value="all">All</option><option value="payin">Pay-in</option><option value="payout">Pay-out</option></select></label><label>Mode<select id="agentMarginMode"><option value="percentage_points">Add percentage points</option><option value="relative_percent">Relative percent</option><option value="fixed">Fixed fee</option><option value="hybrid">Percent + fixed</option></select></label><label>Percent<input id="agentMarginPercent" type="number" step="0.01"></label><label>Fixed<input id="agentMarginFixed" type="number" step="0.01"></label><label>Currency<input id="agentMarginCurrency" type="text"></label><label class="span-3">Internal note<input id="agentMarginNotes" type="text"></label></div><button class="button button-secondary button-compact" type="submit">Save new margin version</button></form>
+          </div>
+          <div id="assignmentList" class="registry-list relationship-list"></div>
+        </div>
+        <p id="managementStatus" class="form-status" role="status" aria-live="polite"></p>
       </section>
 
       <section id="supply" class="panel supply-panel">
@@ -399,6 +502,29 @@
         <dl id="profileDetails" class="details-grid"></dl>
       </section>
 
+      <section class="detail-section merchant-record-section">
+        <div class="section-head"><div><h3>Merchant record</h3><p class="section-copy">Edit the source record, archive inactive requests or remove obvious junk.</p></div><span id="merchantRecordState" class="status-pill">active</span></div>
+        <form id="merchantRecordForm" class="dossier-form">
+          <label>Company<input id="merchantRecordCompany" type="text" required></label>
+          <label>Contact name<input id="merchantRecordName" type="text" required></label>
+          <label>Work email<input id="merchantRecordEmail" type="email" required></label>
+          <label>Telegram<input id="merchantRecordTelegram" type="text"></label>
+          <label class="span-2">Company URL<input id="merchantRecordUrl" type="url"></label>
+          <label>Vertical<input id="merchantRecordVertical" type="text"></label>
+          <label>GEOs<input id="merchantRecordGeos" type="text"></label>
+          <label>Monthly volume<input id="merchantRecordVolume" type="text"></label>
+          <label>Methods<input id="merchantRecordMethods" type="text"></label>
+          <label class="span-3">Details<textarea id="merchantRecordDetails" rows="3"></textarea></label>
+        </form>
+        <div class="section-actions merchant-lifecycle-actions">
+          <button id="saveMerchantRecordButton" class="button button-primary button-compact" type="button">Save merchant</button>
+          <button id="archiveMerchantButton" class="button button-secondary button-compact" type="button">Archive</button>
+          <button id="restoreMerchantButton" class="button button-secondary button-compact is-hidden" type="button">Restore</button>
+          <button id="purgeMerchantButton" class="button button-danger button-compact is-hidden" type="button">Delete permanently</button>
+        </div>
+        <p id="merchantRecordStatus" class="form-status" role="status"></p>
+      </section>
+
       <section id="workspaceDossier" class="detail-section">
         <div class="section-head">
           <div>
@@ -555,6 +681,7 @@
               <option value="active">Active</option><option value="paused">Paused</option><option value="archived">Archived</option>
             </select>
           </label>
+          <label>Tier<select id="supplyRelationshipTier"><option value="top">Top</option><option value="core">Core</option><option value="standard">Standard</option><option value="watchlist">Watchlist</option></select></label>
           <label>Strategic priority<input id="supplyPriority" type="number" min="0" max="100"></label>
           <label class="checkbox-field span-2"><input id="supplyMarginIncluded" type="checkbox"> PSP rate already includes our commission</label>
           <label class="span-3">Relationship notes<textarea id="supplyRelationshipNotes" rows="3"></textarea></label>
@@ -603,7 +730,7 @@
       </section>
 
       <section id="supplyRoutes" class="detail-section supply-routes-workspace">
-        <div class="section-head"><div><h3>Normalized routes</h3><p class="section-copy">Edit working fields without changing the original partner message.</p></div></div>
+        <div class="section-head"><div><h3>Normalized routes</h3><p class="section-copy">Edit working fields without changing the original partner message.</p></div><button id="reviseSupplyRouteButton" class="button button-secondary button-compact is-hidden" type="button">Create revision</button></div>
         <div class="route-workbench">
           <div id="supplyRouteList" class="route-list"></div>
           <form id="supplyRouteForm" class="route-editor is-hidden">

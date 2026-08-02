@@ -111,6 +111,7 @@ async function applyMigrations() {
     "20260802_offerpsp_rate_card_reparse.sql",
     "20260802_offerpsp_route_level_publication.sql",
     "20260802_offerpsp_supply_coverage_matrix.sql",
+    "20260802_offerpsp_entity_lifecycle.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -200,6 +201,26 @@ async function verifySupplyOperationGrants() {
     throw new Error("Supply operation RPC grants do not match the staff-only API model");
   }
   process.stdout.write("PASS staff-only supply operation RPC grants with anon denied\n");
+}
+
+async function verifyManagementOperationGrants() {
+  const result = await query(`select
+    has_function_privilege('authenticated', 'public.get_offerpsp_management_registry()', 'EXECUTE') as authenticated_registry,
+    has_function_privilege('anon', 'public.get_offerpsp_management_registry()', 'EXECUTE') as anon_registry,
+    has_function_privilege('authenticated', 'public.purge_offerpsp_merchant(uuid,text)', 'EXECUTE') as authenticated_purge,
+    has_function_privilege('anon', 'public.purge_offerpsp_merchant(uuid,text)', 'EXECUTE') as anon_purge,
+    has_function_privilege('authenticated', 'public.create_offerpsp_manual_route(uuid,jsonb)', 'EXECUTE') as authenticated_offer,
+    has_function_privilege('anon', 'public.create_offerpsp_manual_route(uuid,jsonb)', 'EXECUTE') as anon_offer,
+    has_function_privilege('authenticated', 'public.set_offerpsp_agent_margin_policy(uuid,uuid,text,text,numeric,numeric,text,text)', 'EXECUTE') as authenticated_agent_margin,
+    has_function_privilege('anon', 'public.set_offerpsp_agent_margin_policy(uuid,uuid,text,text,numeric,numeric,text,text)', 'EXECUTE') as anon_agent_margin
+  `);
+  const grants = result.rows[0];
+  if (!grants.authenticated_registry || !grants.authenticated_purge || !grants.authenticated_offer
+      || !grants.authenticated_agent_margin || grants.anon_registry || grants.anon_purge
+      || grants.anon_offer || grants.anon_agent_margin) {
+    throw new Error("Management RPC grants do not match the staff-only API model");
+  }
+  process.stdout.write("PASS staff-only management RPC grants with anon denied\n");
 }
 
 async function seedUsers() {
@@ -863,6 +884,128 @@ async function verifyAgentWorkspaceAndPricing() {
   process.stdout.write("PASS agent ownership, missing-margin gate, final resale rate and foreign isolation\n");
 }
 
+async function verifyEntityLifecycle() {
+  await setUser(STAFF_ID);
+  const provider = await query(
+    "select public.save_offerpsp_managed_provider(null, $1::jsonb) as value",
+    [JSON.stringify({
+      brand_name: "Future PSP",
+      relationship_status: "active",
+      relationship_tier: "top",
+      strategic_priority: 90,
+      margin_included_default: false,
+      relationship_notes: "Generic lifecycle validation",
+    })],
+  );
+  const providerId = provider.rows[0].value.id;
+  if (provider.rows[0].value.relationship_tier !== "top") {
+    throw new Error("Managed provider tier was not saved");
+  }
+
+  const manualOffer = await query(
+    "select public.create_offerpsp_manual_route($1, $2::jsonb) as value",
+    [providerId, JSON.stringify({
+      client_title: "India · INR · UPI Pay-in",
+      flow: "payin",
+      coverage_scope: "specific",
+      geos: ["IN"],
+      currencies: ["INR"],
+      methods: ["UPI"],
+      traffic_types: ["FTD"],
+      verticals: ["IGAMING"],
+      integrations: ["API"],
+      fees: [{ flow: "payin", fee_type: "percent", base_percent: 5, applies_on: "success" }],
+      limits: [{ flow: "payin", currency: "INR", minimum_amount: 500, maximum_amount: 100000 }],
+      settlements: [{ currency: "USDT", fee_percent: 1, period: "T+1" }],
+      source_reference: "Manual validation offer",
+    })],
+  );
+  const routeId = manualOffer.rows[0].value.route_id;
+  const route = await query("select status, geos, currencies from private.offerpsp_offer_routes where id = $1", [routeId]);
+  if (route.rows[0].status !== "review" || route.rows[0].geos[0] !== "IN" || route.rows[0].currencies[0] !== "INR") {
+    throw new Error("Manual offer did not create an editable normalized route");
+  }
+  const revision = await query("select public.revise_offerpsp_route($1) as value", [routeId]);
+  const revisionRow = await query(
+    "select revision_of_route_id, status from private.offerpsp_offer_routes where id = $1",
+    [revision.rows[0].value.route_id],
+  );
+  if (revisionRow.rows[0].revision_of_route_id !== routeId || revisionRow.rows[0].status !== "review") {
+    throw new Error("Offer revision did not preserve its source route");
+  }
+
+  await query(
+    "select public.set_offerpsp_margin_policy($1, null, 'all', 'percentage_points', 0.5, null, null, 'Initial')",
+    [providerId],
+  );
+  await query(
+    "select public.set_offerpsp_margin_policy($1, null, 'all', 'percentage_points', 0.3, null, null, 'Changed')",
+    [providerId],
+  );
+  const providerMargins = await query(`
+    select active, percent_value, effective_to
+    from private.offerpsp_margin_policies
+    where provider_id = $1 and route_id is null and flow = 'all'
+    order by created_at
+  `, [providerId]);
+  if (providerMargins.rows.length !== 2 || providerMargins.rows[0].active
+      || providerMargins.rows[0].effective_to === null || !providerMargins.rows[1].active
+      || Number(providerMargins.rows[1].percent_value) !== 0.3) {
+    throw new Error("Provider margin versions did not close the old rate and activate the new rate");
+  }
+
+  const organizations = [];
+  for (const [type, name] of [["agent", "Lifecycle Agent"], ["merchant", "Lifecycle Merchant Org"]]) {
+    const saved = await query(
+      "select public.save_offerpsp_organization(null, $1, $2::jsonb) as value",
+      [type, JSON.stringify({ name, status: "active", relationship_tier: "core" })],
+    );
+    organizations.push(saved.rows[0].value);
+  }
+  const agentOrg = organizations.find((item) => item.organization_type === "agent");
+  const merchantOrg = organizations.find((item) => item.organization_type === "merchant");
+  await query("select public.set_offerpsp_agent_assignment($1, $2, 'active')", [agentOrg.id, merchantOrg.id]);
+  await query(
+    "select public.set_offerpsp_agent_margin_policy($1, $2, 'all', 'percentage_points', 1.1, null, null, 'Resale margin')",
+    [agentOrg.id, merchantOrg.id],
+  );
+
+  const junk = await query(`
+    insert into public.offerpsp_leads (
+      name, work_email, company, vertical, geos, source, status, consent
+    ) values ('Junk', 'junk@example.com', 'Unrelated Junk Merchant', 'Other', 'Unknown', 'lifecycle-test', 'new', true)
+    returning lead_id
+  `);
+  const junkId = junk.rows[0].lead_id;
+  const junkInitial = await query("select status from public.offerpsp_leads where lead_id = $1", [junkId]);
+  await expectQueryFailure(
+    "select public.purge_offerpsp_merchant($1, 'DELETE Unrelated Junk Merchant')",
+    [junkId],
+    "Archive the merchant before permanent deletion",
+  );
+  await query("select public.set_offerpsp_merchant_record_state($1, 'archived', 'Unrelated test request')", [junkId]);
+  await query("select public.set_offerpsp_merchant_record_state($1, 'active', null)", [junkId]);
+  const restored = await query("select record_state, status from public.offerpsp_leads where lead_id = $1", [junkId]);
+  if (restored.rows[0].record_state !== "active" || restored.rows[0].status !== junkInitial.rows[0].status) {
+    throw new Error("Archived merchant did not restore its previous status");
+  }
+  await query("select public.set_offerpsp_merchant_record_state($1, 'archived', 'Permanent test cleanup')", [junkId]);
+  await query("select public.purge_offerpsp_merchant($1, 'DELETE Unrelated Junk Merchant')", [junkId]);
+  const purged = await query("select count(*)::integer as count from public.offerpsp_leads where lead_id = $1", [junkId]);
+  const audit = await query("select count(*)::integer as count from private.offerpsp_entity_audit where entity_type = 'merchant' and entity_id = $1 and action_type = 'purged'", [junkId]);
+  if (purged.rows[0].count !== 0 || audit.rows[0].count !== 1) {
+    throw new Error("Permanent merchant deletion did not remove the record while preserving the audit event");
+  }
+
+  const registry = await query("select public.get_offerpsp_management_registry() as value");
+  if (!registry.rows[0].value.providers.some((item) => item.id === providerId)
+      || !registry.rows[0].value.organizations.some((item) => item.id === agentOrg.id)
+      || !registry.rows[0].value.assignments.some((item) => item.agent_organization_id === agentOrg.id)) {
+    throw new Error("Management registry is missing managed entities");
+  }
+  process.stdout.write("PASS generic PSP, offer revision, margin history, organization, assignment and merchant lifecycle\n");
+}
+
 try {
   await bootstrap();
   await applyMigrations();
@@ -870,6 +1013,7 @@ try {
   await verifyWorkspaceGrants();
   await verifyClientPolicyBoundary();
   await verifySupplyOperationGrants();
+  await verifyManagementOperationGrants();
   await seedUsers();
   await verifyPortalLeadClaims();
   await verifyLegacyShortlistBlocked();
@@ -878,6 +1022,7 @@ try {
   await verifyRouteLevelPublication();
   await runEndToEndFixture();
   await verifyAgentWorkspaceAndPricing();
+  await verifyEntityLifecycle();
   process.stdout.write("PASS all OfferPSP migration checks\n");
 } catch (error) {
   process.stderr.write(`FAIL ${error.message}\n`);

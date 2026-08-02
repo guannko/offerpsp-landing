@@ -31,6 +31,13 @@ const STATUS_LABELS = {
   negotiating: "Negotiating",
   won: "Won",
   lost: "Lost",
+  prospect: "Prospect",
+  onboarding: "Onboarding",
+  active: "Active status",
+  paused: "Paused status",
+  archived: "Archived status",
+  pending: "Pending status",
+  ended: "Ended status",
 };
 
 const state = {
@@ -56,6 +63,10 @@ const state = {
   supplyWorkspace: null,
   selectedSupplyProviderId: null,
   selectedSupplyRouteId: null,
+  management: {
+    merchants: [], providers: [], organizations: [], assignments: [],
+    agentMarginPolicies: [], commissionSummary: {}, available: true,
+  },
   rateCardPayload: null,
   lastUpdatedAt: null,
 };
@@ -77,6 +88,66 @@ const elements = {
   lastUpdated: document.getElementById("lastUpdated"),
   searchInput: document.getElementById("searchInput"),
   statusFilter: document.getElementById("statusFilter"),
+  refreshManagementButton: document.getElementById("refreshManagementButton"),
+  managementSummary: document.getElementById("managementSummary"),
+  managementMerchantSearch: document.getElementById("managementMerchantSearch"),
+  managementMerchantState: document.getElementById("managementMerchantState"),
+  managementMerchantList: document.getElementById("managementMerchantList"),
+  managementProviderList: document.getElementById("managementProviderList"),
+  managedProviderForm: document.getElementById("managedProviderForm"),
+  managedProviderId: document.getElementById("managedProviderId"),
+  managedProviderHeading: document.getElementById("managedProviderHeading"),
+  managedProviderName: document.getElementById("managedProviderName"),
+  managedProviderLegalName: document.getElementById("managedProviderLegalName"),
+  managedProviderWebsite: document.getElementById("managedProviderWebsite"),
+  managedProviderStatus: document.getElementById("managedProviderStatus"),
+  managedProviderTier: document.getElementById("managedProviderTier"),
+  managedProviderPriority: document.getElementById("managedProviderPriority"),
+  managedProviderMarginIncluded: document.getElementById("managedProviderMarginIncluded"),
+  managedProviderNotes: document.getElementById("managedProviderNotes"),
+  managedProviderStatusMessage: document.getElementById("managedProviderStatusMessage"),
+  resetManagedProviderButton: document.getElementById("resetManagedProviderButton"),
+  manualOfferForm: document.getElementById("manualOfferForm"),
+  manualOfferProvider: document.getElementById("manualOfferProvider"),
+  manualOfferTitle: document.getElementById("manualOfferTitle"),
+  manualOfferFlow: document.getElementById("manualOfferFlow"),
+  manualOfferGeos: document.getElementById("manualOfferGeos"),
+  manualOfferCurrencies: document.getElementById("manualOfferCurrencies"),
+  manualOfferMethods: document.getElementById("manualOfferMethods"),
+  manualOfferVerticals: document.getElementById("manualOfferVerticals"),
+  manualOfferRate: document.getElementById("manualOfferRate"),
+  manualOfferMin: document.getElementById("manualOfferMin"),
+  manualOfferMax: document.getElementById("manualOfferMax"),
+  manualOfferLimitCurrency: document.getElementById("manualOfferLimitCurrency"),
+  manualOfferSource: document.getElementById("manualOfferSource"),
+  manualOfferStatus: document.getElementById("manualOfferStatus"),
+  organizationForm: document.getElementById("organizationForm"),
+  organizationId: document.getElementById("organizationId"),
+  organizationHeading: document.getElementById("organizationHeading"),
+  organizationType: document.getElementById("organizationType"),
+  organizationName: document.getElementById("organizationName"),
+  organizationLegalName: document.getElementById("organizationLegalName"),
+  organizationStatus: document.getElementById("organizationStatus"),
+  organizationTier: document.getElementById("organizationTier"),
+  organizationNotes: document.getElementById("organizationNotes"),
+  organizationStatusMessage: document.getElementById("organizationStatusMessage"),
+  resetOrganizationButton: document.getElementById("resetOrganizationButton"),
+  organizationList: document.getElementById("organizationList"),
+  agentAssignmentForm: document.getElementById("agentAssignmentForm"),
+  assignmentAgent: document.getElementById("assignmentAgent"),
+  assignmentMerchant: document.getElementById("assignmentMerchant"),
+  assignmentStatus: document.getElementById("assignmentStatus"),
+  agentMarginForm: document.getElementById("agentMarginForm"),
+  agentMarginAgent: document.getElementById("agentMarginAgent"),
+  agentMarginMerchant: document.getElementById("agentMarginMerchant"),
+  agentMarginFlow: document.getElementById("agentMarginFlow"),
+  agentMarginMode: document.getElementById("agentMarginMode"),
+  agentMarginPercent: document.getElementById("agentMarginPercent"),
+  agentMarginFixed: document.getElementById("agentMarginFixed"),
+  agentMarginCurrency: document.getElementById("agentMarginCurrency"),
+  agentMarginNotes: document.getElementById("agentMarginNotes"),
+  assignmentList: document.getElementById("assignmentList"),
+  managementStatus: document.getElementById("managementStatus"),
   resultCount: document.getElementById("resultCount"),
   loadingState: document.getElementById("loadingState"),
   emptyState: document.getElementById("emptyState"),
@@ -130,6 +201,7 @@ const elements = {
   supplyLegalName: document.getElementById("supplyLegalName"),
   supplyWebsite: document.getElementById("supplyWebsite"),
   supplyRelationshipStatus: document.getElementById("supplyRelationshipStatus"),
+  supplyRelationshipTier: document.getElementById("supplyRelationshipTier"),
   supplyPriority: document.getElementById("supplyPriority"),
   supplyMarginIncluded: document.getElementById("supplyMarginIncluded"),
   supplyRelationshipNotes: document.getElementById("supplyRelationshipNotes"),
@@ -189,6 +261,7 @@ const elements = {
   pauseSupplyRouteButton: document.getElementById("pauseSupplyRouteButton"),
   resumeSupplyRouteButton: document.getElementById("resumeSupplyRouteButton"),
   archiveSupplyRouteButton: document.getElementById("archiveSupplyRouteButton"),
+  reviseSupplyRouteButton: document.getElementById("reviseSupplyRouteButton"),
   supplyOpenChecks: document.getElementById("supplyOpenChecks"),
   supplyAnomalyList: document.getElementById("supplyAnomalyList"),
   supplyBatchHistory: document.getElementById("supplyBatchHistory"),
@@ -242,6 +315,23 @@ const elements = {
   shortlistPreview: document.getElementById("shortlistPreview"),
   dealDeskList: document.getElementById("dealDeskList"),
   saveLeadButton: document.getElementById("saveLeadButton"),
+  merchantRecordState: document.getElementById("merchantRecordState"),
+  merchantRecordForm: document.getElementById("merchantRecordForm"),
+  merchantRecordCompany: document.getElementById("merchantRecordCompany"),
+  merchantRecordName: document.getElementById("merchantRecordName"),
+  merchantRecordEmail: document.getElementById("merchantRecordEmail"),
+  merchantRecordTelegram: document.getElementById("merchantRecordTelegram"),
+  merchantRecordUrl: document.getElementById("merchantRecordUrl"),
+  merchantRecordVertical: document.getElementById("merchantRecordVertical"),
+  merchantRecordGeos: document.getElementById("merchantRecordGeos"),
+  merchantRecordVolume: document.getElementById("merchantRecordVolume"),
+  merchantRecordMethods: document.getElementById("merchantRecordMethods"),
+  merchantRecordDetails: document.getElementById("merchantRecordDetails"),
+  saveMerchantRecordButton: document.getElementById("saveMerchantRecordButton"),
+  archiveMerchantButton: document.getElementById("archiveMerchantButton"),
+  restoreMerchantButton: document.getElementById("restoreMerchantButton"),
+  purgeMerchantButton: document.getElementById("purgeMerchantButton"),
+  merchantRecordStatus: document.getElementById("merchantRecordStatus"),
   drawerStatusMessage: document.getElementById("drawerStatusMessage"),
   noteInput: document.getElementById("noteInput"),
   addNoteButton: document.getElementById("addNoteButton"),
@@ -412,7 +502,7 @@ async function enterApp(session) {
     elements.authView.classList.add("is-hidden");
     elements.appView.classList.remove("is-hidden");
     await loadStaffMembers();
-    await Promise.all([loadLeads(), loadSupply()]);
+    await Promise.all([loadLeads(), loadSupply(), loadManagement()]);
   } catch (error) {
     setAuthStatus(error.message || "Could not verify access.", "error");
     elements.appView.classList.add("is-hidden");
@@ -428,6 +518,252 @@ async function loadStaffMembers() {
     .order("display_name", { ascending: true });
   state.staffMembers = error ? [] : data || [];
   elements.drawerOwner.innerHTML = `<option value="">${escapeHtml(i18n?.t("Unassigned") || "Unassigned")}</option>${state.staffMembers.map((member) => `<option value="${escapeHtml(member.user_id)}">${escapeHtml(member.display_name || member.role)}</option>`).join("")}`;
+}
+
+function setManagementStatus(message = "", tone = "") {
+  elements.managementStatus.textContent = message;
+  elements.managementStatus.className = `form-status${tone ? ` ${tone}` : ""}`;
+}
+
+async function loadManagement() {
+  elements.refreshManagementButton.disabled = true;
+  const { data, error } = await supabase.rpc("get_offerpsp_management_registry");
+  elements.refreshManagementButton.disabled = false;
+  if (error) {
+    state.management.available = false;
+    setManagementStatus("Control center will become available after its database migration is applied.", "error");
+    return;
+  }
+  state.management = {
+    merchants: Array.isArray(data?.merchants) ? data.merchants : [],
+    providers: Array.isArray(data?.providers) ? data.providers : [],
+    organizations: Array.isArray(data?.organizations) ? data.organizations : [],
+    assignments: Array.isArray(data?.assignments) ? data.assignments : [],
+    agentMarginPolicies: Array.isArray(data?.agent_margin_policies) ? data.agent_margin_policies : [],
+    commissionSummary: data?.commission_summary || {},
+    available: true,
+  };
+  setManagementStatus();
+  renderManagement();
+}
+
+function renderManagement() {
+  const { merchants, providers, organizations, assignments } = state.management;
+  const agents = organizations.filter((item) => item.organization_type === "agent");
+  elements.managementSummary.innerHTML = [
+    ["Active merchants", merchants.filter((item) => item.record_state === "active").length],
+    ["PSPs", providers.filter((item) => item.relationship_status !== "archived").length],
+    ["Active offers", providers.reduce((sum, item) => sum + Number(item.published_route_count || 0), 0)],
+    ["Agents", agents.filter((item) => item.status === "active").length],
+  ].map(([label, value]) => `<article><span>${escapeHtml(label)}</span><strong>${Number(value)}</strong></article>`).join("");
+  renderManagementMerchants();
+  renderManagementProviders();
+  renderManagementOrganizations();
+}
+
+function renderManagementMerchants() {
+  const search = elements.managementMerchantSearch.value.trim().toLowerCase();
+  const recordState = elements.managementMerchantState.value;
+  const merchants = state.management.merchants.filter((merchant) => {
+    if (recordState !== "all" && merchant.record_state !== recordState) return false;
+    return !search || [merchant.company, merchant.name, merchant.work_email, merchant.telegram, merchant.vertical]
+      .join(" ").toLowerCase().includes(search);
+  });
+  elements.managementMerchantList.innerHTML = merchants.length ? merchants.map((merchant) => `
+    <article class="registry-row">
+      <div><strong>${escapeHtml(merchant.company)}</strong><span>${escapeHtml(merchant.name)} · ${escapeHtml(merchant.work_email)}</span></div>
+      <div class="registry-meta"><span class="status-pill status-${escapeHtml(merchant.status)}">${escapeHtml(statusLabel(merchant.status))}</span><span>${escapeHtml(merchant.vertical || "—")}</span></div>
+      <div class="registry-actions">
+        <button class="text-button open-managed-merchant" type="button" data-id="${escapeHtml(merchant.lead_id)}">Open</button>
+        ${merchant.record_state === "active"
+          ? `<button class="text-button archive-managed-merchant" type="button" data-id="${escapeHtml(merchant.lead_id)}">Archive</button>`
+          : `<button class="text-button restore-managed-merchant" type="button" data-id="${escapeHtml(merchant.lead_id)}">Restore</button><button class="text-button danger purge-managed-merchant" type="button" data-id="${escapeHtml(merchant.lead_id)}">Delete</button>`}
+      </div>
+    </article>`).join("") : '<p class="supply-empty">No merchant records match this filter.</p>';
+  elements.managementMerchantList.querySelectorAll(".open-managed-merchant").forEach((button) => button.addEventListener("click", () => openLead(button.dataset.id)));
+  elements.managementMerchantList.querySelectorAll(".archive-managed-merchant").forEach((button) => button.addEventListener("click", () => changeMerchantRecordState(button.dataset.id, "archived", button)));
+  elements.managementMerchantList.querySelectorAll(".restore-managed-merchant").forEach((button) => button.addEventListener("click", () => changeMerchantRecordState(button.dataset.id, "active", button)));
+  elements.managementMerchantList.querySelectorAll(".purge-managed-merchant").forEach((button) => button.addEventListener("click", () => purgeMerchant(button.dataset.id, button)));
+}
+
+function resetManagedProviderForm() {
+  elements.managedProviderForm.reset();
+  elements.managedProviderId.value = "";
+  elements.managedProviderPriority.value = "50";
+  elements.managedProviderTier.value = "standard";
+  elements.managedProviderHeading.textContent = "Add PSP";
+  elements.managedProviderStatusMessage.textContent = "";
+}
+
+function editManagedProvider(providerId) {
+  const provider = state.management.providers.find((item) => item.id === providerId);
+  if (!provider) return;
+  elements.managedProviderId.value = provider.id;
+  elements.managedProviderHeading.textContent = provider.brand_name;
+  elements.managedProviderName.value = provider.brand_name || "";
+  elements.managedProviderLegalName.value = provider.legal_name || "";
+  elements.managedProviderWebsite.value = provider.website || "";
+  elements.managedProviderStatus.value = provider.relationship_status;
+  elements.managedProviderTier.value = provider.relationship_tier || "standard";
+  elements.managedProviderPriority.value = provider.strategic_priority ?? 50;
+  elements.managedProviderMarginIncluded.checked = Boolean(provider.margin_included_default);
+  elements.managedProviderNotes.value = provider.relationship_notes || "";
+  elements.managedProviderForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderManagementProviders() {
+  const providers = state.management.providers;
+  elements.managementProviderList.innerHTML = providers.length ? providers.map((provider) => `
+    <article class="registry-row">
+      <div><strong>${escapeHtml(provider.brand_name)}</strong><span>${escapeHtml(provider.internal_code)} · ${escapeHtml(provider.relationship_tier || "standard")}</span></div>
+      <div class="registry-meta"><span class="status-pill status-${escapeHtml(provider.relationship_status)}">${escapeHtml(statusLabel(provider.relationship_status))}</span><span>${Number(provider.published_route_count || 0)} live / ${Number(provider.route_count || 0)} routes</span></div>
+      <div class="registry-actions"><button class="text-button edit-managed-provider" type="button" data-id="${escapeHtml(provider.id)}">Edit</button><button class="text-button open-managed-provider" type="button" data-id="${escapeHtml(provider.id)}">Offers</button></div>
+    </article>`).join("") : '<p class="supply-empty">No PSP records yet.</p>';
+  elements.managementProviderList.querySelectorAll(".edit-managed-provider").forEach((button) => button.addEventListener("click", () => editManagedProvider(button.dataset.id)));
+  elements.managementProviderList.querySelectorAll(".open-managed-provider").forEach((button) => button.addEventListener("click", () => openSupplyWorkspace(button.dataset.id)));
+  elements.manualOfferProvider.innerHTML = `<option value="">Choose PSP</option>${providers.filter((item) => item.relationship_status !== "archived").map((provider) => `<option value="${escapeHtml(provider.id)}">${escapeHtml(provider.brand_name)} · ${escapeHtml(provider.internal_code)}</option>`).join("")}`;
+}
+
+function resetOrganizationForm() {
+  elements.organizationForm.reset();
+  elements.organizationId.value = "";
+  elements.organizationType.disabled = false;
+  elements.organizationStatus.value = "active";
+  elements.organizationTier.value = "standard";
+  elements.organizationHeading.textContent = "Add agent or merchant company";
+  elements.organizationStatusMessage.textContent = "";
+}
+
+function editOrganization(organizationId) {
+  const organization = state.management.organizations.find((item) => item.id === organizationId);
+  if (!organization) return;
+  elements.organizationId.value = organization.id;
+  elements.organizationType.value = organization.organization_type;
+  elements.organizationType.disabled = true;
+  elements.organizationName.value = organization.name || "";
+  elements.organizationLegalName.value = organization.legal_name || "";
+  elements.organizationStatus.value = organization.status;
+  elements.organizationTier.value = organization.relationship_tier || "standard";
+  elements.organizationNotes.value = organization.relationship_notes || "";
+  elements.organizationHeading.textContent = organization.name;
+  elements.organizationForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderManagementOrganizations() {
+  const organizations = state.management.organizations;
+  const agents = organizations.filter((item) => item.organization_type === "agent" && item.status !== "archived");
+  const merchants = organizations.filter((item) => item.organization_type === "merchant" && item.status !== "archived");
+  elements.organizationList.innerHTML = organizations.length ? organizations.map((organization) => `
+    <article class="registry-row">
+      <div><strong>${escapeHtml(organization.name)}</strong><span>${escapeHtml(organization.internal_code)} · ${escapeHtml(organization.organization_type)} · ${escapeHtml(organization.relationship_tier || "standard")}</span></div>
+      <div class="registry-meta"><span class="status-pill status-${escapeHtml(organization.status)}">${escapeHtml(statusLabel(organization.status))}</span><span>${Number(organization.member_count || 0)} members${organization.organization_type === "agent" ? ` · ${Number(organization.merchant_count || 0)} merchants` : ""}</span></div>
+      <div class="registry-actions"><button class="text-button edit-organization" type="button" data-id="${escapeHtml(organization.id)}">Edit</button></div>
+    </article>`).join("") : '<p class="supply-empty">No agent or merchant organizations yet.</p>';
+  elements.organizationList.querySelectorAll(".edit-organization").forEach((button) => button.addEventListener("click", () => editOrganization(button.dataset.id)));
+  const agentOptions = agents.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join("");
+  const merchantOptions = merchants.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join("");
+  elements.assignmentAgent.innerHTML = `<option value="">Choose agent</option>${agentOptions}`;
+  elements.agentMarginAgent.innerHTML = `<option value="">Choose agent</option>${agentOptions}`;
+  elements.assignmentMerchant.innerHTML = `<option value="">Choose merchant</option>${merchantOptions}`;
+  elements.agentMarginMerchant.innerHTML = `<option value="">All assigned merchants</option>${merchantOptions}`;
+  elements.assignmentList.innerHTML = state.management.assignments.length ? state.management.assignments.map((assignment) => `
+    <article class="registry-row"><div><strong>${escapeHtml(assignment.agent_name)} → ${escapeHtml(assignment.merchant_name)}</strong><span>Portfolio assignment</span></div><div class="registry-meta"><span class="status-pill status-${escapeHtml(assignment.status)}">${escapeHtml(statusLabel(assignment.status))}</span></div></article>`).join("") : '<p class="supply-empty">No merchant portfolios assigned to agents.</p>';
+}
+
+async function saveManagedProvider(event) {
+  event.preventDefault();
+  const submit = elements.managedProviderForm.querySelector('button[type="submit"]');
+  setButtonLoading(submit, true, "Saving…");
+  const { data, error } = await supabase.rpc("save_offerpsp_managed_provider", {
+    p_provider_id: elements.managedProviderId.value || null,
+    p_payload: {
+      brand_name: elements.managedProviderName.value.trim(), legal_name: elements.managedProviderLegalName.value.trim(),
+      website: elements.managedProviderWebsite.value.trim(), relationship_status: elements.managedProviderStatus.value,
+      relationship_tier: elements.managedProviderTier.value, strategic_priority: elements.managedProviderPriority.value,
+      margin_included_default: elements.managedProviderMarginIncluded.checked, relationship_notes: elements.managedProviderNotes.value.trim(),
+    },
+  });
+  setButtonLoading(submit, false);
+  if (error) { elements.managedProviderStatusMessage.textContent = friendlyError(error, "Could not save PSP."); return; }
+  elements.managedProviderStatusMessage.textContent = "PSP saved.";
+  elements.managedProviderId.value = data.id;
+  await Promise.all([loadManagement(), loadSupply()]);
+}
+
+async function createManualOffer(event) {
+  event.preventDefault();
+  const submit = elements.manualOfferForm.querySelector('button[type="submit"]');
+  const providerId = elements.manualOfferProvider.value;
+  const currency = elements.manualOfferLimitCurrency.value.trim().toUpperCase() || elements.manualOfferCurrencies.value.split(",")[0]?.trim().toUpperCase();
+  const flow = elements.manualOfferFlow.value;
+  const rate = optionalNumber(elements.manualOfferRate);
+  const fees = rate === null ? [] : [{ flow: flow === "both" ? "payin" : flow, fee_type: "percent", base_percent: rate, applies_on: "success", source_text: elements.manualOfferSource.value.trim() }];
+  const min = optionalNumber(elements.manualOfferMin);
+  const max = optionalNumber(elements.manualOfferMax);
+  const limits = (min !== null || max !== null) && currency ? [{ flow, currency, minimum_amount: min, maximum_amount: max }] : [];
+  setButtonLoading(submit, true, "Creating…");
+  const { data, error } = await supabase.rpc("create_offerpsp_manual_route", {
+    p_provider_id: providerId,
+    p_payload: {
+      client_title: elements.manualOfferTitle.value.trim(), flow, coverage_scope: "specific",
+      geos: listValue(elements.manualOfferGeos.value), currencies: listValue(elements.manualOfferCurrencies.value),
+      methods: listValue(elements.manualOfferMethods.value), verticals: listValue(elements.manualOfferVerticals.value),
+      fees, limits, settlements: [], source_reference: elements.manualOfferSource.value.trim(),
+      operational_notes: elements.manualOfferSource.value.trim(),
+    },
+  });
+  setButtonLoading(submit, false);
+  if (error) { elements.manualOfferStatus.textContent = friendlyError(error, "Could not create offer draft."); return; }
+  elements.manualOfferStatus.textContent = `Private draft ${data.route_code} created.`;
+  elements.manualOfferForm.reset();
+  await Promise.all([loadManagement(), loadSupply()]);
+  await openSupplyWorkspace(providerId);
+  state.selectedSupplyRouteId = data.route_id;
+  renderSupplyWorkspace();
+}
+
+async function saveOrganization(event) {
+  event.preventDefault();
+  const submit = elements.organizationForm.querySelector('button[type="submit"]');
+  setButtonLoading(submit, true, "Saving…");
+  const { data, error } = await supabase.rpc("save_offerpsp_organization", {
+    p_organization_id: elements.organizationId.value || null,
+    p_organization_type: elements.organizationType.value,
+    p_payload: { name: elements.organizationName.value.trim(), legal_name: elements.organizationLegalName.value.trim(), status: elements.organizationStatus.value, relationship_tier: elements.organizationTier.value, relationship_notes: elements.organizationNotes.value.trim() },
+  });
+  setButtonLoading(submit, false);
+  if (error) { elements.organizationStatusMessage.textContent = friendlyError(error, "Could not save organization."); return; }
+  elements.organizationStatusMessage.textContent = "Organization saved.";
+  elements.organizationId.value = data.id;
+  await loadManagement();
+}
+
+async function saveAgentAssignment(event) {
+  event.preventDefault();
+  const submit = elements.agentAssignmentForm.querySelector('button[type="submit"]');
+  setButtonLoading(submit, true, "Saving…");
+  const { error } = await supabase.rpc("set_offerpsp_agent_assignment", { p_agent_organization_id: elements.assignmentAgent.value, p_merchant_organization_id: elements.assignmentMerchant.value, p_status: elements.assignmentStatus.value });
+  setButtonLoading(submit, false);
+  if (error) return setManagementStatus(friendlyError(error, "Could not save assignment."), "error");
+  await loadManagement();
+  setManagementStatus("Merchant portfolio assignment saved.", "success");
+}
+
+async function saveAgentMargin(event) {
+  event.preventDefault();
+  const submit = elements.agentMarginForm.querySelector('button[type="submit"]');
+  setButtonLoading(submit, true, "Saving…");
+  const { error } = await supabase.rpc("set_offerpsp_agent_margin_policy", {
+    p_agent_organization_id: elements.agentMarginAgent.value, p_merchant_organization_id: elements.agentMarginMerchant.value || null,
+    p_flow: elements.agentMarginFlow.value, p_mode: elements.agentMarginMode.value,
+    p_percent_value: optionalNumber(elements.agentMarginPercent), p_fixed_value: optionalNumber(elements.agentMarginFixed),
+    p_fixed_currency: elements.agentMarginCurrency.value.trim() || null, p_notes: elements.agentMarginNotes.value.trim() || null,
+  });
+  setButtonLoading(submit, false);
+  if (error) return setManagementStatus(friendlyError(error, "Could not save agent margin."), "error");
+  elements.agentMarginForm.reset();
+  await loadManagement();
+  setManagementStatus("New agent margin version is active; the previous version was closed.", "success");
 }
 
 async function loadSupply() {
@@ -677,6 +1013,7 @@ function renderSupplyWorkspace() {
   elements.supplyLegalName.value = provider.legal_name || "";
   elements.supplyWebsite.value = provider.website || "";
   elements.supplyRelationshipStatus.value = provider.relationship_status || "prospect";
+  elements.supplyRelationshipTier.value = provider.relationship_tier || "standard";
   elements.supplyPriority.value = provider.strategic_priority ?? 50;
   elements.supplyMarginIncluded.checked = Boolean(provider.margin_included_default);
   elements.supplyRelationshipNotes.value = provider.relationship_notes || "";
@@ -733,11 +1070,24 @@ function marginDescription(policy) {
 
 function renderSupplyMargins(policies, routes) {
   const active = policies.filter((policy) => policy.active);
-  elements.supplyMarginList.innerHTML = active.length ? active.map((policy) => {
+  elements.supplyMarginList.innerHTML = policies.length ? policies.slice(0, 20).map((policy) => {
     const route = routes.find((item) => item.id === policy.route_id);
-    return `<article class="margin-card"><div><strong>${escapeHtml(route?.client_title || "All PSP routes")}</strong><span>${escapeHtml(policy.flow)} · ${escapeHtml(policy.mode)}</span></div><b>${escapeHtml(marginDescription(policy))}</b></article>`;
-  }).join("") : '<p class="supply-empty">No active margin policy. Publication is blocked unless the PSP rate already includes commission.</p>';
+    return `<article class="margin-card${policy.active ? "" : " is-inactive"}"><div><strong>${escapeHtml(route?.client_title || "All PSP routes")}</strong><span>${escapeHtml(policy.flow)} · ${escapeHtml(policy.mode)} · ${policy.active ? "current" : `closed ${escapeHtml(formatDate(policy.effective_to))}`}</span></div><b>${escapeHtml(marginDescription(policy))}</b>${policy.active ? `<button class="text-button deactivate-margin" type="button" data-id="${escapeHtml(policy.id)}">Deactivate</button>` : ""}</article>`;
+  }).join("") : '<p class="supply-empty">No margin history. Publication is blocked unless the PSP rate already includes commission.</p>';
+  if (!active.length && policies.length) elements.supplyMarginList.insertAdjacentHTML("afterbegin", '<p class="supply-empty">No active margin policy.</p>');
+  elements.supplyMarginList.querySelectorAll(".deactivate-margin").forEach((button) => button.addEventListener("click", () => deactivateSupplyMargin(button.dataset.id, button)));
   elements.supplyMarginRoute.innerHTML = `<option value="">All PSP routes</option>${routes.filter((route) => route.status !== "archived").map((route) => `<option value="${escapeHtml(route.id)}">${escapeHtml(route.internal_code)} · ${escapeHtml(route.client_title)}</option>`).join("")}`;
+}
+
+async function deactivateSupplyMargin(policyId, button) {
+  const reason = window.prompt("Why is this margin being deactivated?");
+  if (!reason?.trim()) return;
+  setButtonLoading(button, true, "Saving…");
+  const { error } = await supabase.rpc("deactivate_offerpsp_margin_policy", { p_policy_id: policyId, p_reason: reason.trim() });
+  setButtonLoading(button, false);
+  if (error) return setSupplyWorkspaceStatus(friendlyError(error, "Could not deactivate margin."), "error");
+  await Promise.all([loadSupplyWorkspace(), loadManagement()]);
+  setSupplyWorkspaceStatus("Margin policy deactivated; its history was retained.", "success");
 }
 
 function renderSupplyRoutes(routes) {
@@ -797,6 +1147,7 @@ function renderSupplyRouteEditor() {
   elements.supplySettlementRows.replaceChildren(...(route.settlements || []).map(createSupplySettlementRow));
   const editable = !["published", "paused"].includes(route.status);
   elements.saveSupplyRouteButton.disabled = !editable;
+  elements.reviseSupplyRouteButton.classList.toggle("is-hidden", !["published", "paused"].includes(route.status));
   elements.pauseSupplyRouteButton.classList.toggle("is-hidden", route.status !== "published");
   elements.resumeSupplyRouteButton.classList.toggle("is-hidden", route.status !== "paused");
   elements.archiveSupplyRouteButton.classList.toggle("is-hidden", !["draft", "review", "paused"].includes(route.status));
@@ -892,11 +1243,12 @@ function renderSupplyHistory(batches, activity) {
 async function saveSupplyProvider() {
   if (!state.selectedSupplyProviderId) return;
   setButtonLoading(elements.saveSupplyProviderButton, true, "Saving…");
-  const { error } = await supabase.rpc("save_offerpsp_provider", {
+  const { error } = await supabase.rpc("save_offerpsp_managed_provider", {
     p_provider_id: state.selectedSupplyProviderId,
     p_payload: {
       brand_name: elements.supplyBrandName.value.trim(), legal_name: elements.supplyLegalName.value.trim(),
       website: elements.supplyWebsite.value.trim(), relationship_status: elements.supplyRelationshipStatus.value,
+      relationship_tier: elements.supplyRelationshipTier.value,
       strategic_priority: elements.supplyPriority.value, margin_included_default: elements.supplyMarginIncluded.checked,
       relationship_notes: elements.supplyRelationshipNotes.value.trim(),
     },
@@ -905,6 +1257,20 @@ async function saveSupplyProvider() {
   if (error) return setSupplyWorkspaceStatus(friendlyError(error, "Could not save the PSP profile."), "error");
   await Promise.all([loadSupply(), loadSupplyWorkspace()]);
   setSupplyWorkspaceStatus("PSP profile saved.", "success");
+}
+
+async function reviseSupplyRoute() {
+  if (!state.selectedSupplyRouteId) return;
+  const current = (state.supplyWorkspace?.routes || []).find((route) => route.id === state.selectedSupplyRouteId);
+  if (!current || !window.confirm(`Create an editable revision of ${current.internal_code}? The current live route will stay unchanged.`)) return;
+  setButtonLoading(elements.reviseSupplyRouteButton, true, "Creating…");
+  const { data, error } = await supabase.rpc("revise_offerpsp_route", { p_route_id: state.selectedSupplyRouteId });
+  setButtonLoading(elements.reviseSupplyRouteButton, false);
+  if (error) return setSupplyWorkspaceStatus(friendlyError(error, "Could not create route revision."), "error");
+  await Promise.all([loadSupply(), loadSupplyWorkspace()]);
+  state.selectedSupplyRouteId = data.route_id;
+  renderSupplyWorkspace();
+  setSupplyWorkspaceStatus(`Editable revision created in rate card v${data.batch_version}.`, "success");
 }
 
 async function saveSupplyContact(event) {
@@ -1142,6 +1508,7 @@ function filteredLeads() {
   const status = elements.statusFilter.value;
 
   return state.leads.filter((lead) => {
+    if (lead.record_state === "archived") return false;
     const matchesStatus = status === "all" || lead.status === status;
     if (!matchesStatus) return false;
     if (!search) return true;
@@ -1160,8 +1527,9 @@ function filteredLeads() {
 }
 
 function renderStats() {
-  const count = (...statuses) => state.leads.filter((lead) => statuses.includes(lead.status)).length;
-  const total = state.leads.length;
+  const activeLeads = state.leads.filter((lead) => lead.record_state !== "archived");
+  const count = (...statuses) => activeLeads.filter((lead) => statuses.includes(lead.status)).length;
+  const total = activeLeads.length;
   const qualified = count(
     "qualified", "matching", "matched", "shortlist_ready", "shared", "negotiating", "won",
   );
@@ -1169,7 +1537,7 @@ function renderStats() {
   const introduced = count("shared", "negotiating", "won");
   const won = count("won", "closed");
   const conversion = total ? Math.round((won / total) * 100) : 0;
-  elements.statTotal.textContent = state.leads.length;
+  elements.statTotal.textContent = total;
   elements.statNew.textContent = count("new", "reviewing", "qualifying");
   elements.statMatching.textContent = count("matching", "matched");
   elements.statReady.textContent = count("shortlist_ready", "shared");
@@ -1254,6 +1622,31 @@ function renderProfile(lead) {
       <dd>${isHtml ? value : escapeHtml(value)}</dd>
     </div>
   `).join("");
+  renderMerchantRecord(lead);
+}
+
+function renderMerchantRecord(lead) {
+  const archived = lead.record_state === "archived";
+  elements.merchantRecordState.textContent = archived ? "archived" : "active";
+  elements.merchantRecordState.className = `status-pill status-${archived ? "archived" : "active"}`;
+  elements.merchantRecordCompany.value = lead.company || "";
+  elements.merchantRecordName.value = lead.name || "";
+  elements.merchantRecordEmail.value = lead.work_email || "";
+  elements.merchantRecordTelegram.value = lead.telegram || "";
+  elements.merchantRecordUrl.value = lead.company_url || "";
+  elements.merchantRecordVertical.value = lead.vertical || "";
+  elements.merchantRecordGeos.value = lead.geos || "";
+  elements.merchantRecordVolume.value = lead.monthly_volume || "";
+  elements.merchantRecordMethods.value = lead.methods || "";
+  elements.merchantRecordDetails.value = lead.details || "";
+  elements.archiveMerchantButton.classList.toggle("is-hidden", archived);
+  elements.restoreMerchantButton.classList.toggle("is-hidden", !archived);
+  elements.purgeMerchantButton.classList.toggle("is-hidden", !archived || state.staff?.role !== "owner");
+  elements.saveMerchantRecordButton.disabled = archived;
+  elements.merchantRecordForm.querySelectorAll("input, textarea").forEach((input) => { input.disabled = archived; });
+  [elements.drawerStatus, elements.drawerScore, elements.drawerGrade, elements.drawerOwner, elements.saveLeadButton]
+    .forEach((control) => { control.disabled = archived; });
+  elements.merchantRecordStatus.textContent = archived && lead.archive_reason ? `Archived: ${lead.archive_reason}` : "";
 }
 
 const DOSSIER_REQUIRED_FIELDS = [
@@ -2024,6 +2417,66 @@ async function saveLeadChanges() {
   setDrawerStatus(activityError ? "Lead saved, but the activity record failed." : "Changes saved.", activityError ? "error" : "success");
 }
 
+async function saveMerchantRecord() {
+  if (!state.selectedLead) return;
+  setButtonLoading(elements.saveMerchantRecordButton, true, "Saving…");
+  const { data, error } = await supabase.rpc("save_offerpsp_managed_merchant", {
+    p_lead_id: state.selectedLead.lead_id,
+    p_payload: {
+      company: elements.merchantRecordCompany.value.trim(), name: elements.merchantRecordName.value.trim(),
+      work_email: elements.merchantRecordEmail.value.trim(), telegram: elements.merchantRecordTelegram.value.trim(),
+      company_url: elements.merchantRecordUrl.value.trim(), vertical: elements.merchantRecordVertical.value.trim(),
+      geos: elements.merchantRecordGeos.value.trim(), monthly_volume: elements.merchantRecordVolume.value.trim(),
+      methods: elements.merchantRecordMethods.value.trim(), details: elements.merchantRecordDetails.value.trim(),
+    },
+  });
+  setButtonLoading(elements.saveMerchantRecordButton, false);
+  if (error) { elements.merchantRecordStatus.textContent = friendlyError(error, "Could not save merchant."); return; }
+  state.selectedLead = data;
+  state.leads = state.leads.map((lead) => lead.lead_id === data.lead_id ? data : lead);
+  elements.drawerCompany.textContent = cleanText(data.company);
+  elements.drawerContact.textContent = `${cleanText(data.name)} · ${cleanText(data.work_email)}`;
+  renderProfile(data);
+  renderLeads();
+  await Promise.all([loadManagement(), loadActivities(data.lead_id)]);
+  elements.merchantRecordStatus.textContent = "Merchant record saved.";
+}
+
+async function changeMerchantRecordState(leadId, recordState, button) {
+  const merchant = state.management.merchants.find((item) => item.lead_id === leadId)
+    || state.leads.find((item) => item.lead_id === leadId);
+  if (!merchant) return;
+  let reason = null;
+  if (recordState === "archived") {
+    reason = window.prompt("Why is this merchant being archived?", "Not relevant / no active opportunity");
+    if (!reason?.trim()) return;
+  } else if (!window.confirm(`Restore ${merchant.company} to active work?`)) return;
+  setButtonLoading(button, true, "Saving…");
+  const { data, error } = await supabase.rpc("set_offerpsp_merchant_record_state", { p_lead_id: leadId, p_record_state: recordState, p_reason: reason?.trim() || null });
+  setButtonLoading(button, false);
+  if (error) { setManagementStatus(friendlyError(error, "Could not change merchant state."), "error"); return; }
+  state.leads = state.leads.map((lead) => lead.lead_id === leadId ? data : lead);
+  if (state.selectedLead?.lead_id === leadId) { state.selectedLead = data; renderProfile(data); elements.drawerStatus.value = data.status; }
+  await Promise.all([loadLeads(), loadManagement()]);
+  setManagementStatus(recordState === "archived" ? "Merchant archived and removed from active work." : "Merchant restored to active work.", "success");
+}
+
+async function purgeMerchant(leadId, button) {
+  const merchant = state.management.merchants.find((item) => item.lead_id === leadId)
+    || state.leads.find((item) => item.lead_id === leadId);
+  if (!merchant) return;
+  const expected = `DELETE ${merchant.company}`;
+  const confirmation = window.prompt(`This permanently deletes the merchant and its operational data. Type exactly:\n${expected}`);
+  if (confirmation !== expected) return;
+  setButtonLoading(button, true, "Deleting…");
+  const { error } = await supabase.rpc("purge_offerpsp_merchant", { p_lead_id: leadId, p_confirmation: confirmation });
+  setButtonLoading(button, false);
+  if (error) { setManagementStatus(friendlyError(error, "Could not permanently delete merchant."), "error"); return; }
+  if (state.selectedLead?.lead_id === leadId) closeDrawer();
+  await Promise.all([loadLeads(), loadManagement()]);
+  setManagementStatus(`${merchant.company} permanently deleted. The deletion audit event was retained.`, "success");
+}
+
 async function addNote() {
   if (!state.selectedLead) return;
   const body = elements.noteInput.value.trim();
@@ -2197,6 +2650,16 @@ elements.signOutButton.addEventListener("click", async () => {
 
 elements.refreshButton.addEventListener("click", loadLeads);
 elements.refreshSupplyButton.addEventListener("click", loadSupply);
+elements.refreshManagementButton.addEventListener("click", loadManagement);
+elements.managementMerchantSearch.addEventListener("input", renderManagementMerchants);
+elements.managementMerchantState.addEventListener("change", renderManagementMerchants);
+elements.managedProviderForm.addEventListener("submit", saveManagedProvider);
+elements.resetManagedProviderButton.addEventListener("click", resetManagedProviderForm);
+elements.manualOfferForm.addEventListener("submit", createManualOffer);
+elements.organizationForm.addEventListener("submit", saveOrganization);
+elements.resetOrganizationButton.addEventListener("click", resetOrganizationForm);
+elements.agentAssignmentForm.addEventListener("submit", saveAgentAssignment);
+elements.agentMarginForm.addEventListener("submit", saveAgentMargin);
 elements.coverageSearch.addEventListener("input", renderSupplyCoverage);
 elements.coverageStatusFilter.addEventListener("change", renderSupplyCoverage);
 elements.rateCardFileInput.addEventListener("change", async () => {
@@ -2223,11 +2686,16 @@ elements.addSupplySettlementButton.addEventListener("click", () => elements.supp
 elements.pauseSupplyRouteButton.addEventListener("click", () => setSupplyRouteStatus("paused", elements.pauseSupplyRouteButton));
 elements.resumeSupplyRouteButton.addEventListener("click", () => setSupplyRouteStatus("published", elements.resumeSupplyRouteButton));
 elements.archiveSupplyRouteButton.addEventListener("click", () => setSupplyRouteStatus("archived", elements.archiveSupplyRouteButton));
+elements.reviseSupplyRouteButton.addEventListener("click", reviseSupplyRoute);
 elements.searchInput.addEventListener("input", renderLeads);
 elements.statusFilter.addEventListener("change", renderLeads);
 elements.closeDrawerButton.addEventListener("click", closeDrawer);
 elements.drawerBackdrop.addEventListener("click", closeDrawer);
 elements.saveLeadButton.addEventListener("click", saveLeadChanges);
+elements.saveMerchantRecordButton.addEventListener("click", saveMerchantRecord);
+elements.archiveMerchantButton.addEventListener("click", () => state.selectedLead && changeMerchantRecordState(state.selectedLead.lead_id, "archived", elements.archiveMerchantButton));
+elements.restoreMerchantButton.addEventListener("click", () => state.selectedLead && changeMerchantRecordState(state.selectedLead.lead_id, "active", elements.restoreMerchantButton));
+elements.purgeMerchantButton.addEventListener("click", () => state.selectedLead && purgeMerchant(state.selectedLead.lead_id, elements.purgeMerchantButton));
 elements.saveDossierButton.addEventListener("click", saveDossier);
 elements.addNoteButton.addEventListener("click", addNote);
 elements.addTaskButton.addEventListener("click", addTask);
@@ -2249,6 +2717,14 @@ document.querySelectorAll("[data-supply-target]").forEach((button) => {
     document.getElementById(button.dataset.supplyTarget)?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 });
+document.querySelectorAll("[data-management-tab]").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll("[data-management-tab]").forEach((item) => item.classList.toggle("is-active", item === button));
+    const selected = button.dataset.managementTab;
+    document.querySelectorAll(".management-view").forEach((view) => view.classList.add("is-hidden"));
+    document.getElementById(`management${selected.charAt(0).toUpperCase()}${selected.slice(1)}`)?.classList.remove("is-hidden");
+  });
+});
 elements.menuButton.addEventListener("click", () => elements.sidebar.classList.toggle("is-open"));
 window.addEventListener("offerpsp:languagechange", () => {
   document.querySelectorAll("[data-default-label]").forEach((button) => {
@@ -2263,6 +2739,7 @@ window.addEventListener("offerpsp:languagechange", () => {
   renderStats();
   renderLeads();
   renderSupply();
+  renderManagement();
   if (state.supplyWorkspace) renderSupplyWorkspace();
   if (state.selectedLead) {
     renderProfile(state.selectedLead);

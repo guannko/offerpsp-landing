@@ -125,6 +125,29 @@ Status: `VERIFIED` as local code and database behavior only; this is not a produ
 - [x] Batch route/anomaly counts and guarded publish action.
 - [x] Matching v2 and current pipeline statuses in the lead drawer.
 
+### Entity lifecycle and operations control center — local delivery 2026-08-02
+
+Status: `VERIFIED` locally. The migration and frontend are not deployed to production because the
+Supabase OAuth connection is currently unavailable in Codex.
+
+- [x] Generic PSP register: create, edit, rank as top/core/standard/watchlist, change relationship
+  status and archive without losing offer or deal history.
+- [x] Generic private offer creation for any PSP; draft/review offers remain directly editable.
+- [x] Published or paused offers are changed through a new draft revision so the live route is not
+  silently overwritten; routes can be paused or archived through the existing supply workspace.
+- [x] Provider-wide and route-specific OfferPSP margin versions. Changing `0.5 → 0.3 → 1.1`
+  closes the previous effective version and activates the new version without deleting history.
+- [x] Merchant source records are editable. Merchants can be archived and restored; archived junk
+  leads can be permanently deleted only by an owner after an exact confirmation phrase.
+- [x] Permanent deletion is blocked for won merchants and merchants with non-void commission
+  history. The deletion audit event remains after operational data is removed.
+- [x] Agent and merchant organizations can be created, edited, ranked, paused or archived.
+- [x] Merchant organizations can be assigned to agents and receive versioned resale-margin rules.
+- [x] Private audit records cover provider, offer, merchant, organization, assignment and margin
+  changes; management RPCs are staff-only and permanent merchant deletion is owner-only.
+- [x] Desktop and 390px mobile visual verification completed without horizontal overflow.
+- [x] All 19 migrations, access-boundary checks, legacy regressions and full business E2E fixtures pass.
+
 ### Operational workspace — local delivery 2026-08-01
 
 Status: `PARTIAL` production verification. Migration
@@ -195,7 +218,7 @@ a normal authenticated user was denied. Mutation E2E remains locally verified on
 
 Status: `VERIFIED` on 2026-08-02 in an ephemeral PostgreSQL-compatible PGlite database.
 
-- [x] All 18 migrations, including rate-card reprocessing, route-level publication, the coverage matrix and the operational workspaces,
+- [x] All 19 migrations, including rate-card reprocessing, route-level publication, the coverage matrix, operational workspaces and entity lifecycle,
   apply in dependency order.
 - [x] `authenticated` has lead UPDATE/DELETE privileges while `anon` does not.
 - [x] BRPay parser v3 imports 14 real draft routes; only four blocking checks remain in the two
@@ -335,7 +358,9 @@ The first operational UI is implemented locally. Production rollout and daily-us
 
 ### P1 — Agent operations
 
-- [ ] Staff editor for agent organizations, members, merchant assignments and agent margin policies.
+- [x] Staff editor for agent/merchant organizations, relationship tier/status, merchant assignments
+  and versioned agent margin policies — locally verified; production rollout pending.
+- [ ] Organization-member and role management UI.
 - [ ] Agent onboarding/invitation flow and managed-client switcher optimized for larger portfolios.
 - [ ] Agent commission approval, earned/paid workflow and downloadable statements.
 - [ ] Co-branded agent workspace settings; white-label domains remain a later product decision.
@@ -373,7 +398,8 @@ The local parser accepts copied Telegram text, but no Telegram-triggered workflo
 - Do not apply production migrations from an uncommitted working tree.
 - Import source offers as drafts only.
 - Do not publish a batch with open `error` anomalies.
-- Do not configure or publish Antarex pricing without Boris providing the margin value.
+- Do not hard-code Antarex or any other PSP margin in source code. Configure margin through the
+  versioned staff policy and verify the effective client rate before publication.
 - A real client test must use a different authenticated account/session from staff.
 - The legacy public `psp_providers` table remains in place until n8n dependencies are
   verified and migrated safely.
