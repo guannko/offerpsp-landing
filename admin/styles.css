@@ -575,9 +575,123 @@ textarea::placeholder {
 
 .supply-import-card,
 .supply-register,
-.batch-register {
+.batch-register,
+.coverage-register {
   padding: 24px 22px;
 }
+
+.coverage-register {
+  border-bottom: 1px solid var(--line);
+}
+
+.coverage-head {
+  align-items: flex-end;
+  gap: 18px;
+}
+
+.coverage-head > div:first-child p:last-child {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.coverage-filters {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 210px;
+  gap: 8px;
+  width: min(520px, 50%);
+}
+
+.coverage-filters input,
+.coverage-filters select {
+  min-height: 38px;
+}
+
+.coverage-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.coverage-summary article {
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, .025);
+}
+
+.coverage-summary span,
+.coverage-summary strong {
+  display: block;
+}
+
+.coverage-summary span {
+  color: var(--muted);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.coverage-summary strong {
+  margin-top: 4px;
+  color: var(--paper);
+  font-size: 17px;
+}
+
+.coverage-table-wrap {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  overflow-x: auto;
+}
+
+.coverage-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9px;
+}
+
+.coverage-table th,
+.coverage-table td {
+  padding: 11px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.coverage-table th {
+  color: #737987;
+  background: rgba(255, 255, 255, .018);
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.coverage-table tr:last-child td { border-bottom: 0; }
+.coverage-row { cursor: pointer; }
+.coverage-row:hover,
+.coverage-row:focus { background: rgba(255, 255, 255, .035); outline: none; }
+.coverage-row strong,
+.coverage-row small { display: block; }
+.coverage-row strong { color: var(--paper); font-size: 10px; }
+.coverage-row small { margin-top: 3px; color: var(--muted); font-size: 8px; line-height: 1.35; }
+
+.coverage-readiness {
+  display: inline-flex;
+  padding: 4px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.coverage-readiness.is-live { color: var(--mint); border-color: rgba(167, 243, 208, .24); background: rgba(167, 243, 208, .06); }
+.coverage-readiness.is-blocked,
+.coverage-readiness.is-margin { color: #ff9a85; border-color: rgba(255, 141, 120, .24); background: rgba(255, 141, 120, .06); }
+.coverage-readiness.is-stale,
+.coverage-readiness.is-paused { color: #f4c875; border-color: rgba(244, 200, 117, .24); background: rgba(244, 200, 117, .06); }
+.coverage-readiness.is-review { color: #b8c4ff; border-color: rgba(184, 196, 255, .22); background: rgba(184, 196, 255, .05); }
 
 .supply-import-card {
   display: grid;
@@ -1756,6 +1870,9 @@ tbody tr:last-child td {
     border-bottom: 1px solid var(--line);
   }
 
+  .coverage-head { align-items: stretch; flex-direction: column; }
+  .coverage-filters { width: 100%; }
+
   .route-workbench { grid-template-columns: 270px minmax(0, 1fr); }
   .component-row.fee-row,
   .component-row.limit-row,
@@ -1876,6 +1993,39 @@ tbody tr:last-child td {
 
   .provider-list {
     grid-template-columns: 1fr;
+  }
+
+  .coverage-filters,
+  .coverage-summary { grid-template-columns: 1fr; }
+  .coverage-table-wrap { border: 0; overflow: visible; }
+  .coverage-table thead { display: none; }
+  .coverage-table,
+  .coverage-table tbody,
+  .coverage-table tr,
+  .coverage-table td { display: block; width: 100%; }
+  .coverage-table tr {
+    margin-bottom: 9px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, .02);
+  }
+  .coverage-table td {
+    display: grid;
+    grid-template-columns: 82px minmax(0, 1fr);
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .coverage-table td:last-child { border-bottom: 0; }
+  .coverage-table td > * { min-width: 0; }
+  .coverage-table .coverage-readiness { max-width: 100%; white-space: normal; }
+  .coverage-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 8px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
   }
 
   .route-workbench { grid-template-columns: 1fr; }

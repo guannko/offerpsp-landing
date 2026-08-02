@@ -50,6 +50,8 @@ const state = {
   supply: {
     providers: [],
     batches: [],
+    coverage: [],
+    coverageAvailable: true,
   },
   supplyWorkspace: null,
   selectedSupplyProviderId: null,
@@ -109,6 +111,13 @@ const elements = {
   supplyEmptyState: document.getElementById("supplyEmptyState"),
   providerList: document.getElementById("providerList"),
   batchList: document.getElementById("batchList"),
+  coverageSearch: document.getElementById("coverageSearch"),
+  coverageStatusFilter: document.getElementById("coverageStatusFilter"),
+  coverageSummary: document.getElementById("coverageSummary"),
+  coverageUnavailable: document.getElementById("coverageUnavailable"),
+  coverageEmpty: document.getElementById("coverageEmpty"),
+  coverageTableWrap: document.getElementById("coverageTableWrap"),
+  coverageTableBody: document.getElementById("coverageTableBody"),
   supplyDrawerBackdrop: document.getElementById("supplyDrawerBackdrop"),
   supplyDrawer: document.getElementById("supplyDrawer"),
   closeSupplyDrawerButton: document.getElementById("closeSupplyDrawerButton"),
@@ -427,7 +436,11 @@ async function loadSupply() {
   elements.providerList.classList.add("is-hidden");
   elements.refreshSupplyButton.disabled = true;
 
-  const { data, error } = await supabase.rpc("list_offerpsp_supply");
+  const [supplyResult, coverageResult] = await Promise.all([
+    supabase.rpc("list_offerpsp_supply"),
+    supabase.rpc("get_offerpsp_supply_coverage"),
+  ]);
+  const { data, error } = supplyResult;
 
   elements.refreshSupplyButton.disabled = false;
   elements.supplyLoadingState.classList.add("is-hidden");
@@ -442,6 +455,8 @@ async function loadSupply() {
   state.supply = {
     providers: Array.isArray(data?.providers) ? data.providers : [],
     batches: Array.isArray(data?.batches) ? data.batches : [],
+    coverage: Array.isArray(coverageResult.data?.routes) ? coverageResult.data.routes : [],
+    coverageAvailable: !coverageResult.error,
   };
   renderSupply();
 }
@@ -476,6 +491,7 @@ function renderSupply() {
 
   if (!batches.length) {
     elements.batchList.innerHTML = '<div class="supply-empty">No import batches yet.</div>';
+    renderSupplyCoverage();
     return;
   }
 
@@ -503,6 +519,91 @@ function renderSupply() {
   elements.batchList.querySelectorAll(".publish-batch-button").forEach((button) => {
     button.addEventListener("click", () => publishRateCard(button.dataset.batchId, button));
   });
+  renderSupplyCoverage();
+}
+
+function coverageReadiness(route) {
+  if (Number(route.open_error_count || 0) > 0) return { key: "blocked", label: "Blocked by errors" };
+  if (!route.margin_ready) return { key: "margin", label: "Margin required" };
+  if (route.status === "published") return route.is_stale
+    ? { key: "stale", label: "Published · stale" }
+    : { key: "live", label: "Published · live" };
+  if (route.status === "paused") return { key: "paused", label: "Paused" };
+  return { key: "review", label: route.is_stale ? "Review · stale" : "Ready for review" };
+}
+
+function routeCoverage(route) {
+  if (route.geos?.length) return route.geos.join(", ");
+  if (route.coverage_scope === "global") return "Worldwide";
+  if (route.coverage_scope === "regional") return "Regional";
+  return "Not specified";
+}
+
+function renderSupplyCoverage() {
+  const available = state.supply.coverageAvailable;
+  elements.coverageUnavailable.classList.toggle("is-hidden", available);
+  elements.coverageTableWrap.classList.toggle("is-hidden", !available);
+  elements.coverageSummary.classList.toggle("is-hidden", !available);
+  if (!available) {
+    elements.coverageEmpty.classList.add("is-hidden");
+    return;
+  }
+
+  const search = elements.coverageSearch.value.trim().toLowerCase();
+  const statusFilter = elements.coverageStatusFilter.value;
+  const routes = state.supply.coverage.filter((route) => {
+    const readiness = coverageReadiness(route);
+    const statusMatches = statusFilter === "all"
+      || (statusFilter === "published" && route.status === "published")
+      || (statusFilter === "draft" && ["draft", "review"].includes(route.status))
+      || (statusFilter === "attention" && ["blocked", "margin", "stale", "paused"].includes(readiness.key));
+    if (!statusMatches) return false;
+    if (!search) return true;
+    return [
+      routeCoverage(route), route.provider_name, route.provider_code, route.route_code,
+      route.client_title, route.flow, ...(route.currencies || []), ...(route.methods || []),
+      ...(route.verticals || []), ...(route.traffic_types || []), readiness.label,
+    ].join(" ").toLowerCase().includes(search);
+  });
+
+  const uniqueValues = (key) => new Set(routes.flatMap((route) => route[key] || [])).size;
+  const geos = new Set(routes.flatMap((route) => route.geos?.length ? route.geos : [routeCoverage(route)])).size;
+  elements.coverageSummary.innerHTML = [
+    ["Routes", routes.length], ["GEOs", geos], ["Currencies", uniqueValues("currencies")],
+    ["Methods", uniqueValues("methods")], ["PSP", new Set(routes.map((route) => route.provider_id)).size],
+  ].map(([label, value]) => `<article><span>${escapeHtml(label)}</span><strong>${Number(value)}</strong></article>`).join("");
+
+  elements.coverageEmpty.classList.toggle("is-hidden", routes.length > 0);
+  elements.coverageTableWrap.classList.toggle("is-hidden", routes.length === 0);
+  elements.coverageTableBody.innerHTML = routes.map((route) => {
+    const readiness = coverageReadiness(route);
+    return `<tr class="coverage-row" tabindex="0" data-provider-id="${escapeHtml(route.provider_id)}" data-route-id="${escapeHtml(route.route_id)}">
+      <td data-label="Coverage"><strong>${escapeHtml(routeCoverage(route))}</strong><small>${escapeHtml(route.coverage_scope)}</small></td>
+      <td data-label="PSP / route"><strong>${escapeHtml(route.provider_name)}</strong><small>${escapeHtml(route.route_code)} · ${escapeHtml(route.client_title)}</small></td>
+      <td data-label="Flow">${escapeHtml(route.flow)}</td>
+      <td data-label="Currencies">${escapeHtml((route.currencies || []).join(", ") || "—")}</td>
+      <td data-label="Methods">${escapeHtml((route.methods || []).join(", ") || "—")}</td>
+      <td data-label="Verticals">${escapeHtml((route.verticals || []).join(", ") || "Not confirmed")}</td>
+      <td data-label="Readiness"><span class="coverage-readiness is-${escapeHtml(readiness.key)}">${escapeHtml(readiness.label)}</span>${Number(route.open_warning_count || 0) ? `<small>${Number(route.open_warning_count)} warnings</small>` : ""}</td>
+    </tr>`;
+  }).join("");
+
+  elements.coverageTableBody.querySelectorAll(".coverage-row").forEach((row) => {
+    const open = () => openCoverageRoute(row.dataset.providerId, row.dataset.routeId);
+    row.addEventListener("click", open);
+    row.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); open(); }
+    });
+  });
+}
+
+async function openCoverageRoute(providerId, routeId) {
+  await openSupplyWorkspace(providerId);
+  if (!state.supplyWorkspace) return;
+  state.selectedSupplyRouteId = routeId;
+  renderSupplyRoutes((state.supplyWorkspace.routes || []).filter((route) => route.status !== "archived"));
+  renderSupplyRouteEditor();
+  document.getElementById("supplyRoutes")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function setSupplyWorkspaceStatus(message = "", tone = "") {
@@ -2096,6 +2197,8 @@ elements.signOutButton.addEventListener("click", async () => {
 
 elements.refreshButton.addEventListener("click", loadLeads);
 elements.refreshSupplyButton.addEventListener("click", loadSupply);
+elements.coverageSearch.addEventListener("input", renderSupplyCoverage);
+elements.coverageStatusFilter.addEventListener("change", renderSupplyCoverage);
 elements.rateCardFileInput.addEventListener("change", async () => {
   try {
     await readRateCardFile(elements.rateCardFileInput.files?.[0]);

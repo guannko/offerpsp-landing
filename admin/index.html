@@ -234,6 +234,34 @@
           </div>
         </div>
 
+        <div class="coverage-register">
+          <div class="supply-section-head coverage-head">
+            <div>
+              <p class="eyebrow">Coverage matrix</p>
+              <h3>What we can offer now</h3>
+              <p>Cross-provider view of active GEOs, currencies, methods and verticals.</p>
+            </div>
+            <div class="coverage-filters">
+              <input id="coverageSearch" type="search" placeholder="Search GEO, currency, method or PSP">
+              <select id="coverageStatusFilter" aria-label="Filter coverage routes">
+                <option value="all">All active routes</option>
+                <option value="published">Published only</option>
+                <option value="draft">Draft and review</option>
+                <option value="attention">Needs attention</option>
+              </select>
+            </div>
+          </div>
+          <div id="coverageSummary" class="coverage-summary"></div>
+          <div id="coverageUnavailable" class="supply-empty is-hidden">Coverage matrix is unavailable until its database migration is applied.</div>
+          <div id="coverageEmpty" class="supply-empty is-hidden">No routes match these filters.</div>
+          <div id="coverageTableWrap" class="coverage-table-wrap">
+            <table class="coverage-table">
+              <thead><tr><th>Coverage</th><th>PSP / route</th><th>Flow</th><th>Currencies</th><th>Methods</th><th>Verticals</th><th>Readiness</th></tr></thead>
+              <tbody id="coverageTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
         <div class="batch-register">
           <div class="supply-section-head">
             <div>

@@ -110,6 +110,7 @@ async function applyMigrations() {
     "20260801_offerpsp_supply_operations.sql",
     "20260802_offerpsp_rate_card_reparse.sql",
     "20260802_offerpsp_route_level_publication.sql",
+    "20260802_offerpsp_supply_coverage_matrix.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -190,10 +191,12 @@ async function verifySupplyOperationGrants() {
     has_function_privilege('authenticated', 'public.save_offerpsp_route(uuid,jsonb)', 'EXECUTE') as authenticated_save,
     has_function_privilege('anon', 'public.save_offerpsp_route(uuid,jsonb)', 'EXECUTE') as anon_save,
     has_function_privilege('authenticated', 'public.resolve_offerpsp_route_anomaly(uuid,text,text)', 'EXECUTE') as authenticated_resolve,
-    has_function_privilege('anon', 'public.resolve_offerpsp_route_anomaly(uuid,text,text)', 'EXECUTE') as anon_resolve
+    has_function_privilege('anon', 'public.resolve_offerpsp_route_anomaly(uuid,text,text)', 'EXECUTE') as anon_resolve,
+    has_function_privilege('authenticated', 'public.get_offerpsp_supply_coverage()', 'EXECUTE') as authenticated_coverage,
+    has_function_privilege('anon', 'public.get_offerpsp_supply_coverage()', 'EXECUTE') as anon_coverage
   `);
   const grants = result.rows[0];
-  if (!grants.authenticated_list || !grants.authenticated_save || !grants.authenticated_resolve || grants.anon_list || grants.anon_save || grants.anon_resolve) {
+  if (!grants.authenticated_list || !grants.authenticated_save || !grants.authenticated_resolve || !grants.authenticated_coverage || grants.anon_list || grants.anon_save || grants.anon_resolve || grants.anon_coverage) {
     throw new Error("Supply operation RPC grants do not match the staff-only API model");
   }
   process.stdout.write("PASS staff-only supply operation RPC grants with anon denied\n");
@@ -425,8 +428,14 @@ async function verifySupplyOperations() {
     throw new Error("Supply workspace mutations or audit history were not persisted correctly");
   }
 
+  const coverage = await query("select public.get_offerpsp_supply_coverage() as value");
+  if (!Array.isArray(coverage.rows[0].value.routes) || coverage.rows[0].value.routes.length !== 38 || !coverage.rows[0].value.routes.every((item) => item.provider_name && item.route_code && Array.isArray(item.currencies) && Array.isArray(item.methods))) {
+    throw new Error("Supply coverage matrix does not expose the active normalized routes");
+  }
+
   await setUser(OTHER_CLIENT_ID);
   await expectQueryFailure("select public.get_offerpsp_supply_workspace($1)", [providerId], "OfferPSP staff access required");
+  await expectQueryFailure("select public.get_offerpsp_supply_coverage()", [], "OfferPSP staff access required");
   await setUser(STAFF_ID);
   process.stdout.write("PASS PSP profile, contact, route, anomaly, margin, freshness and audit operations\n");
 }
