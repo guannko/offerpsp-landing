@@ -143,7 +143,7 @@ assets are verified; a separate real staff/client mutation E2E remains open.
 - [x] Operational Deal Desk controls cover PSP submission and decision, Telegram, Zoom and won/lost.
 - [x] Client portal loads options through a dedicated safe RPC instead of querying the legacy
   `SECURITY DEFINER` shortlist view directly.
-- [x] Local syntax, portal guards and all 16 migration/E2E fixtures pass.
+- [x] Local syntax, portal guards and all 17 migration/E2E fixtures pass.
 - [x] Production migration grants `EXECUTE` only to `authenticated`; all four RPCs are denied to `anon`.
 - [x] Deploy the operational frontend to `offerpsp.com`.
 - [ ] Run separate real staff/client production mutation E2E.
@@ -166,7 +166,7 @@ a normal authenticated user was denied. Mutation E2E remains locally verified on
 - [x] Last-confirmed action, configurable freshness period and stale-route indicators.
 - [x] Staff-only RPC grants; clients, agents and anonymous users cannot load or mutate supply data.
 - [x] Desktop and 390px mobile visual verification without horizontal overflow.
-- [x] All 16 migration/E2E fixtures and frontend regression guards pass.
+- [x] All 17 migration/E2E fixtures and frontend regression guards pass.
 - [x] Production deployment is `READY`; `/admin/`, `/portal/` and their new assets return 200.
 - [x] Internal `TASKS.md` and `supabase/migrations/` are excluded from Vercel and return 404.
 - [x] Archived routes from superseded parser versions remain in version history but are hidden from
@@ -195,13 +195,14 @@ a normal authenticated user was denied. Mutation E2E remains locally verified on
 
 Status: `VERIFIED` on 2026-08-02 in an ephemeral PostgreSQL-compatible PGlite database.
 
-- [x] All 16 migrations, including rate-card reprocessing and the operational workspaces,
+- [x] All 17 migrations, including rate-card reprocessing, route-level publication and the operational workspaces,
   apply in dependency order.
 - [x] `authenticated` has lead UPDATE/DELETE privileges while `anon` does not.
-- [x] BRPay parser v2 imports 14 real draft routes; only four blocking checks remain in the two
+- [x] BRPay parser v3 imports 14 real draft routes; only four blocking checks remain in the two
   Uzbekistan ecom routes because the partner source contains malformed and conflicting limits.
-- [x] Antarex parser v2 imports 24 real draft routes with zero parser errors; 45 explicit warnings
-  remain for staff confirmation of inferred flow/method and unconfirmed traffic/vertical scope.
+- [x] Antarex parser v3 imports 24 real draft routes with zero parser errors and complete fee coverage
+  for every route flow; 45 explicit warnings remain for staff confirmation of inferred flow/method
+  and unconfirmed traffic/vertical scope.
 - [x] Reprocessing the same immutable source with a newer parser creates a new batch version;
   repeating the same parser version remains idempotent.
 - [x] Open error anomalies prevent draft publication.
@@ -229,11 +230,14 @@ Status: `VERIFIED` on 2026-08-02.
 
 - [x] Applied `offerpsp_rate_card_reparse`; version uniqueness now uses provider, source hash and
   parser version without changing the immutable partner message.
-- [x] BRPay v1 is superseded with 15 archived routes; BRPay v2 is draft with 14 active routes,
-  4 open errors and 18 warnings.
-- [x] Antarex v1 is superseded with 20 archived routes; Antarex v2 is draft with 24 active routes,
-  0 open errors and 45 warnings.
-- [x] BRPay and Antarex remain unpublished. Antarex still has no OfferPSP margin policy.
+- [x] Applied `offerpsp_route_level_publication`; valid routes can be published independently while
+  malformed routes remain private archived history.
+- [x] BRPay v1 is superseded. BRPay v2 is published with 12 active routes; the two malformed
+  Uzbekistan ecom routes are archived with their four source errors. Active routes have zero
+  blocking errors, complete flow pricing and 16 open review warnings.
+- [x] Antarex v2 is superseded. Antarex v3 is draft with 24 active routes, zero parser errors,
+  complete flow pricing and 45 explicit review warnings.
+- [x] Antarex remains unpublished because its OfferPSP margin policy is intentionally unset.
 - [x] Production deployment `dpl_7DMYNebr1UAZQt13nT2bGRkVcPbc` is `READY`, aliased to
   `offerpsp.com`, and serves the archived-route filtering from exact SHA
   `23085532eb623aac7c4ac607807343a884af1949`.
@@ -252,7 +256,8 @@ Status: `VERIFIED` on 2026-08-02.
 - [x] Vercel production deployment `dpl_B1LUdb36EoWqFKhkTLHD5DZQ5Ky3` is `READY` at exact SHA
   `02aee090f50b0ed037615099bcaf6d5bc0c3b02f`; no runtime errors were reported in the post-rollout window.
 
-BRPay and Antarex remain draft-only and were not published by this rollout.
+At the end of this earlier workspace rollout, BRPay and Antarex were still draft-only. The current
+production supply status is recorded above.
 
 ## Earlier production baseline
 
@@ -292,7 +297,8 @@ Status: `VERIFIED` — factual baseline retained for rollout history.
 - [x] The E2E fixture is inert again: provider and route archived, batch superseded,
   test leads closed and unlinked, test shortlists archived and test staff deactivated.
 
-Production rollout verification is complete. BRPay and Antarex remain draft-only.
+This earlier rollout baseline completed before route-level publication. Current supply status is
+recorded in the 2026-08-02 production section above.
 
 Security note: Supabase advisor reports `offerpsp_client_shortlist` as a
 `SECURITY DEFINER` view. Anonymous access is revoked, the view filters on
