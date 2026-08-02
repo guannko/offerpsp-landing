@@ -379,8 +379,8 @@
       <section id="analytics" class="panel analytics-panel">
         <div class="panel-head">
           <div>
-            <h2>Conversion snapshot</h2>
-            <p>Live funnel based on the current lead pipeline</p>
+            <h2>Commercial analytics</h2>
+            <p>Where leads stop, which sources work and what needs attention next</p>
           </div>
           <strong id="conversionRate" class="conversion-rate">0%</strong>
         </div>
@@ -411,6 +411,21 @@
             <strong id="funnelWon">0</strong>
           </div>
         </div>
+        <div class="analytics-grid">
+          <section class="analytics-card">
+            <p class="eyebrow">Main bottleneck</p>
+            <h3 id="analyticsBottleneck">Not enough data yet</h3>
+            <p id="analyticsBottleneckCopy">The dashboard will identify the largest loss between funnel stages.</p>
+          </section>
+          <section class="analytics-card">
+            <div class="analytics-card-head"><div><p class="eyebrow">Current workload</p><h3>Requests by stage</h3></div></div>
+            <div id="analyticsStageChart" class="analytics-bar-chart"></div>
+          </section>
+          <section class="analytics-card">
+            <div class="analytics-card-head"><div><p class="eyebrow">Acquisition</p><h3>Lead sources and results</h3></div></div>
+            <div id="analyticsSourceChart" class="analytics-source-chart"></div>
+          </section>
+        </div>
       </section>
     </main>
   </div>
@@ -423,19 +438,24 @@
         <h2 id="drawerCompany">—</h2>
         <p id="drawerContact" class="drawer-contact">—</p>
       </div>
-      <button id="closeDrawerButton" class="icon-button" type="button" aria-label="Close">×</button>
+      <div class="drawer-head-actions">
+        <a id="drawerEmailLink" class="button button-secondary button-compact is-hidden" href="#">Email</a>
+        <a id="drawerTelegramLink" class="button button-secondary button-compact is-hidden" href="#" target="_blank" rel="noopener">Telegram</a>
+        <button id="drawerOfferButton" class="button button-primary button-compact" type="button">Send offer</button>
+        <button id="closeDrawerButton" class="icon-button" type="button" aria-label="Close">×</button>
+      </div>
     </div>
 
     <div class="drawer-body">
       <nav class="workspace-tabs" aria-label="Request sections">
         <button type="button" data-workspace-target="workspaceOverview">Overview</button>
         <button type="button" data-workspace-target="workspaceDossier">Dossier</button>
-        <button type="button" data-workspace-target="workspaceMatching">Matching</button>
+        <button type="button" data-workspace-target="workspaceMatching">Client offers</button>
         <button type="button" data-workspace-target="workspaceDealDesk">Deal desk</button>
         <button type="button" data-workspace-target="workspaceCollaboration">Tasks & messages</button>
       </nav>
 
-      <section id="workspaceOverview" class="detail-section workspace-overview">
+      <section id="workspaceOverview" class="detail-section workspace-overview" data-workspace-panel="workspaceOverview">
         <div class="section-head">
           <div>
             <p class="eyebrow">Current operation</p>
@@ -446,7 +466,7 @@
         <div id="workspaceSummary" class="workspace-summary"></div>
       </section>
 
-      <section class="detail-section">
+      <section class="detail-section" data-workspace-panel="workspaceOverview">
         <div class="section-head">
           <h3>Pipeline</h3>
           <span id="drawerLeadId" class="lead-id"></span>
@@ -497,12 +517,12 @@
         <p id="drawerStatusMessage" class="form-status" role="status" aria-live="polite"></p>
       </section>
 
-      <section class="detail-section">
+      <section class="detail-section" data-workspace-panel="workspaceOverview">
         <h3>Operating profile</h3>
         <dl id="profileDetails" class="details-grid"></dl>
       </section>
 
-      <section class="detail-section merchant-record-section">
+      <section class="detail-section merchant-record-section" data-workspace-panel="workspaceOverview">
         <div class="section-head"><div><h3>Merchant record</h3><p class="section-copy">Edit the source record, archive inactive requests or remove obvious junk.</p></div><span id="merchantRecordState" class="status-pill">active</span></div>
         <form id="merchantRecordForm" class="dossier-form">
           <label>Company<input id="merchantRecordCompany" type="text" required></label>
@@ -525,7 +545,7 @@
         <p id="merchantRecordStatus" class="form-status" role="status"></p>
       </section>
 
-      <section id="workspaceDossier" class="detail-section">
+      <section id="workspaceDossier" class="detail-section is-hidden" data-workspace-panel="workspaceDossier">
         <div class="section-head">
           <div>
             <h3>Merchant dossier</h3>
@@ -571,10 +591,10 @@
         <p id="dossierSaveStatus" class="form-status" role="status" aria-live="polite"></p>
       </section>
 
-      <section id="workspaceMatching" class="detail-section">
+      <section id="workspaceMatching" class="detail-section is-hidden" data-workspace-panel="workspaceMatching">
         <div class="section-head">
           <div>
-            <h3>PSP matching</h3>
+            <h3>Client offers</h3>
             <p id="matchSummary" class="section-copy">Loading candidates…</p>
           </div>
           <div class="section-actions">
@@ -584,10 +604,28 @@
           </div>
         </div>
         <div id="matchesList" class="matches-list"></div>
+        <div class="manual-offer-workspace">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Manual selection</p>
+              <h3>Send any published route</h3>
+              <p class="section-copy">Automatic matching is advisory. You can send a different route whenever it is commercially relevant.</p>
+            </div>
+            <span id="manualOfferSelectionCount" class="completion-pill">0 selected</span>
+          </div>
+          <input id="manualOfferSearch" type="search" placeholder="Search GEO, currency, method or internal PSP name">
+          <div id="manualOfferRouteList" class="manual-offer-route-list"></div>
+          <div class="dossier-form manual-offer-copy">
+            <label>Client title<input id="manualShortlistTitle" type="text" value="Selected payment routes"></label>
+            <label class="span-2">Introduction<textarea id="manualShortlistIntroduction" rows="2">OfferPSP selected these anonymous payment routes for your review.</textarea></label>
+            <label class="span-3">Note shown with every offer<textarea id="manualShortlistNote" rows="2">Selected manually by OfferPSP for your review.</textarea></label>
+          </div>
+          <button id="createManualShortlistButton" class="button button-primary button-compact" type="button">Create manual preview</button>
+        </div>
         <div id="shortlistPreview" class="shortlist-preview is-hidden"></div>
       </section>
 
-      <section id="workspaceDealDesk" class="detail-section">
+      <section id="workspaceDealDesk" class="detail-section is-hidden" data-workspace-panel="workspaceDealDesk">
         <div class="section-head">
           <div>
             <h3>Deal desk</h3>
@@ -597,13 +635,13 @@
         <div id="dealDeskList" class="deal-desk-list"></div>
       </section>
 
-      <section id="workspaceCollaboration" class="detail-section">
+      <section id="workspaceCollaboration" class="detail-section is-hidden" data-workspace-panel="workspaceCollaboration">
         <h3>Internal note</h3>
         <textarea id="noteInput" rows="4" placeholder="Add qualification context, PSP requirements or next steps…"></textarea>
         <button id="addNoteButton" class="button button-secondary button-compact" type="button">Add to history</button>
       </section>
 
-      <section class="detail-section">
+      <section class="detail-section is-hidden" data-workspace-panel="workspaceCollaboration">
         <h3>Tasks</h3>
         <div class="task-composer">
           <input id="taskTitleInput" type="text" placeholder="e.g. Verify licence and processing history">
@@ -627,7 +665,7 @@
         <div id="taskList" class="task-list"></div>
       </section>
 
-      <section class="detail-section">
+      <section class="detail-section is-hidden" data-workspace-panel="workspaceCollaboration">
         <h3>Client conversation</h3>
         <div id="adminMessageList" class="message-list"></div>
         <div class="admin-message-composer">
@@ -636,7 +674,7 @@
         </div>
       </section>
 
-      <section class="detail-section">
+      <section class="detail-section is-hidden" data-workspace-panel="workspaceCollaboration">
         <h3>Activity</h3>
         <div id="activityList" class="timeline"></div>
       </section>
@@ -662,7 +700,7 @@
         <button type="button" data-supply-target="supplyHistory">Versions & history</button>
       </nav>
 
-      <section id="supplyOverview" class="detail-section">
+      <section id="supplyOverview" class="detail-section" data-supply-panel="supplyOverview">
         <div class="section-head">
           <div>
             <p class="eyebrow">Relationship owner view</p>
@@ -729,7 +767,7 @@
         </div>
       </section>
 
-      <section id="supplyRoutes" class="detail-section supply-routes-workspace">
+      <section id="supplyRoutes" class="detail-section supply-routes-workspace is-hidden" data-supply-panel="supplyRoutes">
         <div class="section-head"><div><h3>Normalized routes</h3><p class="section-copy">Edit working fields without changing the original partner message.</p></div><button id="reviseSupplyRouteButton" class="button button-secondary button-compact is-hidden" type="button">Create revision</button></div>
         <div class="route-workbench">
           <div id="supplyRouteList" class="route-list"></div>
@@ -770,12 +808,12 @@
         </div>
       </section>
 
-      <section id="supplyAnomalies" class="detail-section">
+      <section id="supplyAnomalies" class="detail-section is-hidden" data-supply-panel="supplyAnomalies">
         <div class="section-head"><div><h3>Review queue</h3><p class="section-copy">Every parser error must be corrected or consciously accepted before publication.</p></div><span id="supplyOpenChecks" class="completion-pill">0 open</span></div>
         <div id="supplyAnomalyList" class="anomaly-list"></div>
       </section>
 
-      <section id="supplyHistory" class="detail-section">
+      <section id="supplyHistory" class="detail-section is-hidden" data-supply-panel="supplyHistory">
         <div class="section-head"><div><h3>Rate-card versions</h3><p class="section-copy">Immutable sources and the operational changes made after parsing.</p></div></div>
         <div id="supplyBatchHistory" class="batch-list"></div>
         <div class="section-head history-heading"><h3>Change history</h3></div>

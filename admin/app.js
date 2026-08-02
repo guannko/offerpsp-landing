@@ -50,6 +50,7 @@ const state = {
   tasks: [],
   matches: [],
   selectedMatchIds: new Set(),
+  selectedManualRouteIds: new Set(),
   shortlists: [],
   requestWorkspace: null,
   conversationId: null,
@@ -170,6 +171,10 @@ const elements = {
   funnelMatchedBar: document.getElementById("funnelMatchedBar"),
   funnelIntroducedBar: document.getElementById("funnelIntroducedBar"),
   funnelWonBar: document.getElementById("funnelWonBar"),
+  analyticsBottleneck: document.getElementById("analyticsBottleneck"),
+  analyticsBottleneckCopy: document.getElementById("analyticsBottleneckCopy"),
+  analyticsStageChart: document.getElementById("analyticsStageChart"),
+  analyticsSourceChart: document.getElementById("analyticsSourceChart"),
   providerCount: document.getElementById("providerCount"),
   batchCount: document.getElementById("batchCount"),
   rateCardImportForm: document.getElementById("rateCardImportForm"),
@@ -271,6 +276,9 @@ const elements = {
   closeDrawerButton: document.getElementById("closeDrawerButton"),
   drawerCompany: document.getElementById("drawerCompany"),
   drawerContact: document.getElementById("drawerContact"),
+  drawerEmailLink: document.getElementById("drawerEmailLink"),
+  drawerTelegramLink: document.getElementById("drawerTelegramLink"),
+  drawerOfferButton: document.getElementById("drawerOfferButton"),
   drawerLeadId: document.getElementById("drawerLeadId"),
   drawerStatus: document.getElementById("drawerStatus"),
   drawerScore: document.getElementById("drawerScore"),
@@ -313,6 +321,13 @@ const elements = {
   matchSummary: document.getElementById("matchSummary"),
   matchesList: document.getElementById("matchesList"),
   shortlistPreview: document.getElementById("shortlistPreview"),
+  manualOfferSearch: document.getElementById("manualOfferSearch"),
+  manualOfferRouteList: document.getElementById("manualOfferRouteList"),
+  manualOfferSelectionCount: document.getElementById("manualOfferSelectionCount"),
+  manualShortlistTitle: document.getElementById("manualShortlistTitle"),
+  manualShortlistIntroduction: document.getElementById("manualShortlistIntroduction"),
+  manualShortlistNote: document.getElementById("manualShortlistNote"),
+  createManualShortlistButton: document.getElementById("createManualShortlistButton"),
   dealDeskList: document.getElementById("dealDeskList"),
   saveLeadButton: document.getElementById("saveLeadButton"),
   merchantRecordState: document.getElementById("merchantRecordState"),
@@ -795,6 +810,7 @@ async function loadSupply() {
     coverageAvailable: !coverageResult.error,
   };
   renderSupply();
+  if (state.selectedLead) renderManualOfferRoutes();
 }
 
 function renderSupply() {
@@ -966,6 +982,7 @@ async function openSupplyWorkspace(providerId) {
   document.body.classList.add("drawer-open");
   elements.supplyDrawerTitle.textContent = "Loading PSP…";
   elements.supplyDrawerCode.textContent = "—";
+  activateSupplyWorkspace("supplyOverview");
   setSupplyWorkspaceStatus("Loading private supply workspace…");
   await loadSupplyWorkspace(providerId);
 }
@@ -1531,16 +1548,22 @@ function renderStats() {
   const count = (...statuses) => activeLeads.filter((lead) => statuses.includes(lead.status)).length;
   const total = activeLeads.length;
   const qualified = count(
-    "qualified", "matching", "matched", "shortlist_ready", "shared", "negotiating", "won",
+    "matching", "matched", "shortlist_ready", "shared", "option_selected", "dossier_ready",
+    "provider_reviewing", "provider_needs_info", "provider_accepted", "provider_declined",
+    "telegram_created", "zoom_scheduled", "negotiating", "won",
   );
-  const matched = count("matched", "shortlist_ready", "shared", "negotiating", "won");
-  const introduced = count("shared", "negotiating", "won");
-  const won = count("won", "closed");
+  const matched = count(
+    "matched", "shortlist_ready", "shared", "option_selected", "dossier_ready",
+    "provider_reviewing", "provider_needs_info", "provider_accepted", "provider_declined",
+    "telegram_created", "zoom_scheduled", "negotiating", "won",
+  );
+  const introduced = count("telegram_created", "zoom_scheduled", "negotiating", "won");
+  const won = count("won");
   const conversion = total ? Math.round((won / total) * 100) : 0;
   elements.statTotal.textContent = total;
   elements.statNew.textContent = count("new", "reviewing", "qualifying");
   elements.statMatching.textContent = count("matching", "matched");
-  elements.statReady.textContent = count("shortlist_ready", "shared");
+  elements.statReady.textContent = count("shortlist_ready", "shared", "option_selected", "dossier_ready");
   elements.statWon.textContent = won;
   elements.statWonRate.textContent = `${conversion}% conversion`;
   elements.conversionRate.textContent = `${conversion}%`;
@@ -1555,6 +1578,61 @@ function renderStats() {
   for (const [numberElement, barElement, value] of funnel) {
     numberElement.textContent = value;
     barElement.style.width = `${total ? Math.max(2, (value / total) * 100) : 0}%`;
+  }
+
+  renderCommercialAnalytics(activeLeads, [total, qualified, matched, introduced, won]);
+}
+
+function renderCommercialAnalytics(leads, funnelValues) {
+  const isRu = i18n?.getLanguage() === "ru";
+  const stageDefinitions = [
+    [isRu ? "Новые / уточнение" : "New / clarification", ["new", "reviewing", "qualifying", "needs_clarification"]],
+    [isRu ? "Подбор / shortlist" : "Matching / shortlist", ["matching", "matched", "shortlist_ready"]],
+    [isRu ? "Отправлено / выбор" : "Shared / selected", ["shared", "option_selected", "dossier_ready"]],
+    [isRu ? "PSP / знакомство" : "PSP / introduction", ["provider_reviewing", "provider_needs_info", "provider_accepted", "provider_declined", "telegram_created", "zoom_scheduled", "negotiating"]],
+    [isRu ? "Запущено" : "Won", ["won"]],
+    [isRu ? "Потеряно" : "Lost", ["lost"]],
+  ];
+  const stageCounts = stageDefinitions.map(([label, statuses]) => ({
+    label,
+    count: leads.filter((lead) => statuses.includes(lead.status)).length,
+  }));
+  const stageMax = Math.max(1, ...stageCounts.map((item) => item.count));
+  elements.analyticsStageChart.innerHTML = stageCounts.map((item) => `
+    <div class="analytics-bar-row"><span>${escapeHtml(item.label)}</span><div><i style="width:${(item.count / stageMax) * 100}%"></i></div><strong>${item.count}</strong></div>
+  `).join("");
+
+  const sources = new Map();
+  for (const lead of leads) {
+    const source = cleanText(lead.utm_source || lead.source || (isRu ? "Без источника" : "Unknown"));
+    const value = sources.get(source) || { total: 0, won: 0 };
+    value.total += 1;
+    if (lead.status === "won") value.won += 1;
+    sources.set(source, value);
+  }
+  const sourceRows = [...sources.entries()].sort((a, b) => b[1].total - a[1].total).slice(0, 8);
+  elements.analyticsSourceChart.innerHTML = sourceRows.length
+    ? sourceRows.map(([source, value]) => `<div class="analytics-source-row"><strong>${escapeHtml(source)}</strong><span>${value.total} ${isRu ? "лидов" : "leads"}</span><em>${value.won} ${isRu ? "успех" : "won"}</em></div>`).join("")
+    : `<p class="form-status">${isRu ? "Источников пока нет." : "No source data yet."}</p>`;
+
+  const stageLabels = isRu
+    ? ["получение → квалификация", "квалификация → shortlist", "shortlist → знакомство", "знакомство → запуск"]
+    : ["submitted → qualified", "qualified → shortlist", "shortlist → introduction", "introduction → won"];
+  const drops = funnelValues.slice(0, -1).map((value, index) => ({
+    label: stageLabels[index],
+    from: value,
+    to: funnelValues[index + 1],
+    loss: value ? Math.round(((value - funnelValues[index + 1]) / value) * 100) : 0,
+  }));
+  const bottleneck = drops.filter((item) => item.from > 0).sort((a, b) => b.loss - a.loss)[0];
+  if (!bottleneck) {
+    elements.analyticsBottleneck.textContent = isRu ? "Пока недостаточно данных" : "Not enough data yet";
+    elements.analyticsBottleneckCopy.textContent = isRu ? "После появления заявок здесь будет показан самый большой провал воронки." : "The largest funnel loss will appear here after requests arrive.";
+  } else {
+    elements.analyticsBottleneck.textContent = `${bottleneck.label}: −${bottleneck.loss}%`;
+    elements.analyticsBottleneckCopy.textContent = isRu
+      ? `${bottleneck.from} вошли в этап, ${bottleneck.to} прошли дальше. Это первая точка для проверки процесса.`
+      : `${bottleneck.from} entered the stage and ${bottleneck.to} moved forward. Review this process first.`;
   }
 }
 
@@ -1668,7 +1746,17 @@ const DOSSIER_FIELD_LABELS = {
   volume_currency: "Volume currency",
   requested_methods: "Payment methods",
   requested_flows: "Payment flows",
+  requested_currencies: "Processing currencies",
+  traffic_types: "Traffic types",
+  min_transaction_amount: "Minimum transaction",
+  max_transaction_amount: "Maximum transaction",
+  transaction_currency: "Transaction currency",
 };
+
+function matchingMissingLabel(field) {
+  const label = DOSSIER_FIELD_LABELS[field] || field.replaceAll("_", " ");
+  return i18n?.t(label) || label;
+}
 
 function renderRequestWorkspace() {
   const lead = state.selectedLead;
@@ -1812,6 +1900,38 @@ async function saveDossier() {
   setDossierSaveStatus(data.complete ? "Dossier saved and ready for PSP review." : "Dossier saved. Complete the highlighted fields before PSP review.", data.complete ? "success" : "error");
 }
 
+function activateWorkspace(target) {
+  document.querySelectorAll("[data-workspace-panel]").forEach((panel) => {
+    panel.classList.toggle("is-hidden", panel.dataset.workspacePanel !== target);
+  });
+  document.querySelectorAll("[data-workspace-target]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.workspaceTarget === target);
+  });
+  elements.leadDrawer.querySelector(".drawer-body")?.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function activateSupplyWorkspace(target) {
+  document.querySelectorAll("[data-supply-panel]").forEach((panel) => {
+    panel.classList.toggle("is-hidden", panel.dataset.supplyPanel !== target);
+  });
+  document.querySelectorAll("[data-supply-target]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.supplyTarget === target);
+  });
+  elements.supplyDrawer.querySelector(".drawer-body")?.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function renderLeadContactActions(lead) {
+  const email = String(lead.work_email || "").trim();
+  elements.drawerEmailLink.classList.toggle("is-hidden", !email);
+  elements.drawerEmailLink.href = email ? `mailto:${email}` : "#";
+  const telegram = String(lead.telegram || "").trim();
+  const telegramHref = /^https?:\/\//i.test(telegram)
+    ? telegram
+    : telegram ? `https://t.me/${telegram.replace(/^@/, "")}` : "";
+  elements.drawerTelegramLink.classList.toggle("is-hidden", !telegramHref);
+  elements.drawerTelegramLink.href = telegramHref || "#";
+}
+
 async function openLead(leadId) {
   const lead = state.leads.find((item) => item.lead_id === leadId);
   if (!lead) return;
@@ -1821,12 +1941,14 @@ async function openLead(leadId) {
   state.tasks = [];
   state.matches = [];
   state.selectedMatchIds = new Set();
+  state.selectedManualRouteIds = new Set();
   state.shortlists = [];
   state.requestWorkspace = null;
   state.conversationId = null;
   state.messages = [];
   elements.drawerCompany.textContent = cleanText(lead.company);
   elements.drawerContact.textContent = `${cleanText(lead.name)} · ${cleanText(lead.work_email)}`;
+  renderLeadContactActions(lead);
   elements.drawerLeadId.textContent = lead.lead_id.slice(0, 8);
   elements.drawerStatus.value = lead.status || "new";
   elements.drawerScore.value = lead.quality_score ?? "";
@@ -1847,6 +1969,12 @@ async function openLead(leadId) {
   elements.dealDeskList.innerHTML = '<div class="state-card">Loading deal desk…</div>';
   elements.adminMessageList.innerHTML = '<p class="form-status">Loading conversation…</p>';
   elements.adminMessageInput.value = "";
+  elements.manualOfferSearch.value = "";
+  elements.manualShortlistTitle.value = i18n?.getLanguage() === "ru" ? "Подобранные платёжные маршруты" : "Selected payment routes";
+  elements.manualShortlistIntroduction.value = i18n?.getLanguage() === "ru" ? "OfferPSP подобрал эти конфиденциальные платёжные маршруты для вашего рассмотрения." : "OfferPSP selected these anonymous payment routes for your review.";
+  elements.manualShortlistNote.value = i18n?.getLanguage() === "ru" ? "Выбрано специалистом OfferPSP для вашего рассмотрения." : "Selected manually by OfferPSP for your review.";
+  activateWorkspace("workspaceOverview");
+  renderManualOfferRoutes();
   elements.drawerBackdrop.classList.remove("is-hidden");
   elements.leadDrawer.classList.add("is-open");
   elements.leadDrawer.setAttribute("aria-hidden", "false");
@@ -1871,6 +1999,7 @@ function closeDrawer() {
   state.selectedLead = null;
   state.requestWorkspace = null;
   state.selectedMatchIds = new Set();
+  state.selectedManualRouteIds = new Set();
 }
 
 async function loadActivities(leadId) {
@@ -1976,6 +2105,7 @@ function renderMatches() {
   );
   elements.createShortlistButton.classList.toggle("is-hidden", state.selectedMatchIds.size === 0);
   renderShortlistPreview();
+  renderManualOfferRoutes();
 
   if (!state.matches.length) {
     elements.matchesList.innerHTML = '<p class="form-status">Run matching to compare this request with the PSP database.</p>';
@@ -2009,6 +2139,45 @@ function renderMatches() {
       if (checkbox.checked) state.selectedMatchIds.add(checkbox.dataset.matchId);
       else state.selectedMatchIds.delete(checkbox.dataset.matchId);
       renderMatches();
+    });
+  });
+}
+
+function renderManualOfferRoutes() {
+  const isRu = i18n?.getLanguage() === "ru";
+  const search = elements.manualOfferSearch.value.trim().toLowerCase();
+  const routes = state.supply.coverage.filter((route) => {
+    if (route.status !== "published" || Number(route.open_error_count || 0) > 0 || !route.margin_ready) return false;
+    if (!search) return true;
+    return [
+      route.provider_name, route.provider_code, route.route_code, route.client_title, routeCoverage(route),
+      route.flow, ...(route.currencies || []), ...(route.methods || []), ...(route.verticals || []),
+      ...(route.traffic_types || []),
+    ].join(" ").toLowerCase().includes(search);
+  });
+  elements.manualOfferSelectionCount.textContent = `${state.selectedManualRouteIds.size} ${isRu ? "выбрано" : "selected"}`;
+  elements.createManualShortlistButton.disabled = state.selectedManualRouteIds.size === 0;
+  if (!state.supply.coverageAvailable) {
+    elements.manualOfferRouteList.innerHTML = `<p class="form-status error">${isRu ? "Каталог офферов недоступен." : "The offer catalog is unavailable."}</p>`;
+    return;
+  }
+  if (!routes.length) {
+    elements.manualOfferRouteList.innerHTML = `<p class="form-status">${isRu ? "Опубликованные офферы не найдены." : "No published offers found."}</p>`;
+    return;
+  }
+  elements.manualOfferRouteList.innerHTML = routes.map((route) => {
+    const selected = state.selectedManualRouteIds.has(route.route_id);
+    const readiness = coverageReadiness(route);
+    return `<label class="manual-route-card${selected ? " is-selected" : ""}">
+      <input type="checkbox" data-manual-route-id="${escapeHtml(route.route_id)}" ${selected ? "checked" : ""}>
+      <span><strong>${escapeHtml(route.client_title)}</strong><span>${escapeHtml([routeCoverage(route), (route.currencies || []).join(", "), String(route.flow || "").toUpperCase(), (route.methods || []).join(", ")].filter(Boolean).join(" · "))}</span><small>${escapeHtml(route.provider_name)} · ${escapeHtml(readiness.label)}</small></span>
+    </label>`;
+  }).join("");
+  elements.manualOfferRouteList.querySelectorAll("[data-manual-route-id]").forEach((checkbox) => {
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) state.selectedManualRouteIds.add(checkbox.dataset.manualRouteId);
+      else state.selectedManualRouteIds.delete(checkbox.dataset.manualRouteId);
+      renderManualOfferRoutes();
     });
   });
 }
@@ -2080,11 +2249,12 @@ async function runMatching() {
   }
 
   setButtonLoading(elements.runMatchingButton, false);
+  const missingLabels = (data?.missing_fields || []).map(matchingMissingLabel);
   setDrawerStatus(
     data?.status === "needs_clarification"
-      ? `Matching needs clarification: ${(data.missing_fields || []).join(", ")}.`
+      ? `${i18n?.getLanguage() === "ru" ? "Для автоматического подбора заполните" : "Complete for automatic matching"}: ${missingLabels.join(", ")}. ${i18n?.getLanguage() === "ru" ? "Ручная отправка офферов доступна без этих данных." : "Manual offer sending remains available."}`
       : `Matching complete: ${data?.match_count ?? state.matches.length} eligible routes. Review and select the routes manually.`,
-    data?.status === "needs_clarification" ? "error" : "success",
+    "success",
   );
 }
 
@@ -2111,6 +2281,33 @@ async function createShortlist() {
     loadLeads(),
   ]);
   setDrawerStatus("Shortlist preview created. Check the client-facing terms before sharing.", "success");
+}
+
+async function createManualShortlist() {
+  if (!state.selectedLead || state.selectedManualRouteIds.size === 0) return;
+  setButtonLoading(elements.createManualShortlistButton, true, "Creating preview…");
+  setDrawerStatus();
+  const { error } = await supabase.rpc("create_offerpsp_manual_shortlist", {
+    p_lead_id: state.selectedLead.lead_id,
+    p_route_ids: [...state.selectedManualRouteIds],
+    p_title: elements.manualShortlistTitle.value.trim(),
+    p_introduction: elements.manualShortlistIntroduction.value.trim(),
+    p_client_note: elements.manualShortlistNote.value.trim(),
+  });
+  setButtonLoading(elements.createManualShortlistButton, false);
+  if (error) {
+    setDrawerStatus(friendlyError(error, "Could not create the manual offer preview."), "error");
+    return;
+  }
+  state.selectedManualRouteIds = new Set();
+  await Promise.all([
+    loadShortlists(state.selectedLead.lead_id),
+    loadRequestWorkspace(state.selectedLead.lead_id),
+    loadActivities(state.selectedLead.lead_id),
+    loadLeads(),
+  ]);
+  renderManualOfferRoutes();
+  setDrawerStatus("Manual preview created. Check the client-facing prices and press Share shortlist.", "success");
 }
 
 async function shareShortlist() {
@@ -2436,6 +2633,7 @@ async function saveMerchantRecord() {
   state.leads = state.leads.map((lead) => lead.lead_id === data.lead_id ? data : lead);
   elements.drawerCompany.textContent = cleanText(data.company);
   elements.drawerContact.textContent = `${cleanText(data.name)} · ${cleanText(data.work_email)}`;
+  renderLeadContactActions(data);
   renderProfile(data);
   renderLeads();
   await Promise.all([loadManagement(), loadActivities(data.lead_id)]);
@@ -2701,21 +2899,20 @@ elements.addNoteButton.addEventListener("click", addNote);
 elements.addTaskButton.addEventListener("click", addTask);
 elements.runMatchingButton.addEventListener("click", runMatching);
 elements.createShortlistButton.addEventListener("click", createShortlist);
+elements.createManualShortlistButton.addEventListener("click", createManualShortlist);
+elements.manualOfferSearch.addEventListener("input", renderManualOfferRoutes);
 elements.shareShortlistButton.addEventListener("click", shareShortlist);
+elements.drawerOfferButton.addEventListener("click", () => activateWorkspace("workspaceMatching"));
 elements.sendAdminMessageButton.addEventListener("click", sendAdminMessage);
 elements.dealDeskList.addEventListener("click", (event) => {
   const button = event.target.closest("[data-deal-action]");
   if (button) handleDealDeskAction(button);
 });
 document.querySelectorAll("[data-workspace-target]").forEach((button) => {
-  button.addEventListener("click", () => {
-    document.getElementById(button.dataset.workspaceTarget)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
+  button.addEventListener("click", () => activateWorkspace(button.dataset.workspaceTarget));
 });
 document.querySelectorAll("[data-supply-target]").forEach((button) => {
-  button.addEventListener("click", () => {
-    document.getElementById(button.dataset.supplyTarget)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
+  button.addEventListener("click", () => activateSupplyWorkspace(button.dataset.supplyTarget));
 });
 document.querySelectorAll("[data-management-tab]").forEach((button) => {
   button.addEventListener("click", () => {

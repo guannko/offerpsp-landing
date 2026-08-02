@@ -540,6 +540,36 @@ textarea::placeholder {
   scroll-margin-top: 24px;
 }
 
+.analytics-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, .75fr) minmax(320px, 1fr) minmax(320px, 1fr);
+  gap: 14px;
+  padding: 0 24px 24px;
+}
+
+.analytics-card {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .022);
+}
+
+.analytics-card h3 { margin: 5px 0 8px; font-size: 14px; }
+.analytics-card > p:last-child { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
+.analytics-bar-chart,
+.analytics-source-chart { display: grid; gap: 10px; margin-top: 14px; }
+.analytics-bar-row { display: grid; grid-template-columns: 105px minmax(80px, 1fr) 28px; gap: 9px; align-items: center; }
+.analytics-bar-row span { overflow: hidden; color: var(--muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.analytics-bar-row div { height: 7px; overflow: hidden; border-radius: 999px; background: rgba(255, 255, 255, .06); }
+.analytics-bar-row i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--pink), #a7f3d0); }
+.analytics-bar-row strong { color: var(--paper); font-size: 10px; text-align: right; }
+.analytics-source-row { display: grid; grid-template-columns: minmax(100px, 1fr) auto auto; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.analytics-source-row:last-child { border-bottom: 0; }
+.analytics-source-row strong { overflow: hidden; color: var(--paper); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.analytics-source-row span { color: var(--muted); font-size: 9px; }
+.analytics-source-row em { color: var(--mint); font-size: 9px; font-style: normal; font-weight: 800; }
+
 .supply-panel {
   scroll-margin-top: 24px;
 }
@@ -1204,6 +1234,9 @@ tbody tr:last-child td {
   letter-spacing: -.045em;
 }
 
+.drawer-head-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.drawer-head-actions .button { margin: 0; text-decoration: none; white-space: nowrap; }
+
 .drawer-contact {
   margin: 5px 0 0;
   color: var(--muted);
@@ -1245,6 +1278,12 @@ tbody tr:last-child td {
 .workspace-tabs button:hover {
   border-color: rgba(255, 77, 122, .4);
   color: var(--paper);
+}
+
+.workspace-tabs button.is-active {
+  border-color: rgba(255, 77, 122, .55);
+  color: var(--paper);
+  background: rgba(255, 77, 122, .12);
 }
 
 .workspace-overview { padding-top: 20px; }
@@ -1471,6 +1510,27 @@ tbody tr:last-child td {
   font-weight: 850;
   text-align: center;
 }
+
+.manual-offer-workspace {
+  margin-top: 22px;
+  padding: 20px;
+  border: 1px solid rgba(255, 77, 122, .2);
+  border-radius: 16px;
+  background: rgba(255, 77, 122, .035);
+}
+
+.manual-offer-workspace > input { margin-top: 16px; }
+.manual-offer-route-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; max-height: 330px; margin-top: 12px; overflow-y: auto; }
+.manual-route-card { position: relative; display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; padding: 13px; border: 1px solid var(--line); border-radius: 12px; background: rgba(17, 21, 34, .9); cursor: pointer; }
+.manual-route-card:hover,
+.manual-route-card.is-selected { border-color: rgba(255, 77, 122, .45); background: rgba(255, 77, 122, .07); }
+.manual-route-card input { margin: 2px 0 0; }
+.manual-route-card strong,
+.manual-route-card span { display: block; }
+.manual-route-card strong { color: var(--paper); font-size: 11px; }
+.manual-route-card span { margin-top: 4px; color: var(--muted); font-size: 9px; line-height: 1.45; }
+.manual-route-card small { display: block; margin-top: 5px; color: #686e7d; font-size: 8px; }
+.manual-offer-copy { margin-top: 14px; }
 
 .lead-id {
   color: #636978;
@@ -1966,6 +2026,8 @@ tbody tr:last-child td {
   .component-row.fee-row,
   .component-row.limit-row,
   .component-row.settlement-row { grid-template-columns: repeat(3, 1fr); }
+  .analytics-grid { grid-template-columns: 1fr 1fr; }
+  .analytics-card:first-child { grid-column: 1 / -1; }
 }
 
 @media (max-width: 850px) {
@@ -2007,6 +2069,13 @@ tbody tr:last-child td {
   .workspace {
     padding: 22px 14px 40px;
   }
+
+  .drawer-head { align-items: flex-start; }
+  .drawer-head-actions { flex-wrap: wrap; }
+  .drawer-head-actions a.button { display: none; }
+  .manual-offer-route-list,
+  .analytics-grid { grid-template-columns: 1fr; }
+  .analytics-card:first-child { grid-column: auto; }
 
   .topbar h1 {
     font-size: 25px;

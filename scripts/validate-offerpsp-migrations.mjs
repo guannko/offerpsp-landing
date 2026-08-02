@@ -113,6 +113,7 @@ async function applyMigrations() {
     "20260802_offerpsp_supply_coverage_matrix.sql",
     "20260802_offerpsp_entity_lifecycle.sql",
     "20260802_offerpsp_entity_lifecycle_grants.sql",
+    "20260803_offerpsp_manual_client_offers.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -195,10 +196,15 @@ async function verifySupplyOperationGrants() {
     has_function_privilege('authenticated', 'public.resolve_offerpsp_route_anomaly(uuid,text,text)', 'EXECUTE') as authenticated_resolve,
     has_function_privilege('anon', 'public.resolve_offerpsp_route_anomaly(uuid,text,text)', 'EXECUTE') as anon_resolve,
     has_function_privilege('authenticated', 'public.get_offerpsp_supply_coverage()', 'EXECUTE') as authenticated_coverage,
-    has_function_privilege('anon', 'public.get_offerpsp_supply_coverage()', 'EXECUTE') as anon_coverage
+    has_function_privilege('anon', 'public.get_offerpsp_supply_coverage()', 'EXECUTE') as anon_coverage,
+    has_function_privilege('authenticated', 'public.create_offerpsp_manual_shortlist(uuid,uuid[],text,text,text)', 'EXECUTE') as authenticated_manual_shortlist,
+    has_function_privilege('anon', 'public.create_offerpsp_manual_shortlist(uuid,uuid[],text,text,text)', 'EXECUTE') as anon_manual_shortlist
   `);
   const grants = result.rows[0];
-  if (!grants.authenticated_list || !grants.authenticated_save || !grants.authenticated_resolve || !grants.authenticated_coverage || grants.anon_list || grants.anon_save || grants.anon_resolve || grants.anon_coverage) {
+  if (!grants.authenticated_list || !grants.authenticated_save || !grants.authenticated_resolve
+      || !grants.authenticated_coverage || !grants.authenticated_manual_shortlist
+      || grants.anon_list || grants.anon_save || grants.anon_resolve
+      || grants.anon_coverage || grants.anon_manual_shortlist) {
     throw new Error("Supply operation RPC grants do not match the staff-only API model");
   }
   process.stdout.write("PASS staff-only supply operation RPC grants with anon denied\n");
@@ -620,6 +626,33 @@ async function runEndToEndFixture() {
   );
   const leadId = leadResult.rows[0].lead_id;
   await query("update public.offerpsp_leads set client_user_id = $1 where lead_id = $2", [CLIENT_ID, leadId]);
+
+  const unrelatedRoute = await query(`
+    select r.id
+    from private.offerpsp_offer_routes r
+    join private.offerpsp_providers p on p.id = r.provider_id
+    where p.brand_name = 'Route Publication Fixture'
+      and r.client_title = 'Valid route for partial publication'
+      and r.status = 'published'
+    limit 1
+  `);
+  const manualShortlist = await query(
+    "select public.create_offerpsp_manual_shortlist($1, array[$2::uuid], 'Manual offer', 'A custom proposal.', 'Sent outside automatic matching.') as value",
+    [leadId, unrelatedRoute.rows[0].id],
+  );
+  if (manualShortlist.rows[0].value.selection_mode !== "manual") {
+    throw new Error("Manual shortlist did not report its selection mode");
+  }
+  await query("select public.share_offerpsp_shortlist($1)", [manualShortlist.rows[0].value.shortlist_id]);
+  await setUser(CLIENT_ID);
+  const manualOptions = await query("select * from public.list_offerpsp_client_options($1)", [leadId]);
+  if (manualOptions.rows.length !== 1 || manualOptions.rows[0].route_title !== "Valid route for partial publication") {
+    throw new Error(`Manual route outside matching was not visible to the client: ${JSON.stringify(manualOptions.rows)}`);
+  }
+  if (/Route Publication Fixture|provider_id|offer_route_id|base_percent|margin_mode/i.test(JSON.stringify(manualOptions.rows[0]))) {
+    throw new Error("Manual client offer leaked private provider or pricing data");
+  }
+  await setUser(STAFF_ID);
 
   const matchResult = await query(
     "select public.rebuild_offerpsp_route_matches($1) as value",
