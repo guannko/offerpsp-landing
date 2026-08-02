@@ -219,11 +219,34 @@ a normal authenticated user was denied. Mutation E2E remains locally verified on
 - [x] Empty `won` and `lost` requests show a completed state instead of a conflicting
   matching-in-progress state.
 
+### Focused staff workspace and manual client offers — production delivery 2026-08-03
+
+Status: `VERIFIED` in source, migration validation and production deployment. A final click-through
+with an existing authenticated staff session remains a user-side acceptance check.
+
+- [x] Lead drawer navigation switches real workspace panels instead of scrolling through one long
+  page: overview, dossier, client offers, Deal Desk and collaboration.
+- [x] Staff can open email or Telegram from the lead header and can jump directly to client offers.
+- [x] Automatic matching remains an advisory tool; incomplete matching fields no longer block the
+  manual commercial workflow.
+- [x] Staff can search the full publishable route catalog, select any suitable routes independently
+  of the merchant's original request and create a client-safe manual shortlist.
+- [x] Manual offers support a custom title, introduction and client note while retaining private PSP
+  identity, base pricing, internal IDs and OfferPSP margin.
+- [x] Migration `offerpsp_manual_client_offers` is applied in production. The RPC is executable by
+  `authenticated` and `service_role`, denied to `anon` and `PUBLIC`, and repeats its own staff check.
+- [x] Local E2E deliberately sends a published `ZZ / USD / cards` route to an
+  `India / INR / UPI` request and verifies that the client snapshot contains no private supply data.
+- [x] Commercial analytics now explains its purpose and shows the main funnel bottleneck, stage
+  distribution, source volume and won results instead of counters alone.
+- [x] Vercel production deployment `dpl_E3n2ErgzifvwuCXKz9oxGQoRJtLd` is `READY`, aliased to
+  `offerpsp.com`, and production assets contain the focused panels, manual-offer controls and charts.
+
 ## Verified locally
 
 Status: `VERIFIED` on 2026-08-02 in an ephemeral PostgreSQL-compatible PGlite database.
 
-- [x] All 19 migrations, including rate-card reprocessing, route-level publication, the coverage matrix, operational workspaces and entity lifecycle,
+- [x] All 20 migrations, including rate-card reprocessing, route-level publication, the coverage matrix, operational workspaces, entity lifecycle and manual client offers,
   apply in dependency order.
 - [x] `authenticated` has lead UPDATE/DELETE privileges while `anon` does not.
 - [x] BRPay parser v3 imports 14 real draft routes; only four blocking checks remain in the two
