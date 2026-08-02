@@ -10,7 +10,7 @@ Code or a passing local test is not evidence that production has been updated.
 ### 1. Available through the production interface
 
 Status: `VERIFIED` for production deployment
-`dpl_B6iRxCeWnCkXE3cymvJw9N1c3XWJ` at exact repository HEAD
+`dpl_B6iRxCeWnCkXE3cymvJw9N1c3XWJ` from application source commit
 `0e1ca9a32b55bccb13e5c5c28c5572d105717550`.
 
 - The client portal is a persistent RU/EN multi-request Payment Workspace with counters,
