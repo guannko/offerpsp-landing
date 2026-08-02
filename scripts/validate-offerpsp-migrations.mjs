@@ -109,6 +109,7 @@ async function applyMigrations() {
     "20260801_offerpsp_operational_workspaces.sql",
     "20260801_offerpsp_supply_operations.sql",
     "20260802_offerpsp_rate_card_reparse.sql",
+    "20260802_offerpsp_route_level_publication.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -296,7 +297,7 @@ async function verifyPortalLeadClaims() {
 
 async function importPreparedDrafts() {
   for (const [providerKey, fileName, expected] of [
-    ["brpay", ".private/imports/brpay-2026-07-23-v2.json", { routes: 14, errors: 4, duplicates: 0, publishError: "Resolve all error-level anomalies before publication" }],
+    ["brpay", ".private/imports/brpay-2026-07-23-v2.json", { routes: 14, errors: 4, duplicates: 0, publishError: "Resolve or exclude every error-level route before publication" }],
     ["antarex", ".private/imports/antarex-2026-07-30-v2.json", { routes: 24, errors: 0, duplicates: 2, publishError: "A provider margin policy is required before publication" }],
   ]) {
     const payload = JSON.parse(await readFile(resolve(fileName), "utf8"));
@@ -428,6 +429,64 @@ async function verifySupplyOperations() {
   await expectQueryFailure("select public.get_offerpsp_supply_workspace($1)", [providerId], "OfferPSP staff access required");
   await setUser(STAFF_ID);
   process.stdout.write("PASS PSP profile, contact, route, anomaly, margin, freshness and audit operations\n");
+}
+
+async function verifyRouteLevelPublication() {
+  await setUser(STAFF_ID);
+  const provider = await query(
+    "select public.upsert_offerpsp_provider('Route Publication Fixture', null, null, null, 'active', 1, true, 'Validation only') as value",
+  );
+  const providerCode = provider.rows[0].value.internal_code;
+  const routes = [
+    {
+      client_title: "Valid route for partial publication",
+      coverage_scope: "specific",
+      geos: ["ZZ"],
+      currencies: ["USD"],
+      flow: "payin",
+      methods: ["CARDS"],
+      fees: [{ flow: "payin", fee_type: "percent", base_percent: 5, applies_on: "success" }],
+      anomalies: [],
+    },
+    {
+      client_title: "Excluded malformed route",
+      coverage_scope: "specific",
+      geos: ["ZZ"],
+      currencies: ["USD"],
+      flow: "payin",
+      methods: [],
+      fees: [{ flow: "payin", fee_type: "percent", base_percent: 5, applies_on: "success" }],
+      anomalies: [{ code: "method_missing", severity: "error", field: "methods", message: "Validation error" }],
+    },
+  ];
+  const imported = await query(
+    "select public.import_offerpsp_rate_card($1, 'manual', 'route-level-publication-fixture', 'validation', current_date, 'fixture-v1', '{}'::jsonb, $2::jsonb) as value",
+    [providerCode, JSON.stringify(routes)],
+  );
+  const batchId = imported.rows[0].value.batch_id;
+  await expectQueryFailure(
+    "select public.publish_offerpsp_rate_card($1)",
+    [batchId],
+    "Resolve or exclude every error-level route before publication",
+  );
+  const malformed = await query(
+    "select id from private.offerpsp_offer_routes where batch_id = $1 and client_title = 'Excluded malformed route'",
+    [batchId],
+  );
+  await query("select public.set_offerpsp_route_status($1, 'archived')", [malformed.rows[0].id]);
+  const published = await query("select public.publish_offerpsp_rate_card($1) as value", [batchId]);
+  const states = await query(
+    "select status, count(*)::integer as count from private.offerpsp_offer_routes where batch_id = $1 group by status order by status",
+    [batchId],
+  );
+  if (
+    published.rows[0].value.route_count !== 1
+    || states.rows.find((row) => row.status === "published")?.count !== 1
+    || states.rows.find((row) => row.status === "archived")?.count !== 1
+  ) {
+    throw new Error(`Route-level publication changed excluded-route isolation: ${JSON.stringify(states.rows)}`);
+  }
+  process.stdout.write("PASS valid routes publish while malformed routes stay archived\n");
 }
 
 async function runEndToEndFixture() {
@@ -807,6 +866,7 @@ try {
   await verifyLegacyShortlistBlocked();
   await importPreparedDrafts();
   await verifySupplyOperations();
+  await verifyRouteLevelPublication();
   await runEndToEndFixture();
   await verifyAgentWorkspaceAndPricing();
   process.stdout.write("PASS all OfferPSP migration checks\n");

@@ -849,17 +849,21 @@ begin
 
   select count(*) into v_route_count
   from private.offerpsp_offer_routes
-  where batch_id = v_batch.id;
+  where batch_id = v_batch.id
+    and status in ('draft', 'review');
 
   select count(*) into v_blocking_anomalies
-  from private.offerpsp_route_anomalies
-  where batch_id = v_batch.id
-    and status = 'open'
-    and severity = 'error';
+  from private.offerpsp_route_anomalies a
+  join private.offerpsp_offer_routes r on r.id = a.route_id
+  where a.batch_id = v_batch.id
+    and r.status in ('draft', 'review')
+    and a.status = 'open'
+    and a.severity = 'error';
 
   select count(*) into v_missing_pricing
   from private.offerpsp_offer_routes r
   where r.batch_id = v_batch.id
+    and r.status in ('draft', 'review')
     and not exists (
       select 1
       from private.offerpsp_offer_fee_components f
@@ -869,6 +873,7 @@ begin
   select count(*) into v_missing_dimensions
   from private.offerpsp_offer_routes r
   where r.batch_id = v_batch.id
+    and r.status in ('draft', 'review')
     and (
       (r.coverage_scope = 'specific' and cardinality(r.geos) = 0)
       or cardinality(r.currencies) = 0
@@ -879,6 +884,7 @@ begin
   from private.offerpsp_offer_limits l
   join private.offerpsp_offer_routes r on r.id = l.route_id
   where r.batch_id = v_batch.id
+    and r.status in ('draft', 'review')
     and l.minimum_amount is not null
     and l.maximum_amount is not null
     and l.maximum_amount < l.minimum_amount;
