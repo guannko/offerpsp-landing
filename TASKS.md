@@ -10,8 +10,8 @@ Code or a passing local test is not evidence that production has been updated.
 ### 1. Available through the production interface
 
 Status: `VERIFIED` for production deployment
-`dpl_B1LUdb36EoWqFKhkTLHD5DZQ5Ky3` at SHA
-`02aee090f50b0ed037615099bcaf6d5bc0c3b02f`.
+`dpl_7DMYNebr1UAZQt13nT2bGRkVcPbc` at SHA
+`23085532eb623aac7c4ac607807343a884af1949`.
 
 - The client portal is a persistent RU/EN multi-request Payment Workspace with counters,
   request navigation, recurring `New payment request` action, anonymous safe route options,
@@ -72,6 +72,10 @@ Status: `VERIFIED` as local code and database behavior only; this is not a produ
 - [x] Duplicate blocks, missing dimensions, malformed limits and ambiguous settlement rules are flagged.
 - [x] Exact-source imports are idempotent per provider.
 - [x] Prepared payloads are stored under gitignored `.private/` with mode `0600`.
+- [x] Parser v2 keeps the immutable source but can create a new normalized version of the
+  same message; the previous draft and its routes are superseded and archived automatically.
+- [x] Exact duplicate source blocks are omitted from active routes and recorded in parser metadata.
+- [x] Compound South Korea offers are split into Account Transfer, P2P Payout, Toss and Kakao routes.
 
 ### Matching v2
 
@@ -139,7 +143,7 @@ assets are verified; a separate real staff/client mutation E2E remains open.
 - [x] Operational Deal Desk controls cover PSP submission and decision, Telegram, Zoom and won/lost.
 - [x] Client portal loads options through a dedicated safe RPC instead of querying the legacy
   `SECURITY DEFINER` shortlist view directly.
-- [x] Local syntax, portal guards and all 15 migration/E2E fixtures pass.
+- [x] Local syntax, portal guards and all 16 migration/E2E fixtures pass.
 - [x] Production migration grants `EXECUTE` only to `authenticated`; all four RPCs are denied to `anon`.
 - [x] Deploy the operational frontend to `offerpsp.com`.
 - [ ] Run separate real staff/client production mutation E2E.
@@ -162,9 +166,11 @@ a normal authenticated user was denied. Mutation E2E remains locally verified on
 - [x] Last-confirmed action, configurable freshness period and stale-route indicators.
 - [x] Staff-only RPC grants; clients, agents and anonymous users cannot load or mutate supply data.
 - [x] Desktop and 390px mobile visual verification without horizontal overflow.
-- [x] All 15 migration/E2E fixtures and frontend regression guards pass.
+- [x] All 16 migration/E2E fixtures and frontend regression guards pass.
 - [x] Production deployment is `READY`; `/admin/`, `/portal/` and their new assets return 200.
 - [x] Internal `TASKS.md` and `supabase/migrations/` are excluded from Vercel and return 404.
+- [x] Archived routes from superseded parser versions remain in version history but are hidden from
+  the active route list and anomaly counters.
 - [ ] Visual field-by-field diff between two rate-card versions.
 - [ ] Automated stale-offer alerts and partner reminders through n8n.
 - [ ] GEO/method/vertical coverage matrix.
@@ -187,13 +193,17 @@ a normal authenticated user was denied. Mutation E2E remains locally verified on
 
 ## Verified locally
 
-Status: `VERIFIED` on 2026-08-01 in an ephemeral PostgreSQL-compatible PGlite database.
+Status: `VERIFIED` on 2026-08-02 in an ephemeral PostgreSQL-compatible PGlite database.
 
-- [x] All 15 migrations, including operational request and PSP supply workspaces,
+- [x] All 16 migrations, including rate-card reprocessing and the operational workspaces,
   apply in dependency order.
 - [x] `authenticated` has lead UPDATE/DELETE privileges while `anon` does not.
-- [x] BRPay parses and imports as exactly 15 draft routes.
-- [x] Antarex parses and imports as exactly 20 draft routes.
+- [x] BRPay parser v2 imports 14 real draft routes; only four blocking checks remain in the two
+  Uzbekistan ecom routes because the partner source contains malformed and conflicting limits.
+- [x] Antarex parser v2 imports 24 real draft routes with zero parser errors; 45 explicit warnings
+  remain for staff confirmation of inferred flow/method and unconfirmed traffic/vertical scope.
+- [x] Reprocessing the same immutable source with a newer parser creates a new batch version;
+  repeating the same parser version remains idempotent.
 - [x] Open error anomalies prevent draft publication.
 - [x] A non-staff authenticated user cannot call the private supply API.
 - [x] Client shortlist output does not contain provider identity, internal route/provider IDs,
@@ -215,7 +225,18 @@ Local verification does not replace testing with real Supabase staff and client 
 
 ## Deployed and verified in production
 
-Status: `VERIFIED` on 2026-08-01.
+Status: `VERIFIED` on 2026-08-02.
+
+- [x] Applied `offerpsp_rate_card_reparse`; version uniqueness now uses provider, source hash and
+  parser version without changing the immutable partner message.
+- [x] BRPay v1 is superseded with 15 archived routes; BRPay v2 is draft with 14 active routes,
+  4 open errors and 18 warnings.
+- [x] Antarex v1 is superseded with 20 archived routes; Antarex v2 is draft with 24 active routes,
+  0 open errors and 45 warnings.
+- [x] BRPay and Antarex remain unpublished. Antarex still has no OfferPSP margin policy.
+- [x] Production deployment `dpl_7DMYNebr1UAZQt13nT2bGRkVcPbc` is `READY`, aliased to
+  `offerpsp.com`, and serves the archived-route filtering from exact SHA
+  `23085532eb623aac7c4ac607807343a884af1949`.
 
 - [x] Closed snapshot and rollback script are readable under gitignored `.private/`; the snapshot
   includes the previous shortlist view definition, constraints, policies and grants.
