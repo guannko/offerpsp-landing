@@ -294,11 +294,19 @@ async function verifyPortalLeadClaims() {
 }
 
 async function importPreparedDrafts() {
-  for (const [providerKey, fileName] of [
-    ["brpay", ".private/imports/brpay-2026-07-23.json"],
-    ["antarex", ".private/imports/antarex-2026-07-30.json"],
+  for (const [providerKey, fileName, expected] of [
+    ["brpay", ".private/imports/brpay-2026-07-23-v2.json", { routes: 14, errors: 4, duplicates: 0, publishError: "Resolve all error-level anomalies before publication" }],
+    ["antarex", ".private/imports/antarex-2026-07-30-v2.json", { routes: 24, errors: 0, duplicates: 2, publishError: "A provider margin policy is required before publication" }],
   ]) {
     const payload = JSON.parse(await readFile(resolve(fileName), "utf8"));
+    if (
+      payload.batch.parser_version !== "offerpsp-source-parser-v2"
+      || payload.batch.routes.length !== expected.routes
+      || payload.batch.parser_metadata.blocking_anomaly_count !== expected.errors
+      || payload.batch.parser_metadata.duplicate_source_block_count !== expected.duplicates
+    ) {
+      throw new Error(`${providerKey} parser regression changed the normalized rate card`);
+    }
     const providerResult = await query(
       `select public.upsert_offerpsp_provider(
         $1, null, null, $2, 'active', $3, $4, 'Prepared draft validation'
@@ -344,7 +352,7 @@ async function importPreparedDrafts() {
     await expectQueryFailure(
       "select public.publish_offerpsp_rate_card($1)",
       [imported.batch_id],
-      "Resolve all error-level anomalies before publication",
+      expected.publishError,
     );
     process.stdout.write(`PASS private draft ${providerKey}: ${imported.route_count} routes\n`);
   }
@@ -357,7 +365,7 @@ async function verifySupplyOperations() {
   if (!providerId) throw new Error("BRPay provider fixture is missing");
 
   const initial = await query("select public.get_offerpsp_supply_workspace($1) as value", [providerId]);
-  if (initial.rows[0].value.routes.length !== 15 || initial.rows[0].value.batches.length !== 1) {
+  if (initial.rows[0].value.routes.length !== 14 || initial.rows[0].value.batches.length !== 1) {
     throw new Error("Supply workspace does not expose the imported BRPay routes and version");
   }
 
