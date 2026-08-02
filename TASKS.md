@@ -1,6 +1,6 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-08-01
+Updated: 2026-08-02
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
@@ -10,14 +10,14 @@ Code or a passing local test is not evidence that production has been updated.
 ### 1. Available through the production interface
 
 Status: `VERIFIED` for production deployment
-`dpl_7DMYNebr1UAZQt13nT2bGRkVcPbc` at SHA
-`23085532eb623aac7c4ac607807343a884af1949`.
+`dpl_EeuotqpGK4qWuf2w94NDLHfK3msS` at SHA
+`c750c8c7f382318c22992c8ecf40bf44b0453aa8`.
 
 - The client portal is a persistent RU/EN multi-request Payment Workspace with counters,
   request navigation, recurring `New payment request` action, anonymous safe route options,
   option feedback, introduction request and client-visible deal progress.
-- The existing staff cabinet supports the lead desk, basic private supply register, prepared
-  draft upload, guarded publishing, route matching and current pipeline statuses.
+- The staff cabinet supports the lead desk, the private PSP workspace, prepared draft upload,
+  guarded publishing, route matching, the current pipeline and a cross-provider coverage matrix.
 - There is no production UI yet for agent organizations, managed merchant portfolios, agent
   margin policies or the commission ledger.
 
@@ -143,7 +143,7 @@ assets are verified; a separate real staff/client mutation E2E remains open.
 - [x] Operational Deal Desk controls cover PSP submission and decision, Telegram, Zoom and won/lost.
 - [x] Client portal loads options through a dedicated safe RPC instead of querying the legacy
   `SECURITY DEFINER` shortlist view directly.
-- [x] Local syntax, portal guards and all 17 migration/E2E fixtures pass.
+- [x] Local syntax, portal guards and all 18 migration/E2E fixtures pass.
 - [x] Production migration grants `EXECUTE` only to `authenticated`; all four RPCs are denied to `anon`.
 - [x] Deploy the operational frontend to `offerpsp.com`.
 - [ ] Run separate real staff/client production mutation E2E.
@@ -166,14 +166,14 @@ a normal authenticated user was denied. Mutation E2E remains locally verified on
 - [x] Last-confirmed action, configurable freshness period and stale-route indicators.
 - [x] Staff-only RPC grants; clients, agents and anonymous users cannot load or mutate supply data.
 - [x] Desktop and 390px mobile visual verification without horizontal overflow.
-- [x] All 17 migration/E2E fixtures and frontend regression guards pass.
+- [x] All 18 migration/E2E fixtures and frontend regression guards pass.
 - [x] Production deployment is `READY`; `/admin/`, `/portal/` and their new assets return 200.
 - [x] Internal `TASKS.md` and `supabase/migrations/` are excluded from Vercel and return 404.
 - [x] Archived routes from superseded parser versions remain in version history but are hidden from
   the active route list and anomaly counters.
 - [ ] Visual field-by-field diff between two rate-card versions.
 - [ ] Automated stale-offer alerts and partner reminders through n8n.
-- [ ] GEO/method/vertical coverage matrix.
+- [x] GEO/currency/method/vertical coverage matrix with readiness, search and status filters.
 
 ### Production grant hotfix
 
@@ -195,7 +195,7 @@ a normal authenticated user was denied. Mutation E2E remains locally verified on
 
 Status: `VERIFIED` on 2026-08-02 in an ephemeral PostgreSQL-compatible PGlite database.
 
-- [x] All 17 migrations, including rate-card reprocessing, route-level publication and the operational workspaces,
+- [x] All 18 migrations, including rate-card reprocessing, route-level publication, the coverage matrix and the operational workspaces,
   apply in dependency order.
 - [x] `authenticated` has lead UPDATE/DELETE privileges while `anon` does not.
 - [x] BRPay parser v3 imports 14 real draft routes; only four blocking checks remain in the two
@@ -238,9 +238,11 @@ Status: `VERIFIED` on 2026-08-02.
 - [x] Antarex v2 is superseded. Antarex v3 is draft with 24 active routes, zero parser errors,
   complete flow pricing and 45 explicit review warnings.
 - [x] Antarex remains unpublished because its OfferPSP margin policy is intentionally unset.
-- [x] Production deployment `dpl_7DMYNebr1UAZQt13nT2bGRkVcPbc` is `READY`, aliased to
-  `offerpsp.com`, and serves the archived-route filtering from exact SHA
-  `23085532eb623aac7c4ac607807343a884af1949`.
+- [x] Applied `offerpsp_supply_coverage_matrix`; staff receives 36 active normalized routes,
+  while `anon` has no execute grant and a non-staff authenticated user is denied.
+- [x] Production deployment `dpl_EeuotqpGK4qWuf2w94NDLHfK3msS` is `READY`, aliased to
+  `offerpsp.com`, and serves the RU/EN coverage matrix from exact SHA
+  `c750c8c7f382318c22992c8ecf40bf44b0453aa8`.
 
 - [x] Closed snapshot and rollback script are readable under gitignored `.private/`; the snapshot
   includes the previous shortlist view definition, constraints, policies and grants.
@@ -310,14 +312,14 @@ Status: `PARTIAL` — these are the actual next P1/P2 tasks after rollout.
 
 ### P1 — PSP and route operations
 
-- [x] Full PSP/contact editor in the staff cabinet — locally verified, rollout pending.
-- [x] Route, fee, limit, settlement and anomaly editor — locally verified, rollout pending.
-- [x] Anomaly resolution/acceptance UI with audit notes — locally verified, rollout pending.
-- [x] Pause, resume and archive controls for individual routes — locally verified, rollout pending.
-- [x] Visual version history — locally verified; field-by-field batch comparison remains open.
-- [x] Freshness dashboard and last-confirmed controls — locally verified; automated alerts remain open.
+- [x] Full PSP/contact editor in the production staff cabinet.
+- [x] Route, fee, limit, settlement and anomaly editor in production.
+- [x] Anomaly resolution/acceptance UI with audit notes in production.
+- [x] Pause, resume and archive controls for individual routes in production.
+- [x] Visual version history in production; field-by-field batch comparison remains open.
+- [x] Freshness dashboard and last-confirmed controls in production; automated alerts remain open.
 - [ ] Partner reminders through n8n.
-- [ ] GEO/method/vertical coverage matrix.
+- [x] GEO/currency/method/vertical coverage matrix deployed in RU/EN.
 
 ### P1 — Deal Desk
 
