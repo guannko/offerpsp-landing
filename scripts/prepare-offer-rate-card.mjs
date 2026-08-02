@@ -245,7 +245,9 @@ function inferFeeFlow(line, fallbackFlow) {
   if (/settlement|сеттл|расч[её]т|funding|kraken|binance|bybit|rapira|htx|paribu|uznex|\bxe\b/i.test(line)) return "settlement";
   if (/refund/i.test(line)) return "refund";
   if (/charge\s?back|chargeback/i.test(line)) return "chargeback";
-  if (/decline/i.test(line)) return "decline";
+  // A combined "Success + Decline" transaction fee still belongs to the
+  // route flow. Only a standalone decline charge is a decline fee component.
+  if (/decline/i.test(line) && !/success/i.test(line)) return "decline";
   if (/pay[-\s]?in|deposit|при[её]м|\bmdr\b/i.test(line)) return "payin";
   return fallbackFlow === "both" ? null : fallbackFlow;
 }
@@ -528,7 +530,7 @@ async function main() {
       source_type: args["source-type"] || "telegram",
       source_reference: args.reference || basename(sourcePath),
       source_effective_date: args["effective-date"] || provider.effectiveDate,
-      parser_version: "offerpsp-source-parser-v2",
+      parser_version: "offerpsp-source-parser-v3",
       parser_metadata: {
         source_sha256: createHash("sha256").update(sourceText).digest("hex"),
         source_bytes: Buffer.byteLength(sourceText),

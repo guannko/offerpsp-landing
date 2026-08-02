@@ -297,12 +297,12 @@ async function verifyPortalLeadClaims() {
 
 async function importPreparedDrafts() {
   for (const [providerKey, fileName, expected] of [
-    ["brpay", ".private/imports/brpay-2026-07-23-v2.json", { routes: 14, errors: 4, duplicates: 0, publishError: "Resolve or exclude every error-level route before publication" }],
-    ["antarex", ".private/imports/antarex-2026-07-30-v2.json", { routes: 24, errors: 0, duplicates: 2, publishError: "A provider margin policy is required before publication" }],
+    ["brpay", ".private/imports/brpay-2026-07-23-v3.json", { routes: 14, errors: 4, duplicates: 0, publishError: "Resolve or exclude every error-level route before publication" }],
+    ["antarex", ".private/imports/antarex-2026-07-30-v3.json", { routes: 24, errors: 0, duplicates: 2, publishError: "A provider margin policy is required before publication" }],
   ]) {
     const payload = JSON.parse(await readFile(resolve(fileName), "utf8"));
     if (
-      payload.batch.parser_version !== "offerpsp-source-parser-v2"
+      payload.batch.parser_version !== "offerpsp-source-parser-v3"
       || payload.batch.routes.length !== expected.routes
       || payload.batch.parser_metadata.blocking_anomaly_count !== expected.errors
       || payload.batch.parser_metadata.duplicate_source_block_count !== expected.duplicates
