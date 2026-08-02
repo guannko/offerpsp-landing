@@ -241,6 +241,9 @@ with an existing authenticated staff session remains a user-side acceptance chec
   distribution, source volume and won results instead of counters alone.
 - [x] Vercel production deployment `dpl_E3n2ErgzifvwuCXKz9oxGQoRJtLd` is `READY`, aliased to
   `offerpsp.com`, and production assets contain the focused panels, manual-offer controls and charts.
+- [x] Follow-up deployment `dpl_4XA7qk1xXSBY2t3Su7kTG4m6uBNC` replaces the remaining long-page
+  navigation with four independent staff screens. PSP supply is further split into provider register,
+  offer catalog, rate-card import and version history; no sidebar action uses scroll navigation.
 
 ## Verified locally
 
