@@ -10,7 +10,7 @@ const groupLabels = {
 } as const;
 
 export default function AppSidebar() {
-  const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
+  const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleMobileSidebar } = useSidebar();
   const location = useLocation();
   const showLabels = isExpanded || isHovered || isMobileOpen;
 
@@ -34,12 +34,12 @@ export default function AppSidebar() {
               <h2 className={`mb-3 flex text-[10px] font-semibold uppercase leading-5 tracking-[0.18em] text-gray-400 ${showLabels ? "justify-start px-3" : "justify-center"}`}>{showLabels ? groupLabels[group] : <HorizontaLDots className="size-5"/>}</h2>
               <ul className="space-y-1">{items.map((item) => {
                 const active = item.path === "/" ? location.pathname === "/" : location.pathname.startsWith(item.path);
-                return <li key={item.id}><Link to={item.path} title={!showLabels ? item.label : undefined} className={`menu-item group ${active ? "menu-item-active" : "menu-item-inactive"} ${showLabels ? "justify-start" : "justify-center"}`}><span className={`menu-item-icon-size ${active ? "menu-item-icon-active" : "menu-item-icon-inactive"}`}>{item.icon}</span>{showLabels && <span className="menu-item-text">{item.label}</span>}</Link></li>;
+                return <li key={item.id}><Link to={item.path} onClick={() => { if (isMobileOpen) toggleMobileSidebar(); }} title={!showLabels ? item.label : undefined} className={`menu-item group ${active ? "menu-item-active" : "menu-item-inactive"} ${showLabels ? "justify-start" : "justify-center"}`}><span className={`menu-item-icon-size ${active ? "menu-item-icon-active" : "menu-item-icon-inactive"}`}>{item.icon}</span>{showLabels && <span className="menu-item-text">{item.label}</span>}</Link></li>;
               })}</ul>
             </div>;
           })}
         </nav>
-        {showLabels && <div className="mt-auto rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-white/[0.03]"><div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-success-500"/><strong className="text-xs text-gray-700 dark:text-gray-300">Production работает</strong></div><p className="mt-2 text-[11px] leading-4 text-gray-400">V2 строится отдельно. Переключение — только после полного E2E.</p></div>}
+        {showLabels && <div className="mt-auto rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-white/[0.03]"><div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-success-500"/><strong className="text-xs text-gray-700 dark:text-gray-300">Production работает</strong></div><p className="mt-2 text-[11px] leading-4 text-gray-400">Control Bridge подключён к рабочим данным. Legacy-панель сохранена для аварийного отката.</p></div>}
       </div>
     </aside>
   );
