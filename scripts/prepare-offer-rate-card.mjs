@@ -88,13 +88,34 @@ function parseArgs(argv) {
     args[token.slice(2)] = argv[index + 1];
     index += 1;
   }
-  if (!args.provider || !PROVIDERS[args.provider]) {
-    throw new Error("Use --provider brpay|antarex");
+  if (!args.provider && !args["provider-name"]) {
+    throw new Error("Use --provider brpay|antarex or --provider-name <name>");
+  }
+  if (args.provider && !PROVIDERS[args.provider] && !args["provider-name"]) {
+    throw new Error("Unknown provider preset. Add --provider-name <name> for a new PSP.");
   }
   if (!args.source || !args.output) {
     throw new Error("Use --source <path> --output <path>");
   }
   return args;
+}
+
+function parseBoolean(value, fallback = false) {
+  if (value == null) return fallback;
+  if (/^(?:1|true|yes)$/i.test(value)) return true;
+  if (/^(?:0|false|no)$/i.test(value)) return false;
+  throw new Error(`Invalid boolean value: ${value}`);
+}
+
+function providerFromArgs(args) {
+  const preset = args.provider ? PROVIDERS[args.provider] : null;
+  return {
+    brandName: args["provider-name"] || preset?.brandName,
+    website: args["provider-website"] || preset?.website || null,
+    strategicPriority: Number(args["strategic-priority"] || preset?.strategicPriority || 50),
+    marginIncludedDefault: parseBoolean(args["margin-included"], preset?.marginIncludedDefault || false),
+    effectiveDate: args["effective-date"] || preset?.effectiveDate || null,
+  };
 }
 
 function normalizeText(value) {
@@ -477,7 +498,7 @@ function parseRoute(block, index) {
     max_monthly_volume: null,
     volume_currency: null,
     risk_terms: {
-      rolling_reserve: block.match(/rolling reserve[^\n]*/i)?.[0] || null,
+      rolling_reserve: block.match(/(?:rolling reserve|(?:^|\n)\s*RR\s*:)[^\n]*/i)?.[0]?.trim() || null,
       chargeback: block.match(/charge\s?back[^\n]*/i)?.[0] || null,
       refund: block.match(/refund[^\n]*/i)?.[0] || null,
     },
@@ -510,14 +531,25 @@ function validateAndDeduplicate(routes) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const provider = PROVIDERS[args.provider];
+  const provider = providerFromArgs(args);
   const sourcePath = resolve(args.source);
   const outputPath = resolve(args.output);
   const sourceText = normalizeText(await readFile(sourcePath, "utf8"));
+  const sourceMetadata = args["source-metadata"]
+    ? JSON.parse(await readFile(resolve(args["source-metadata"]), "utf8"))
+    : {};
   const sourceBlocks = splitBlocks(sourceText);
   const expandedBlocks = expandCompoundBlocks(sourceBlocks);
   const { routes, duplicateBlockCount } = validateAndDeduplicate(expandedBlocks.map(parseRoute));
-  const blockingCount = routes.reduce((count, route) => count + route.anomalies.filter((item) => item.severity === "error").length, 0);
+  const batchAnomalies = routes.length ? [] : [{
+    code: "source_unparsed",
+    severity: "error",
+    field: "source",
+    message: "The source produced no normalized offer routes. Use a format adapter, OCR/AI extraction or manual review.",
+    source_excerpt: sourceText.slice(0, 400),
+  }];
+  const blockingCount = batchAnomalies.length
+    + routes.reduce((count, route) => count + route.anomalies.filter((item) => item.severity === "error").length, 0);
 
   const payload = {
     provider: {
@@ -532,6 +564,13 @@ async function main() {
       source_effective_date: args["effective-date"] || provider.effectiveDate,
       parser_version: "offerpsp-source-parser-v3",
       parser_metadata: {
+        ...sourceMetadata,
+        ingestion_standard: "offerpsp-universal-source-v1",
+        presentation_standard: "offerpsp-telegram-offer-v1",
+        source_format: args["source-format"] || args["source-type"] || "text",
+        original_source_reference: args["original-source"] || args.reference || basename(sourcePath),
+        extraction_method: args["extraction-method"] || "plain-text",
+        extractor_version: args["extractor-version"] || null,
         source_sha256: createHash("sha256").update(sourceText).digest("hex"),
         source_bytes: Buffer.byteLength(sourceText),
         source_block_count: sourceBlocks.length,
@@ -539,6 +578,7 @@ async function main() {
         duplicate_source_block_count: duplicateBlockCount,
         route_count: routes.length,
         blocking_anomaly_count: blockingCount,
+        batch_anomalies: batchAnomalies,
         generated_at: new Date().toISOString(),
         publication_allowed: false,
       },

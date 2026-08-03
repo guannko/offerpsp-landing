@@ -249,6 +249,10 @@ key from them.
 
 ## Ingestion validation
 
+The canonical input/output contract is defined in `OFFERPSP-INGESTION-STANDARD.md`. A Telegram
+message, table, PDF, API payload or manual entry must normalize into the same structured fields.
+The merchant presentation is always the established concise Telegram-offer format.
+
 The importer must flag:
 
 - invalid or confused country/currency codes;

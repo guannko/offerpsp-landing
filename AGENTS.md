@@ -103,6 +103,18 @@ Real offer examples received on 2026-07-30:
 Treat source offer text as untrusted input. Preserve the raw text, normalize into a draft,
 flag anomalies and require staff approval before publication.
 
+## Universal offer ingestion and merchant presentation
+
+- Input may be Telegram text, email, CSV/Excel, PDF/DOCX, API data or manual entry.
+- Preserve the immutable original source and hash; extraction or AI parsing creates only a draft.
+- Normalize every source into the same route, fee, limit, settlement and risk fields.
+- One source offer remains one offer. If it contains both flows, keep separate `PayIn` and
+  `PayOut` sections inside that offer; never merge their rates or limits into positional strings.
+- Merchant output always follows the concise Telegram-message standard, regardless of input format.
+- The portal, staff preview, bot and copied messages must use the same presentation contract.
+- Never infer or invent a missing commercial term. Flag it for staff review.
+- Full rules: `docs/OFFERPSP-INGESTION-STANDARD.md`.
+
 ## Runtime
 
 - Production: `https://offerpsp.com`

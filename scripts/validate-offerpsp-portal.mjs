@@ -20,7 +20,14 @@ const adminSource = await readFile(new URL("../admin/app.js", import.meta.url), 
 const adminHtmlSource = await readFile(new URL("../admin/index.html", import.meta.url), "utf8");
 assert.match(appSource, /rpc\("list_offerpsp_workspace_requests"\)/);
 assert.match(appSource, /rpc\("list_offerpsp_client_deals"/);
-assert.match(appSource, /rpc\("list_offerpsp_client_options"/);
+assert.match(appSource, /rpc\("list_offerpsp_client_offers"/);
+assert.doesNotMatch(appSource, /rpc\("list_offerpsp_client_options"/);
+assert.match(appSource, /class="telegram-offer"/);
+assert.match(appSource, /class="offer-flow-message"/);
+assert.match(appSource, /offerLimit\(option, "payin"\)/);
+assert.match(appSource, /offerLimit\(option, "payout"\)/);
+assert.match(appSource, /offerFee\(option, "payin"\)/);
+assert.match(appSource, /offerFee\(option, "payout"\)/);
 assert.doesNotMatch(appSource, /from\("offerpsp_client_shortlist"\)/);
 assert.match(appSource, /rpc\("get_offerpsp_client_request_profile"/);
 assert.match(appSource, /rpc\("update_offerpsp_client_dossier"/);

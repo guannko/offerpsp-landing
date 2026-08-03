@@ -127,6 +127,7 @@
     "Provider brand_name is required.": "В файле не указано название PSP.",
     "Original rate-card source text is required.": "В файле отсутствует исходный текст rate card.",
     "The rate-card routes must be an array.": "Маршруты rate card должны быть массивом.",
+    "No normalized offer routes were found. Review the source extraction before import.": "Нормализованные офферы не найдены. Проверьте извлечение данных из исходника перед импортом.",
     "The prepared JSON file must be smaller than 10 MB.": "Подготовленный JSON-файл должен быть меньше 10 МБ.",
     "Choose a valid prepared JSON file first.": "Сначала выберите корректный подготовленный JSON-файл.",
     "This exact source was already imported; no duplicate was created.": "Этот исходник уже импортирован; дубликат не создан.",

@@ -1459,6 +1459,7 @@ function validateRateCardPayload(payload) {
   if (!payload.provider?.brand_name) throw new Error("Provider brand_name is required.");
   if (!payload.batch?.source_text) throw new Error("Original rate-card source text is required.");
   if (!Array.isArray(payload.batch?.routes)) throw new Error("The rate-card routes must be an array.");
+  if (!payload.batch.routes.length) throw new Error("No normalized offer routes were found. Review the source extraction before import.");
   return payload;
 }
 
@@ -1469,7 +1470,7 @@ async function readRateCardFile(file) {
   state.rateCardPayload = payload;
   elements.rateCardPreview.innerHTML = `
     <strong>${escapeHtml(payload.provider.brand_name)}</strong>
-    <span>${payload.batch.routes.length} routes · ${escapeHtml(payload.batch.source_reference || payload.batch.source_type || "rate card")}</span>
+    <span>${payload.batch.routes.length} routes · ${Number(payload.batch.parser_metadata?.blocking_anomaly_count || 0)} blocking checks · ${escapeHtml(payload.batch.source_reference || payload.batch.source_type || "rate card")}</span>
   `;
   elements.rateCardPreview.classList.remove("is-hidden");
   setSupplyStatus();
@@ -2258,8 +2259,15 @@ function renderShortlistPreview() {
     <div><div><p class="eyebrow">Client preview</p><h4>${escapeHtml(shortlist.title)} · v${escapeHtml(shortlist.version)}</h4></div><span class="status-pill status-${escapeHtml(shortlist.status)}">${escapeHtml(shortlist.status)}</span></div>
     <div class="preview-options">${items.map((item, index) => {
       const snapshot = item.client_snapshot || {};
-      const fees = (snapshot.client_fees || []).map((fee) => fee.client_percent != null ? `${fee.client_percent}%` : fee.client_fixed != null ? String(fee.client_fixed) : "").filter(Boolean).join(" · ") || "—";
-      return `<article class="preview-option"><div><strong>${escapeHtml(i18n?.t("Option"))} ${index + 1}: ${escapeHtml(snapshot.title || i18n?.t("Incomplete legacy option"))}</strong><p>${escapeHtml([listInput(snapshot.geos), listInput(snapshot.currencies), listInput(snapshot.methods)].filter(Boolean).join(" · ") || i18n?.t("Missing normalized route details"))}</p></div><strong>${escapeHtml(fees)}</strong></article>`;
+      const feeText = (fee) => [
+        fee.client_percent != null ? `${fee.client_percent}%` : "",
+        fee.client_fixed != null ? `${fee.client_fixed} ${fee.client_fixed_currency || ""}`.trim() : "",
+      ].filter(Boolean).join(" + ") || "—";
+      const commercialFees = ["payin", "payout"].map((flow) => {
+        const fee = (snapshot.client_fees || []).find((candidate) => candidate.flow === flow);
+        return fee ? `${flow === "payin" ? "PayIn" : "PayOut"}: ${feeText(fee)}` : "";
+      }).filter(Boolean).join(" · ") || "—";
+      return `<article class="preview-option"><div><strong>${escapeHtml(i18n?.t("Option"))} ${index + 1}: ${escapeHtml(snapshot.title || i18n?.t("Incomplete legacy option"))}</strong><p>${escapeHtml([listInput(snapshot.geos), listInput(snapshot.currencies), listInput(snapshot.methods)].filter(Boolean).join(" · ") || i18n?.t("Missing normalized route details"))}</p></div><strong>${escapeHtml(commercialFees)}</strong></article>`;
     }).join("")}</div>`;
 }
 

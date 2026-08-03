@@ -1,6 +1,6 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-08-02
+Updated: 2026-08-03
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
@@ -97,6 +97,8 @@ Status: `VERIFIED` as local code and database behavior only; this is not a produ
 - [x] Persistent multi-request payment workspace replaces the one-request shortlist viewer.
 - [x] Request rail, workspace counters, recurring `New payment request` action and clear guided next action.
 - [x] Anonymous route details, limits, settlement and final client fees are shown.
+- [x] Merchant offers use the canonical Telegram-message layout. One source offer remains one
+  offer, with separate labelled PayIn and PayOut rates and limits inside it.
 - [x] `Interested`, `Need details` and `Not suitable` responses.
 - [x] Selected-option summary and primary `Request introduction` action.
 - [x] Client-safe Telegram/Zoom/result projection keeps the deal usable after the shortlist stage.
@@ -399,11 +401,19 @@ The first operational UI is deployed. Daily-use refinement remains.
 ### P1 — Telegram ingestion
 
 - [ ] Receive a partner rate card directly from Telegram.
-- [ ] Attach the source message/file reference and start parsing automatically.
+- [x] Define the universal ingestion contract: any source becomes a reviewed normalized draft and
+  every merchant output uses the Telegram-offer presentation standard.
+- [x] Add local source adapters for TXT/Markdown, CSV/TSV, XLSX, text PDF and DOCX with immutable
+  original-file hashes and review-required metadata.
+- [x] Allow the deterministic normalizer to accept new PSPs without adding a hard-coded provider preset.
+- [ ] Connect Telegram, email and admin uploads to the universal source adapters automatically.
+- [ ] Store original binary files privately and attach their source reference to the batch.
+- [ ] Add OCR for scanned PDF/image sources.
 - [ ] Send parser errors and duplicate warnings to a staff review queue.
 - [ ] Link Telegram ingestion to partner freshness reminders.
 
-The local parser accepts copied Telegram text, but no Telegram-triggered workflow exists.
+The local adapter/parser path supports common source files. The production n8n/admin trigger and
+private binary storage are not connected yet.
 
 ### P2 — Analytics
 

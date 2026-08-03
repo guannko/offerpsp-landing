@@ -46,7 +46,7 @@ const COPY = {
     nextLost: "Создайте новую задачу или попросите альтернативу.", nextLostCopy: "История сохранена — повторно описывать весь контекст не нужно.",
     matchingProgress: "Мы готовим нормализованные варианты", matchingCopy: "В кабинете появятся только маршруты с понятными условиями.",
     matchingComplete: "По этой задаче нет активных вариантов", matchingCompleteCopy: "Результат сохранён. Можно создать новую задачу.",
-    option: "Маршрут", clientRate: "Итоговая ставка", methods: "Методы", limits: "Лимиты", settlement: "Расчёты",
+    option: "Оффер", clientRate: "Итоговая ставка", methods: "Методы", limits: "Лимиты", settlement: "Расчёты",
     integration: "Интеграция", whyMatched: "Почему подходит", interested: "Интересно", needDetails: "Нужны детали",
     notSuitable: "Не подходит", selectedOptions: "Выбрано", requestIntroduction: "Запросить знакомство с PSP",
     sharedAt: "Обновлено", noMessages: "Сообщений пока нет. Здесь сохраняется весь рабочий контекст.",
@@ -68,6 +68,14 @@ const COPY = {
     maximumTransaction: "Максимальная транзакция", transactionCurrency: "Валюта транзакции", launchTimeline: "Когда нужен запуск",
     processingSetup: "Текущий процессинг", saveProfile: "Сохранить профиль", profileComplete: "Профиль готов для PSP review",
     profileSaved: "Профиль сохранён.", profileStillMissing: "Профиль сохранён. Заполните отмеченные пункты.",
+    payinSolutions: "Решения PayIn", payoutSolutions: "Решения PayOut", payin: "PayIn", payout: "PayOut",
+    geo: "GEO", currency: "Валюта", trafficType: "Тип трафика", openGeo: "Открытые GEO", solution: "Решение",
+    cardBrands: "Карты", cardIssue: "Страна выпуска карты", method: "Метод",
+    mdrPayin: "MDR PayIn", mdrPayout: "MDR PayOut", minMaxPayin: "Min/Max транзакции PayIn",
+    minMaxPayout: "Min/Max транзакции PayOut", settlementCurrency: "Валюта расчётов",
+    settlementFee: "Комиссия за расчёт", settlementPeriod: "Период расчётов", minimumSettlement: "Минимальная выплата",
+    chargebackFee: "Комиссия Chargeback", refundFee: "Комиссия Refund", rollingReserve: "Rolling Reserve",
+    notSpecified: "Не указано", offerExplanation: "Условия одного платёжного решения без скрытых догадок.",
   },
   en: {
     workspace: "Payment workspace", authTitle: "All your payment work, in one place.",
@@ -103,7 +111,7 @@ const COPY = {
     nextLost: "Create a new request or ask for an alternative.", nextLostCopy: "The history is saved, so you do not need to repeat the full context.",
     matchingProgress: "We are preparing normalized options", matchingCopy: "Only routes with clear comparable terms will appear here.",
     matchingComplete: "No active options for this request", matchingCompleteCopy: "The result is saved. You can create a new request.",
-    option: "Route", clientRate: "Final rate", methods: "Methods", limits: "Limits", settlement: "Settlement",
+    option: "Offer", clientRate: "Final rate", methods: "Methods", limits: "Limits", settlement: "Settlement",
     integration: "Integration", whyMatched: "Why it fits", interested: "Interested", needDetails: "Need details",
     notSuitable: "Not suitable", selectedOptions: "Selected", requestIntroduction: "Request PSP introduction",
     sharedAt: "Updated", noMessages: "No messages yet. The full working context stays here.", sent: "Message sent.",
@@ -124,6 +132,14 @@ const COPY = {
     maximumTransaction: "Maximum transaction", transactionCurrency: "Transaction currency", launchTimeline: "Launch timeline",
     processingSetup: "Current processing setup", saveProfile: "Save profile", profileComplete: "Profile is ready for PSP review",
     profileSaved: "Profile saved.", profileStillMissing: "Profile saved. Complete the highlighted items.",
+    payinSolutions: "PayIn solutions", payoutSolutions: "PayOut solutions", payin: "PayIn", payout: "PayOut",
+    geo: "GEO", currency: "Currency", trafficType: "Traffic type", openGeo: "Open GEO", solution: "Solution",
+    cardBrands: "Card brands", cardIssue: "Card issue", method: "Method",
+    mdrPayin: "MDR PayIn", mdrPayout: "MDR PayOut", minMaxPayin: "Min/Max transaction PayIn",
+    minMaxPayout: "Min/Max transaction PayOut", settlementCurrency: "Settlement currency",
+    settlementFee: "Settlement fee", settlementPeriod: "Settlement period", minimumSettlement: "Minimum settlement",
+    chargebackFee: "Chargeback fee", refundFee: "Refund fee", rollingReserve: "Rolling reserve",
+    notSpecified: "Not specified", offerExplanation: "One payment solution with explicit commercial terms.",
   },
 };
 
@@ -197,6 +213,80 @@ function formatFee(fee) {
   if (fee.client_percent != null) result.push(`${formatNumber(fee.client_percent)}%`);
   if (fee.client_fixed != null) result.push(`${formatNumber(fee.client_fixed)} ${fee.client_fixed_currency || ""}`.trim());
   return result.join(" + ") || "—";
+}
+function paymentFlow(value) { return String(value || "").toLowerCase(); }
+function countryFlag(value) {
+  const code = String(value || "").trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(code)) return "🌐";
+  return String.fromCodePoint(...[...code].map((character) => 127397 + character.charCodeAt(0)));
+}
+function countryName(value) {
+  const code = String(value || "").trim().toUpperCase();
+  try {
+    return new Intl.DisplayNames([state.language === "ru" ? "ru" : "en"], { type: "region" }).of(code) || code;
+  } catch {
+    return code;
+  }
+}
+function readableCode(value) {
+  const code = String(value || "").trim();
+  if (!code) return "";
+  const normalized = code.toUpperCase();
+  if (normalized === "TRUSTED") return "Trusted";
+  if (normalized === "CARDS") return "Cards";
+  if (normalized === "MASTERCARD") return "MasterCard";
+  if (normalized === "VISA") return "Visa";
+  return normalized;
+}
+function readableList(values, separator = ", ") { return list(values).map(readableCode).filter(Boolean).join(separator); }
+function offerGeo(option) {
+  if (option.coverage_scope === "global") return `🌐 ${t("global")}`;
+  return list(option.geos).map((geo) => `${countryFlag(geo)} ${countryName(geo)}`).join(", ") || t("notSpecified");
+}
+function offerLimit(option, requestedFlow) {
+  const flow = paymentFlow(requestedFlow);
+  const paymentLimits = list(option.limits).filter((limit) => [flow, "both"].includes(paymentFlow(limit.flow)));
+  return paymentLimits.map((limit) => {
+    const minimum = limit.minimum_amount == null ? "—" : formatNumber(limit.minimum_amount);
+    const maximum = limit.maximum_amount == null ? "—" : formatNumber(limit.maximum_amount);
+    return `${minimum}–${maximum} ${limit.currency || ""}`.trim();
+  }).join("; ") || t("notSpecified");
+}
+function offerFee(option, flow) {
+  const fee = list(option.client_fees).find((item) => paymentFlow(item.flow) === flow);
+  return fee ? formatFee(fee) : t("notSpecified");
+}
+function offerSettlement(option) {
+  const terms = list(option.settlement);
+  return {
+    currency: [...new Set(terms.map((item) => item.currency).filter(Boolean))].join(", ") || t("notSpecified"),
+    period: [...new Set(terms.map((item) => item.period).filter(Boolean))].join(", ") || t("notSpecified"),
+    minimum: terms.map((item) => item.minimum_amount == null ? "" : `${formatNumber(item.minimum_amount)} ${item.currency || ""}`.trim()).filter(Boolean).join("; ") || t("notSpecified"),
+    reserve: terms.map((item) => item.netting_percent == null ? "" : `${formatNumber(item.netting_percent)}%`).filter(Boolean).join("; ") || t("notSpecified"),
+  };
+}
+function trafficDescription(option) {
+  const traffic = list(option.traffic_types).map(readableCode).filter(Boolean);
+  if (traffic.length > 1) return `Both (${traffic.join(" & ")})`;
+  return traffic.join("") || t("notSpecified");
+}
+function flowMethods(option, flow) {
+  const scoped = [
+    ...list(option.client_fees).filter((fee) => paymentFlow(fee.flow) === flow).flatMap((fee) => list(fee.method_scope)),
+    ...list(option.limits).filter((limit) => [flow, "both"].includes(paymentFlow(limit.flow))).flatMap((limit) => list(limit.method_scope)),
+  ];
+  return readableList([...new Set(scoped)]) || readableList(option.methods) || t("notSpecified");
+}
+function supportsFlow(option, flow) {
+  const routeFlow = paymentFlow(option.flow);
+  return routeFlow === flow || routeFlow === "both"
+    || list(option.client_fees).some((fee) => paymentFlow(fee.flow) === flow)
+    || list(option.limits).some((limit) => paymentFlow(limit.flow) === flow);
+}
+function commercialTermLine(label, value, sourcePattern) {
+  const normalized = String(value || "").trim();
+  if (!normalized) return "";
+  return sourcePattern.test(normalized) ? normalized : `${label}: ${normalized}`;
 }
 function statusLabel(status) { return t(STATUS_KEYS[status] || status); }
 function requestSummary(lead) {
@@ -356,25 +446,51 @@ function renderOptions() {
   elements.pendingCopy.textContent = t(pendingCopy);
   elements.shortlistUpdated.textContent = hasOptions ? `${t("sharedAt")}: ${formatDate(state.options[0].shared_at)}` : "";
   elements.shortlistGrid.innerHTML = state.options.map((option) => {
-    const geos = option.coverage_scope === "global" ? t("global") : list(option.geos).join(", ");
-    const facts = [geos, list(option.currencies).join(", "), option.flow?.toUpperCase()].filter(Boolean);
-    const fees = list(option.client_fees).map(formatFee).join(" · ") || "—";
-    const limits = list(option.limits).map((limit) => {
-      const range = [limit.minimum_amount, limit.maximum_amount].filter((value) => value != null).map(formatNumber).join("–");
-      return `${range} ${limit.currency || ""}`.trim();
-    }).filter(Boolean).join(" · ") || "—";
-    const settlement = list(option.settlement).map((item) => [item.currency, item.period].filter(Boolean).join(" · ")).filter(Boolean).join("; ") || "—";
+    const settlement = offerSettlement(option);
+    const riskTerms = option.risk_terms && typeof option.risk_terms === "object" ? option.risk_terms : {};
+    const geos = offerGeo(option);
+    const methods = readableList(option.methods) || t("notSpecified");
+    const payin = supportsFlow(option, "payin");
+    const payout = supportsFlow(option, "payout");
+    const chargeback = riskTerms.chargeback || offerFee(option, "chargeback");
+    const refund = riskTerms.refund || offerFee(option, "refund");
+    const rollingReserve = riskTerms.rolling_reserve || settlement.reserve;
+    const hasChargeback = chargeback !== t("notSpecified");
+    const hasRefund = refund !== t("notSpecified");
+    const hasReserve = rollingReserve !== t("notSpecified");
+    const hasSettlementMinimum = settlement.minimum !== t("notSpecified");
+    const hasIntegration = readableList(option.integrations) !== "";
     return `<article class="option-card">
       <div class="option-top"><span>${escapeHtml(t("option"))} ${escapeHtml(option.rank)}</span><code>${escapeHtml(option.option_code)}</code></div>
-      <h3>${escapeHtml(option.route_title)}</h3>
-      <div class="route-tags">${facts.map((fact) => `<span>${escapeHtml(fact)}</span>`).join("")}</div>
-      <dl class="option-facts">
-        <div class="rate-fact"><dt>${escapeHtml(t("clientRate"))}</dt><dd>${escapeHtml(fees)}</dd></div>
-        <div><dt>${escapeHtml(t("methods"))}</dt><dd>${escapeHtml(list(option.methods).join(", ") || "—")}</dd></div>
-        <div><dt>${escapeHtml(t("limits"))}</dt><dd>${escapeHtml(limits)}</dd></div>
-        <div><dt>${escapeHtml(t("settlement"))}</dt><dd>${escapeHtml(settlement)}</dd></div>
-        <div><dt>${escapeHtml(t("integration"))}</dt><dd>${escapeHtml(list(option.integrations).join(", ") || "—")}</dd></div>
-      </dl>
+      <div class="telegram-offer">
+        <h3>${escapeHtml(`GEO — ${geos}`)} <small>(${escapeHtml(methods)})</small></h3>
+        <div class="offer-message-lines">
+          <p>${escapeHtml(t("currency"))} — ${escapeHtml(readableList(option.currencies) || t("notSpecified"))}</p>
+          <p>${escapeHtml(t("trafficType"))} — ${escapeHtml(trafficDescription(option))}</p>
+          <p>${escapeHtml(t("cardBrands"))}: ${escapeHtml(readableList(option.card_brands, " / ") || t("notSpecified"))}</p>
+          <p><strong>${escapeHtml(t("method"))}: ${escapeHtml(methods)}</strong></p>
+          ${option.card_issue ? `<p>${escapeHtml(t("cardIssue"))}: ${escapeHtml(option.card_issue)}</p>` : ""}
+          <p>${escapeHtml(t("openGeo"))}: ${escapeHtml(list(option.geos).join(", ") || t("global"))}</p>
+        </div>
+        ${payin ? `<section class="offer-flow-message"><h4>${escapeHtml(t("payin"))}</h4>
+          <p>${escapeHtml(t("minMaxPayin"))} (${escapeHtml(flowMethods(option, "payin"))}) ${escapeHtml(offerLimit(option, "payin"))}</p>
+          <p class="mdr-line">${escapeHtml(t("mdrPayin"))} — <strong>${escapeHtml(offerFee(option, "payin"))}</strong></p>
+        </section>` : ""}
+        ${payout ? `<section class="offer-flow-message"><h4>${escapeHtml(t("payout"))}</h4>
+          <p>${escapeHtml(t("minMaxPayout"))} (${escapeHtml(flowMethods(option, "payout"))}) ${escapeHtml(offerLimit(option, "payout"))}</p>
+          <p class="mdr-line">${escapeHtml(t("mdrPayout"))} — <strong>${escapeHtml(offerFee(option, "payout"))}</strong></p>
+        </section>` : ""}
+        <section class="offer-settlement-message"><h4>${escapeHtml(t("settlement"))}:</h4>
+          <p>${escapeHtml(t("settlementCurrency"))}: ${escapeHtml(settlement.currency)}</p>
+          <p>${escapeHtml(t("settlementFee"))}: ${escapeHtml(offerFee(option, "settlement"))}</p>
+          ${hasSettlementMinimum ? `<p>${escapeHtml(t("minimumSettlement"))}: ${escapeHtml(settlement.minimum)}</p>` : ""}
+          <p>${escapeHtml(t("settlementPeriod"))}: ${escapeHtml(settlement.period)}</p>
+          ${hasChargeback ? `<p>${escapeHtml(commercialTermLine(t("chargebackFee"), chargeback, /^charge\s?back\b/i))}</p>` : ""}
+          ${hasRefund ? `<p>${escapeHtml(commercialTermLine(t("refundFee"), refund, /^refund\b/i))}</p>` : ""}
+          ${hasReserve ? `<p>${escapeHtml(commercialTermLine(t("rollingReserve"), rollingReserve, /^(?:rolling reserve|rr\s*:)/i))}</p>` : ""}
+          ${hasIntegration ? `<p>${escapeHtml(t("integration"))}: ${escapeHtml(readableList(option.integrations))}</p>` : ""}
+        </section>
+      </div>
       <p class="match-reason"><span>${escapeHtml(t("whyMatched"))}</span>${escapeHtml(option.client_note)}</p>
       ${option.valid_through ? `<small class="validity">${escapeHtml(t("validThrough"))}: ${escapeHtml(formatDate(option.valid_through))}</small>` : ""}
       <div class="option-actions">
@@ -417,7 +533,7 @@ async function enterPortal(session) {
 async function loadWorkspace(preferredLeadId = state.lead?.lead_id) {
   const [requestsResult, optionsResult, dealsResult, organizationsResult] = await Promise.all([
     supabase.rpc("list_offerpsp_workspace_requests"),
-    supabase.rpc("list_offerpsp_client_options", { p_lead_id: null }),
+    supabase.rpc("list_offerpsp_client_offers", { p_lead_id: null }),
     supabase.rpc("list_offerpsp_client_deals", { p_lead_id: null }),
     supabase.rpc("list_offerpsp_my_organizations"),
   ]);

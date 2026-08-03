@@ -114,6 +114,7 @@ async function applyMigrations() {
     "20260802_offerpsp_entity_lifecycle.sql",
     "20260802_offerpsp_entity_lifecycle_grants.sql",
     "20260803_offerpsp_manual_client_offers.sql",
+    "20260803_offerpsp_client_offer_display.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -198,13 +199,16 @@ async function verifySupplyOperationGrants() {
     has_function_privilege('authenticated', 'public.get_offerpsp_supply_coverage()', 'EXECUTE') as authenticated_coverage,
     has_function_privilege('anon', 'public.get_offerpsp_supply_coverage()', 'EXECUTE') as anon_coverage,
     has_function_privilege('authenticated', 'public.create_offerpsp_manual_shortlist(uuid,uuid[],text,text,text)', 'EXECUTE') as authenticated_manual_shortlist,
-    has_function_privilege('anon', 'public.create_offerpsp_manual_shortlist(uuid,uuid[],text,text,text)', 'EXECUTE') as anon_manual_shortlist
+    has_function_privilege('anon', 'public.create_offerpsp_manual_shortlist(uuid,uuid[],text,text,text)', 'EXECUTE') as anon_manual_shortlist,
+    has_function_privilege('authenticated', 'public.list_offerpsp_client_offers(uuid)', 'EXECUTE') as authenticated_client_offers,
+    has_function_privilege('anon', 'public.list_offerpsp_client_offers(uuid)', 'EXECUTE') as anon_client_offers
   `);
   const grants = result.rows[0];
   if (!grants.authenticated_list || !grants.authenticated_save || !grants.authenticated_resolve
       || !grants.authenticated_coverage || !grants.authenticated_manual_shortlist
+      || !grants.authenticated_client_offers
       || grants.anon_list || grants.anon_save || grants.anon_resolve
-      || grants.anon_coverage || grants.anon_manual_shortlist) {
+      || grants.anon_coverage || grants.anon_manual_shortlist || grants.anon_client_offers) {
     throw new Error("Supply operation RPC grants do not match the staff-only API model");
   }
   process.stdout.write("PASS staff-only supply operation RPC grants with anon denied\n");
@@ -542,7 +546,7 @@ async function runEndToEndFixture() {
     currencies: ["INR"],
     flow: "payin",
     methods: ["UPI"],
-    card_brands: [],
+    card_brands: ["VISA", "MASTERCARD"],
     traffic_types: ["FTD"],
     verticals: ["IGAMING"],
     prohibited_verticals: [],
@@ -550,7 +554,8 @@ async function runEndToEndFixture() {
     niche_key: "IN|INR|PAYIN|UPI|FTD|IGAMING|H2H",
     effective_from: "2026-07-31",
     freshness_days: 30,
-    risk_terms: {},
+    risk_terms: { chargeback: "Chargeback penalty: NO", refund: "Refund fee: NO" },
+    raw_block: "Card brands: Visa / MasterCard\nCard issue: India\nChargeback penalty: NO\nRefund fee: NO\nRR: 10% / 180d",
     fees: [{
       flow: "payin",
       traffic_tier: "FTD",
@@ -698,6 +703,20 @@ async function runEndToEndFixture() {
   const clientPayload = JSON.stringify(clientOptions.rows[0]);
   if (/Validation PSP|validation\.invalid|provider_id|offer_route_id|base_percent|margin_mode/i.test(clientPayload)) {
     throw new Error("Client shortlist leaked internal provider or pricing data");
+  }
+  const clientOffers = await query("select * from public.list_offerpsp_client_offers($1)", [leadId]);
+  if (
+    clientOffers.rows.length !== 1
+    || clientOffers.rows[0].coverage_scope !== "specific"
+    || JSON.stringify(clientOffers.rows[0].card_brands) !== JSON.stringify(["VISA", "MASTERCARD"])
+    || clientOffers.rows[0].card_issue !== "India"
+    || clientOffers.rows[0].risk_terms.chargeback !== "Chargeback penalty: NO"
+    || clientOffers.rows[0].risk_terms.rolling_reserve !== "RR: 10% / 180d"
+  ) {
+    throw new Error(`Client offer display fields are incomplete: ${JSON.stringify(clientOffers.rows)}`);
+  }
+  if (/fee_percent|fixed_fee|Validation PSP|provider_id|offer_route_id|base_percent|margin_mode/i.test(JSON.stringify(clientOffers.rows[0].settlement))) {
+    throw new Error("Client offer display leaked private source settlement or provider pricing data");
   }
   const dossierUpdate = await query(
     "select public.update_offerpsp_client_dossier($1, $2::jsonb) as value",
