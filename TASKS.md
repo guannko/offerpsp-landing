@@ -43,12 +43,15 @@ Status: `VERIFIED` locally, on a protected Vercel preview and in production.
 - [x] The combined preview bundle contains the production Supabase URL without
   fallback values and the assembled public artifact excludes private files,
   migrations and internal task documentation.
-- [x] Production deployment `dpl_32wVgFtLmz2ig99sd7MzTsJtF3Q8` is `READY` and
-  serves `https://offerpsp.com/control/` while preserving `/`, `/admin/` and
-  `/portal/`. The production bundle contains the real Supabase URL without the
-  fallback placeholders, the sign-in UI rendered in a browser and runtime logs
-  contained no errors.
-- [x] Previous deployment `dpl_pgpNwMjmZ9hkhpmsaQ5Fihxiurp9` remains the immediate
+- [x] Production deployment `dpl_D8GkbbqJmduntGntZnpfcqXtLUAi` is `READY` and
+  serves Control Bridge V2 at the canonical `https://offerpsp.com/admin/` route.
+  The former staff cabinet remains available at `/admin-legacy/`, `/control/`
+  redirects to `/admin/`, and the landing plus `/portal/` remain intact.
+- [x] The production bundle contains the real Supabase URL without fallback
+  placeholders; `/admin/`, nested SPA routes, `/admin-legacy/` and `/portal/`
+  passed deployment smoke checks. The sign-in UI rendered in a browser and
+  runtime logs contained no errors.
+- [x] Previous production `dpl_32wVgFtLmz2ig99sd7MzTsJtF3Q8` remains the immediate
   rollback target. No database migration was required for this frontend rollout.
 
 ## Delivery layers — current source of truth

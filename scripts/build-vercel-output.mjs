@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
-import { cp, mkdir, rm } from "node:fs/promises";
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const output = resolve(root, ".vercel-static");
-const controlDist = resolve(root, "platform-v2", "dist");
+const adminDist = resolve(root, "platform-v2", "dist");
 
 const publicFiles = [
   "index.html",
@@ -24,8 +24,15 @@ for (const file of publicFiles) {
   await cp(resolve(root, file), resolve(output, file));
 }
 
-await cp(resolve(root, "admin"), resolve(output, "admin"), { recursive: true });
+await cp(resolve(root, "admin"), resolve(output, "admin-legacy"), { recursive: true });
 await cp(resolve(root, "portal"), resolve(output, "portal"), { recursive: true });
-await cp(controlDist, resolve(output, "control"), { recursive: true });
+await cp(adminDist, resolve(output, "admin"), { recursive: true });
 
-process.stdout.write("PASS assembled landing, legacy admin, client portal and Control Bridge V2\n");
+const legacyIndexPath = resolve(output, "admin-legacy", "index.html");
+const legacyAppPath = resolve(output, "admin-legacy", "app.js");
+const legacyIndex = (await readFile(legacyIndexPath, "utf8")).replaceAll("/admin/", "/admin-legacy/");
+const legacyApp = (await readFile(legacyAppPath, "utf8")).replaceAll("/admin/", "/admin-legacy/");
+await writeFile(legacyIndexPath, legacyIndex);
+await writeFile(legacyAppPath, legacyApp);
+
+process.stdout.write("PASS assembled landing, client portal, Control Bridge admin and legacy fallback\n");
