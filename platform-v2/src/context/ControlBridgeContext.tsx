@@ -46,6 +46,7 @@ const emptyData: ControlBridgeData = {
 };
 
 const ControlBridgeContext = createContext<ControlBridgeContextValue | null>(null);
+const CONTROL_BRIDGE_OWNER_EMAIL = "guannko@gmail.com";
 
 const asArray = <T,>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
 
@@ -71,6 +72,21 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
 
     if (userResult.error || !user) {
       setState({ ...emptyData, loading: false, user: null });
+      return;
+    }
+
+    const isOwnerGoogleAccount =
+      user.email?.toLowerCase() === CONTROL_BRIDGE_OWNER_EMAIL &&
+      user.app_metadata?.provider === "google";
+
+    if (!isOwnerGoogleAccount) {
+      await supabase.auth.signOut();
+      setState({
+        ...emptyData,
+        loading: false,
+        accessDenied: true,
+        error: `Доступ разрешён только Google-аккаунту ${CONTROL_BRIDGE_OWNER_EMAIL}.`,
+      });
       return;
     }
 
