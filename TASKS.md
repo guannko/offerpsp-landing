@@ -5,6 +5,52 @@ Updated: 2026-08-03
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## Control Bridge V2 — local frontend migration 2026-08-03
+
+Status: `VERIFIED` locally, on a protected Vercel preview and in production.
+
+- [x] TailAdmin Free React/TypeScript/Tailwind converted into an OfferPSP staff shell.
+- [x] Command center, attention queues, pipeline, merchants, PSP, offers, deals,
+  subagents and analytics use actual bridge data instead of demo fixtures.
+- [x] Merchant workspace connects route matching, manual selection of any eligible
+  route, client-safe shortlist preview and controlled sharing.
+- [x] Deal Desk connects the existing dossier, PSP review, Telegram, Zoom and
+  won/lost RPC chain.
+- [x] PSP workspace connects profile, contacts, freshness, versioned OfferPSP
+  margin and normalized route editing/lifecycle RPCs.
+- [x] Subagent workspace connects organization lifecycle, merchant assignment and
+  versioned agent-margin RPCs.
+- [x] Header search resolves real merchants, PSPs and routes to their workspaces.
+- [x] Dead actions were removed from enabled modules; unfinished modules remain
+  hidden through feature flags rather than pretending to work.
+- [x] Merchant shortlist preview follows the Telegram-offer standard, keeps PayIn
+  and PayOut as separate commercial sections and supports RU/EN staff preview.
+- [x] Working registries hide closed merchant fixtures and archived PSP/agents by
+  default while preserving searchable history; archived routes are read-only.
+- [x] Authenticated production-data contract passed for separate staff/client users:
+  roles, leads, management registry, supply registry and coverage RPC all returned 200.
+- [x] Authenticated browser smoke passed for sign-in, all eight enabled modules,
+  merchant workspace, RU/EN offer preview, global search, PSP/agent creation forms
+  and provider workspace. Browser runtime logs contain no errors.
+- [x] Reversible provider mutation passed through the V2 UI and the original value
+  was restored; the temporary E2E staff account was deactivated again.
+- [x] Standalone protected preview `dpl_Ce1G486tbqSkupcXvR9iFJoWLyWy` verified the
+  V2 application independently before it was integrated into the public site artifact.
+- [x] Production-safe combined preview `dpl_FzaqN2xkame6ZrVYpcbJkwEoFCmi` is `READY` at
+  `https://offerpsp-landing-l9xs82u4z-annoris.vercel.app`: the existing landing,
+  `/admin/` and `/portal/` remain intact while Control Bridge V2 is mounted at
+  `/control/`; sign-in and nested SPA routes resolve to the V2 shell.
+- [x] The combined preview bundle contains the production Supabase URL without
+  fallback values and the assembled public artifact excludes private files,
+  migrations and internal task documentation.
+- [x] Production deployment `dpl_32wVgFtLmz2ig99sd7MzTsJtF3Q8` is `READY` and
+  serves `https://offerpsp.com/control/` while preserving `/`, `/admin/` and
+  `/portal/`. The production bundle contains the real Supabase URL without the
+  fallback placeholders, the sign-in UI rendered in a browser and runtime logs
+  contained no errors.
+- [x] Previous deployment `dpl_pgpNwMjmZ9hkhpmsaQ5Fihxiurp9` remains the immediate
+  rollback target. No database migration was required for this frontend rollout.
+
 ## Delivery layers — current source of truth
 
 ### 1. Available through the production interface

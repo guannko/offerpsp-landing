@@ -1,0 +1,11 @@
+{
+  "name": "offerpsp-platform",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "validate": "node scripts/validate-offerpsp-portal.mjs",
+    "build:control": "npm --prefix platform-v2 ci && npm --prefix platform-v2 run build -- --base=/control/",
+    "build": "npm run validate && npm run build:control && node scripts/build-vercel-output.mjs"
+  }
+}

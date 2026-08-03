@@ -1,4 +1,5 @@
 .vercel
+.vercel-static/
 .private/
 .DS_Store
 psp_database.csv

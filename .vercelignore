@@ -4,7 +4,6 @@ logo.jpg
 AGENTS.md
 TASKS.md
 docs/
-scripts/
 supabase/
 .gitignore
 .private/
