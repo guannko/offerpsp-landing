@@ -6,6 +6,14 @@ import { useControlBridge } from "../context/ControlBridgeContext";
 import { supabase } from "../lib/supabase";
 import DealDeskPanel, { type DealWorkspace } from "./DealDeskPanel";
 import MerchantProfileEditor from "../components/control/MerchantProfileEditor";
+import {
+  ActivityPanel,
+  CommunicationsPanel,
+  ContactsPanel,
+  DocumentsPanel,
+  TasksPanel,
+  useEntityWorkspace,
+} from "../components/control/EntityWorkspace360";
 
 type Match = {
   match_id: string;
@@ -67,14 +75,19 @@ type Shortlist = {
   offerpsp_shortlist_items?: ShortlistItem[];
 };
 
-type Tab = "overview" | "profile" | "matching" | "preview" | "deal";
+type Tab = "overview" | "profile" | "contacts" | "matching" | "preview" | "deal" | "communications" | "documents" | "tasks" | "activity";
 
 const tabs: Array<{ id: Tab; label: string }> = [
   { id: "overview", label: "Обзор" },
-  { id: "profile", label: "Профиль и управление" },
-  { id: "matching", label: "Подбор и офферы" },
-  { id: "preview", label: "Предпросмотр клиента" },
-  { id: "deal", label: "Deal Desk" },
+  { id: "profile", label: "Профиль" },
+  { id: "contacts", label: "Контакты" },
+  { id: "matching", label: "Офферы" },
+  { id: "preview", label: "Кабинет клиента" },
+  { id: "deal", label: "Сделка" },
+  { id: "communications", label: "Связь" },
+  { id: "documents", label: "Документы" },
+  { id: "tasks", label: "Задачи" },
+  { id: "activity", label: "История" },
 ];
 
 const textList = (value: unknown) => Array.isArray(value) && value.length ? value.join(", ") : "—";
@@ -120,6 +133,7 @@ export default function MerchantWorkspace() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  const entityWorkspace = useEntityWorkspace("merchant", leadId);
 
   const loadWorkspace = useCallback(async () => {
     if (!leadId) return;
@@ -170,7 +184,7 @@ export default function MerchantWorkspace() {
       setBusy(null);
       return false;
     }
-    await Promise.all([loadWorkspace(), refresh()]);
+    await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]);
     setMessage({ tone: "success", text: success });
     setBusy(null);
     return true;
@@ -239,12 +253,13 @@ export default function MerchantWorkspace() {
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{lead.name || "Контакт не указан"} · {lead.work_email || lead.telegram || "нет контакта"}</p>
       </div>
       <div className="flex flex-wrap gap-2">
-        <button onClick={() => void loadWorkspace()} disabled={loading || Boolean(busy)} className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-brand-300 hover:text-brand-500 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300">Обновить</button>
+        <button onClick={() => void Promise.all([loadWorkspace(), entityWorkspace.refresh()])} disabled={loading || entityWorkspace.loading || Boolean(busy)} className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-brand-300 hover:text-brand-500 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300">Обновить</button>
         <button onClick={() => setTab("matching")} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600">Подобрать и отправить офферы</button>
       </div>
     </div>
 
     {message && <div className={`mb-5 rounded-xl border px-4 py-3 text-sm ${message.tone === "error" ? "border-error-200 bg-error-50 text-error-700 dark:border-error-500/20 dark:bg-error-500/10 dark:text-error-300" : "border-success-200 bg-success-50 text-success-700 dark:border-success-500/20 dark:bg-success-500/10 dark:text-success-300"}`}>{message.text}</div>}
+    {entityWorkspace.error && <ErrorBanner message={entityWorkspace.error}/>}
 
     <div className="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-800 dark:bg-gray-900">
       {tabs.map((item) => <button key={item.id} onClick={() => setTab(item.id)} className={`whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium ${tab === item.id ? "bg-brand-500 text-white" : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"}`}>{item.label}</button>)}
@@ -253,7 +268,9 @@ export default function MerchantWorkspace() {
     {loading ? <SkeletonPage/> : tab === "overview"
       ? <Overview lead={lead} matches={matches} shortlist={latest}/>
       : tab === "profile"
-        ? <MerchantProfileEditor lead={lead} onChanged={async () => { await Promise.all([loadWorkspace(), refresh()]); }}/>
+        ? <MerchantProfileEditor lead={lead} onChanged={async () => { await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]); }}/>
+      : tab === "contacts"
+        ? (entityWorkspace.loading ? <SkeletonPage/> : <ContactsPanel contacts={entityWorkspace.data.contacts} baseContact={{ full_name: lead.name || "Анкетный контакт", email: lead.work_email, telegram: lead.telegram, is_primary: true }} busy={entityWorkspace.busy} onSave={entityWorkspace.saveContact} onArchive={entityWorkspace.archiveContact}/>)
       : tab === "matching"
         ? <MatchingPanel
             matches={matches}
@@ -269,9 +286,17 @@ export default function MerchantWorkspace() {
             createMatched={() => void createMatchedShortlist()}
             createManual={() => void createManualShortlist()}
           />
-        : tab === "preview"
+      : tab === "preview"
           ? <Preview shortlist={latest} busy={busy} onShare={() => void shareLatest()}/>
-          : <DealDeskPanel workspace={dealWorkspace} reload={async () => { await Promise.all([loadWorkspace(), refresh()]); }}/>}
+      : tab === "deal"
+          ? <DealDeskPanel workspace={dealWorkspace} reload={async () => { await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]); }}/>
+      : tab === "communications"
+          ? (entityWorkspace.loading ? <SkeletonPage/> : <CommunicationsPanel leadId={lead.lead_id} conversations={entityWorkspace.data.conversations} emails={entityWorkspace.data.emails}/>)
+      : tab === "documents"
+          ? (entityWorkspace.loading ? <SkeletonPage/> : <DocumentsPanel documents={entityWorkspace.data.documents} busy={entityWorkspace.busy} onSave={entityWorkspace.saveDocument} onArchive={entityWorkspace.archiveDocument}/>)
+      : tab === "tasks"
+          ? (entityWorkspace.loading ? <SkeletonPage/> : <TasksPanel tasks={entityWorkspace.data.tasks} busy={entityWorkspace.busy} onSave={entityWorkspace.saveTask}/>)
+          : (entityWorkspace.loading ? <SkeletonPage/> : <ActivityPanel activities={entityWorkspace.data.activities}/>)}
   </>;
 }
 

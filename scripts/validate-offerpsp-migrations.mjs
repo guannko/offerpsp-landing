@@ -55,6 +55,16 @@ async function bootstrap() {
     as $$
       select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid;
     $$;
+    create or replace function auth.jwt()
+    returns jsonb
+    language sql
+    stable
+    as $$
+      select jsonb_build_object(
+        'email', coalesce((select email from auth.users where id = auth.uid()), ''),
+        'app_metadata', jsonb_build_object('provider', 'google')
+      );
+    $$;
 
     create table public.offerpsp_leads (
       lead_id uuid primary key default gen_random_uuid(),
@@ -145,6 +155,9 @@ async function applyMigrations() {
     "20260803_offerpsp_manual_client_offers.sql",
     "20260803_offerpsp_client_offer_display.sql",
     "20260803192003_offerpsp_captains_bridge.sql",
+    "20260803195211_offerpsp_single_google_owner.sql",
+    "20260803201601_offerpsp_agent_database.sql",
+    "20260803203528_offerpsp_360_workspaces.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -278,9 +291,35 @@ async function verifyCaptainsBridgeGrants() {
   process.stdout.write("PASS staff-only Captain's Bridge and email RPC grants with anon denied\n");
 }
 
+async function verify360WorkspaceGrants() {
+  const result = await query(`select
+    has_function_privilege('authenticated', 'public.get_offerpsp_entity_workspace(text,uuid)', 'EXECUTE') as authenticated_workspace,
+    has_function_privilege('anon', 'public.get_offerpsp_entity_workspace(text,uuid)', 'EXECUTE') as anon_workspace,
+    has_function_privilege('authenticated', 'public.save_offerpsp_merchant_contact(uuid,uuid,jsonb)', 'EXECUTE') as authenticated_contact,
+    has_function_privilege('anon', 'public.save_offerpsp_merchant_contact(uuid,uuid,jsonb)', 'EXECUTE') as anon_contact,
+    has_function_privilege('authenticated', 'public.save_offerpsp_entity_document(text,uuid,uuid,jsonb)', 'EXECUTE') as authenticated_document,
+    has_function_privilege('anon', 'public.save_offerpsp_entity_document(text,uuid,uuid,jsonb)', 'EXECUTE') as anon_document,
+    has_function_privilege('authenticated', 'public.save_offerpsp_lead_task(uuid,uuid,jsonb)', 'EXECUTE') as authenticated_task,
+    has_function_privilege('anon', 'public.save_offerpsp_lead_task(uuid,uuid,jsonb)', 'EXECUTE') as anon_task,
+    has_table_privilege('authenticated', 'private.offerpsp_merchant_contacts', 'SELECT') as authenticated_contacts_table,
+    has_table_privilege('authenticated', 'private.offerpsp_entity_documents', 'SELECT') as authenticated_documents_table,
+    has_table_privilege('anon', 'private.offerpsp_merchant_contacts', 'SELECT') as anon_contacts_table,
+    has_table_privilege('anon', 'private.offerpsp_entity_documents', 'SELECT') as anon_documents_table
+  `);
+  const grants = result.rows[0];
+  if (!grants.authenticated_workspace || !grants.authenticated_contact || !grants.authenticated_document
+      || !grants.authenticated_task || grants.anon_workspace || grants.anon_contact || grants.anon_document
+      || grants.anon_task
+      || grants.authenticated_contacts_table || grants.authenticated_documents_table
+      || grants.anon_contacts_table || grants.anon_documents_table) {
+    throw new Error("360 workspace grants expose private contacts or documents");
+  }
+  process.stdout.write("PASS staff-only 360 workspace RPC grants with private tables isolated\n");
+}
+
 async function seedUsers() {
   await query(
-    "insert into auth.users (id, email) values ($1, 'staff@example.com'), ($2, 'client@example.com'), ($3, 'other@example.com'), ($4, 'agent@example.com')",
+    "insert into auth.users (id, email) values ($1, 'guannko@gmail.com'), ($2, 'client@example.com'), ($3, 'other@example.com'), ($4, 'agent@example.com')",
     [STAFF_ID, CLIENT_ID, OTHER_CLIENT_ID, AGENT_ID],
   );
   await setUser(STAFF_ID);
@@ -1103,6 +1142,96 @@ async function verifyEntityLifecycle() {
   process.stdout.write("PASS generic PSP, offer revision, margin history, organization, assignment and merchant lifecycle\n");
 }
 
+async function verify360Workspaces() {
+  await setUser(STAFF_ID);
+  const lead = await query(`
+    insert into public.offerpsp_leads (
+      name, work_email, company, vertical, geos, source, status, consent
+    ) values (
+      'Workspace Owner', 'workspace@example.com', 'Workspace Merchant',
+      'iGaming', 'EU', 'workspace-360-test', 'new', true
+    ) returning lead_id
+  `);
+  const leadId = lead.rows[0].lead_id;
+  const contact = await query(
+    "select public.save_offerpsp_merchant_contact($1, null, $2::jsonb) as value",
+    [leadId, JSON.stringify({
+      full_name: "Finance Contact",
+      role_title: "CFO",
+      email: "finance@example.com",
+      preferred_channel: "email",
+      is_primary: true,
+    })],
+  );
+  const merchantDocument = await query(
+    "select public.save_offerpsp_entity_document('merchant', $1, null, $2::jsonb) as value",
+    [leadId, JSON.stringify({
+      category: "license",
+      title: "Merchant licence",
+      document_url: "https://example.com/licence",
+    })],
+  );
+  await query(
+    "select public.save_offerpsp_lead_task($1, null, $2::jsonb)",
+    [leadId, JSON.stringify({
+      title: "Request KYB package",
+      details: "Collect company and licence documents",
+      priority: "high",
+      status: "pending",
+    })],
+  );
+  const merchantWorkspace = await query(
+    "select public.get_offerpsp_entity_workspace('merchant', $1) as value",
+    [leadId],
+  );
+  if (merchantWorkspace.rows[0].value.contacts.length !== 1
+      || merchantWorkspace.rows[0].value.documents.length !== 1
+      || merchantWorkspace.rows[0].value.tasks.length !== 1
+      || !merchantWorkspace.rows[0].value.activities.some((item) => item.activity_type === "document_added")) {
+    throw new Error("Merchant 360 workspace is missing contacts, documents or timeline events");
+  }
+
+  const provider = await query(
+    "select public.save_offerpsp_managed_provider(null, $1::jsonb) as value",
+    [JSON.stringify({ brand_name: "Workspace PSP", relationship_status: "prospect" })],
+  );
+  const providerId = provider.rows[0].value.id;
+  await query(
+    "select public.save_offerpsp_entity_document('provider', $1, null, $2::jsonb)",
+    [providerId, JSON.stringify({
+      category: "rate_card",
+      title: "Current rate card",
+      document_url: "https://example.com/rate-card",
+    })],
+  );
+  const providerWorkspace = await query(
+    "select public.get_offerpsp_entity_workspace('provider', $1) as value",
+    [providerId],
+  );
+  if (providerWorkspace.rows[0].value.documents.length !== 1
+      || !providerWorkspace.rows[0].value.activities.some((item) => item.action_type === "document_added")) {
+    throw new Error("Provider 360 workspace is missing documents or timeline events");
+  }
+
+  await setUser(OTHER_CLIENT_ID);
+  await expectQueryFailure(
+    "select public.get_offerpsp_entity_workspace('merchant', $1)",
+    [leadId],
+    "OfferPSP staff access required",
+  );
+  await setUser(STAFF_ID);
+  await query("select public.archive_offerpsp_merchant_contact($1)", [contact.rows[0].value.id]);
+  await query("select public.archive_offerpsp_entity_document($1)", [merchantDocument.rows[0].value.id]);
+  const archived = await query(
+    "select public.get_offerpsp_entity_workspace('merchant', $1) as value",
+    [leadId],
+  );
+  if (archived.rows[0].value.contacts[0].active || archived.rows[0].value.documents[0].status !== "archived") {
+    throw new Error("360 workspace contact or document archive failed");
+  }
+  process.stdout.write("PASS merchant/provider 360 workspaces, timeline and staff isolation\n");
+}
+
 try {
   await bootstrap();
   await applyMigrations();
@@ -1112,6 +1241,7 @@ try {
   await verifySupplyOperationGrants();
   await verifyManagementOperationGrants();
   await verifyCaptainsBridgeGrants();
+  await verify360WorkspaceGrants();
   await seedUsers();
   await verifyPortalLeadClaims();
   await verifyLegacyShortlistBlocked();
@@ -1121,6 +1251,7 @@ try {
   await runEndToEndFixture();
   await verifyAgentWorkspaceAndPricing();
   await verifyEntityLifecycle();
+  await verify360Workspaces();
   process.stdout.write("PASS all OfferPSP migration checks\n");
 } catch (error) {
   process.stderr.write(`FAIL ${error.message}\n`);

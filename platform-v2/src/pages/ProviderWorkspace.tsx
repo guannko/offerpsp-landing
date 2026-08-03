@@ -4,6 +4,7 @@ import PageMeta from "../components/common/PageMeta";
 import { EmptyState, ErrorBanner, Panel, SkeletonPage, StatusPill } from "../components/control/Ui";
 import { useControlBridge } from "../context/ControlBridgeContext";
 import { supabase } from "../lib/supabase";
+import { ActivityPanel, DocumentsPanel, useEntityWorkspace } from "../components/control/EntityWorkspace360";
 
 type JsonRow = Record<string, string | number | null | undefined>;
 type Provider = {
@@ -24,6 +25,17 @@ type Route = {
 };
 type Workspace = { provider: Provider; contacts: Contact[]; margin_policies: Margin[]; routes: Route[]; batches: JsonRow[]; activity: JsonRow[] };
 type MarginDraft = { route_id:string; flow:string; mode:string; percent_value:string; fixed_value:string; fixed_currency:string; notes:string };
+type ProviderTab = "overview" | "profile" | "contacts" | "offers" | "pricing" | "documents" | "activity";
+
+const providerTabs: Array<{ id: ProviderTab; label: string }> = [
+  { id: "overview", label: "Обзор" },
+  { id: "profile", label: "Профиль" },
+  { id: "contacts", label: "Контакты" },
+  { id: "offers", label: "Офферы" },
+  { id: "pricing", label: "Маржа" },
+  { id: "documents", label: "Документы" },
+  { id: "activity", label: "История" },
+];
 
 const fieldClass = "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:text-white";
 const areaClass = "min-h-24 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:text-white";
@@ -41,9 +53,11 @@ export default function ProviderWorkspace() {
   const [loading, setLoading] = useState(!isNew);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  const [tab, setTab] = useState<ProviderTab>("overview");
   const [providerDraft, setProviderDraft] = useState<Partial<Provider>>({ relationship_status: "prospect", relationship_tier: "standard", strategic_priority: 50, margin_included_default: false });
   const [contactDraft, setContactDraft] = useState<Partial<Contact>>({ active: true, preferred_channel: "telegram" });
   const [marginDraft, setMarginDraft] = useState({ route_id: "", flow: "all", mode: "percentage_points", percent_value: "", fixed_value: "", fixed_currency: "", notes: "" });
+  const entityWorkspace = useEntityWorkspace("provider", isNew ? undefined : providerId);
 
   const load = useCallback(async () => {
     if (!providerId || isNew) return;
@@ -66,7 +80,7 @@ export default function ProviderWorkspace() {
     setBusy(name); setMessage(null);
     const result = await action();
     if (result.error) { setMessage({ tone: "error", text: result.error.message }); setBusy(null); return null; }
-    if (!isNew) await Promise.all([load(), refreshBridge()]);
+    if (!isNew) await Promise.all([load(), refreshBridge(), entityWorkspace.refresh()]);
     setMessage({ tone: "success", text: success }); setBusy(null);
     return result.data;
   }
@@ -111,11 +125,42 @@ export default function ProviderWorkspace() {
     <PageMeta title={`${isNew ? "Новый PSP" : workspace?.provider.brand_name || "PSP"} | OfferPSP`} description="Private PSP workspace"/>
     <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"><div><Link to="/psps" className="text-sm font-medium text-gray-500 hover:text-brand-500">← Реестр PSP</Link><div className="mt-3 flex flex-wrap items-center gap-3"><h1 className="text-2xl font-semibold text-gray-900 dark:text-white sm:text-3xl">{isNew ? "Новый PSP" : workspace?.provider.brand_name}</h1>{workspace && <StatusPill status={workspace.provider.relationship_status}/>}</div><p className="mt-2 text-sm text-gray-500">{workspace?.provider.internal_code || "Код будет назначен автоматически"}</p></div>{!isNew && <button onClick={() => void confirmFreshness()} disabled={Boolean(busy)} className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-brand-300 hover:text-brand-500 dark:border-gray-700 dark:text-gray-300">{busy === "freshness" ? "Подтверждаю…" : "Подтвердить актуальность"}</button>}</div>
     {message && (message.tone === "error" ? <ErrorBanner message={message.text}/> : <div className="mb-6 rounded-xl border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-700 dark:border-success-500/20 dark:bg-success-500/10 dark:text-success-300">{message.text}</div>)}
-    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-      <div className="space-y-6"><ProviderForm draft={providerDraft} setDraft={setProviderDraft} save={() => void saveProvider()} busy={busy}/>{workspace && <ContactPanel contacts={workspace.contacts || []} draft={contactDraft} setDraft={setContactDraft} save={() => void saveContact()} busy={busy}/>}</div>
-      {workspace ? <div className="space-y-6"><SupplySummary workspace={workspace}/><MarginPanel routes={workspace.routes} policies={workspace.margin_policies || []} draft={marginDraft} setDraft={setMarginDraft} save={() => void saveMargin()} busy={busy}/><RouteWorkspace workspace={workspace} route={selectedRoute} select={(id) => setParams({ route: id })} reload={load} execute={execute}/></div> : !isNew && <EmptyState title="Workspace недоступен" description="Не удалось загрузить данные PSP."/>}
-    </div>
+    {entityWorkspace.error && <ErrorBanner message={entityWorkspace.error}/>}
+    {isNew
+      ? <div className="max-w-2xl"><ProviderForm draft={providerDraft} setDraft={setProviderDraft} save={() => void saveProvider()} busy={busy}/></div>
+      : workspace
+        ? <>
+            <div className="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-800 dark:bg-gray-900">
+              {providerTabs.map((item) => <button key={item.id} onClick={() => setTab(item.id)} className={`whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium ${tab === item.id ? "bg-brand-500 text-white" : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"}`}>{item.label}</button>)}
+            </div>
+            {tab === "overview"
+              ? <ProviderOverview workspace={workspace} setTab={setTab}/>
+              : tab === "profile"
+                ? <div className="max-w-2xl"><ProviderForm draft={providerDraft} setDraft={setProviderDraft} save={() => void saveProvider()} busy={busy}/></div>
+              : tab === "contacts"
+                ? <div className="max-w-3xl"><ContactPanel contacts={workspace.contacts || []} draft={contactDraft} setDraft={setContactDraft} save={() => void saveContact()} busy={busy}/></div>
+              : tab === "offers"
+                ? <RouteWorkspace workspace={workspace} route={selectedRoute} select={(id) => { setParams({ route: id }); setTab("offers"); }} reload={load} execute={execute}/>
+              : tab === "pricing"
+                ? <MarginPanel routes={workspace.routes} policies={workspace.margin_policies || []} draft={marginDraft} setDraft={setMarginDraft} save={() => void saveMargin()} busy={busy}/>
+              : tab === "documents"
+                ? (entityWorkspace.loading ? <SkeletonPage/> : <DocumentsPanel documents={entityWorkspace.data.documents} busy={entityWorkspace.busy} onSave={entityWorkspace.saveDocument} onArchive={entityWorkspace.archiveDocument}/>)
+                : (entityWorkspace.loading ? <SkeletonPage/> : <ActivityPanel activities={entityWorkspace.data.activities}/>)}
+          </>
+        : <EmptyState title="Workspace недоступен" description="Не удалось загрузить данные PSP."/>}
   </>;
+}
+
+function ProviderOverview({ workspace, setTab }: { workspace: Workspace; setTab: (tab: ProviderTab) => void }) {
+  const activeRoutes = workspace.routes.filter((route) => route.status !== "archived");
+  const nextAction = activeRoutes.some((route) => route.open_error_count)
+    ? "Исправить ошибки в офферах"
+    : activeRoutes.some((route) => route.is_stale)
+      ? "Подтвердить актуальность условий"
+      : !activeRoutes.some((route) => route.status === "published")
+        ? "Подготовить и опубликовать оффер"
+        : "Проверить новые запросы мерчей";
+  return <div className="space-y-6"><SupplySummary workspace={workspace}/><div className="grid grid-cols-1 gap-6 lg:grid-cols-2"><Panel><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Следующее действие</p><h2 className="mt-3 text-xl font-semibold text-gray-900 dark:text-white">{nextAction}</h2><p className="mt-2 text-sm text-gray-500">Профиль PSP, его условия и история теперь собраны в одном workspace.</p><button onClick={() => setTab("offers")} className="mt-5 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white">Открыть офферы</button></Panel><Panel><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Relationship</p><div className="mt-4 grid grid-cols-2 gap-4 text-sm"><div><span className="text-gray-400">Tier</span><strong className="mt-1 block text-gray-900 dark:text-white">{workspace.provider.relationship_tier || "standard"}</strong></div><div><span className="text-gray-400">Приоритет</span><strong className="mt-1 block text-gray-900 dark:text-white">{workspace.provider.strategic_priority ?? 50}</strong></div><div><span className="text-gray-400">Контактов</span><strong className="mt-1 block text-gray-900 dark:text-white">{workspace.contacts.length}</strong></div><div><span className="text-gray-400">Маржа</span><strong className="mt-1 block text-gray-900 dark:text-white">{workspace.margin_policies.filter((policy) => policy.active).length} активных правил</strong></div></div><button onClick={() => setTab("profile")} className="mt-5 text-sm font-semibold text-brand-500">Редактировать профиль →</button></Panel></div></div>;
 }
 
 function ProviderForm({ draft, setDraft, save, busy }: { draft: Partial<Provider>; setDraft: (value: Partial<Provider>) => void; save: () => void; busy: string | null }) {
