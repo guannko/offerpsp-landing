@@ -86,6 +86,35 @@ async function bootstrap() {
       methods text,
       notes text
     );
+
+    create table public.casino_leads (
+      id serial primary key, internal_id text, name text not null, website text,
+      geo text, license text, sphere text, email text, contact_name text,
+      contact_title text, telegram text, phone text, linkedin text,
+      contact_status text not null default 'new', score integer, source text,
+      city text, emails_sent integer, last_contacted_at timestamptz,
+      last_reply_at timestamptz, reply_status text, next_follow_up date,
+      notes text, tags text[], created_at timestamptz default now(),
+      updated_at timestamptz default now()
+    );
+
+    create table public.email_drafts (
+      id bigserial primary key, chat_id text not null, lead_internal_id text,
+      to_email text, subject text, body text, status text,
+      created_at timestamptz default now()
+    );
+
+    create table public.chat_logs (
+      id bigserial primary key, chat_id text not null, role text not null,
+      message text not null, created_at timestamptz default now()
+    );
+
+    create table public.bot_tasks (
+      id serial primary key, task_type text, payload jsonb, priority integer,
+      scheduled_for timestamptz, status text, result text, error text,
+      created_by text, created_at timestamptz default now(), started_at timestamptz,
+      completed_at timestamptz, ref_type text, ref_id text
+    );
   `);
 }
 
@@ -115,6 +144,7 @@ async function applyMigrations() {
     "20260802_offerpsp_entity_lifecycle_grants.sql",
     "20260803_offerpsp_manual_client_offers.sql",
     "20260803_offerpsp_client_offer_display.sql",
+    "20260803192003_offerpsp_captains_bridge.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -232,6 +262,20 @@ async function verifyManagementOperationGrants() {
     throw new Error("Management RPC grants do not match the staff-only API model");
   }
   process.stdout.write("PASS staff-only management RPC grants with anon denied\n");
+}
+
+async function verifyCaptainsBridgeGrants() {
+  const result = await query(`select
+    has_function_privilege('authenticated', 'public.get_offerpsp_captains_bridge()', 'EXECUTE') as authenticated_registry,
+    has_function_privilege('anon', 'public.get_offerpsp_captains_bridge()', 'EXECUTE') as anon_registry,
+    has_function_privilege('authenticated', 'public.create_offerpsp_email_draft(uuid,text,text,text)', 'EXECUTE') as authenticated_email,
+    has_function_privilege('anon', 'public.create_offerpsp_email_draft(uuid,text,text,text)', 'EXECUTE') as anon_email
+  `);
+  const grants = result.rows[0];
+  if (!grants.authenticated_registry || !grants.authenticated_email || grants.anon_registry || grants.anon_email) {
+    throw new Error("Captain's Bridge RPC grants do not match the staff-only API model");
+  }
+  process.stdout.write("PASS staff-only Captain's Bridge and email RPC grants with anon denied\n");
 }
 
 async function seedUsers() {
@@ -1067,6 +1111,7 @@ try {
   await verifyClientPolicyBoundary();
   await verifySupplyOperationGrants();
   await verifyManagementOperationGrants();
+  await verifyCaptainsBridgeGrants();
   await seedUsers();
   await verifyPortalLeadClaims();
   await verifyLegacyShortlistBlocked();

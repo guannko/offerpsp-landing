@@ -14,13 +14,13 @@ import {
   CommandCenter,
   DealDeskPage,
   InboxPage,
-  IntelligencePage,
   MerchantsPage,
   ModulePage,
   OffersPage,
   PipelinePage,
   ProvidersPage,
 } from "./pages/Platform";
+import { CommunicationsWorkspace, IntelligenceWorkspace, IntegrationsWorkspace, TasksWorkspace } from "./pages/CaptainPages";
 
 export default function App() {
   const basename = import.meta.env.BASE_URL === "/" ? undefined : import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -37,13 +37,13 @@ export default function App() {
       <Route path="/offers" element={<OffersPage/>}/>
       <Route path="/matching" element={<ModulePage module="matching"/>}/>
       <Route path="/deals" element={<DealDeskPage/>}/>
-      <Route path="/intelligence" element={<IntelligencePage/>}/>
-      <Route path="/communications" element={<ModulePage module="communications"/>}/>
-      <Route path="/operations" element={<ModulePage module="operations"/>}/>
+      <Route path="/intelligence" element={<IntelligenceWorkspace/>}/>
+      <Route path="/communications" element={<CommunicationsWorkspace/>}/>
+      <Route path="/operations" element={<TasksWorkspace/>}/>
       <Route path="/agents" element={<AgentsPage/>}/>
       <Route path="/agents/:agentId" element={<AgentWorkspace/>}/>
       <Route path="/analytics" element={<AnalyticsPage/>}/>
-      <Route path="/integrations" element={<ModulePage module="integrations"/>}/>
+      <Route path="/integrations" element={<IntegrationsWorkspace/>}/>
     </Route>
     <Route path="*" element={<NotFound/>}/>
   </Routes></BrowserRouter></ControlBridgeProvider>;

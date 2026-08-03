@@ -36,13 +36,13 @@ export const featureFlags = {
   offers: true,
   matching: false,
   dealDesk: true,
-  intelligence: false,
-  communications: false,
-  tasks: false,
+  intelligence: true,
+  communications: true,
+  tasks: true,
   agents: true,
   analytics: true,
   finance: false,
-  integrations: false,
+  integrations: true,
   settings: false,
 } as const;
 

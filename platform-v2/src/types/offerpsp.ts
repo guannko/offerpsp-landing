@@ -23,11 +23,66 @@ export type Lead = {
   currencies?: string | string[] | null;
   expected_monthly_volume?: number | null;
   monthly_volume?: string | null;
-  owner_user_id?: string | null;
+  assigned_to?: string | null;
   submitted_at?: string | null;
   updated_at?: string | null;
   next_action_at?: string | null;
   quality_score?: number | null;
+  quality_grade?: string | null;
+  registration_geo?: string | null;
+  target_geos?: string[] | null;
+  requested_currencies?: string[] | null;
+  requested_flows?: string[] | null;
+  requested_methods?: string[] | null;
+  traffic_types?: string[] | null;
+  volume_currency?: string | null;
+  min_transaction_amount?: number | null;
+  max_transaction_amount?: number | null;
+  transaction_currency?: string | null;
+  business_model?: string | null;
+  license_status?: string | null;
+  license_jurisdiction?: string | null;
+  license_number?: string | null;
+  license_evidence_url?: string | null;
+  launch_timeline?: string | null;
+  current_processing_setup?: string | null;
+  qualification_notes?: string | null;
+  details?: string | null;
+  utm_source?: string | null;
+  utm_campaign?: string | null;
+  merchant_organization_id?: string | null;
+  agent_organization_id?: string | null;
+};
+
+export type CasinoLead = {
+  id: number; internal_id?: string | null; name?: string | null; website?: string | null;
+  geo?: string | null; license?: string | null; sphere?: string | null; email?: string | null;
+  contact_name?: string | null; contact_title?: string | null; telegram?: string | null;
+  contact_status?: string | null; score?: number | null; source?: string | null;
+  notes?: string | null; updated_at?: string | null;
+};
+
+export type EmailDraft = {
+  id: number; lead_internal_id?: string | null; to_email?: string | null; subject?: string | null;
+  body?: string | null; status?: string | null; created_at?: string | null;
+};
+
+export type TelegramLog = {
+  id: number; chat_id?: string | null; role?: string | null; message?: string | null; created_at?: string | null;
+};
+
+export type WorkTask = {
+  id: string | number; lead_id?: string | null; title?: string | null; details?: string | null;
+  task_type?: string | null; status?: string | null; priority?: string | number | null;
+  due_at?: string | null; scheduled_for?: string | null; created_at?: string | null; payload?: unknown;
+};
+
+export type CaptainsBridgeSnapshot = {
+  casino_leads: CasinoLead[];
+  email_drafts: EmailDraft[];
+  telegram_log: TelegramLog[];
+  bot_tasks: WorkTask[];
+  offerpsp_tasks: WorkTask[];
 };
 
 export type Provider = {
@@ -114,6 +169,7 @@ export type ControlBridgeData = {
   assignments: AgentAssignment[];
   agentMarginPolicies: AgentMarginPolicy[];
   commissionSummary: Record<string, number>;
+  captainsBridge: CaptainsBridgeSnapshot;
   loading: boolean;
   refreshing: boolean;
   ready: boolean;

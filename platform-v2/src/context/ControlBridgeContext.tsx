@@ -18,6 +18,7 @@ import type {
   Provider,
   RouteCoverage,
   StaffMember,
+  CaptainsBridgeSnapshot,
 } from "../types/offerpsp";
 
 type ControlBridgeContextValue = ControlBridgeData & {
@@ -35,6 +36,7 @@ const emptyData: ControlBridgeData = {
   assignments: [],
   agentMarginPolicies: [],
   commissionSummary: {},
+  captainsBridge: { casino_leads: [], email_drafts: [], telegram_log: [], bot_tasks: [], offerpsp_tasks: [] },
   loading: true,
   refreshing: false,
   ready: false,
@@ -90,14 +92,15 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const [leadsResult, managementResult, supplyResult, coverageResult] = await Promise.all([
+    const [leadsResult, managementResult, supplyResult, coverageResult, captainsResult] = await Promise.all([
       supabase.from("offerpsp_leads").select("*").order("submitted_at", { ascending: false }),
       supabase.rpc("get_offerpsp_management_registry"),
       supabase.rpc("list_offerpsp_supply"),
       supabase.rpc("get_offerpsp_supply_coverage"),
+      supabase.rpc("get_offerpsp_captains_bridge"),
     ]);
 
-    const firstError = [leadsResult.error, managementResult.error, supplyResult.error, coverageResult.error].find(Boolean);
+    const firstError = [leadsResult.error, managementResult.error, supplyResult.error, coverageResult.error, captainsResult.error].find(Boolean);
     const management = (managementResult.data || {}) as Record<string, unknown>;
     const supply = (supplyResult.data || {}) as Record<string, unknown>;
     const coverage = (coverageResult.data || {}) as Record<string, unknown>;
@@ -105,13 +108,14 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
     setState({
       user,
       staff: staffResult.data as StaffMember,
-      leads: asArray<Lead>(leadsResult.data).filter((lead) => lead.record_state !== "archived"),
+      leads: asArray<Lead>(leadsResult.data),
       providers: asArray<Provider>(management.providers || supply.providers),
       routes: asArray<RouteCoverage>(coverage.routes),
       organizations: asArray<Organization>(management.organizations),
       assignments: asArray<AgentAssignment>(management.assignments),
       agentMarginPolicies: asArray<AgentMarginPolicy>(management.agent_margin_policies),
       commissionSummary: (management.commission_summary || {}) as Record<string, number>,
+      captainsBridge: (captainsResult.data || emptyData.captainsBridge) as CaptainsBridgeSnapshot,
       loading: false,
       refreshing: false,
       ready: true,

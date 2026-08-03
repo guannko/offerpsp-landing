@@ -5,6 +5,32 @@ Updated: 2026-08-03
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## Captain's Bridge — isolated production cockpit 2026-08-03
+
+Status: `VERIFIED` for migration, build, deployment and public-route isolation. Authenticated
+visual smoke of the new internal pages remains to be repeated after staff sign-in on the new domain.
+
+- [x] Staff cockpit moved out of `offerpsp.com` into the separate Vercel project
+  `ops-7q4m2x9k8v3n` at `https://ops-7q4m2x9k8v3n.vercel.app`.
+- [x] Public deployment no longer contains staff bundles or routes. `/admin/`,
+  `/admin-legacy/` and `/control/` return 404 while `/` and `/portal/` remain available.
+- [x] Production cockpit deployment `dpl_6UMnSYCnnc8aYGJs9PAQa7CtvdyP` is `READY` and aliased
+  to the isolated project address.
+- [x] Production migration `offerpsp_captains_bridge` adds staff-only RPCs for the unified
+  AIBot/Telegram/email/task read model, email draft journal and complete merchant editing.
+- [x] All 23 migrations pass in isolated PGlite, including staff/anon grants and the complete
+  route → shortlist → client → PSP review → Telegram → Zoom → won E2E.
+- [x] Merchant workspace now edits company, contacts, payment request, volume/limits, licence,
+  qualification, status, quality and owner. Archive, restore and guarded owner-only purge are wired.
+- [x] Archived merchants remain visible in CRM history instead of disappearing from the UI.
+- [x] Intelligence reads the existing `casino_leads`; Communications reads Telegram logs and
+  email history; Tasks combines OfferPSP and AIBot queues; Integrations reflects real data flow.
+- [x] Email composition is proxied through a staff-authenticated server function to the existing
+  active n8n Email Sender. Anonymous requests return 401; no test email was sent to a real contact.
+- [ ] Repeat desktop/mobile authenticated browser smoke after signing into the new Vercel domain.
+- [ ] Separate security-hardening project for legacy AIBot tables with disabled RLS; changing this
+  now would break existing anon-based n8n workflows and was intentionally not mixed into rollout.
+
 ## Control Bridge V2 — local frontend migration 2026-08-03
 
 Status: `VERIFIED` locally, on a protected Vercel preview and in production.

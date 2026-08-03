@@ -5,6 +5,7 @@ import { EmptyState, ErrorBanner, Panel, SkeletonPage, StatusPill } from "../com
 import { useControlBridge } from "../context/ControlBridgeContext";
 import { supabase } from "../lib/supabase";
 import DealDeskPanel, { type DealWorkspace } from "./DealDeskPanel";
+import MerchantProfileEditor from "../components/control/MerchantProfileEditor";
 
 type Match = {
   match_id: string;
@@ -66,10 +67,11 @@ type Shortlist = {
   offerpsp_shortlist_items?: ShortlistItem[];
 };
 
-type Tab = "overview" | "matching" | "preview" | "deal";
+type Tab = "overview" | "profile" | "matching" | "preview" | "deal";
 
 const tabs: Array<{ id: Tab; label: string }> = [
   { id: "overview", label: "Обзор" },
+  { id: "profile", label: "Профиль и управление" },
   { id: "matching", label: "Подбор и офферы" },
   { id: "preview", label: "Предпросмотр клиента" },
   { id: "deal", label: "Deal Desk" },
@@ -250,6 +252,8 @@ export default function MerchantWorkspace() {
 
     {loading ? <SkeletonPage/> : tab === "overview"
       ? <Overview lead={lead} matches={matches} shortlist={latest}/>
+      : tab === "profile"
+        ? <MerchantProfileEditor lead={lead} onChanged={async () => { await Promise.all([loadWorkspace(), refresh()]); }}/>
       : tab === "matching"
         ? <MatchingPanel
             matches={matches}

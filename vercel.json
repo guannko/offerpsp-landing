@@ -4,9 +4,6 @@
   "buildCommand": "npm run build",
   "outputDirectory": ".vercel-static",
   "routes": [
-    { "src": "/control", "status": 307, "headers": { "Location": "/admin/" } },
-    { "src": "/control/(.*)", "status": 307, "headers": { "Location": "/admin/$1" } },
-    { "handle": "filesystem" },
-    { "src": "/admin(?:/.*)?", "dest": "/admin/index.html" }
+    { "handle": "filesystem" }
   ]
 }
