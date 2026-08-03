@@ -6,8 +6,8 @@ const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 export const hasSupabaseConfig = Boolean(supabaseUrl && supabasePublishableKey);
 
 export const supabase = createClient(
-  supabaseUrl || "https://invalid.local",
-  supabasePublishableKey || "missing-publishable-key",
+  supabaseUrl || "https://configuration-required.supabase.co",
+  supabasePublishableKey || "configuration-required",
   {
     auth: {
       persistSession: true,

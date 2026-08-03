@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
 import { useControlBridge } from "../../context/ControlBridgeContext";
-import { supabase } from "../../lib/supabase";
+import { hasSupabaseConfig, supabase } from "../../lib/supabase";
 
 export default function ControlSignIn() {
   const { user, staff } = useControlBridge();
@@ -15,6 +15,11 @@ export default function ControlSignIn() {
 
   async function googleLogin() {
     setBusy(true); setStatus("");
+    if (!hasSupabaseConfig) {
+      setStatus("Конфигурация входа не загружена. Обновите production deployment.");
+      setBusy(false);
+      return;
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
