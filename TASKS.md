@@ -51,7 +51,17 @@ Status: `VERIFIED` locally, on a protected Vercel preview and in production.
   placeholders; `/admin/`, nested SPA routes, `/admin-legacy/` and `/portal/`
   passed deployment smoke checks. The sign-in UI rendered in a browser and
   runtime logs contained no errors.
-- [x] Previous production `dpl_32wVgFtLmz2ig99sd7MzTsJtF3Q8` remains the immediate
+- [x] Daily-operations polish excludes archive/closed fixtures from active metrics,
+  adds Command Center quick actions, mobile merchant cards, contained Kanban
+  scrolling and responsive global search across merchants, PSPs and routes.
+- [x] Analytics now includes the cumulative commercial funnel, six-week lead trend,
+  GEO coverage, supply health, launch conversion and shortlist conversion instead
+  of relying only on headline counters.
+- [x] Polished production deployment `dpl_5FXvX5M5yj1LRmDAxzhPTzDpp15R` is `READY`.
+  `/admin/`, `/admin/analytics`, `/admin/merchants`, `/portal/` and
+  `/admin-legacy/` passed production smoke checks; the bundle contains the real
+  Supabase URL without fallback placeholders.
+- [x] Previous production `dpl_D8GkbbqJmduntGntZnpfcqXtLUAi` remains the immediate
   rollback target. No database migration was required for this frontend rollout.
 
 ## Delivery layers — current source of truth
