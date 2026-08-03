@@ -10,12 +10,15 @@ Code or a passing local test is not evidence that production has been updated.
 ### 1. Available through the production interface
 
 Status: `VERIFIED` for production deployment
-`dpl_B6iRxCeWnCkXE3cymvJw9N1c3XWJ` from application source commit
-`0e1ca9a32b55bccb13e5c5c28c5572d105717550`.
+`dpl_DPKh1HTC5S5ou179caFE2LtEx371` from clean application source commit
+`2bbeccb93c33b283f59fd7ff7e305ea892563178`.
 
 - The client portal is a persistent RU/EN multi-request Payment Workspace with counters,
   request navigation, recurring `New payment request` action, anonymous safe route options,
   option feedback, introduction request and client-visible deal progress.
+- Production migration `20260803072020 offerpsp_client_offer_display` and the matching frontend
+  render one source offer as one concise Telegram-style message with separate PayIn and PayOut
+  rates and limits. Anonymous access to the new client projection is denied.
 - The staff cabinet supports the lead desk, merchant edit/archive/purge controls, the private PSP
   workspace, generic PSP and manual-offer creation, relationship tiers, prepared draft upload,
   guarded publishing, versioned OfferPSP and agent margins, route matching, the Deal Desk,
