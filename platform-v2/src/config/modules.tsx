@@ -55,7 +55,7 @@ export const platformModules: PlatformModule[] = [
   { id: "offers", label: "Офферы", shortLabel: "Офферы", path: "/offers", icon: <PageIcon />, enabled: featureFlags.offers, group: "operations" },
   { id: "matching", label: "Подбор решений", shortLabel: "Matching", path: "/matching", icon: <ShootingStarIcon />, enabled: featureFlags.matching, group: "operations" },
   { id: "dealDesk", label: "Сделки", shortLabel: "Сделки", path: "/deals", icon: <TaskIcon />, enabled: featureFlags.dealDesk, group: "operations" },
-  { id: "intelligence", label: "Разведка", shortLabel: "Разведка", path: "/intelligence", icon: <BoltIcon />, enabled: featureFlags.intelligence, group: "growth" },
+  { id: "intelligence", label: "База AIBot", shortLabel: "База AIBot", path: "/intelligence", icon: <BoltIcon />, enabled: featureFlags.intelligence, group: "growth" },
   { id: "communications", label: "Коммуникации", shortLabel: "Связь", path: "/communications", icon: <ChatIcon />, enabled: featureFlags.communications, group: "growth" },
   { id: "tasks", label: "Задачи и календарь", shortLabel: "Задачи", path: "/operations", icon: <CalenderIcon />, enabled: featureFlags.tasks, group: "growth" },
   { id: "agents", label: "Субагенты", shortLabel: "Агенты", path: "/agents", icon: <UserCircleIcon />, enabled: featureFlags.agents, group: "growth" },

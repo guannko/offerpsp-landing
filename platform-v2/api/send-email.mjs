@@ -16,9 +16,9 @@ export default async function handler(request, response) {
   const userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, { headers: { apikey: supabaseKey, Authorization: authorization } });
   if (!userResponse.ok) return json(response, 401, { success: false, error: "Invalid session" });
   const user = await userResponse.json();
-  const staffResponse = await fetch(`${supabaseUrl}/rest/v1/offerpsp_staff_members?select=user_id&user_id=eq.${encodeURIComponent(user.id)}&active=eq.true`, { headers: { apikey: supabaseKey, Authorization: authorization } });
-  const staff = staffResponse.ok ? await staffResponse.json() : [];
-  if (!Array.isArray(staff) || !staff.length) return json(response, 403, { success: false, error: "Active OfferPSP staff account required" });
+  const staffResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/is_offerpsp_staff`, { method: "POST", headers: { apikey: supabaseKey, Authorization: authorization, "Content-Type": "application/json" }, body: "{}" });
+  const isStaff = staffResponse.ok ? await staffResponse.json() : false;
+  if (isStaff !== true) return json(response, 403, { success: false, error: "Active OfferPSP staff account required" });
 
   const body = typeof request.body === "string" ? JSON.parse(request.body || "{}") : (request.body || {});
   const to = String(body.to || "").trim().toLowerCase();
@@ -27,7 +27,7 @@ export default async function handler(request, response) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to) || !subject || !emailBody) return json(response, 400, { success: false, error: "Valid recipient, subject and body are required" });
   if (subject.length > 240 || emailBody.length > 50000) return json(response, 400, { success: false, error: "Email is too large" });
 
-  const delivery = await fetch(senderUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to, subject, body: emailBody, from_name: "OfferPSP", lead_id: body.lead_id || null }) });
+  const delivery = await fetch(senderUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to, subject, body: emailBody, from_name: "OfferPSP", from_email: "bizdev@offerpsp.com", reply_to: "bizdev@offerpsp.com", lead_id: body.lead_id || null }) });
   const result = await delivery.json().catch(() => ({}));
   if (!delivery.ok || result.success === false) return json(response, 502, { success: false, error: result.message || "Email sender failed" });
   return json(response, 200, { success: true, to });

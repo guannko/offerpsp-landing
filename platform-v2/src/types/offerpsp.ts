@@ -62,6 +62,17 @@ export type CasinoLead = {
   notes?: string | null; updated_at?: string | null;
 };
 
+export type AgentPspProvider = {
+  id: number; name?: string | null; website?: string | null; geo?: string | null;
+  cluster?: string | null; specialization?: string | null; methods?: string | null;
+  email?: string | null; contact_name?: string | null; phone?: string | null;
+  telegram?: string | null; linkedin?: string | null; contact_status?: string | null;
+  provider_status?: string | null; risk_appetite?: string | null;
+  supported_countries?: string[] | null; supported_currencies?: string[] | null;
+  payment_methods?: string[] | null; supported_verticals?: string[] | null;
+  integration_types?: string[] | null; notes?: string | null; updated_at?: string | null;
+};
+
 export type EmailDraft = {
   id: number; lead_internal_id?: string | null; to_email?: string | null; subject?: string | null;
   body?: string | null; status?: string | null; created_at?: string | null;
@@ -79,6 +90,7 @@ export type WorkTask = {
 
 export type CaptainsBridgeSnapshot = {
   casino_leads: CasinoLead[];
+  psp_providers: AgentPspProvider[];
   email_drafts: EmailDraft[];
   telegram_log: TelegramLog[];
   bot_tasks: WorkTask[];

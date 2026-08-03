@@ -23,10 +23,15 @@ visual smoke of the new internal pages remains to be repeated after staff sign-i
 - [x] Merchant workspace now edits company, contacts, payment request, volume/limits, licence,
   qualification, status, quality and owner. Archive, restore and guarded owner-only purge are wired.
 - [x] Archived merchants remain visible in CRM history instead of disappearing from the UI.
-- [x] Intelligence reads the existing `casino_leads`; Communications reads Telegram logs and
-  email history; Tasks combines OfferPSP and AIBot queues; Integrations reflects real data flow.
+- [x] `База AIBot` reads all current `casino_leads` and legacy research `psp_providers` through
+  the staff-only bridge RPC; the production response was verified with 222 casinos and 77 PSPs.
+- [x] Communications reads Telegram logs and email history; Tasks combines OfferPSP and AIBot
+  queues; Integrations reflects real data flow.
 - [x] Email composition is proxied through a staff-authenticated server function to the existing
-  active n8n Email Sender. Anonymous requests return 401; no test email was sent to a real contact.
+  active n8n Email Sender using `bizdev@offerpsp.com`. SMTP accepted the self-addressed verification
+  message and the workflow now skips the optional Notion update when no draft ID is supplied.
+- [x] The public sign-in page and frontend bundle no longer disclose the owner email or send it as
+  a Google `login_hint`; the exact account restriction remains enforced by the database function.
 - [ ] Repeat desktop/mobile authenticated browser smoke after signing into the new Vercel domain.
 - [ ] Separate security-hardening project for legacy AIBot tables with disabled RLS; changing this
   now would break existing anon-based n8n workflows and was intentionally not mixed into rollout.

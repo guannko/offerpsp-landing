@@ -36,7 +36,7 @@ const emptyData: ControlBridgeData = {
   assignments: [],
   agentMarginPolicies: [],
   commissionSummary: {},
-  captainsBridge: { casino_leads: [], email_drafts: [], telegram_log: [], bot_tasks: [], offerpsp_tasks: [] },
+  captainsBridge: { casino_leads: [], psp_providers: [], email_drafts: [], telegram_log: [], bot_tasks: [], offerpsp_tasks: [] },
   loading: true,
   refreshing: false,
   ready: false,
@@ -46,8 +46,6 @@ const emptyData: ControlBridgeData = {
 };
 
 const ControlBridgeContext = createContext<ControlBridgeContextValue | null>(null);
-const CONTROL_BRIDGE_OWNER_EMAIL = "guannko@gmail.com";
-
 const asArray = <T,>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
 
 export function ControlBridgeProvider({ children }: { children: ReactNode }) {
@@ -75,17 +73,13 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const isOwnerGoogleAccount =
-      user.email?.toLowerCase() === CONTROL_BRIDGE_OWNER_EMAIL &&
-      user.app_metadata?.provider === "google";
-
-    if (!isOwnerGoogleAccount) {
+    if (user.app_metadata?.provider !== "google") {
       await supabase.auth.signOut();
       setState({
         ...emptyData,
         loading: false,
         accessDenied: true,
-        error: `Доступ разрешён только Google-аккаунту ${CONTROL_BRIDGE_OWNER_EMAIL}.`,
+        error: "Этот способ входа не имеет доступа к Control Bridge.",
       });
       return;
     }
@@ -103,7 +97,7 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
         user,
         loading: false,
         accessDenied: true,
-        error: staffResult.error?.message || "Your account is not an active OfferPSP staff member.",
+        error: staffResult.error?.message || "Этот Google-аккаунт не имеет доступа к Control Bridge.",
       });
       return;
     }
