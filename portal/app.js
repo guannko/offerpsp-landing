@@ -1,5 +1,11 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 import { isPortalTerminalStatus, portalEmptyStateKeys } from "/portal/request-state.js";
+import {
+  localizedClientNote,
+  localizedCommercialLine,
+  localizedCountryName,
+  readableOfferCode,
+} from "/portal/offer-localization.js";
 
 const supabase = createClient(
   "https://xcizofpejsomjiflesbx.supabase.co",
@@ -75,7 +81,10 @@ const COPY = {
     minMaxPayout: "Min/Max транзакции PayOut", settlementCurrency: "Валюта расчётов",
     settlementFee: "Комиссия за расчёт", settlementPeriod: "Период расчётов", minimumSettlement: "Минимальная выплата",
     chargebackFee: "Комиссия Chargeback", refundFee: "Комиссия Refund", rollingReserve: "Rolling Reserve",
-    notSpecified: "Не указано", offerExplanation: "Условия одного платёжного решения без скрытых догадок.",
+    notSpecified: "Не указано", notApplicable: "Не применяется", yes: "Да", no: "Нет", bothTraffic: "Оба",
+    selectedForReview: "Выбрано специалистом OfferPSP для вашего рассмотрения.",
+    firstRefundRule: "Первый возврат по плательщику проводится без дополнительных вопросов; последующие возвраты по этому плательщику проверяет служба поддержки.",
+    offerExplanation: "Условия одного платёжного решения без скрытых догадок.",
   },
   en: {
     workspace: "Payment workspace", authTitle: "All your payment work, in one place.",
@@ -139,7 +148,10 @@ const COPY = {
     minMaxPayout: "Min/Max transaction PayOut", settlementCurrency: "Settlement currency",
     settlementFee: "Settlement fee", settlementPeriod: "Settlement period", minimumSettlement: "Minimum settlement",
     chargebackFee: "Chargeback fee", refundFee: "Refund fee", rollingReserve: "Rolling reserve",
-    notSpecified: "Not specified", offerExplanation: "One payment solution with explicit commercial terms.",
+    notSpecified: "Not specified", notApplicable: "N/A", yes: "Yes", no: "No", bothTraffic: "Both",
+    selectedForReview: "Selected by an OfferPSP specialist for your review.",
+    firstRefundRule: "The first refund for a payer is processed without additional questions; subsequent refunds for the same payer are investigated by support.",
+    offerExplanation: "One payment solution with explicit commercial terms.",
   },
 };
 
@@ -228,20 +240,14 @@ function countryName(value) {
     return code;
   }
 }
-function readableCode(value) {
-  const code = String(value || "").trim();
-  if (!code) return "";
-  const normalized = code.toUpperCase();
-  if (normalized === "TRUSTED") return "Trusted";
-  if (normalized === "CARDS") return "Cards";
-  if (normalized === "MASTERCARD") return "MasterCard";
-  if (normalized === "VISA") return "Visa";
-  return normalized;
-}
+function readableCode(value) { return readableOfferCode(value, state.language); }
 function readableList(values, separator = ", ") { return list(values).map(readableCode).filter(Boolean).join(separator); }
 function offerGeo(option) {
   if (option.coverage_scope === "global") return `🌐 ${t("global")}`;
   return list(option.geos).map((geo) => `${countryFlag(geo)} ${countryName(geo)}`).join(", ") || t("notSpecified");
+}
+function localizedCountryValue(value) {
+  return localizedCountryName(value, state.language);
 }
 function offerLimit(option, requestedFlow) {
   const flow = paymentFlow(requestedFlow);
@@ -267,7 +273,7 @@ function offerSettlement(option) {
 }
 function trafficDescription(option) {
   const traffic = list(option.traffic_types).map(readableCode).filter(Boolean);
-  if (traffic.length > 1) return `Both (${traffic.join(" & ")})`;
+  if (traffic.length > 1) return `${t("bothTraffic")} (${traffic.join(" & ")})`;
   return traffic.join("") || t("notSpecified");
 }
 function flowMethods(option, flow) {
@@ -284,9 +290,7 @@ function supportsFlow(option, flow) {
     || list(option.limits).some((limit) => paymentFlow(limit.flow) === flow);
 }
 function commercialTermLine(label, value, sourcePattern) {
-  const normalized = String(value || "").trim();
-  if (!normalized) return "";
-  return sourcePattern.test(normalized) ? normalized : `${label}: ${normalized}`;
+  return localizedCommercialLine(label, value, sourcePattern, state.language);
 }
 function statusLabel(status) { return t(STATUS_KEYS[status] || status); }
 function requestSummary(lead) {
@@ -469,7 +473,7 @@ function renderOptions() {
           <p>${escapeHtml(t("trafficType"))} — ${escapeHtml(trafficDescription(option))}</p>
           <p>${escapeHtml(t("cardBrands"))}: ${escapeHtml(readableList(option.card_brands, " / ") || t("notSpecified"))}</p>
           <p><strong>${escapeHtml(t("method"))}: ${escapeHtml(methods)}</strong></p>
-          ${option.card_issue ? `<p>${escapeHtml(t("cardIssue"))}: ${escapeHtml(option.card_issue)}</p>` : ""}
+          ${option.card_issue ? `<p>${escapeHtml(t("cardIssue"))}: ${escapeHtml(localizedCountryValue(option.card_issue))}</p>` : ""}
           <p>${escapeHtml(t("openGeo"))}: ${escapeHtml(list(option.geos).join(", ") || t("global"))}</p>
         </div>
         ${payin ? `<section class="offer-flow-message"><h4>${escapeHtml(t("payin"))}</h4>
@@ -485,13 +489,13 @@ function renderOptions() {
           <p>${escapeHtml(t("settlementFee"))}: ${escapeHtml(offerFee(option, "settlement"))}</p>
           ${hasSettlementMinimum ? `<p>${escapeHtml(t("minimumSettlement"))}: ${escapeHtml(settlement.minimum)}</p>` : ""}
           <p>${escapeHtml(t("settlementPeriod"))}: ${escapeHtml(settlement.period)}</p>
-          ${hasChargeback ? `<p>${escapeHtml(commercialTermLine(t("chargebackFee"), chargeback, /^charge\s?back\b/i))}</p>` : ""}
-          ${hasRefund ? `<p>${escapeHtml(commercialTermLine(t("refundFee"), refund, /^refund\b/i))}</p>` : ""}
-          ${hasReserve ? `<p>${escapeHtml(commercialTermLine(t("rollingReserve"), rollingReserve, /^(?:rolling reserve|rr\s*:)/i))}</p>` : ""}
+          ${hasChargeback ? `<p>${escapeHtml(commercialTermLine(t("chargebackFee"), chargeback, /^charge\s?back(?:\s+(?:fee|penalty))?\b/i))}</p>` : ""}
+          ${hasRefund ? `<p>${escapeHtml(commercialTermLine(t("refundFee"), refund, /^refund(?:\s+fee)?\b/i))}</p>` : ""}
+          ${hasReserve ? `<p>${escapeHtml(commercialTermLine(t("rollingReserve"), rollingReserve, /^(?:rolling reserve|rr)\b/i))}</p>` : ""}
           ${hasIntegration ? `<p>${escapeHtml(t("integration"))}: ${escapeHtml(readableList(option.integrations))}</p>` : ""}
         </section>
       </div>
-      <p class="match-reason"><span>${escapeHtml(t("whyMatched"))}</span>${escapeHtml(option.client_note)}</p>
+      <p class="match-reason"><span>${escapeHtml(t("whyMatched"))}</span>${escapeHtml(localizedClientNote(option.client_note, state.language, t("selectedForReview")))}</p>
       ${option.valid_through ? `<small class="validity">${escapeHtml(t("validThrough"))}: ${escapeHtml(formatDate(option.valid_through))}</small>` : ""}
       <div class="option-actions">
         <button type="button" data-option-response="interested" data-option-code="${escapeHtml(option.option_code)}" class="option-button${option.client_response === "interested" ? " active" : ""}">${escapeHtml(t("interested"))}</button>
