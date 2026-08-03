@@ -10,8 +10,8 @@ Code or a passing local test is not evidence that production has been updated.
 ### 1. Available through the production interface
 
 Status: `VERIFIED` for production deployment
-`dpl_DPKh1HTC5S5ou179caFE2LtEx371` from clean application source commit
-`2bbeccb93c33b283f59fd7ff7e305ea892563178`.
+`dpl_pgpNwMjmZ9hkhpmsaQ5Fihxiurp9` from clean application source commit
+`836f7a7`.
 
 - The client portal is a persistent RU/EN multi-request Payment Workspace with counters,
   request navigation, recurring `New payment request` action, anonymous safe route options,
@@ -19,6 +19,9 @@ Status: `VERIFIED` for production deployment
 - Production migration `20260803072020 offerpsp_client_offer_display` and the matching frontend
   render one source offer as one concise Telegram-style message with separate PayIn and PayOut
   rates and limits. Anonymous access to the new client projection is denied.
+- The portal language now controls the complete merchant-facing offer presentation: RU localizes
+  labels, countries, common methods and commercial terms to Russian; EN renders their English
+  equivalents without exposing the language of the source rate card.
 - The staff cabinet supports the lead desk, merchant edit/archive/purge controls, the private PSP
   workspace, generic PSP and manual-offer creation, relationship tiers, prepared draft upload,
   guarded publishing, versioned OfferPSP and agent margins, route matching, the Deal Desk,
@@ -97,6 +100,8 @@ Status: `VERIFIED` as local code and database behavior only; this is not a produ
 ### Client cabinet
 
 - [x] RU is the default language; RU/EN switch is available.
+- [x] The selected portal language controls both the workspace UI and the full Telegram-format
+  offer, including countries, common methods, traffic, card issue and standard risk terms.
 - [x] Persistent multi-request payment workspace replaces the one-request shortlist viewer.
 - [x] Request rail, workspace counters, recurring `New payment request` action and clear guided next action.
 - [x] Anonymous route details, limits, settlement and final client fees are shown.
