@@ -1,9 +1,28 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-08-03
+Updated: 2026-08-04
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
+
+## Editable research base and scalable offer catalogue — 2026-08-04
+
+Status: `VERIFIED` for database migration, access isolation, local build and regression suite.
+
+- [x] `База AIBot` supports creating and editing all current casino and research-PSP fields,
+  including contacts, GEO, licences, qualification, coverage, limits, commercial terms and notes.
+- [x] Casino/PSP records have reversible archive/restore lifecycle and staff audit history; website
+  opening is a separate action and no longer replaces editing.
+- [x] Offer catalogue is grouped by PSP and filters by PSP, status, GEO, currency, payment method,
+  PayIn/PayOut flow, validation health, freshness and free-text search.
+- [x] Every offer row opens the existing full route editor; provider and route query parameters are
+  preserved when moving between the catalogue and PSP workspace.
+- [x] Production migration `offerpsp_research_crud` applied without changing the existing 222 casino
+  and 77 research-PSP records. CRUD and lifecycle RPCs are denied to `anon` and check staff identity.
+- [x] All 27 migrations and the full route → shortlist → client → PSP review → Telegram → Zoom → won
+  regression pass in isolated PGlite, including research CRUD and non-staff denial.
+- [ ] Legacy AIBot tables still have broad direct `anon` grants and disabled RLS. This is pre-existing
+  and must be migrated together with the anon-based n8n workflows, not revoked blindly during UI work.
 
 ## Captain's Bridge — isolated production cockpit 2026-08-03
 

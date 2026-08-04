@@ -94,12 +94,35 @@ async function bootstrap() {
       cluster text,
       specialization text,
       methods text,
-      notes text
+      notes text,
+      contact_status text default 'not_contacted',
+      commission_terms text,
+      email text,
+      contact_name text,
+      phone text,
+      telegram text,
+      linkedin text,
+      other_contacts text,
+      supported_countries text[] not null default '{}',
+      supported_currencies text[] not null default '{}',
+      payment_methods text[] not null default '{}',
+      supported_verticals text[] not null default '{}',
+      restricted_countries text[] not null default '{}',
+      integration_types text[] not null default '{}',
+      min_monthly_volume numeric,
+      max_monthly_volume numeric,
+      risk_appetite text,
+      provider_status text default 'research',
+      capabilities_verified_at timestamptz,
+      capabilities_source text,
+      created_at timestamptz default now(),
+      updated_at timestamptz default now()
     );
 
     create table public.casino_leads (
       id serial primary key, internal_id text, name text not null, website text,
-      geo text, license text, sphere text, email text, contact_name text,
+      description text, geo text, license text, software text, affiliate_program text,
+      sphere text, email text, contact_name text,
       contact_title text, telegram text, phone text, linkedin text,
       contact_status text not null default 'new', score integer, source text,
       city text, emails_sent integer, last_contacted_at timestamptz,
@@ -158,6 +181,7 @@ async function applyMigrations() {
     "20260803195211_offerpsp_single_google_owner.sql",
     "20260803201601_offerpsp_agent_database.sql",
     "20260803203528_offerpsp_360_workspaces.sql",
+    "20260804161410_offerpsp_research_crud.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -315,6 +339,20 @@ async function verify360WorkspaceGrants() {
     throw new Error("360 workspace grants expose private contacts or documents");
   }
   process.stdout.write("PASS staff-only 360 workspace RPC grants with private tables isolated\n");
+}
+
+async function verifyResearchCrudGrants() {
+  const result = await query(`select
+    has_function_privilege('authenticated', 'public.save_offerpsp_research_entity(text,bigint,jsonb)', 'EXECUTE') as authenticated_save,
+    has_function_privilege('anon', 'public.save_offerpsp_research_entity(text,bigint,jsonb)', 'EXECUTE') as anon_save,
+    has_function_privilege('authenticated', 'public.set_offerpsp_research_entity_state(text,bigint,text)', 'EXECUTE') as authenticated_state,
+    has_function_privilege('anon', 'public.set_offerpsp_research_entity_state(text,bigint,text)', 'EXECUTE') as anon_state
+  `);
+  const grants = result.rows[0];
+  if (!grants.authenticated_save || !grants.authenticated_state || grants.anon_save || grants.anon_state) {
+    throw new Error("Research CRUD RPC grants do not match the staff-only API model");
+  }
+  process.stdout.write("PASS staff-only research CRUD grants with anon denied\n");
 }
 
 async function seedUsers() {
@@ -1232,6 +1270,82 @@ async function verify360Workspaces() {
   process.stdout.write("PASS merchant/provider 360 workspaces, timeline and staff isolation\n");
 }
 
+async function verifyResearchCrud() {
+  await setUser(STAFF_ID);
+  const casino = await query(
+    "select public.save_offerpsp_research_entity('casino', null, $1::jsonb) as value",
+    [JSON.stringify({
+      name: "Research Casino",
+      website: "https://casino.example",
+      geo: "EU",
+      license: "MGA",
+      email: "BIZDEV@CASINO.EXAMPLE",
+      contact_status: "researching",
+      score: 72,
+      tags: ["igaming", "priority"],
+    })],
+  );
+  const casinoId = casino.rows[0].value.id;
+  await query(
+    "select public.save_offerpsp_research_entity('casino', $1, $2::jsonb)",
+    [casinoId, JSON.stringify({ score: 88, contact_name: "Product Owner", notes: "Qualified manually" })],
+  );
+  await query("select public.set_offerpsp_research_entity_state('casino', $1, 'archived')", [casinoId]);
+  await query("select public.set_offerpsp_research_entity_state('casino', $1, 'active')", [casinoId]);
+  const savedCasino = await query("select score, contact_name, record_state, email, tags from public.casino_leads where id = $1", [casinoId]);
+  if (savedCasino.rows[0].score !== 88 || savedCasino.rows[0].contact_name !== "Product Owner"
+      || savedCasino.rows[0].record_state !== "active" || savedCasino.rows[0].email !== "bizdev@casino.example"
+      || savedCasino.rows[0].tags.length !== 2) {
+    throw new Error("Casino research create/update/archive workflow did not persist correctly");
+  }
+
+  const psp = await query(
+    "select public.save_offerpsp_research_entity('psp', null, $1::jsonb) as value",
+    [JSON.stringify({
+      name: "Research PSP",
+      website: "https://psp.example",
+      contact_status: "contacted",
+      provider_status: "qualified",
+      supported_countries: ["IN", "BR"],
+      supported_currencies: ["INR", "BRL"],
+      payment_methods: ["UPI", "PIX"],
+      supported_verticals: ["IGAMING"],
+      min_monthly_volume: 100000,
+      max_monthly_volume: 5000000,
+      capabilities_verified: true,
+    })],
+  );
+  const pspId = psp.rows[0].value.id;
+  await query(
+    "select public.save_offerpsp_research_entity('psp', $1, $2::jsonb)",
+    [pspId, JSON.stringify({ commission_terms: "Negotiated", payment_methods: ["UPI", "PIX", "P2P"] })],
+  );
+  const savedPsp = await query("select commission_terms, payment_methods, capabilities_verified_at from public.psp_providers where id = $1", [pspId]);
+  if (savedPsp.rows[0].commission_terms !== "Negotiated" || savedPsp.rows[0].payment_methods.length !== 3
+      || !savedPsp.rows[0].capabilities_verified_at) {
+    throw new Error("PSP research create/update workflow did not persist correctly");
+  }
+  const bridge = await query("select public.get_offerpsp_captains_bridge() as value");
+  if (!bridge.rows[0].value.casino_leads.some((item) => item.id === casinoId)
+      || !bridge.rows[0].value.psp_providers.some((item) => item.id === pspId)) {
+    throw new Error("Captain's Bridge is missing editable research records");
+  }
+
+  await setUser(OTHER_CLIENT_ID);
+  await expectQueryFailure(
+    "select public.save_offerpsp_research_entity('casino', $1, $2::jsonb)",
+    [casinoId, JSON.stringify({ score: 1 })],
+    "OfferPSP staff access required",
+  );
+  await expectQueryFailure(
+    "select public.set_offerpsp_research_entity_state('psp', $1, 'archived')",
+    [pspId],
+    "OfferPSP staff access required",
+  );
+  await setUser(STAFF_ID);
+  process.stdout.write("PASS editable casino/PSP research records, lifecycle, bridge and staff isolation\n");
+}
+
 try {
   await bootstrap();
   await applyMigrations();
@@ -1242,6 +1356,7 @@ try {
   await verifyManagementOperationGrants();
   await verifyCaptainsBridgeGrants();
   await verify360WorkspaceGrants();
+  await verifyResearchCrudGrants();
   await seedUsers();
   await verifyPortalLeadClaims();
   await verifyLegacyShortlistBlocked();
@@ -1252,6 +1367,7 @@ try {
   await verifyAgentWorkspaceAndPricing();
   await verifyEntityLifecycle();
   await verify360Workspaces();
+  await verifyResearchCrud();
   process.stdout.write("PASS all OfferPSP migration checks\n");
 } catch (error) {
   process.stderr.write(`FAIL ${error.message}\n`);

@@ -56,10 +56,15 @@ export type Lead = {
 
 export type CasinoLead = {
   id: number; internal_id?: string | null; name?: string | null; website?: string | null;
+  description?: string | null;
   geo?: string | null; license?: string | null; sphere?: string | null; email?: string | null;
+  software?: string | null; affiliate_program?: string | null;
   contact_name?: string | null; contact_title?: string | null; telegram?: string | null;
+  phone?: string | null; linkedin?: string | null; city?: string | null;
   contact_status?: string | null; score?: number | null; source?: string | null;
-  notes?: string | null; updated_at?: string | null;
+  reply_status?: string | null; next_follow_up?: string | null; tags?: string[] | null;
+  notes?: string | null; record_state?: string | null; archived_at?: string | null;
+  created_at?: string | null; updated_at?: string | null;
 };
 
 export type AgentPspProvider = {
@@ -67,10 +72,15 @@ export type AgentPspProvider = {
   cluster?: string | null; specialization?: string | null; methods?: string | null;
   email?: string | null; contact_name?: string | null; phone?: string | null;
   telegram?: string | null; linkedin?: string | null; contact_status?: string | null;
+  other_contacts?: string | null; commission_terms?: string | null;
   provider_status?: string | null; risk_appetite?: string | null;
   supported_countries?: string[] | null; supported_currencies?: string[] | null;
   payment_methods?: string[] | null; supported_verticals?: string[] | null;
-  integration_types?: string[] | null; notes?: string | null; updated_at?: string | null;
+  restricted_countries?: string[] | null; integration_types?: string[] | null;
+  min_monthly_volume?: number | null; max_monthly_volume?: number | null;
+  capabilities_source?: string | null; capabilities_verified_at?: string | null;
+  notes?: string | null; record_state?: string | null; archived_at?: string | null;
+  created_at?: string | null; updated_at?: string | null;
 };
 
 export type EmailDraft = {

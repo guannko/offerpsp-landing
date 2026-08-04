@@ -36,6 +36,7 @@ const providerTabs: Array<{ id: ProviderTab; label: string }> = [
   { id: "documents", label: "Документы" },
   { id: "activity", label: "История" },
 ];
+const providerTabIds = new Set<ProviderTab>(providerTabs.map((item) => item.id));
 
 const fieldClass = "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:text-white";
 const areaClass = "min-h-24 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:text-white";
@@ -53,7 +54,8 @@ export default function ProviderWorkspace() {
   const [loading, setLoading] = useState(!isNew);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
-  const [tab, setTab] = useState<ProviderTab>("overview");
+  const requestedTab = params.get("tab") as ProviderTab | null;
+  const [tab, setTab] = useState<ProviderTab>(requestedTab && providerTabIds.has(requestedTab) ? requestedTab : "overview");
   const [providerDraft, setProviderDraft] = useState<Partial<Provider>>({ relationship_status: "prospect", relationship_tier: "standard", strategic_priority: 50, margin_included_default: false });
   const [contactDraft, setContactDraft] = useState<Partial<Contact>>({ active: true, preferred_channel: "telegram" });
   const [marginDraft, setMarginDraft] = useState({ route_id: "", flow: "all", mode: "percentage_points", percent_value: "", fixed_value: "", fixed_currency: "", notes: "" });
@@ -68,13 +70,28 @@ export default function ProviderWorkspace() {
       const next = data as Workspace;
       setWorkspace(next);
       setProviderDraft(next.provider);
-      if (!params.get("route") && next.routes?.length) setParams({ route: next.routes.find((route) => route.status !== "archived")?.id || next.routes[0].id }, { replace: true });
+      if (!params.get("route") && next.routes?.length) {
+        const nextParams = new URLSearchParams(params);
+        nextParams.set("route", next.routes.find((route) => route.status !== "archived")?.id || next.routes[0].id);
+        setParams(nextParams, { replace: true });
+      }
     }
     setLoading(false);
   }, [isNew, params, providerId, setParams]);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const nextTab = params.get("tab") as ProviderTab | null;
+    if (nextTab && providerTabIds.has(nextTab) && nextTab !== tab) setTab(nextTab);
+  }, [params, tab]);
   const selectedRoute = workspace?.routes.find((route) => route.id === params.get("route"));
+
+  const selectTab = (nextTab: ProviderTab) => {
+    setTab(nextTab);
+    const nextParams = new URLSearchParams(params);
+    nextParams.set("tab", nextTab);
+    setParams(nextParams, { replace: true });
+  };
 
   async function execute(name: string, action: () => Promise<{ data?: unknown; error: { message: string } | null }>, success: string) {
     setBusy(name); setMessage(null);
@@ -131,16 +148,16 @@ export default function ProviderWorkspace() {
       : workspace
         ? <>
             <div className="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-800 dark:bg-gray-900">
-              {providerTabs.map((item) => <button key={item.id} onClick={() => setTab(item.id)} className={`whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium ${tab === item.id ? "bg-brand-500 text-white" : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"}`}>{item.label}</button>)}
+              {providerTabs.map((item) => <button key={item.id} onClick={() => selectTab(item.id)} className={`whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium ${tab === item.id ? "bg-brand-500 text-white" : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"}`}>{item.label}</button>)}
             </div>
             {tab === "overview"
-              ? <ProviderOverview workspace={workspace} setTab={setTab}/>
+              ? <ProviderOverview workspace={workspace} setTab={selectTab}/>
               : tab === "profile"
                 ? <div className="max-w-2xl"><ProviderForm draft={providerDraft} setDraft={setProviderDraft} save={() => void saveProvider()} busy={busy}/></div>
               : tab === "contacts"
                 ? <div className="max-w-3xl"><ContactPanel contacts={workspace.contacts || []} draft={contactDraft} setDraft={setContactDraft} save={() => void saveContact()} busy={busy}/></div>
               : tab === "offers"
-                ? <RouteWorkspace workspace={workspace} route={selectedRoute} select={(id) => { setParams({ route: id }); setTab("offers"); }} reload={load} execute={execute}/>
+                ? <RouteWorkspace workspace={workspace} route={selectedRoute} select={(id) => { const nextParams = new URLSearchParams(params); nextParams.set("route", id); nextParams.set("tab", "offers"); setParams(nextParams); setTab("offers"); }} reload={load} execute={execute}/>
               : tab === "pricing"
                 ? <MarginPanel routes={workspace.routes} policies={workspace.margin_policies || []} draft={marginDraft} setDraft={setMarginDraft} save={() => void saveMargin()} busy={busy}/>
               : tab === "documents"
