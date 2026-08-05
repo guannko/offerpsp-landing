@@ -342,7 +342,11 @@ a normal authenticated user was denied. Mutation E2E remains locally verified on
 - [x] Archived routes from superseded parser versions remain in version history but are hidden from
   the active route list and anomaly counters.
 - [ ] Visual field-by-field diff between two rate-card versions.
-- [ ] Automated stale-offer alerts and partner reminders through n8n.
+- [x] Automated stale-offer alerts and partner reminders through n8n. A private provider-level
+  queue uses the existing `last_verified_at`, source effective date, route expiry and
+  `freshness_days`; it creates one deduplicated operational task, prepares RU/EN partner text,
+  alerts Boris in Telegram at most once per seven days and resolves itself after confirmation or
+  publication of a fresh rate card.
 - [x] GEO/currency/method/vertical coverage matrix with readiness, search and status filters.
 
 ### Production grant hotfix
@@ -514,7 +518,8 @@ Status: `PARTIAL` — these are the actual next P1/P2 tasks after rollout.
 - [x] Pause, resume and archive controls for individual routes in production.
 - [x] Visual version history in production; field-by-field batch comparison remains open.
 - [x] Freshness dashboard and last-confirmed controls in production; automated alerts remain open.
-- [ ] Partner reminders through n8n.
+- [x] Partner reminders through n8n; the active six-hour workflow was validated with zero errors
+  and completed a production sync without sending an early notification.
 - [x] GEO/currency/method/vertical coverage matrix deployed in RU/EN.
 
 ### P1 — Deal Desk
@@ -576,10 +581,13 @@ The first operational UI is deployed. Daily-use refinement remains.
 - [x] Surface new draft parses, parser failures, blocking anomalies and duplicates in the staff
   review queue. The Command Center shows the attention count; the intake screen refreshes every
   15 seconds and supports direct review, retry and dismissal.
-- [ ] Link Telegram ingestion to partner freshness reminders.
+- [x] Link Telegram ingestion to partner freshness reminders. Published reviewed rate cards update
+  the existing provider confirmation timestamp, close the reminder and complete its task; incoming
+  drafts remain review-only and never falsely confirm partner terms.
 
 The production queue, AIBot transport, automatic text parser and private admin-file ingestion are
-connected. Incoming mailbox activation and partner freshness automation remain separate next steps.
+connected. Incoming mailbox activation remains the next external-channel step; partner freshness
+automation is live in Supabase, the cockpit and n8n.
 
 ### P2 — Analytics
 
