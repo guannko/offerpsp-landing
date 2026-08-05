@@ -88,6 +88,46 @@ export type EmailDraft = {
   body?: string | null; status?: string | null; created_at?: string | null;
 };
 
+export type EmailThread = {
+  id: string;
+  subject: string;
+  participant_email: string;
+  counterparty_type: "merchant" | "provider" | "casino" | "research_psp" | "subagent" | "general";
+  counterparty_id?: string | null;
+  lead_id?: string | null;
+  status: "open" | "awaiting_reply" | "follow_up" | "closed" | "archived";
+  unread_count: number;
+  assigned_to?: string | null;
+  last_message_at: string;
+  tags?: string[];
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type EmailMessage = {
+  id: string;
+  thread_id: string;
+  direction: "inbound" | "outbound";
+  sender_email: string;
+  recipient_emails: string[];
+  cc_emails?: string[];
+  subject: string;
+  text_body?: string | null;
+  html_body?: string | null;
+  provider: string;
+  delivery_status: string;
+  is_read: boolean;
+  sent_at?: string | null;
+  received_at?: string | null;
+  created_at: string;
+};
+
+export type MailCenterSnapshot = {
+  metrics: { threads: number; unread: number; awaiting_reply: number; follow_up: number };
+  threads: EmailThread[];
+  messages: EmailMessage[];
+};
+
 export type TelegramLog = {
   id: number; chat_id?: string | null; role?: string | null; message?: string | null; created_at?: string | null;
 };
@@ -192,6 +232,7 @@ export type ControlBridgeData = {
   agentMarginPolicies: AgentMarginPolicy[];
   commissionSummary: Record<string, number>;
   captainsBridge: CaptainsBridgeSnapshot;
+  mailCenter: MailCenterSnapshot;
   loading: boolean;
   refreshing: boolean;
   ready: boolean;

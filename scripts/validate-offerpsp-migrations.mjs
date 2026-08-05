@@ -42,7 +42,7 @@ async function bootstrap() {
   await db.exec(`
     create role anon nologin;
     create role authenticated nologin;
-    create role service_role nologin;
+    create role service_role nologin bypassrls;
     create schema auth;
     create table auth.users (
       id uuid primary key,
@@ -127,8 +127,9 @@ async function bootstrap() {
       contact_status text not null default 'new', score integer, source text,
       city text, emails_sent integer, last_contacted_at timestamptz,
       last_reply_at timestamptz, reply_status text, next_follow_up date,
-      notes text, tags text[], created_at timestamptz default now(),
-      updated_at timestamptz default now()
+      notes text, tags text[], enriched_emails jsonb not null default '[]'::jsonb,
+      created_at timestamptz default now(), updated_at timestamptz default now(),
+      unique (internal_id)
     );
 
     create table public.email_drafts (
@@ -182,6 +183,9 @@ async function applyMigrations() {
     "20260803201601_offerpsp_agent_database.sql",
     "20260803203528_offerpsp_360_workspaces.sql",
     "20260804161410_offerpsp_research_crud.sql",
+    "20260805152500_aibot_n8n_service_rpc.sql",
+    "20260805153500_aibot_legacy_table_rls.sql",
+    "20260805161000_offerpsp_mail_center.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -1346,6 +1350,163 @@ async function verifyResearchCrud() {
   process.stdout.write("PASS editable casino/PSP research records, lifecycle, bridge and staff isolation\n");
 }
 
+async function verifyAibotServiceBoundary() {
+  const functionGrants = await query(`select
+    has_function_privilege('service_role', 'public.aibot_n8n_get_chat_history(text, integer)', 'EXECUTE') as service_history,
+    has_function_privilege('service_role', 'public.aibot_n8n_ingest_casino_batch(jsonb)', 'EXECUTE') as service_ingest,
+    has_function_privilege('anon', 'public.aibot_n8n_get_chat_history(text, integer)', 'EXECUTE') as anon_history,
+    has_function_privilege('authenticated', 'public.aibot_n8n_ingest_casino_batch(jsonb)', 'EXECUTE') as authenticated_ingest`);
+  const grants = functionGrants.rows[0];
+  if (!grants.service_history || !grants.service_ingest || grants.anon_history || grants.authenticated_ingest) {
+    throw new Error("AIBot n8n RPC grants are not service-role-only");
+  }
+
+  const tableBoundary = await query(`select
+    c.relname as table_name,
+    c.relrowsecurity as rls_enabled,
+    has_table_privilege('anon', format('public.%I', c.relname), 'SELECT') as anon_select,
+    has_table_privilege('authenticated', format('public.%I', c.relname), 'UPDATE') as authenticated_update,
+    has_table_privilege('service_role', format('public.%I', c.relname), 'SELECT,INSERT,UPDATE,DELETE') as service_dml
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public'
+      and c.relname in ('casino_leads', 'psp_providers', 'bot_tasks', 'chat_logs', 'email_drafts')
+    order by c.relname`);
+  if (tableBoundary.rows.length !== 5 || tableBoundary.rows.some((row) =>
+      !row.rls_enabled || row.anon_select || row.authenticated_update || !row.service_dml)) {
+    throw new Error("Legacy AIBot table grants or RLS boundary are incorrect");
+  }
+
+  const chatId = `migration-test-${Date.now()}`;
+  const savedHistory = await query(
+    "select public.aibot_n8n_save_chat_history($1, $2, $3) as value",
+    [chatId, "Find a PSP", "Working on it"],
+  );
+  const history = await query(
+    "select * from public.aibot_n8n_get_chat_history($1, 30)",
+    [chatId],
+  );
+  if (savedHistory.rows[0].value.count !== 2 || history.rows.length !== 2
+      || history.rows[0].role !== "user" || history.rows[1].role !== "assistant") {
+    throw new Error("AIBot chat history service RPC workflow failed");
+  }
+
+  const website = `migration-${Date.now()}.example`;
+  const ingested = await query(
+    "select public.aibot_n8n_ingest_casino_batch($1::jsonb) as value",
+    [JSON.stringify([{ name: "Migration Casino", website, email: "bizdev@example.com", score: 8 }])],
+  );
+  const lead = ingested.rows[0].value[0];
+  if (lead.status !== "inserted" || !lead.internal_id) {
+    throw new Error("AIBot casino ingest service RPC failed");
+  }
+
+  const enriched = await query(
+    "select public.aibot_n8n_update_casino_enrichment($1::jsonb) as value",
+    [JSON.stringify([{ internal_id: lead.internal_id, website, enriched_emails: [{ email: "partners@example.com" }], scraped_emails: 1, total_emails: 1 }])],
+  );
+  const researched = await query(
+    "select public.aibot_n8n_update_casino_research($1::jsonb) as value",
+    [JSON.stringify([{ internal_id: lead.internal_id, notes: "Verified research" }])],
+  );
+  if (!enriched.rows[0].value[0].enriched || researched.rows[0].value[0].status !== "researched") {
+    throw new Error("AIBot enrichment or research service RPC failed");
+  }
+
+  const draft = await query(
+    `insert into public.email_drafts(chat_id, lead_internal_id, to_email, subject, body, status)
+     values ($1, $2, 'merchant@example.com', 'Test', 'Body', 'draft') returning id`,
+    [chatId, lead.internal_id],
+  );
+  const marked = await query(
+    "select public.aibot_n8n_mark_email_sent($1, $2) as value",
+    [draft.rows[0].id, chatId],
+  );
+  const persisted = await query(
+    `select d.status, l.contact_status, l.emails_sent, l.notes, jsonb_array_length(l.enriched_emails) as email_count
+     from public.email_drafts d
+     join public.casino_leads l on l.internal_id = d.lead_internal_id
+     where d.id = $1`,
+    [draft.rows[0].id],
+  );
+  if (!marked.rows[0].value.success || persisted.rows[0].status !== "sent"
+      || persisted.rows[0].contact_status !== "in_progress" || persisted.rows[0].emails_sent !== 1
+      || persisted.rows[0].notes !== "Verified research" || persisted.rows[0].email_count !== 1) {
+    throw new Error("AIBot email sent service RPC failed");
+  }
+
+  await query("delete from public.email_drafts where chat_id = $1", [chatId]);
+  await query("delete from public.chat_logs where chat_id = $1", [chatId]);
+  await query("delete from public.casino_leads where internal_id = $1", [lead.internal_id]);
+  process.stdout.write("PASS AIBot service RPCs, RLS and direct-access boundary\n");
+}
+
+async function verifyMailCenter() {
+  const grants = await query(`select
+    has_function_privilege('service_role', 'public.aibot_n8n_ingest_email(jsonb)', 'EXECUTE') as service_ingest,
+    has_function_privilege('anon', 'public.aibot_n8n_ingest_email(jsonb)', 'EXECUTE') as anon_ingest,
+    has_function_privilege('authenticated', 'public.get_offerpsp_mail_center(integer)', 'EXECUTE') as authenticated_read,
+    has_table_privilege('authenticated', 'public.offerpsp_email_threads', 'SELECT') as authenticated_table_read,
+    has_table_privilege('service_role', 'public.offerpsp_email_messages', 'SELECT,INSERT,UPDATE,DELETE') as service_messages`);
+  const boundary = grants.rows[0];
+  if (!boundary.service_ingest || boundary.anon_ingest || !boundary.authenticated_read
+      || boundary.authenticated_table_read || !boundary.service_messages) {
+    throw new Error("OfferPSP mail center grants do not match the RPC-only access model");
+  }
+
+  const unique = Date.now();
+  const recipient = `mail-center-${unique}@example.com`;
+  const created = await query(
+    "select public.create_offerpsp_email_draft(null, $1, $2, $3) as value",
+    [recipient, "Partnership request", "Outbound introduction"],
+  );
+  const draftId = Number(created.rows[0].value.id);
+  await query("select public.set_offerpsp_email_draft_status($1, 'sent')", [draftId]);
+
+  const outbound = await query(`select t.id as thread_id, t.status, m.delivery_status
+    from public.offerpsp_email_threads t
+    join public.offerpsp_email_messages m on m.thread_id = t.id
+    where m.source_draft_id = $1`, [draftId]);
+  if (outbound.rows.length !== 1 || outbound.rows[0].status !== "awaiting_reply"
+      || outbound.rows[0].delivery_status !== "sent") {
+    throw new Error("Outgoing email was not synchronized into the threaded mailbox");
+  }
+
+  const threadId = outbound.rows[0].thread_id;
+  const inbound = await query("select public.aibot_n8n_ingest_email($1::jsonb) as value", [JSON.stringify({
+    from_email: `Partner <${recipient}>`,
+    to: ["bizdev@offerpsp.com"],
+    subject: "Re: Partnership request",
+    text: "Interested. Please send the details.",
+    message_id: `<mail-center-${unique}@example.com>`,
+    received_at: new Date().toISOString(),
+  })]);
+  if (inbound.rows[0].value.thread_id !== threadId) {
+    throw new Error("Inbound reply did not join the existing email thread");
+  }
+
+  const mailbox = await query("select public.get_offerpsp_mail_center(200) as value");
+  const thread = mailbox.rows[0].value.threads.find((item) => item.id === threadId);
+  const messages = mailbox.rows[0].value.messages.filter((item) => item.thread_id === threadId);
+  if (!thread || thread.unread_count !== 1 || thread.status !== "open" || messages.length !== 2
+      || messages[0].direction !== "outbound" || messages[1].direction !== "inbound") {
+    throw new Error("Threaded inbox does not expose the expected outbound/inbound conversation");
+  }
+
+  await query("select public.set_offerpsp_email_thread_state($1, 'follow_up', true)", [threadId]);
+  const updated = await query("select status, unread_count from public.offerpsp_email_threads where id = $1", [threadId]);
+  if (updated.rows[0].status !== "follow_up" || updated.rows[0].unread_count !== 0) {
+    throw new Error("Email thread read/follow-up state did not persist");
+  }
+
+  await setUser(OTHER_CLIENT_ID);
+  await expectQueryFailure("select public.get_offerpsp_mail_center(20)", [], "OfferPSP staff access required");
+  await setUser(STAFF_ID);
+  await query("delete from public.email_drafts where id = $1", [draftId]);
+  await query("delete from public.offerpsp_email_threads where id = $1", [threadId]);
+  process.stdout.write("PASS threaded email inbox, reply grouping, state controls and staff isolation\n");
+}
+
 try {
   await bootstrap();
   await applyMigrations();
@@ -1368,6 +1529,8 @@ try {
   await verifyEntityLifecycle();
   await verify360Workspaces();
   await verifyResearchCrud();
+  await verifyAibotServiceBoundary();
+  await verifyMailCenter();
   process.stdout.write("PASS all OfferPSP migration checks\n");
 } catch (error) {
   process.stderr.write(`FAIL ${error.message}\n`);

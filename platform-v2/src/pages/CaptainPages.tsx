@@ -53,11 +53,37 @@ export function IntelligenceWorkspace() {
 }
 
 export function CommunicationsWorkspace() {
-  const { captainsBridge, leads, refresh } = useControlBridge();
+  const { captainsBridge, mailCenter, leads, refresh } = useControlBridge();
   const [searchParams] = useSearchParams();
   const [to, setTo] = useState(""); const [subject, setSubject] = useState(""); const [body, setBody] = useState("");
   const [leadId, setLeadId] = useState(""); const [busy, setBusy] = useState(false); const [message, setMessage] = useState<{error?:boolean;text:string}|null>(null);
-  const [section, setSection] = useState<"compose" | "sent" | "telegram">("compose");
+  const [section, setSection] = useState<"mail" | "compose" | "telegram">("mail");
+  const [threadId, setThreadId] = useState("");
+  const [query, setQuery] = useState("");
+  const [mailScope, setMailScope] = useState<"active" | "follow_up" | "archived" | "all">("active");
+  const [linkType, setLinkType] = useState<"merchant" | "casino" | "research_psp" | "general">("general");
+  const [linkId, setLinkId] = useState("");
+
+  const visibleThreads = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return mailCenter.threads.filter((thread) => {
+      const scopeMatch = mailScope === "all"
+        || (mailScope === "archived" ? thread.status === "archived"
+          : mailScope === "follow_up" ? thread.status === "follow_up" : thread.status !== "archived");
+      return scopeMatch && [thread.subject, thread.participant_email, thread.counterparty_type, thread.status]
+        .filter(Boolean).join(" ").toLowerCase().includes(needle);
+    });
+  }, [mailCenter.threads, mailScope, query]);
+  const selectedThread = mailCenter.threads.find((thread) => thread.id === threadId) || visibleThreads[0];
+  const selectedMessages = selectedThread
+    ? mailCenter.messages.filter((entry) => entry.thread_id === selectedThread.id)
+    : [];
+
+  useEffect(() => {
+    if (!selectedThread) return;
+    setLinkType(selectedThread.counterparty_type === "casino" || selectedThread.counterparty_type === "research_psp" || selectedThread.counterparty_type === "merchant" ? selectedThread.counterparty_type : "general");
+    setLinkId(selectedThread.lead_id || selectedThread.counterparty_id || "");
+  }, [selectedThread]);
 
   useEffect(() => {
     const requestedLead = searchParams.get("lead");
@@ -69,7 +95,7 @@ export function CommunicationsWorkspace() {
     setSection("compose");
   }, [leadId, leads, searchParams]);
 
-  async function sendEmail() {
+  async function sendEmail(returnToThread = false) {
     if (!to.trim() || !subject.trim() || !body.trim()) { setMessage({ error: true, text: "Заполните получателя, тему и текст." }); return; }
     setBusy(true); setMessage(null);
     const created = await supabase.rpc("create_offerpsp_email_draft", { p_lead_id: leadId || null, p_to_email: to, p_subject: subject, p_body: body });
@@ -87,21 +113,72 @@ export function CommunicationsWorkspace() {
       await supabase.rpc("set_offerpsp_email_draft_status", { p_draft_id: draftId, p_status: "failed" });
       setMessage({ error: true, text: error instanceof Error ? error.message : "Не удалось отправить письмо" });
     }
+    await refresh();
+    if (returnToThread) setSection("mail");
+    setBusy(false);
+  }
+
+  async function openThread(id: string) {
+    setThreadId(id); setSection("mail");
+    const thread = mailCenter.threads.find((item) => item.id === id);
+    if (thread?.unread_count) {
+      await supabase.rpc("set_offerpsp_email_thread_state", { p_thread_id: id, p_status: thread.status, p_mark_read: true });
+      await refresh();
+    }
+  }
+
+  async function changeThreadState(status: "open" | "awaiting_reply" | "follow_up" | "closed" | "archived") {
+    if (!selectedThread) return;
+    setBusy(true);
+    const result = await supabase.rpc("set_offerpsp_email_thread_state", { p_thread_id: selectedThread.id, p_status: status, p_mark_read: true });
+    setMessage(result.error ? { error: true, text: result.error.message } : { text: "Статус переписки обновлён." });
     await refresh(); setBusy(false);
   }
 
-  return <Frame title="Коммуникации" description="Email и Telegram в одной панели."><PageHeading eyebrow="Omnichannel desk" title="Коммуникации" description="Письма и Telegram‑диалоги AIBot в одном рабочем контуре, с привязкой к мерчу."/>
+  async function saveThreadLink() {
+    if (!selectedThread) return;
+    setBusy(true);
+    const result = await supabase.rpc("link_offerpsp_email_thread", {
+      p_thread_id: selectedThread.id,
+      p_counterparty_type: linkType,
+      p_counterparty_id: linkType === "general" ? null : linkId || null,
+      p_lead_id: linkType === "merchant" ? linkId || null : null,
+    });
+    setMessage(result.error ? { error: true, text: result.error.message } : { text: "Переписка привязана к рабочей карточке." });
+    await refresh(); setBusy(false);
+  }
+
+  function startReply() {
+    if (!selectedThread) return;
+    setTo(selectedThread.participant_email);
+    setSubject(/^re:/i.test(selectedThread.subject) ? selectedThread.subject : `Re: ${selectedThread.subject}`);
+    setBody("");
+    setLeadId(selectedThread.lead_id || "");
+    setSection("compose");
+  }
+
+  const linkOptions = linkType === "merchant"
+    ? leads.filter((lead) => lead.record_state !== "archived").map((lead) => ({ id: lead.lead_id, label: `${lead.company || lead.name || "Мерч"} · ${lead.work_email || "нет email"}` }))
+    : linkType === "casino"
+      ? captainsBridge.casino_leads.filter((item) => item.record_state !== "archived").map((item) => ({ id: String(item.id), label: item.name || item.website || `Casino ${item.id}` }))
+      : linkType === "research_psp"
+        ? captainsBridge.psp_providers.filter((item) => item.record_state !== "archived").map((item) => ({ id: String(item.id), label: item.name || item.website || `PSP ${item.id}` }))
+        : [];
+
+  return <Frame title="Коммуникации" description="Email и Telegram в одной панели."><PageHeading eyebrow="Omnichannel desk" title="Коммуникации" description="Полный почтовый центр bizdev@offerpsp.com и Telegram‑история AIBot в одной рабочей панели."/>
     {message&&<div className={`mb-5 rounded-xl border px-4 py-3 text-sm ${message.error?"border-error-200 bg-error-50 text-error-700":"border-success-200 bg-success-50 text-success-700"}`}>{message.text}</div>}
+    <div className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4"><Metric label="Переписки" value={mailCenter.metrics.threads} hint="активные цепочки"/><Metric label="Непрочитано" value={mailCenter.metrics.unread} hint="требуют просмотра" tone={mailCenter.metrics.unread ? "success" : undefined}/><Metric label="Ждём ответ" value={mailCenter.metrics.awaiting_reply} hint="наш ход сделан"/><Metric label="Follow-up" value={mailCenter.metrics.follow_up} hint="нужно напомнить"/></div>
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
       <Panel className="h-fit"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Каналы</p><div className="mt-4 space-y-2">{[
+        ["mail", "Почтовый центр", `${mailCenter.metrics.unread} непрочитано`],
         ["compose", "Новое письмо", "bizdev@offerpsp.com"],
-        ["sent", "Исходящие", `${captainsBridge.email_drafts.length} писем`],
         ["telegram", "Telegram / AIBot", `${captainsBridge.telegram_log.length} сообщений`],
       ].map(([id,label,hint])=><button key={id} onClick={()=>setSection(id as typeof section)} className={`w-full rounded-xl px-4 py-3 text-left ${section===id?"bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300":"hover:bg-gray-50 dark:hover:bg-white/5"}`}><strong className="block text-sm">{label}</strong><span className="mt-1 block text-xs text-gray-400">{hint}</span></button>)}</div></Panel>
-      {section === "compose"
-        ? <Panel><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Новое письмо</h2><p className="mt-1 text-sm text-gray-500">Отправитель: <strong className="text-gray-700 dark:text-gray-200">bizdev@offerpsp.com</strong> · доставка через n8n.</p><div className="mt-5 space-y-4"><select className={field} value={leadId} onChange={(e)=>{setLeadId(e.target.value);const selected=leads.find((lead)=>lead.lead_id===e.target.value);if(selected?.work_email)setTo(selected.work_email);}}><option value="">Без привязки к мерчу</option>{leads.filter((lead)=>lead.record_state!=="archived").map((lead)=><option key={lead.lead_id} value={lead.lead_id}>{lead.company || "Без названия"} · {lead.work_email || "нет email"}</option>)}</select><input className={field} type="email" value={to} onChange={(e)=>setTo(e.target.value)} placeholder="Получатель"/><input className={field} value={subject} onChange={(e)=>setSubject(e.target.value)} placeholder="Тема"/><textarea className={area} value={body} onChange={(e)=>setBody(e.target.value)} placeholder="Текст письма"/><button onClick={()=>void sendEmail()} disabled={busy} className="w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy?"Отправляю…":"Отправить письмо"}</button></div></Panel>
-      : section === "sent"
-        ? <Panel><div className="flex items-center justify-between"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Исходящие письма</h2><p className="mt-1 text-sm text-gray-500">Журнал доставки и неудачных отправок.</p></div><span className="text-sm text-gray-400">{captainsBridge.email_drafts.length}</span></div><div className="mt-5 max-h-[680px] divide-y divide-gray-100 overflow-y-auto dark:divide-gray-800">{captainsBridge.email_drafts.map((draft)=><div key={draft.id} className="py-4"><div className="flex items-start justify-between gap-3"><div><strong className="text-sm text-gray-900 dark:text-white">{draft.subject || "Без темы"}</strong><span className="mt-1 block text-xs text-gray-400">{draft.to_email || "нет получателя"} · {formatDate(draft.created_at)}</span></div><StatusPill status={draft.status}/></div><p className="mt-2 line-clamp-3 whitespace-pre-wrap text-xs text-gray-500">{draft.body}</p></div>)}{!captainsBridge.email_drafts.length&&<EmptyState title="Писем пока нет" description="Первое отправленное письмо появится здесь."/>}</div></Panel>
+      {section === "mail" ? <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
+        <Panel className="min-w-0"><div className="space-y-3"><input className={field} value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Тема, email, статус…"/><select className={field} value={mailScope} onChange={(event)=>setMailScope(event.target.value as typeof mailScope)}><option value="active">Активные</option><option value="follow_up">Только follow-up</option><option value="archived">Архив</option><option value="all">Все</option></select></div><div className="mt-4 max-h-[720px] divide-y divide-gray-100 overflow-y-auto dark:divide-gray-800">{visibleThreads.map((thread)=><button key={thread.id} onClick={()=>void openThread(thread.id)} className={`w-full px-2 py-4 text-left ${selectedThread?.id===thread.id?"bg-brand-50 dark:bg-brand-500/10":"hover:bg-gray-50 dark:hover:bg-white/[0.03]"}`}><div className="flex items-start justify-between gap-3"><strong className="line-clamp-1 text-sm text-gray-900 dark:text-white">{thread.subject}</strong>{thread.unread_count>0&&<span className="rounded-full bg-brand-500 px-2 py-0.5 text-xs font-semibold text-white">{thread.unread_count}</span>}</div><span className="mt-1 block truncate text-xs text-gray-500">{thread.participant_email}</span><div className="mt-2 flex items-center justify-between gap-2"><StatusPill status={thread.status}/><span className="text-xs text-gray-400">{formatDate(thread.last_message_at)}</span></div></button>)}{!visibleThreads.length&&<EmptyState title="Писем не найдено" description="Входящие и исходящие цепочки появятся здесь."/>}</div></Panel>
+        <Panel className="min-w-0">{selectedThread ? <><div className="flex flex-col gap-4 border-b border-gray-100 pb-5 dark:border-gray-800 md:flex-row md:items-start md:justify-between"><div><h2 className="text-xl font-semibold text-gray-900 dark:text-white">{selectedThread.subject}</h2><p className="mt-1 text-sm text-gray-500">{selectedThread.participant_email} · {selectedThread.counterparty_type}</p></div><button onClick={startReply} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white">Ответить</button></div><div className="mt-4 flex flex-wrap gap-2"><button disabled={busy} onClick={()=>void changeThreadState("open")} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold dark:border-gray-700">Открыто</button><button disabled={busy} onClick={()=>void changeThreadState("follow_up")} className="rounded-lg border border-warning-200 bg-warning-50 px-3 py-2 text-xs font-semibold text-warning-700">Follow-up</button><button disabled={busy} onClick={()=>void changeThreadState("closed")} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold dark:border-gray-700">Закрыть</button><button disabled={busy} onClick={()=>void changeThreadState("archived")} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-500 dark:border-gray-700">В архив</button></div><div className="mt-4 grid gap-3 rounded-xl bg-gray-50 p-4 dark:bg-white/[0.03] md:grid-cols-[160px_minmax(0,1fr)_auto]"><select className={field} value={linkType} onChange={(event)=>{setLinkType(event.target.value as typeof linkType);setLinkId("");}}><option value="general">Без привязки</option><option value="merchant">Мерч</option><option value="casino">Казино</option><option value="research_psp">PSP из базы AIBot</option></select><select className={field} value={linkId} disabled={linkType==="general"} onChange={(event)=>setLinkId(event.target.value)}><option value="">Выберите карточку</option>{linkOptions.map((option)=><option key={option.id} value={option.id}>{option.label}</option>)}</select><button disabled={busy} onClick={()=>void saveThreadLink()} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold dark:border-gray-700">Привязать</button></div><div className="mt-5 max-h-[520px] space-y-4 overflow-y-auto pr-1">{selectedMessages.map((entry)=><div key={entry.id} className={`max-w-[88%] rounded-2xl border p-4 ${entry.direction==="outbound"?"ml-auto border-brand-100 bg-brand-50 dark:border-brand-500/20 dark:bg-brand-500/10":"border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"}`}><div className="flex items-center justify-between gap-4"><strong className="text-xs uppercase tracking-wide text-brand-500">{entry.direction==="outbound"?"OfferPSP →":"← Входящее"}</strong><span className="text-xs text-gray-400">{formatDate(entry.sent_at || entry.received_at || entry.created_at)}</span></div><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-gray-700 dark:text-gray-200">{entry.text_body || (entry.html_body ? "HTML-письмо без текстовой версии" : "Пустое письмо")}</p><span className="mt-3 block text-xs text-gray-400">{entry.delivery_status} · {entry.provider}</span></div>)}</div></> : <EmptyState title="Выберите переписку" description="Откройте цепочку слева или создайте новое письмо."/>}</Panel>
+      </div> : section === "compose"
+        ? <Panel><div className="flex items-start justify-between gap-4"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">{selectedThread && to===selectedThread.participant_email ? "Ответ на письмо" : "Новое письмо"}</h2><p className="mt-1 text-sm text-gray-500">Отправитель: <strong className="text-gray-700 dark:text-gray-200">bizdev@offerpsp.com</strong> · доставка через n8n.</p></div><button onClick={()=>setSection("mail")} className="text-sm text-gray-500">К перепискам</button></div><div className="mt-5 space-y-4"><select className={field} value={leadId} onChange={(e)=>{setLeadId(e.target.value);const selected=leads.find((lead)=>lead.lead_id===e.target.value);if(selected?.work_email)setTo(selected.work_email);}}><option value="">Без привязки к мерчу</option>{leads.filter((lead)=>lead.record_state!=="archived").map((lead)=><option key={lead.lead_id} value={lead.lead_id}>{lead.company || "Без названия"} · {lead.work_email || "нет email"}</option>)}</select><input className={field} type="email" value={to} onChange={(e)=>setTo(e.target.value)} placeholder="Получатель"/><input className={field} value={subject} onChange={(e)=>setSubject(e.target.value)} placeholder="Тема"/><textarea className={area} value={body} onChange={(e)=>setBody(e.target.value)} placeholder="Текст письма"/><button onClick={()=>void sendEmail(Boolean(selectedThread && to===selectedThread.participant_email))} disabled={busy} className="w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy?"Отправляю…":"Отправить письмо"}</button></div></Panel>
         : <Panel><div className="flex items-center justify-between"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Telegram / AIBot log</h2><p className="mt-1 text-sm text-gray-500">Фактическая история сообщений агента.</p></div><span className="text-sm text-gray-400">{captainsBridge.telegram_log.length}</span></div><div className="mt-5 grid max-h-[720px] grid-cols-1 gap-3 overflow-y-auto lg:grid-cols-2">{captainsBridge.telegram_log.slice(0,60).map((entry)=><div key={entry.id} className="rounded-xl border border-gray-200 p-4 dark:border-gray-800"><div className="flex items-center justify-between gap-3"><strong className="text-xs uppercase tracking-wide text-brand-500">{entry.role || "message"}</strong><span className="text-xs text-gray-400">{formatDate(entry.created_at)}</span></div><p className="mt-2 line-clamp-5 whitespace-pre-wrap text-sm text-gray-600 dark:text-gray-300">{entry.message}</p></div>)}{!captainsBridge.telegram_log.length&&<EmptyState title="Telegram журнал пуст" description="Сообщения активного AIBot появятся здесь автоматически."/>}</div></Panel>}
     </div>
   </Frame>;
