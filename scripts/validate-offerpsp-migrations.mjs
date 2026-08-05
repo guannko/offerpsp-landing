@@ -193,6 +193,7 @@ async function applyMigrations() {
     "20260805161000_offerpsp_mail_center.sql",
     "20260805181309_remove_legacy_client_shortlist_view.sql",
     "20260805183500_offerpsp_offer_ingestion_queue.sql",
+    "20260805193000_offerpsp_offer_ingestion_worker.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -590,6 +591,11 @@ async function verifyOfferIngestionQueue() {
   };
 
   await setRole("service_role");
+  const claimed = await query("select public.claim_offerpsp_ingestion_jobs(5) as value");
+  const claimedJob = claimed.rows[0].value.find((item) => item.id === queued.rows[0].value.job_id);
+  if (!claimedJob || claimedJob.provider_name !== providerName) {
+    throw new Error("Service worker did not atomically claim the queued offer source");
+  }
   const completed = await query(
     "select public.complete_offerpsp_source($1, $2::jsonb) as value",
     [queued.rows[0].value.job_id, JSON.stringify(payload)],
@@ -609,19 +615,40 @@ async function verifyOfferIngestionQueue() {
     throw new Error("Ingestion deduplication or staff review queue projection failed");
   }
 
+  const failureSource = `${sourceText}\nFailure fixture`;
+  const failureQueued = await query(
+    "select public.enqueue_offerpsp_source($1, 'telegram', $2, $3, '{}'::jsonb) as value",
+    [providerName, failureSource, `tg:${unique}:failure`],
+  );
+  await setRole("service_role");
+  await query("select public.claim_offerpsp_ingestion_jobs(5)");
+  const failed = await query(
+    "select public.fail_offerpsp_source($1, $2) as value",
+    [failureQueued.rows[0].value.job_id, "Fixture parser failure"],
+  );
+  if (failed.rows[0].value.status !== "failed" || failed.rows[0].value.attempt_count !== 1) {
+    throw new Error("Service worker failure did not preserve the queued source and error state");
+  }
+  await setRole("authenticated");
+
   const grants = await query(`select
     has_function_privilege('authenticated', 'public.enqueue_offerpsp_source(text,text,text,text,jsonb)', 'EXECUTE') as staff_enqueue,
     has_function_privilege('service_role', 'public.complete_offerpsp_source(uuid,jsonb)', 'EXECUTE') as service_complete,
     has_function_privilege('authenticated', 'public.complete_offerpsp_source(uuid,jsonb)', 'EXECUTE') as staff_complete,
+    has_function_privilege('service_role', 'public.claim_offerpsp_ingestion_jobs(integer)', 'EXECUTE') as service_claim,
+    has_function_privilege('authenticated', 'public.claim_offerpsp_ingestion_jobs(integer)', 'EXECUTE') as staff_claim,
+    has_function_privilege('service_role', 'public.fail_offerpsp_source(uuid,text)', 'EXECUTE') as service_fail,
     has_function_privilege('anon', 'public.list_offerpsp_ingestion_jobs(integer)', 'EXECUTE') as anon_list,
     has_table_privilege('authenticated', 'private.offerpsp_ingestion_jobs', 'SELECT') as direct_table_read`);
   const boundary = grants.rows[0];
   if (!boundary.staff_enqueue || !boundary.service_complete || boundary.staff_complete
+      || !boundary.service_claim || boundary.staff_claim || !boundary.service_fail
       || boundary.anon_list || boundary.direct_table_read) {
     throw new Error("Offer ingestion queue grants are broader than the RPC-only contract");
   }
 
   await query("delete from private.offerpsp_ingestion_jobs where id = $1", [queued.rows[0].value.job_id]);
+  await query("delete from private.offerpsp_ingestion_jobs where id = $1", [failureQueued.rows[0].value.job_id]);
   await query("delete from private.offerpsp_rate_card_batches where provider_id = (select id from private.offerpsp_providers where lower(brand_name) = lower($1))", [providerName]);
   await query("delete from private.offerpsp_providers where lower(brand_name) = lower($1)", [providerName]);
   process.stdout.write("PASS Telegram/admin ingestion queue, draft import, deduplication and access boundary\n");
