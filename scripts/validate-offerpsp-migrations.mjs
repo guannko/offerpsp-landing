@@ -213,6 +213,7 @@ async function applyMigrations() {
     "20260805193000_offerpsp_offer_ingestion_worker.sql",
     "20260805195500_offerpsp_ingestion_worker_response.sql",
     "20260805233000_offerpsp_private_source_storage.sql",
+    "20260805235000_offerpsp_ingestion_purge.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -657,19 +658,23 @@ async function verifyOfferIngestionQueue() {
     has_function_privilege('service_role', 'public.claim_offerpsp_ingestion_jobs(integer)', 'EXECUTE') as service_claim,
     has_function_privilege('authenticated', 'public.claim_offerpsp_ingestion_jobs(integer)', 'EXECUTE') as staff_claim,
     has_function_privilege('service_role', 'public.fail_offerpsp_source(uuid,text)', 'EXECUTE') as service_fail,
+    has_function_privilege('authenticated', 'public.purge_offerpsp_ingestion_source(uuid)', 'EXECUTE') as staff_purge,
+    has_function_privilege('anon', 'public.purge_offerpsp_ingestion_source(uuid)', 'EXECUTE') as anon_purge,
     has_function_privilege('anon', 'public.list_offerpsp_ingestion_jobs(integer)', 'EXECUTE') as anon_list,
     has_table_privilege('authenticated', 'private.offerpsp_ingestion_jobs', 'SELECT') as direct_table_read`);
   const boundary = grants.rows[0];
   if (!boundary.staff_enqueue || !boundary.service_complete || boundary.staff_complete
       || !boundary.service_claim || boundary.staff_claim || !boundary.service_fail
-      || boundary.anon_list || boundary.direct_table_read) {
+      || !boundary.staff_purge || boundary.anon_purge || boundary.anon_list || boundary.direct_table_read) {
     throw new Error("Offer ingestion queue grants are broader than the RPC-only contract");
   }
 
-  await query("delete from private.offerpsp_ingestion_jobs where id = $1", [queued.rows[0].value.job_id]);
-  await query("delete from private.offerpsp_ingestion_jobs where id = $1", [failureQueued.rows[0].value.job_id]);
-  await query("delete from private.offerpsp_rate_card_batches where provider_id = (select id from private.offerpsp_providers where lower(brand_name) = lower($1))", [providerName]);
-  await query("delete from private.offerpsp_providers where lower(brand_name) = lower($1)", [providerName]);
+  const purgedFailure = await query("select public.purge_offerpsp_ingestion_source($1) as value", [failureQueued.rows[0].value.job_id]);
+  const purgedReview = await query("select public.purge_offerpsp_ingestion_source($1) as value", [queued.rows[0].value.job_id]);
+  if (!purgedFailure.rows[0].value.success || !purgedReview.rows[0].value.success
+      || !purgedReview.rows[0].value.provider_deleted) {
+    throw new Error("Guarded ingestion source purge did not remove the draft fixture cleanly");
+  }
   process.stdout.write("PASS Telegram/admin ingestion queue, draft import, deduplication and access boundary\n");
 }
 
