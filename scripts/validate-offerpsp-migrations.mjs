@@ -216,6 +216,7 @@ async function applyMigrations() {
     "20260805233000_offerpsp_private_source_storage.sql",
     "20260805235000_offerpsp_ingestion_purge.sql",
     "20260806002000_offerpsp_ocr_source_types.sql",
+    "20260806015000_offerpsp_freshness_reminders.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -1660,6 +1661,92 @@ async function verifyPrivateSourceStorage() {
   process.stdout.write("PASS private source bucket, size boundary and staff-only storage policies\n");
 }
 
+async function verifyFreshnessReminders() {
+  await setUser(STAFF_ID);
+  await setRole("authenticated");
+  const provider = await query(
+    "select public.upsert_offerpsp_provider('Freshness Reminder Fixture', null, null, null, 'active', 1, true, 'Validation only') as value",
+  );
+  const providerCode = provider.rows[0].value.internal_code;
+  const providerId = (await query(
+    "select id from private.offerpsp_providers where internal_code = $1",
+    [providerCode],
+  )).rows[0].id;
+  await query(
+    "select public.save_offerpsp_provider_contact($1, null, $2::jsonb)",
+    [providerId, JSON.stringify({ full_name: "Freshness Contact", telegram: "@freshness", preferred_channel: "telegram", active: true })],
+  );
+  const imported = await query(
+    `select public.import_offerpsp_rate_card(
+      $1, 'manual', 'freshness reminder fixture', 'validation', current_date - 45,
+      'freshness-fixture-v1', '{}'::jsonb, $2::jsonb
+    ) as value`,
+    [providerCode, JSON.stringify([{
+      client_title: "Freshness route",
+      coverage_scope: "specific",
+      geos: ["IN"],
+      currencies: ["INR"],
+      flow: "payin",
+      methods: ["UPI"],
+      freshness_days: 30,
+      fees: [{ flow: "payin", fee_type: "percent", base_percent: 5, applies_on: "success" }],
+      limits: [{ flow: "payin", currency: "INR", minimum_amount: 100, maximum_amount: 10000 }],
+      anomalies: [],
+    }])],
+  );
+  await query("select public.publish_offerpsp_rate_card($1)", [imported.rows[0].value.batch_id]);
+  await query("update private.offerpsp_providers set last_verified_at = now() - interval '45 days' where id = $1", [providerId]);
+
+  const synced = await query("select public.sync_offerpsp_freshness_reminders(7, 7) as value");
+  const reminder = synced.rows[0].value.queue.find((item) => item.provider_id === providerId);
+  const notification = synced.rows[0].value.notifications.find((item) => item.provider_id === providerId);
+  if (!reminder || !notification || reminder.contact_value !== "@freshness" || !reminder.message_ru.includes("Freshness Reminder Fixture")) {
+    throw new Error(`Freshness sync did not prepare the PSP reminder: ${JSON.stringify(synced.rows[0].value)}`);
+  }
+
+  const openTasks = await query(
+    `select count(*)::integer as count from public.offerpsp_tasks
+     where metadata ->> 'automation' = 'provider_freshness'
+       and metadata ->> 'provider_id' = $1 and status in ('pending', 'in_progress')`,
+    [providerId],
+  );
+  if (openTasks.rows[0].count !== 1) throw new Error("Freshness sync did not create exactly one operational task");
+
+  await query(
+    "select public.mark_offerpsp_freshness_notified($1, 'telegram', 'owner', $2)",
+    [providerId, reminder.message_ru],
+  );
+  const repeated = await query("select public.sync_offerpsp_freshness_reminders(7, 7) as value");
+  if (repeated.rows[0].value.notifications.some((item) => item.provider_id === providerId)) {
+    throw new Error("Freshness sync repeated a notification inside the cooldown window");
+  }
+
+  await query("select public.confirm_offerpsp_provider_freshness($1)", [providerId]);
+  const resolved = await query(
+    "select status from private.offerpsp_freshness_reminders where provider_id = $1",
+    [providerId],
+  );
+  const resolvedTask = await query(
+    `select status from public.offerpsp_tasks
+     where metadata ->> 'automation' = 'provider_freshness'
+       and metadata ->> 'provider_id' = $1 order by created_at desc limit 1`,
+    [providerId],
+  );
+  if (resolved.rows[0].status !== "resolved" || resolvedTask.rows[0].status !== "done") {
+    throw new Error("Freshness confirmation did not resolve the reminder and task");
+  }
+
+  const grants = await query(`select
+    has_function_privilege('authenticated', 'public.list_offerpsp_freshness_reminders()', 'EXECUTE') as staff_list,
+    has_function_privilege('service_role', 'public.sync_offerpsp_freshness_reminders(integer,integer)', 'EXECUTE') as service_sync,
+    has_function_privilege('anon', 'public.list_offerpsp_freshness_reminders()', 'EXECUTE') as anon_list,
+    has_table_privilege('authenticated', 'private.offerpsp_freshness_reminders', 'SELECT') as direct_read`);
+  if (!grants.rows[0].staff_list || !grants.rows[0].service_sync || grants.rows[0].anon_list || grants.rows[0].direct_read) {
+    throw new Error("Freshness reminder grants are broader than the RPC-only contract");
+  }
+  process.stdout.write("PASS n8n freshness queue, notification cooldown, task deduplication and confirmation cleanup\n");
+}
+
 function verifyCanonicalGeoHeaderParsing() {
   const payload = parseOfferSource({
     providerName: "OCR Header Fixture",
@@ -1718,6 +1805,7 @@ try {
   await verifyAibotServiceBoundary();
   await verifyMailCenter();
   await verifyPrivateSourceStorage();
+  await verifyFreshnessReminders();
   process.stdout.write("PASS all OfferPSP migration checks\n");
 } catch (error) {
   process.stderr.write(`FAIL ${error.message}\n`);
