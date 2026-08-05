@@ -554,15 +554,19 @@ The first operational UI is deployed. Daily-use refinement remains.
   retry and dismissal controls.
 - [x] Protect the AIBot → OfferPSP intake webhook with a dedicated internal credential. Production
   transport E2E returned a queued job in Supabase; the test job and temporary workflows were removed.
-- [ ] Connect queued Telegram, email and admin sources to the universal adapters and parser worker
-  automatically.
+- [x] Run queued text sources through the deterministic parser automatically. The production n8n
+  worker claims jobs every minute, calls the protected parser API, imports only draft/review data
+  and records failures without publishing routes. A real production E2E reached `review`, created
+  one draft route and no published routes; the exact test job, batch, route and provider were removed.
+- [ ] Connect incoming mailbox messages and binary admin files to their source adapters before the
+  existing queue/parser worker.
 - [ ] Store original binary files privately and attach their source reference to the batch.
 - [ ] Add OCR for scanned PDF/image sources.
 - [ ] Send parser errors and duplicate warnings to a staff review queue.
 - [ ] Link Telegram ingestion to partner freshness reminders.
 
-The production queue and AIBot transport are connected. Automatic parsing, private binary storage,
-OCR and partner freshness automation remain separate next steps.
+The production queue, AIBot transport and automatic text parser are connected. Incoming mailbox
+activation, binary adapters/storage, OCR and partner freshness automation remain separate next steps.
 
 ### P2 — Analytics
 

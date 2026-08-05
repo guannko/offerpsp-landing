@@ -194,6 +194,7 @@ async function applyMigrations() {
     "20260805181309_remove_legacy_client_shortlist_view.sql",
     "20260805183500_offerpsp_offer_ingestion_queue.sql",
     "20260805193000_offerpsp_offer_ingestion_worker.sql",
+    "20260805195500_offerpsp_ingestion_worker_response.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -592,7 +593,7 @@ async function verifyOfferIngestionQueue() {
 
   await setRole("service_role");
   const claimed = await query("select public.claim_offerpsp_ingestion_jobs(5) as value");
-  const claimedJob = claimed.rows[0].value.find((item) => item.id === queued.rows[0].value.job_id);
+  const claimedJob = claimed.rows[0].value.jobs.find((item) => item.id === queued.rows[0].value.job_id);
   if (!claimedJob || claimedJob.provider_name !== providerName) {
     throw new Error("Service worker did not atomically claim the queued offer source");
   }
