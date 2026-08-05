@@ -562,7 +562,9 @@ The first operational UI is deployed. Daily-use refinement remains.
   existing queue/parser worker.
 - [ ] Store original binary files privately and attach their source reference to the batch.
 - [ ] Add OCR for scanned PDF/image sources.
-- [ ] Send parser errors and duplicate warnings to a staff review queue.
+- [x] Surface new draft parses, parser failures, blocking anomalies and duplicates in the staff
+  review queue. The Command Center shows the attention count; the intake screen refreshes every
+  15 seconds and supports direct review, retry and dismissal.
 - [ ] Link Telegram ingestion to partner freshness reminders.
 
 The production queue, AIBot transport and automatic text parser are connected. Incoming mailbox
