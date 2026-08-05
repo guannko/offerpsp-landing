@@ -517,7 +517,7 @@ Status: `PARTIAL` — these are the actual next P1/P2 tasks after rollout.
 - [x] Anomaly resolution/acceptance UI with audit notes in production.
 - [x] Pause, resume and archive controls for individual routes in production.
 - [x] Visual version history in production; field-by-field batch comparison remains open.
-- [x] Freshness dashboard and last-confirmed controls in production; automated alerts remain open.
+- [x] Freshness dashboard, last-confirmed controls and automated reminder queue are in production.
 - [x] Partner reminders through n8n; the active six-hour workflow was validated with zero errors
   and completed a production sync without sending an early notification.
 - [x] GEO/currency/method/vertical coverage matrix deployed in RU/EN.
@@ -530,7 +530,11 @@ Status: `PARTIAL` — these are the actual next P1/P2 tasks after rollout.
 - [x] Telegram group recording and transition in production.
 - [x] Zoom scheduling and won/lost controls in production.
 - [ ] Stored introduction templates and automated Telegram/Zoom preparation.
-- [ ] Deal history and result-quality tracking.
+- [x] Structured deal outcome and result-quality tracking in production: won/lost reason,
+  integration stage, live date, actual monthly volume, quality score, follow-up date, full staff
+  chronology and elapsed-time metrics from lead submission through PSP review, Telegram, Zoom and
+  final result. Production migration `offerpsp_deal_outcomes` and cockpit deployment
+  `dpl_AWgXCueSPCQARooqbyVvBFTR73j1` are verified; direct client/anonymous access is denied.
 
 The first operational UI is deployed. Daily-use refinement remains.
 
