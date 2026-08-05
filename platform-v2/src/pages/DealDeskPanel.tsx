@@ -81,6 +81,13 @@ export type DealHistoryEntry = {
   created_at: string;
 };
 
+type IntroductionPack = {
+  language: "ru" | "en";
+  telegram: { group_title: string; message: string };
+  zoom: { meeting_title: string; agenda: string };
+  checklist: string[];
+};
+
 export type DealWorkspace = {
   dossier?: Record<string, unknown>;
   shortlist_items?: DealShortlistItem[];
@@ -98,6 +105,7 @@ type Draft = {
   requestedInformation: string;
   telegramTitle: string;
   telegramUrl: string;
+  preparationLanguage: "ru" | "en";
   zoomUrl: string;
   zoomAt: string;
   result: "won" | "lost";
@@ -118,6 +126,7 @@ const emptyDraft = (): Draft => ({
   requestedInformation: "",
   telegramTitle: "",
   telegramUrl: "",
+  preparationLanguage: "ru",
   zoomUrl: "",
   zoomAt: "",
   result: "won",
@@ -150,6 +159,7 @@ const fieldClass = "w-full rounded-lg border border-gray-200 bg-white px-3 py-2.
 
 export default function DealDeskPanel({ workspace, reload }: { workspace: DealWorkspace | null; reload: () => Promise<void> }) {
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
+  const [packs, setPacks] = useState<Record<string, IntroductionPack>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const items = (workspace?.shortlist_items || []).filter((item) => item.introduction_requested_at);
@@ -169,6 +179,31 @@ export default function DealDeskPanel({ workspace, reload }: { workspace: DealWo
     await reload();
     setMessage({ tone: "success", text: success });
     setBusy(null);
+  }
+
+  async function prepareIntroduction(itemId: string, reviewId: string, language: "ru" | "en", base: Draft) {
+    setBusy(`${itemId}:prepare`);
+    setMessage(null);
+    const result = await supabase.rpc("prepare_offerpsp_introduction", { p_review_id: reviewId, p_language: language });
+    if (result.error) {
+      setMessage({ tone: "error", text: result.error.message });
+      setBusy(null);
+      return;
+    }
+    const pack = result.data as IntroductionPack;
+    setPacks((current) => ({ ...current, [itemId]: pack }));
+    patchDraft(itemId, { telegramTitle: pack.telegram.group_title }, base);
+    setMessage({ tone: "success", text: "Пакет знакомства подготовлен. Создайте группу, добавьте участников и вставьте готовый текст." });
+    setBusy(null);
+  }
+
+  async function copyText(value: string, success: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setMessage({ tone: "success", text: success });
+    } catch {
+      setMessage({ tone: "error", text: "Не удалось скопировать автоматически. Выделите текст вручную." });
+    }
   }
 
   if (!items.length) return <Panel><EmptyState title="Запросов на знакомство нет" description="Когда клиент выберет оффер и запросит знакомство, здесь появится управляемая цепочка PSP review → Telegram → Zoom → запуск."/></Panel>;
@@ -199,6 +234,7 @@ export default function DealDeskPanel({ workspace, reload }: { workspace: DealWo
       const introduction = review ? (workspace?.introductions || []).find((candidate) => candidate.review_id === review.review_id) : undefined;
       const outcome = introduction ? (workspace?.outcomes || []).find((candidate) => candidate.introduction_id === introduction.introduction_id) : undefined;
       const draft = draftFor(item.item_id, outcome);
+      const pack = packs[item.item_id];
       const actionKey = `${item.item_id}:${review?.status || "new"}:${introduction?.status || "none"}`;
 
       return <Panel key={item.item_id}>
@@ -226,8 +262,13 @@ export default function DealDeskPanel({ workspace, reload }: { workspace: DealWo
         </section> : null}
 
         {review?.status === "accepted" && !introduction ? <section className="mt-5">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">3. Создать общий Telegram‑чат</h3>
-          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"><input className={fieldClass} value={draft.telegramTitle} onChange={(event) => patchDraft(item.item_id, { telegramTitle: event.target.value })} placeholder="Название группы"/><input className={fieldClass} value={draft.telegramUrl} onChange={(event) => patchDraft(item.item_id, { telegramUrl: event.target.value })} placeholder="https://t.me/…"/><button disabled={Boolean(busy) || !draft.telegramUrl.trim()} onClick={() => void execute(actionKey, async () => { const result = await supabase.rpc("record_offerpsp_telegram_introduction", { p_review_id: review.review_id, p_group_title: draft.telegramTitle || null, p_group_url: draft.telegramUrl }); return { error: result.error }; }, "Telegram-знакомство зафиксировано.")} className="rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40">Зафиксировать чат</button></div>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">3. Подготовить и создать общий Telegram‑чат</h3>
+          <div className="mt-4 flex flex-wrap items-center gap-2"><select className={`${fieldClass} w-36`} value={draft.preparationLanguage} onChange={(event) => patchDraft(item.item_id, { preparationLanguage: event.target.value as "ru" | "en" }, draft)}><option value="ru">Русский</option><option value="en">English</option></select><button disabled={Boolean(busy)} onClick={() => void prepareIntroduction(item.item_id, review.review_id, draft.preparationLanguage, draft)} className="rounded-lg border border-brand-200 px-4 py-2.5 text-sm font-semibold text-brand-600 disabled:opacity-40 dark:border-brand-500/30 dark:text-brand-300">{busy === `${item.item_id}:prepare` ? "Готовлю…" : pack ? "Обновить пакет" : "Подготовить знакомство"}</button></div>
+          {pack && <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800"><div className="flex items-center justify-between"><strong className="text-sm text-gray-900 dark:text-white">Telegram</strong><button onClick={() => void copyText(`${pack.telegram.group_title}\n\n${pack.telegram.message}`, "Название и текст Telegram скопированы.")} className="text-xs font-semibold text-brand-500">Скопировать всё</button></div><p className="mt-3 text-sm font-semibold text-gray-800 dark:text-gray-100">{pack.telegram.group_title}</p><pre className="mt-3 whitespace-pre-wrap font-sans text-sm leading-6 text-gray-600 dark:text-gray-300">{pack.telegram.message}</pre></div>
+            <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800"><div className="flex items-center justify-between"><strong className="text-sm text-gray-900 dark:text-white">Zoom</strong><button onClick={() => void copyText(`${pack.zoom.meeting_title}\n\n${pack.zoom.agenda}`, "Название и повестка Zoom скопированы.")} className="text-xs font-semibold text-brand-500">Скопировать всё</button></div><p className="mt-3 text-sm font-semibold text-gray-800 dark:text-gray-100">{pack.zoom.meeting_title}</p><pre className="mt-3 whitespace-pre-wrap font-sans text-sm leading-6 text-gray-600 dark:text-gray-300">{pack.zoom.agenda}</pre><ul className="mt-4 space-y-1 text-xs text-gray-500">{pack.checklist.map((step) => <li key={step}>✓ {step}</li>)}</ul></div>
+          </div>}
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"><input className={fieldClass} value={draft.telegramTitle} onChange={(event) => patchDraft(item.item_id, { telegramTitle: event.target.value }, draft)} placeholder="Название группы"/><input className={fieldClass} value={draft.telegramUrl} onChange={(event) => patchDraft(item.item_id, { telegramUrl: event.target.value }, draft)} placeholder="https://t.me/…"/><button disabled={Boolean(busy) || !draft.telegramUrl.trim()} onClick={() => void execute(actionKey, async () => { const result = await supabase.rpc("record_offerpsp_telegram_introduction", { p_review_id: review.review_id, p_group_title: draft.telegramTitle || null, p_group_url: draft.telegramUrl }); return { error: result.error }; }, "Telegram-знакомство зафиксировано.")} className="rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40">Зафиксировать чат</button></div>
         </section> : null}
 
         {introduction && ["telegram_created", "zoom_scheduled", "won", "lost"].includes(introduction.status) ? <section className="mt-5 rounded-xl bg-gray-50 p-4 dark:bg-white/[0.03]">

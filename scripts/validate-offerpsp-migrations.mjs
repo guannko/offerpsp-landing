@@ -218,6 +218,7 @@ async function applyMigrations() {
     "20260806002000_offerpsp_ocr_source_types.sql",
     "20260806015000_offerpsp_freshness_reminders.sql",
     "20260806030000_offerpsp_deal_outcomes.sql",
+    "20260806043000_offerpsp_introduction_preparation.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -1054,6 +1055,24 @@ async function runEndToEndFixture() {
   }
   const reviewId = secondReviewResult.rows[0].value.review_id;
   await query("select public.record_offerpsp_provider_review($1, 'accepted', 'Approved', null)", [reviewId]);
+  const introductionPack = await query(
+    "select public.prepare_offerpsp_introduction($1, 'ru') as value",
+    [reviewId],
+  );
+  if (!introductionPack.rows[0].value.telegram.group_title.includes("Merchant Ltd")
+      || !introductionPack.rows[0].value.telegram.message.includes("PSP")
+      || !introductionPack.rows[0].value.zoom.agenda.includes("Повестка")
+      || introductionPack.rows[0].value.checklist.length !== 5) {
+    throw new Error(`Introduction preparation pack is incomplete: ${JSON.stringify(introductionPack.rows[0].value)}`);
+  }
+  const englishPack = await query(
+    "select public.prepare_offerpsp_introduction($1, 'en') as value",
+    [reviewId],
+  );
+  if (!englishPack.rows[0].value.telegram.message.includes("introducing")
+      || !englishPack.rows[0].value.zoom.agenda.includes("30-minute agenda")) {
+    throw new Error("English introduction templates were not rendered");
+  }
   const introResult = await query(
     "select public.record_offerpsp_telegram_introduction($1, 'Validation group', 'https://t.me/validation') as value",
     [reviewId],
@@ -1141,6 +1160,11 @@ async function runEndToEndFixture() {
     [leadId],
     "OfferPSP staff access required",
   );
+  await expectQueryFailure(
+    "select public.prepare_offerpsp_introduction($1, 'ru')",
+    [reviewId],
+    "OfferPSP staff access required",
+  );
   const outcomeGrants = await query(`select
     has_function_privilege('authenticated', 'public.record_offerpsp_deal_outcome(uuid,jsonb)', 'EXECUTE') as staff_record,
     has_function_privilege('authenticated', 'public.get_offerpsp_deal_history(uuid)', 'EXECUTE') as staff_history,
@@ -1153,6 +1177,16 @@ async function runEndToEndFixture() {
       || outcomeGrants.rows[0].anon_record || outcomeGrants.rows[0].anon_history
       || outcomeGrants.rows[0].staff_table || outcomeGrants.rows[0].anon_table) {
     throw new Error("Deal outcome API grants expose the private outcome table or anonymous RPC access");
+  }
+  const preparationGrants = await query(`select
+    has_function_privilege('authenticated', 'public.prepare_offerpsp_introduction(uuid,text)', 'EXECUTE') as staff_prepare,
+    has_function_privilege('anon', 'public.prepare_offerpsp_introduction(uuid,text)', 'EXECUTE') as anon_prepare,
+    has_table_privilege('authenticated', 'private.offerpsp_introduction_templates', 'SELECT') as staff_templates,
+    has_table_privilege('authenticated', 'private.offerpsp_introduction_preparations', 'SELECT') as staff_preparations
+  `);
+  if (!preparationGrants.rows[0].staff_prepare || preparationGrants.rows[0].anon_prepare
+      || preparationGrants.rows[0].staff_templates || preparationGrants.rows[0].staff_preparations) {
+    throw new Error("Introduction preparation grants expose templates or generated packs");
   }
 
   process.stdout.write("PASS end-to-end private offer → dossier → PSP review → Telegram → Zoom → structured won outcome\n");
