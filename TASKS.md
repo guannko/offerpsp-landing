@@ -558,17 +558,26 @@ The first operational UI is deployed. Daily-use refinement remains.
   worker claims jobs every minute, calls the protected parser API, imports only draft/review data
   and records failures without publishing routes. A real production E2E reached `review`, created
   one draft route and no published routes; the exact test job, batch, route and provider were removed.
-- [ ] Connect incoming mailbox messages and binary admin files to their source adapters before the
-  existing queue/parser worker.
-- [ ] Store original binary files privately and attach their source reference to the batch.
+- [x] Connect binary admin files to the source adapters before the existing queue/parser worker.
+  The cockpit accepts TXT/CSV/JSON/HTML, PDF, DOCX and XLSX, extracts normalized text in the
+  authenticated browser and sends the result through the same draft/review pipeline.
+- [x] Store original binary files in the private `offerpsp-private-sources` bucket and attach the
+  storage reference, SHA-256, MIME type, size and extractor metadata to the ingestion job/batch.
+  Production upload E2E verified the physical object, automatic worker pickup and review state.
+- [x] Add guarded staff purge for rejected/test sources. It refuses queued/processing/published
+  data and removes the job, non-published draft batch, queue-created provider and private Storage
+  object. Production E2E cleanup left the 12 published routes unchanged.
+- [ ] Connect incoming mailbox messages and attachments to the source adapters before the existing
+  queue/parser worker. Activation remains blocked by the invalid GoDaddy IMAP credential above.
 - [ ] Add OCR for scanned PDF/image sources.
 - [x] Surface new draft parses, parser failures, blocking anomalies and duplicates in the staff
   review queue. The Command Center shows the attention count; the intake screen refreshes every
   15 seconds and supports direct review, retry and dismissal.
 - [ ] Link Telegram ingestion to partner freshness reminders.
 
-The production queue, AIBot transport and automatic text parser are connected. Incoming mailbox
-activation, binary adapters/storage, OCR and partner freshness automation remain separate next steps.
+The production queue, AIBot transport, automatic text parser and private admin-file ingestion are
+connected. Incoming mailbox activation, OCR and partner freshness automation remain separate next
+steps.
 
 ### P2 — Analytics
 
