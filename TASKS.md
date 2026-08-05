@@ -529,7 +529,13 @@ Status: `PARTIAL` — these are the actual next P1/P2 tasks after rollout.
 - [x] Staff controls for PSP submission and review decisions in production.
 - [x] Telegram group recording and transition in production.
 - [x] Zoom scheduling and won/lost controls in production.
-- [ ] Stored introduction templates and automated Telegram/Zoom preparation.
+- [x] Stored RU/EN introduction templates and automated Telegram/Zoom preparation are in
+  production: the Deal Desk generates a group title, introduction message, participant contacts,
+  Zoom title/agenda and operational checklist, with copy actions and saved staff-only preparation
+  history. Telegram group creation and the actual Zoom link remain deliberate human actions because
+  the Telegram Bot API cannot create groups and no Zoom OAuth account is connected. Production
+  migration `offerpsp_introduction_preparation` and deployment
+  `dpl_FtB4QMyK4qTfRbeBEbDL1tQy5oBP` are verified.
 - [x] Structured deal outcome and result-quality tracking in production: won/lost reason,
   integration stage, live date, actual monthly volume, quality score, follow-up date, full staff
   chronology and elapsed-time metrics from lead submission through PSP review, Telegram, Zoom and
