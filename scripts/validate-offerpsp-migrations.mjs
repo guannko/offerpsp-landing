@@ -217,6 +217,7 @@ async function applyMigrations() {
     "20260805235000_offerpsp_ingestion_purge.sql",
     "20260806002000_offerpsp_ocr_source_types.sql",
     "20260806015000_offerpsp_freshness_reminders.sql",
+    "20260806030000_offerpsp_deal_outcomes.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -1067,9 +1068,55 @@ async function runEndToEndFixture() {
     [reviewId],
     "already advanced beyond Telegram setup",
   );
-  await query("select public.close_offerpsp_introduction($1, 'won', 'Validation complete')", [introductionId]);
+  const outcomeResult = await query(
+    `select public.record_offerpsp_deal_outcome($1, $2::jsonb) as value`,
+    [introductionId, JSON.stringify({
+      result: "won",
+      reason_code: "launched",
+      integration_status: "live",
+      live_at: "2026-08-02T12:00:00Z",
+      actual_monthly_volume: 125000,
+      volume_currency: "eur",
+      quality_score: 5,
+      notes: "Validation complete",
+    })],
+  );
+  if (outcomeResult.rows[0].value.provider_id || outcomeResult.rows[0].value.route_id) {
+    throw new Error("Deal outcome response exposes private provider identifiers");
+  }
   const finalLead = await query("select status from public.offerpsp_leads where lead_id = $1", [leadId]);
   if (finalLead.rows[0].status !== "won") throw new Error("Introduction pipeline did not finish as won");
+
+  const dealHistory = await query("select public.get_offerpsp_deal_history($1) as value", [leadId]);
+  const historyValue = dealHistory.rows[0].value;
+  if (historyValue.outcomes.length !== 1
+      || historyValue.outcomes[0].reason_code !== "launched"
+      || historyValue.outcomes[0].actual_monthly_volume !== 125000
+      || historyValue.outcomes[0].volume_currency !== "EUR"
+      || historyValue.metrics.hours_to_telegram == null
+      || !historyValue.history.some((entry) => entry.activity_type === "deal_outcome_recorded")) {
+    throw new Error(`Structured deal history is incomplete: ${JSON.stringify(historyValue)}`);
+  }
+
+  await query(
+    `select public.record_offerpsp_deal_outcome($1, $2::jsonb)`,
+    [introductionId, JSON.stringify({
+      result: "won",
+      reason_code: "launched",
+      integration_status: "live",
+      actual_monthly_volume: 150000,
+      volume_currency: "EUR",
+      quality_score: 4,
+      notes: "Updated after first processing month",
+    })],
+  );
+  const outcomeCount = await query(
+    "select count(*)::int as count, max(actual_monthly_volume)::numeric as volume from private.offerpsp_deal_outcomes where introduction_id = $1",
+    [introductionId],
+  );
+  if (outcomeCount.rows[0].count !== 1 || Number(outcomeCount.rows[0].volume) !== 150000) {
+    throw new Error("Deal outcome update created a duplicate or did not persist the new volume");
+  }
 
   await setUser(CLIENT_ID);
   const deals = await query("select * from public.list_offerpsp_client_deals($1)", [leadId]);
@@ -1089,8 +1136,26 @@ async function runEndToEndFixture() {
     [leadId],
     "OfferPSP staff access required",
   );
+  await expectQueryFailure(
+    "select public.get_offerpsp_deal_history($1)",
+    [leadId],
+    "OfferPSP staff access required",
+  );
+  const outcomeGrants = await query(`select
+    has_function_privilege('authenticated', 'public.record_offerpsp_deal_outcome(uuid,jsonb)', 'EXECUTE') as staff_record,
+    has_function_privilege('authenticated', 'public.get_offerpsp_deal_history(uuid)', 'EXECUTE') as staff_history,
+    has_function_privilege('anon', 'public.record_offerpsp_deal_outcome(uuid,jsonb)', 'EXECUTE') as anon_record,
+    has_function_privilege('anon', 'public.get_offerpsp_deal_history(uuid)', 'EXECUTE') as anon_history,
+    has_table_privilege('authenticated', 'private.offerpsp_deal_outcomes', 'SELECT') as staff_table,
+    has_table_privilege('anon', 'private.offerpsp_deal_outcomes', 'SELECT') as anon_table
+  `);
+  if (!outcomeGrants.rows[0].staff_record || !outcomeGrants.rows[0].staff_history
+      || outcomeGrants.rows[0].anon_record || outcomeGrants.rows[0].anon_history
+      || outcomeGrants.rows[0].staff_table || outcomeGrants.rows[0].anon_table) {
+    throw new Error("Deal outcome API grants expose the private outcome table or anonymous RPC access");
+  }
 
-  process.stdout.write("PASS end-to-end private offer → manual shortlist → client dossier → PSP review → Telegram → Zoom → won\n");
+  process.stdout.write("PASS end-to-end private offer → dossier → PSP review → Telegram → Zoom → structured won outcome\n");
 }
 
 async function verifyAgentWorkspaceAndPricing() {

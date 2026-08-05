@@ -53,11 +53,42 @@ export type Introduction = {
   route_title?: string;
 };
 
+export type DealOutcome = {
+  id: string;
+  introduction_id: string;
+  result: "won" | "lost";
+  reason_code: string;
+  integration_status: string;
+  live_at?: string | null;
+  expected_monthly_volume?: number | null;
+  actual_monthly_volume?: number | null;
+  volume_currency?: string | null;
+  quality_score?: number | null;
+  follow_up_at?: string | null;
+  notes?: string | null;
+  updated_at?: string | null;
+  provider_code?: string;
+  provider_name?: string;
+  route_code?: string;
+  route_title?: string;
+};
+
+export type DealHistoryEntry = {
+  id: string;
+  activity_type: string;
+  title: string;
+  body?: string | null;
+  created_at: string;
+};
+
 export type DealWorkspace = {
   dossier?: Record<string, unknown>;
   shortlist_items?: DealShortlistItem[];
   reviews?: ProviderReview[];
   introductions?: Introduction[];
+  outcomes?: DealOutcome[];
+  history?: DealHistoryEntry[];
+  metrics?: Record<string, number | null>;
 };
 
 type Draft = {
@@ -69,6 +100,14 @@ type Draft = {
   telegramUrl: string;
   zoomUrl: string;
   zoomAt: string;
+  result: "won" | "lost";
+  reasonCode: string;
+  integrationStatus: string;
+  liveAt: string;
+  actualMonthlyVolume: string;
+  volumeCurrency: string;
+  qualityScore: string;
+  followUpAt: string;
   resultNotes: string;
 };
 
@@ -81,8 +120,31 @@ const emptyDraft = (): Draft => ({
   telegramUrl: "",
   zoomUrl: "",
   zoomAt: "",
+  result: "won",
+  reasonCode: "launched",
+  integrationStatus: "technical_setup",
+  liveAt: "",
+  actualMonthlyVolume: "",
+  volumeCurrency: "EUR",
+  qualityScore: "",
+  followUpAt: "",
   resultNotes: "",
 });
+
+const dateTimeLocal = (value?: string | null) => value ? new Date(value).toISOString().slice(0, 16) : "";
+
+const draftFromOutcome = (outcome?: DealOutcome): Draft => outcome ? {
+  ...emptyDraft(),
+  result: outcome.result,
+  reasonCode: outcome.reason_code,
+  integrationStatus: outcome.integration_status,
+  liveAt: dateTimeLocal(outcome.live_at),
+  actualMonthlyVolume: outcome.actual_monthly_volume?.toString() || "",
+  volumeCurrency: outcome.volume_currency || "EUR",
+  qualityScore: outcome.quality_score?.toString() || "",
+  followUpAt: dateTimeLocal(outcome.follow_up_at),
+  resultNotes: outcome.notes || "",
+} : emptyDraft();
 
 const fieldClass = "w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:bg-gray-900 dark:text-white";
 
@@ -92,8 +154,8 @@ export default function DealDeskPanel({ workspace, reload }: { workspace: DealWo
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const items = (workspace?.shortlist_items || []).filter((item) => item.introduction_requested_at);
 
-  const draftFor = (id: string) => drafts[id] || emptyDraft();
-  const patchDraft = (id: string, patch: Partial<Draft>) => setDrafts((current) => ({ ...current, [id]: { ...draftFor(id), ...patch } }));
+  const draftFor = (id: string, outcome?: DealOutcome) => drafts[id] || draftFromOutcome(outcome);
+  const patchDraft = (id: string, patch: Partial<Draft>, base?: Draft) => setDrafts((current) => ({ ...current, [id]: { ...(current[id] || base || emptyDraft()), ...patch } }));
 
   async function execute(name: string, action: () => Promise<{ error: { message: string } | null }>, success: string) {
     setBusy(name);
@@ -119,13 +181,24 @@ export default function DealDeskPanel({ workspace, reload }: { workspace: DealWo
       <Summary label="Результат" value={(workspace?.introductions || []).filter((item) => ["won", "lost"].includes(item.status)).length}/>
     </div>
 
+    {workspace?.metrics && <Panel>
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+        <Metric label="До PSP review" value={workspace.metrics.hours_to_psp_review} unit="ч"/>
+        <Metric label="Решение PSP" value={workspace.metrics.hours_to_psp_decision} unit="ч"/>
+        <Metric label="До Telegram" value={workspace.metrics.hours_to_telegram} unit="ч"/>
+        <Metric label="До Zoom" value={workspace.metrics.hours_to_zoom} unit="ч"/>
+        <Metric label="До результата" value={workspace.metrics.days_to_result} unit="дн"/>
+      </div>
+    </Panel>}
+
     {message && <div className={`rounded-xl border px-4 py-3 text-sm ${message.tone === "error" ? "border-error-200 bg-error-50 text-error-700 dark:border-error-500/20 dark:bg-error-500/10 dark:text-error-300" : "border-success-200 bg-success-50 text-success-700 dark:border-success-500/20 dark:bg-success-500/10 dark:text-success-300"}`}>{message.text}</div>}
 
     {items.map((item) => {
       const reviews = (workspace?.reviews || []).filter((review) => review.shortlist_item_id === item.item_id);
       const review = reviews.sort((a, b) => Number(b.review_round || 0) - Number(a.review_round || 0))[0];
       const introduction = review ? (workspace?.introductions || []).find((candidate) => candidate.review_id === review.review_id) : undefined;
-      const draft = draftFor(item.item_id);
+      const outcome = introduction ? (workspace?.outcomes || []).find((candidate) => candidate.introduction_id === introduction.introduction_id) : undefined;
+      const draft = draftFor(item.item_id, outcome);
       const actionKey = `${item.item_id}:${review?.status || "new"}:${introduction?.status || "none"}`;
 
       return <Panel key={item.item_id}>
@@ -166,18 +239,34 @@ export default function DealDeskPanel({ workspace, reload }: { workspace: DealWo
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_240px_auto]"><input className={fieldClass} value={draft.zoomUrl} onChange={(event) => patchDraft(item.item_id, { zoomUrl: event.target.value })} placeholder="https://zoom.us/…"/><input type="datetime-local" className={fieldClass} value={draft.zoomAt} onChange={(event) => patchDraft(item.item_id, { zoomAt: event.target.value })}/><button disabled={Boolean(busy) || !draft.zoomUrl.trim() || !draft.zoomAt} onClick={() => void execute(actionKey, async () => { const result = await supabase.rpc("record_offerpsp_zoom", { p_introduction_id: introduction.introduction_id, p_zoom_url: draft.zoomUrl, p_scheduled_at: new Date(draft.zoomAt).toISOString() }); return { error: result.error }; }, "Zoom назначен и зафиксирован.")} className="rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40">Назначить Zoom</button></div>
         </section> : null}
 
-        {introduction && ["telegram_created", "zoom_scheduled"].includes(introduction.status) ? <section className="mt-5 border-t border-gray-100 pt-5 dark:border-gray-800">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">5. Результат знакомства</h3>
-          <textarea className={`${fieldClass} mt-3`} value={draft.resultNotes} onChange={(event) => patchDraft(item.item_id, { resultNotes: event.target.value })} placeholder="Что согласовано, причина выигрыша или отказа"/>
-          <div className="mt-3 flex gap-2"><button disabled={Boolean(busy)} onClick={() => void execute(`${actionKey}:won`, async () => { const result = await supabase.rpc("close_offerpsp_introduction", { p_introduction_id: introduction.introduction_id, p_result: "won", p_notes: draft.resultNotes || null }); return { error: result.error }; }, "Сделка отмечена как запущенная.")} className="rounded-lg bg-success-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40">Won — запущено</button><button disabled={Boolean(busy)} onClick={() => void execute(`${actionKey}:lost`, async () => { const result = await supabase.rpc("close_offerpsp_introduction", { p_introduction_id: introduction.introduction_id, p_result: "lost", p_notes: draft.resultNotes || null }); return { error: result.error }; }, "Сделка закрыта как lost.")} className="rounded-lg border border-error-200 px-4 py-2.5 text-sm font-semibold text-error-600 disabled:opacity-40">Lost</button></div>
+        {introduction && ["telegram_created", "zoom_scheduled", "won", "lost"].includes(introduction.status) ? <section className="mt-5 border-t border-gray-100 pt-5 dark:border-gray-800">
+          <div className="flex items-start justify-between gap-3"><div><h3 className="text-sm font-semibold text-gray-900 dark:text-white">5. Результат и качество запуска</h3><p className="mt-1 text-sm text-gray-500">Фиксируем не только won/lost, но и настоящую причину, стадию интеграции и качество сделки.</p></div>{outcome && <StatusPill status={outcome.result}/>}</div>
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+            <select className={fieldClass} value={draft.result} onChange={(event) => { const result = event.target.value as "won" | "lost"; patchDraft(item.item_id, { result, reasonCode: result === "won" ? "launched" : "other", integrationStatus: result === "won" ? "technical_setup" : "not_started" }, draft); }}><option value="won">Won — сотрудничество начато</option><option value="lost">Lost — запуск не состоялся</option></select>
+            <select className={fieldClass} value={draft.reasonCode} onChange={(event) => patchDraft(item.item_id, { reasonCode: event.target.value }, draft)}>{draft.result === "won" ? <option value="launched">Запущена обработка</option> : <><option value="commercial_terms">Не сошлись по условиям</option><option value="compliance">Compliance / лицензия</option><option value="technical">Техническая причина</option><option value="no_response">Нет ответа</option><option value="timing">Не сейчас</option><option value="competitor">Выбран конкурент</option><option value="merchant_cancelled">Мерч отказался</option><option value="provider_capacity">PSP не готов принять</option><option value="other">Другая причина</option></>}</select>
+            <select className={fieldClass} value={draft.integrationStatus} onChange={(event) => patchDraft(item.item_id, { integrationStatus: event.target.value }, draft)}><option value="not_started" disabled={draft.result === "won"}>Не начато</option><option value="technical_setup">Техническая интеграция</option><option value="testing">Тестирование</option><option value="live">Live</option><option value="stopped">Остановлено</option></select>
+            <input type="datetime-local" className={fieldClass} value={draft.liveAt} onChange={(event) => patchDraft(item.item_id, { liveAt: event.target.value }, draft)} aria-label="Дата запуска" title="Дата запуска"/>
+            <div className="grid grid-cols-[minmax(0,1fr)_90px] gap-2"><input type="number" min="0" className={fieldClass} value={draft.actualMonthlyVolume} onChange={(event) => patchDraft(item.item_id, { actualMonthlyVolume: event.target.value }, draft)} placeholder="Факт. оборот / мес."/><input className={fieldClass} value={draft.volumeCurrency} onChange={(event) => patchDraft(item.item_id, { volumeCurrency: event.target.value.toUpperCase() }, draft)} placeholder="EUR" maxLength={8}/></div>
+            <select className={fieldClass} value={draft.qualityScore} onChange={(event) => patchDraft(item.item_id, { qualityScore: event.target.value }, draft)}><option value="">Качество не оценено</option><option value="5">5 — отличный запуск</option><option value="4">4 — хороший</option><option value="3">3 — средний</option><option value="2">2 — слабый</option><option value="1">1 — проблемный</option></select>
+            <input type="datetime-local" className={fieldClass} value={draft.followUpAt} onChange={(event) => patchDraft(item.item_id, { followUpAt: event.target.value }, draft)} aria-label="Дата следующего контроля" title="Следующий контроль"/>
+            <textarea className={`${fieldClass} md:col-span-2`} value={draft.resultNotes} onChange={(event) => patchDraft(item.item_id, { resultNotes: event.target.value }, draft)} placeholder="Что согласовано, причины результата, риски и следующий шаг"/>
+          </div>
+          <button disabled={Boolean(busy) || (draft.result === "won" && draft.integrationStatus === "not_started")} onClick={() => void execute(`${actionKey}:outcome`, async () => { const result = await supabase.rpc("record_offerpsp_deal_outcome", { p_introduction_id: introduction.introduction_id, p_payload: { result: draft.result, reason_code: draft.reasonCode, integration_status: draft.integrationStatus, live_at: draft.liveAt ? new Date(draft.liveAt).toISOString() : null, actual_monthly_volume: draft.actualMonthlyVolume || null, volume_currency: draft.actualMonthlyVolume ? draft.volumeCurrency : null, quality_score: draft.qualityScore || null, follow_up_at: draft.followUpAt ? new Date(draft.followUpAt).toISOString() : null, notes: draft.resultNotes || null } }); return { error: result.error }; }, outcome ? "Результат сделки обновлён." : "Результат сделки сохранён.")} className="mt-3 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40">{busy === `${actionKey}:outcome` ? "Сохраняю…" : outcome ? "Обновить результат" : "Зафиксировать результат"}</button>
         </section> : null}
-
-        {introduction && ["won", "lost"].includes(introduction.status) ? <div className="mt-5 rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-600 dark:border-gray-800 dark:text-gray-300">Финальный результат: <strong>{introduction.status.toUpperCase()}</strong>{introduction.result_notes ? ` · ${introduction.result_notes}` : ""}</div> : null}
       </Panel>;
     })}
+
+    {Boolean(workspace?.history?.length) && <Panel>
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Хронология сделки</h2>
+      <div className="mt-4 divide-y divide-gray-100 dark:divide-gray-800">{workspace!.history!.slice(0, 20).map((entry) => <div key={entry.id} className="grid gap-1 py-3 sm:grid-cols-[170px_minmax(0,1fr)]"><time className="text-xs text-gray-400">{new Date(entry.created_at).toLocaleString("ru-RU")}</time><div><p className="text-sm font-medium text-gray-800 dark:text-gray-100">{entry.title}</p>{entry.body && <p className="mt-1 text-sm text-gray-500">{entry.body}</p>}</div></div>)}</div>
+    </Panel>}
   </div>;
 }
 
 function Summary({ label, value }: { label: string; value: number }) {
   return <Panel><span className="text-xs text-gray-400">{label}</span><strong className="mt-2 block text-2xl text-gray-900 dark:text-white">{value}</strong></Panel>;
+}
+
+function Metric({ label, value, unit }: { label: string; value?: number | null; unit: string }) {
+  return <div><span className="text-xs text-gray-400">{label}</span><strong className="mt-1 block text-lg text-gray-900 dark:text-white">{value == null ? "—" : `${value} ${unit}`}</strong></div>;
 }

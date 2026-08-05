@@ -138,7 +138,7 @@ export default function MerchantWorkspace() {
   const loadWorkspace = useCallback(async () => {
     if (!leadId) return;
     setLoading(true);
-    const [matchesResult, shortlistsResult, dealResult] = await Promise.all([
+    const [matchesResult, shortlistsResult, dealResult, historyResult] = await Promise.all([
       supabase.rpc("list_offerpsp_route_matches", { p_lead_id: leadId }),
       supabase
         .from("offerpsp_shortlists")
@@ -146,12 +146,15 @@ export default function MerchantWorkspace() {
         .eq("lead_id", leadId)
         .order("version", { ascending: false }),
       supabase.rpc("get_offerpsp_staff_request_workspace", { p_lead_id: leadId }),
+      supabase.rpc("get_offerpsp_deal_history", { p_lead_id: leadId }),
     ]);
-    const error = matchesResult.error || shortlistsResult.error || dealResult.error;
+    const error = matchesResult.error || shortlistsResult.error || dealResult.error || historyResult.error;
     if (error) setMessage({ tone: "error", text: error.message });
     setMatches(Array.isArray(matchesResult.data) ? matchesResult.data as Match[] : []);
     setShortlists(Array.isArray(shortlistsResult.data) ? shortlistsResult.data as Shortlist[] : []);
-    setDealWorkspace(dealResult.data && typeof dealResult.data === "object" ? dealResult.data as DealWorkspace : null);
+    const dealData = dealResult.data && typeof dealResult.data === "object" ? dealResult.data as DealWorkspace : null;
+    const historyData = historyResult.data && typeof historyResult.data === "object" ? historyResult.data as Pick<DealWorkspace, "metrics" | "outcomes" | "history"> : null;
+    setDealWorkspace(dealData ? { ...dealData, ...(historyData || {}) } : historyData);
     setLoading(false);
   }, [leadId]);
 
