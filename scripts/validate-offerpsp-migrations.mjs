@@ -214,6 +214,7 @@ async function applyMigrations() {
     "20260805195500_offerpsp_ingestion_worker_response.sql",
     "20260805233000_offerpsp_private_source_storage.sql",
     "20260805235000_offerpsp_ingestion_purge.sql",
+    "20260806002000_offerpsp_ocr_source_types.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -1637,7 +1638,10 @@ async function verifyPrivateSourceStorage() {
     from storage.buckets where id = 'offerpsp-private-sources'`);
   if (bucket.rows.length !== 1 || bucket.rows[0].public
       || Number(bucket.rows[0].file_size_limit) !== 15 * 1024 * 1024
-      || !bucket.rows[0].allowed_mime_types.includes("application/pdf")) {
+      || !bucket.rows[0].allowed_mime_types.includes("application/pdf")
+      || !bucket.rows[0].allowed_mime_types.includes("image/png")
+      || !bucket.rows[0].allowed_mime_types.includes("image/jpeg")
+      || !bucket.rows[0].allowed_mime_types.includes("image/webp")) {
     throw new Error("OfferPSP source bucket is missing or not private");
   }
 
