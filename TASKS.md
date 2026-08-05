@@ -540,20 +540,29 @@ The first operational UI is deployed. Daily-use refinement remains.
 
 ### P1 — Telegram ingestion
 
-- [ ] Receive a partner rate card directly from Telegram.
+- [x] Receive a partner rate card from the existing AIBot when Boris forwards or pastes the source
+  and explicitly asks the agent to save it. The agent preserves the original text and only enqueues
+  it for review; it does not claim that the source is parsed or published.
 - [x] Define the universal ingestion contract: any source becomes a reviewed normalized draft and
   every merchant output uses the Telegram-offer presentation standard.
 - [x] Add local source adapters for TXT/Markdown, CSV/TSV, XLSX, text PDF and DOCX with immutable
   original-file hashes and review-required metadata.
 - [x] Allow the deterministic normalizer to accept new PSPs without adding a hard-coded provider preset.
-- [ ] Connect Telegram, email and admin uploads to the universal source adapters automatically.
+- [x] Deploy the private production ingestion queue for Telegram, email, admin text/file and API
+  sources, including source hashes, deduplication, processing state, errors and immutable references.
+- [x] Deploy the cockpit intake screen for pasted sources and text-based files, with queue history,
+  retry and dismissal controls.
+- [x] Protect the AIBot → OfferPSP intake webhook with a dedicated internal credential. Production
+  transport E2E returned a queued job in Supabase; the test job and temporary workflows were removed.
+- [ ] Connect queued Telegram, email and admin sources to the universal adapters and parser worker
+  automatically.
 - [ ] Store original binary files privately and attach their source reference to the batch.
 - [ ] Add OCR for scanned PDF/image sources.
 - [ ] Send parser errors and duplicate warnings to a staff review queue.
 - [ ] Link Telegram ingestion to partner freshness reminders.
 
-The local adapter/parser path supports common source files. The production n8n/admin trigger and
-private binary storage are not connected yet.
+The production queue and AIBot transport are connected. Automatic parsing, private binary storage,
+OCR and partner freshness automation remain separate next steps.
 
 ### P2 — Analytics
 
