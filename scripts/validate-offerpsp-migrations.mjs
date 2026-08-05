@@ -38,6 +38,10 @@ async function setUser(userId) {
   await query("select set_config('request.jwt.claim.sub', $1, false)", [userId]);
 }
 
+async function setRole(role = "authenticated") {
+  await query("select set_config('request.jwt.claim.role', $1, false)", [role]);
+}
+
 async function bootstrap() {
   await db.exec(`
     create role anon nologin;
@@ -61,6 +65,7 @@ async function bootstrap() {
     stable
     as $$
       select jsonb_build_object(
+        'role', current_setting('request.jwt.claim.role', true),
         'email', coalesce((select email from auth.users where id = auth.uid()), ''),
         'app_metadata', jsonb_build_object('provider', 'google')
       );
@@ -187,6 +192,7 @@ async function applyMigrations() {
     "20260805153500_aibot_legacy_table_rls.sql",
     "20260805161000_offerpsp_mail_center.sql",
     "20260805181309_remove_legacy_client_shortlist_view.sql",
+    "20260805183500_offerpsp_offer_ingestion_queue.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -546,6 +552,79 @@ async function importPreparedDrafts() {
     );
     process.stdout.write(`PASS private draft ${providerKey}: ${imported.route_count} routes\n`);
   }
+}
+
+async function verifyOfferIngestionQueue() {
+  await setUser(STAFF_ID);
+  await setRole("authenticated");
+  const unique = Date.now();
+  const providerName = `Queue PSP ${unique}`;
+  const sourceText = `Telegram fixture ${unique}\nGEO - India\nCurrency - INR\nMethod: UPI\nMDR PayIn - 7%`;
+  const queued = await query(
+    "select public.enqueue_offerpsp_source($1, 'telegram', $2, $3, '{}'::jsonb) as value",
+    [providerName, sourceText, `tg:${unique}`],
+  );
+  if (queued.rows[0].value.status !== "queued" || queued.rows[0].value.duplicate) {
+    throw new Error("Staff offer source did not enter the private ingestion queue");
+  }
+
+  const template = JSON.parse(await readFile(resolve(".private/imports/brpay-2026-07-23-v3.json"), "utf8"));
+  const payload = {
+    provider: {
+      brand_name: providerName,
+      website: null,
+      strategic_priority: 50,
+      margin_included_default: false,
+    },
+    batch: {
+      source_reference: `tg:${unique}`,
+      source_effective_date: null,
+      parser_version: "offerpsp-source-parser-v3",
+      parser_metadata: {
+        ingestion_standard: "offerpsp-universal-source-v1",
+        publication_allowed: false,
+        blocking_anomaly_count: template.batch.routes[0].anomalies.filter((item) => item.severity === "error").length,
+      },
+      routes: [template.batch.routes[0]],
+    },
+  };
+
+  await setRole("service_role");
+  const completed = await query(
+    "select public.complete_offerpsp_source($1, $2::jsonb) as value",
+    [queued.rows[0].value.job_id, JSON.stringify(payload)],
+  );
+  if (completed.rows[0].value.status !== "review" || completed.rows[0].value.route_count !== 1) {
+    throw new Error(`Service ingestion did not create a review draft: ${JSON.stringify(completed.rows[0].value)}`);
+  }
+
+  await setRole("authenticated");
+  const repeated = await query(
+    "select public.enqueue_offerpsp_source($1, 'telegram', $2, $3, '{}'::jsonb) as value",
+    [providerName.toUpperCase(), sourceText, `tg:${unique}:repeat`],
+  );
+  const list = await query("select public.list_offerpsp_ingestion_jobs(20) as value");
+  const job = list.rows[0].value.find((item) => item.id === queued.rows[0].value.job_id);
+  if (!repeated.rows[0].value.duplicate || !job || job.status !== "review" || job.route_count !== 1) {
+    throw new Error("Ingestion deduplication or staff review queue projection failed");
+  }
+
+  const grants = await query(`select
+    has_function_privilege('authenticated', 'public.enqueue_offerpsp_source(text,text,text,text,jsonb)', 'EXECUTE') as staff_enqueue,
+    has_function_privilege('service_role', 'public.complete_offerpsp_source(uuid,jsonb)', 'EXECUTE') as service_complete,
+    has_function_privilege('authenticated', 'public.complete_offerpsp_source(uuid,jsonb)', 'EXECUTE') as staff_complete,
+    has_function_privilege('anon', 'public.list_offerpsp_ingestion_jobs(integer)', 'EXECUTE') as anon_list,
+    has_table_privilege('authenticated', 'private.offerpsp_ingestion_jobs', 'SELECT') as direct_table_read`);
+  const boundary = grants.rows[0];
+  if (!boundary.staff_enqueue || !boundary.service_complete || boundary.staff_complete
+      || boundary.anon_list || boundary.direct_table_read) {
+    throw new Error("Offer ingestion queue grants are broader than the RPC-only contract");
+  }
+
+  await query("delete from private.offerpsp_ingestion_jobs where id = $1", [queued.rows[0].value.job_id]);
+  await query("delete from private.offerpsp_rate_card_batches where provider_id = (select id from private.offerpsp_providers where lower(brand_name) = lower($1))", [providerName]);
+  await query("delete from private.offerpsp_providers where lower(brand_name) = lower($1)", [providerName]);
+  process.stdout.write("PASS Telegram/admin ingestion queue, draft import, deduplication and access boundary\n");
 }
 
 async function verifySupplyOperations() {
@@ -1517,6 +1596,7 @@ try {
   await verifyPortalLeadClaims();
   await verifyLegacyShortlistBlocked();
   await importPreparedDrafts();
+  await verifyOfferIngestionQueue();
   await verifySupplyOperations();
   await verifyRouteLevelPublication();
   await runEndToEndFixture();

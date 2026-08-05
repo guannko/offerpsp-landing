@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import PageMeta from "../components/common/PageMeta";
 import {
@@ -11,6 +11,7 @@ import {
   StatusPill,
 } from "../components/control/Ui";
 import { useControlBridge } from "../context/ControlBridgeContext";
+import { supabase } from "../lib/supabase";
 import type { Lead } from "../types/offerpsp";
 
 const activeStatuses = ["new", "qualifying", "needs_clarification", "matching", "matched", "shortlist_ready", "shared", "option_selected", "dossier_ready", "provider_reviewing", "provider_needs_info", "provider_accepted", "telegram_created", "zoom_scheduled", "negotiating"];
@@ -158,8 +159,112 @@ export function ProvidersPage() {
   return <PageFrame title="PSP" description="Закрытый реестр PSP."><PageHeading eyebrow="Private supply" title="PSP и партнёры" description="Настоящие названия, контакты, tier и история доступны только команде OfferPSP." action={<Link to="/psps/new" className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white">Добавить PSP</Link>}/><Panel className="mb-5"><div className="flex flex-wrap gap-2">{[["active","Рабочие"],["history","Архив"],["all","Все"]].map(([value,label]) => <button key={value} onClick={() => setScope(value as typeof scope)} className={`rounded-lg px-3 py-2 text-sm ${scope === value ? "bg-brand-500 text-white" : "bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300"}`}>{label}</button>)}</div><p className="mt-3 text-xs text-gray-400">Показано {visible.length} из {providers.length}. Ушедшие и тестовые PSP остаются в истории, но не мешают работе.</p></Panel><div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">{visible.map((provider) => <Panel key={provider.id}><div className="flex items-start justify-between"><div><span className="text-xs font-semibold uppercase tracking-wide text-brand-500">{provider.internal_code || "PSP"}</span><h2 className="mt-2 text-xl font-semibold text-gray-900 dark:text-white">{provider.brand_name}</h2><p className="mt-1 text-sm text-gray-500">{provider.legal_name || provider.website || "Юридические данные не заполнены"}</p></div><StatusPill status={provider.relationship_status}/></div><div className="mt-5 grid grid-cols-3 gap-3 border-t border-gray-100 pt-4 text-center dark:border-gray-800"><div><strong className="block text-lg text-gray-900 dark:text-white">{provider.route_count || 0}</strong><span className="text-xs text-gray-400">офферов</span></div><div><strong className="block text-lg text-gray-900 dark:text-white">{provider.published_route_count || 0}</strong><span className="text-xs text-gray-400">live</span></div><div><strong className="block text-lg text-gray-900 dark:text-white">{provider.strategic_priority ?? "—"}</strong><span className="text-xs text-gray-400">приоритет</span></div></div><Link to={`/psps/${provider.id}`} className="mt-5 block w-full rounded-lg border border-gray-200 px-4 py-2 text-center text-sm font-medium text-gray-700 hover:border-brand-300 hover:text-brand-500 dark:border-gray-700 dark:text-gray-300">Открыть workspace</Link></Panel>)}{!visible.length && <Panel className="lg:col-span-2 xl:col-span-3"><EmptyState title="PSP не найдены" description="Измените фильтр или добавьте нового партнёра."/></Panel>}</div></PageFrame>;
 }
 
+type OfferIngestionJob = {
+  id: string;
+  provider_name: string;
+  provider_code?: string | null;
+  source_type: string;
+  source_reference?: string | null;
+  source_text: string;
+  status: string;
+  route_count: number;
+  blocking_anomaly_count: number;
+  error_message?: string | null;
+  received_at: string;
+  processed_at?: string | null;
+  batch_version?: number | null;
+};
+
+function OfferIntakePanel({ providerNames, onImported }: { providerNames: string[]; onImported: () => Promise<void> }) {
+  const [jobs, setJobs] = useState<OfferIngestionJob[]>([]);
+  const [providerName, setProviderName] = useState("");
+  const [sourceType, setSourceType] = useState("telegram");
+  const [sourceReference, setSourceReference] = useState("");
+  const [sourceText, setSourceText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const loadJobs = async () => {
+    const result = await supabase.rpc("list_offerpsp_ingestion_jobs", { p_limit: 100 });
+    if (result.error) setMessage(result.error.message);
+    else setJobs((result.data || []) as OfferIngestionJob[]);
+  };
+  useEffect(() => { void loadJobs(); }, []);
+
+  const enqueue = async () => {
+    if (!providerName.trim() || !sourceText.trim()) {
+      setMessage("Укажите PSP и вставьте исходный оффер.");
+      return;
+    }
+    setBusy(true); setMessage("");
+    const result = await supabase.rpc("enqueue_offerpsp_source", {
+      p_provider_name: providerName.trim(),
+      p_source_type: sourceType,
+      p_source_text: sourceText,
+      p_source_reference: sourceReference.trim() || null,
+      p_source_metadata: { entrypoint: "control_bridge", publication_allowed: false },
+    });
+    setBusy(false);
+    if (result.error) { setMessage(result.error.message); return; }
+    const duplicate = Boolean((result.data as { duplicate?: boolean } | null)?.duplicate);
+    setMessage(duplicate ? "Этот источник уже есть в очереди — дубль не создан." : "Источник принят в закрытую очередь.");
+    if (!duplicate) { setSourceText(""); setSourceReference(""); }
+    await loadJobs();
+    await onImported();
+  };
+
+  const changeState = async (jobId: string, status: "queued" | "dismissed") => {
+    setBusy(true); setMessage("");
+    const result = await supabase.rpc("set_offerpsp_ingestion_state", { p_job_id: jobId, p_status: status });
+    setBusy(false);
+    if (result.error) setMessage(result.error.message);
+    else { setMessage(status === "queued" ? "Источник возвращён в очередь." : "Источник убран из рабочей очереди."); await loadJobs(); }
+  };
+
+  const readTextFile = async (file?: File) => {
+    if (!file) return;
+    const allowed = /\.(txt|md|csv|tsv|json|html|xml)$/i.test(file.name);
+    if (!allowed) {
+      setMessage("PDF, DOCX и XLSX принимаются через универсальный extractor; здесь загрузите TXT/CSV/JSON или вставьте извлечённый текст.");
+      return;
+    }
+    setSourceText(await file.text());
+    setSourceReference(file.name);
+    setSourceType("admin_file");
+  };
+
+  const openJobs = jobs.filter((job) => !["dismissed", "imported", "duplicate"].includes(job.status));
+  const historyJobs = jobs.filter((job) => ["dismissed", "imported", "duplicate"].includes(job.status));
+  const field = "min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-brand-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200";
+
+  return <div className="space-y-5">
+    <Panel>
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Новый источник</h2>
+          <p className="mt-1 text-sm text-gray-500">Telegram, email и ручная загрузка сходятся в одну закрытую очередь. Ничего не публикуется автоматически.</p>
+          <div className="mt-5 space-y-3">
+            <input list="offerpsp-provider-names" className={field} value={providerName} onChange={(event)=>setProviderName(event.target.value)} placeholder="Название PSP"/>
+            <datalist id="offerpsp-provider-names">{providerNames.map((name)=><option key={name} value={name}/>)}</datalist>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><select className={field} value={sourceType} onChange={(event)=>setSourceType(event.target.value)}><option value="telegram">Telegram</option><option value="email">Email</option><option value="admin_text">Ручной текст</option><option value="admin_file">Файл</option><option value="api">API</option></select><input className={field} value={sourceReference} onChange={(event)=>setSourceReference(event.target.value)} placeholder="Ссылка / message ID"/></div>
+            <label className="flex cursor-pointer items-center justify-center rounded-lg border border-dashed border-gray-300 px-4 py-3 text-sm font-semibold text-gray-600 hover:border-brand-400 hover:text-brand-500 dark:border-gray-700 dark:text-gray-300">Загрузить TXT / CSV / JSON<input type="file" className="hidden" accept=".txt,.md,.csv,.tsv,.json,.html,.xml" onChange={(event)=>void readTextFile(event.target.files?.[0])}/></label>
+          </div>
+        </div>
+        <div><textarea className={`${field} min-h-64 resize-y p-4 font-mono leading-6`} value={sourceText} onChange={(event)=>setSourceText(event.target.value)} placeholder="Вставьте оффер ровно в том виде, в котором его прислал PSP…"/><div className="mt-3 flex flex-wrap items-center justify-between gap-3"><span className="text-xs text-gray-400">Исходник и его hash сохраняются; результат всегда создаётся как draft/review.</span><button disabled={busy} onClick={()=>void enqueue()} className="rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy ? "Сохраняю…" : "Принять оффер"}</button></div></div>
+      </div>
+      {message&&<div className="mt-4 rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-700 dark:bg-white/[0.04] dark:text-gray-300">{message}</div>}
+    </Panel>
+    <Panel>
+      <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Очередь разбора</h2><p className="mt-1 text-sm text-gray-500">Видно источник, результат нормализации, ошибки и дубли.</p></div><button onClick={()=>void loadJobs()} className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300">Обновить</button></div>
+      <div className="mt-5 divide-y divide-gray-100 dark:divide-gray-800">{openJobs.map((job)=><div key={job.id} className="grid gap-4 py-4 first:pt-0 lg:grid-cols-[1fr_180px_180px_auto]"><div className="min-w-0"><strong className="text-sm text-gray-900 dark:text-white">{job.provider_name}</strong><span className="mt-1 block truncate text-xs text-gray-400">{job.source_type} · {job.source_reference || "без ссылки"}</span><details className="mt-2"><summary className="cursor-pointer text-xs font-semibold text-brand-500">Показать исходник</summary><pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-gray-50 p-3 text-xs text-gray-600 dark:bg-white/[0.03] dark:text-gray-300">{job.source_text}</pre></details></div><div><span className="text-xs text-gray-400">Получен</span><strong className="mt-1 block text-sm text-gray-700 dark:text-gray-300">{date(job.received_at)}</strong></div><div><StatusPill status={job.status}/><span className="mt-2 block text-xs text-gray-400">{job.route_count} маршрутов · {job.blocking_anomaly_count} блокеров</span>{job.error_message&&<span className="mt-1 block text-xs text-error-600">{job.error_message}</span>}</div><div className="flex items-start gap-2">{job.status==="failed"&&<button disabled={busy} onClick={()=>void changeState(job.id,"queued")} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold dark:border-gray-700">Повторить</button>}<button disabled={busy} onClick={()=>void changeState(job.id,"dismissed")} className="rounded-lg border border-error-200 px-3 py-2 text-xs font-semibold text-error-600">Убрать</button></div></div>)}{!openJobs.length&&<EmptyState title="Очередь пуста" description="Новые офферы из Telegram, email и админки появятся здесь."/>}</div>
+      {historyJobs.length>0&&<details className="mt-5 border-t border-gray-100 pt-4 dark:border-gray-800"><summary className="cursor-pointer text-sm font-semibold text-gray-600 dark:text-gray-300">История · {historyJobs.length}</summary><div className="mt-3 space-y-2">{historyJobs.map((job)=><div key={job.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-gray-50 px-4 py-3 text-sm dark:bg-white/[0.03]"><span><strong className="text-gray-800 dark:text-white">{job.provider_name}</strong> · {job.source_reference || job.source_type}</span><span className="flex items-center gap-3"><span className="text-xs text-gray-400">{job.route_count} маршрутов</span><StatusPill status={job.status}/></span></div>)}</div></details>}
+    </Panel>
+  </div>;
+}
+
 export function OffersPage() {
-  const { routes } = useControlBridge();
+  const { routes, providers: registryProviders, refresh } = useControlBridge();
+  const [workspace, setWorkspace] = useState<"catalog" | "intake">("catalog");
   const [status, setStatus] = useState("all");
   const [providerId, setProviderId] = useState("all");
   const [geo, setGeo] = useState("all");
@@ -191,13 +296,14 @@ export function OffersPage() {
   const selectClass = "h-10 min-w-0 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-brand-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200";
   const reset = () => { setStatus("all"); setProviderId("all"); setGeo("all"); setCurrency("all"); setMethod("all"); setFlow("all"); setHealth("all"); setQuery(""); };
   return <PageFrame title="Офферы" description="Маршруты и rate cards.">
-    <PageHeading eyebrow="Offer operations" title="Офферы и маршруты" description="Каталог разделён по PSP. Фильтры позволяют быстро найти конкретный GEO, валюту, метод, поток и рабочее состояние."/>
+    <PageHeading eyebrow="Offer operations" title="Офферы и маршруты" description="Каталог, единый приём источников и очередь проверки — в одном рабочем модуле." action={<div className="flex rounded-lg border border-gray-200 p-1 dark:border-gray-700">{[["catalog","Каталог"],["intake","Приём офферов"]].map(([value,label])=><button key={value} onClick={()=>setWorkspace(value as "catalog"|"intake")} className={`rounded-md px-4 py-2 text-sm font-semibold ${workspace===value?"bg-brand-500 text-white":"text-gray-600 dark:text-gray-300"}`}>{label}</button>)}</div>}/>
+    {workspace === "intake" ? <OfferIntakePanel providerNames={registryProviders.map((provider)=>provider.brand_name).sort()} onImported={refresh}/> : <>
     <Panel className="mb-5">
       <div className="flex flex-wrap gap-2">{[["all","Все"],["published","Опубликованы"],["draft","Черновики"],["review","На проверке"],["paused","Пауза"],["archived","Архив"]].map(([value,label]) => <button key={value} onClick={() => setStatus(value)} className={`rounded-lg px-3 py-2 text-sm ${status === value ? "bg-brand-500 text-white" : "bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300"}`}>{label}</button>)}</div>
       <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4"><input value={query} onChange={(event)=>setQuery(event.target.value)} className={selectClass} placeholder="PSP, маршрут, GEO, метод…"/><select value={providerId} onChange={(event)=>setProviderId(event.target.value)} className={selectClass}><option value="all">Все PSP</option>{providers.map((provider)=><option key={provider.id} value={provider.id}>{provider.name} · {routes.filter((route)=>route.provider_id===provider.id).length}</option>)}</select><select value={geo} onChange={(event)=>setGeo(event.target.value)} className={selectClass}><option value="all">Все GEO</option>{geos.map((value)=><option key={value}>{value}</option>)}</select><select value={currency} onChange={(event)=>setCurrency(event.target.value)} className={selectClass}><option value="all">Все валюты</option>{currencies.map((value)=><option key={value}>{value}</option>)}</select><select value={method} onChange={(event)=>setMethod(event.target.value)} className={selectClass}><option value="all">Все методы</option>{methods.map((value)=><option key={value}>{value}</option>)}</select><select value={flow} onChange={(event)=>setFlow(event.target.value)} className={selectClass}><option value="all">Все потоки</option><option value="payin">PayIn</option><option value="payout">PayOut</option><option value="both">PayIn + PayOut</option></select><select value={health} onChange={(event)=>setHealth(event.target.value)} className={selectClass}><option value="all">Любая готовность</option><option value="ready">Готовы к работе</option><option value="errors">С ошибками</option><option value="warnings">С предупреждениями</option><option value="stale">Устарели</option></select><button onClick={reset} className="h-10 rounded-lg border border-gray-200 px-3 text-sm font-semibold text-gray-600 hover:border-brand-300 hover:text-brand-500 dark:border-gray-700 dark:text-gray-300">Сбросить фильтры</button></div>
       <p className="mt-4 text-xs text-gray-400">Показано {visible.length} из {routes.length} маршрутов · {groups.length} PSP. Каждый оффер открывается в полном редакторе.</p>
     </Panel>
-    <div className="space-y-5">{groups.map(({provider, routes:providerRoutes})=><Panel key={provider.id} className="overflow-hidden !p-0"><div className="flex flex-col gap-3 border-b border-gray-200 bg-gray-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800 dark:bg-white/[0.03]"><div><div className="flex items-center gap-3"><h2 className="text-lg font-semibold text-gray-900 dark:text-white">{provider.name}</h2><span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">{providerRoutes.length} офферов</span></div><p className="mt-1 text-xs text-gray-400">{provider.code || "внутренний код не указан"}</p></div><Link to={`/psps/${provider.id}?tab=offers`} className="text-sm font-semibold text-brand-500">Открыть PSP и добавить оффер →</Link></div><div className="overflow-x-auto"><table className="min-w-full"><thead><tr>{["Оффер", "GEO и валюта", "Метод и поток", "Проверки", "Статус", ""].map((head)=><th key={head} className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">{head}</th>)}</tr></thead><tbody className="divide-y divide-gray-100 dark:divide-gray-800">{providerRoutes.map((route)=><tr key={route.route_id} className="hover:bg-gray-50/70 dark:hover:bg-white/[0.02]"><td className="px-5 py-4"><strong className="text-sm text-gray-900 dark:text-white">{route.client_title || route.route_code}</strong><span className="block text-xs text-gray-400">{route.route_code} · v{route.batch_version || "—"}</span></td><td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">{list(route.geos)}<span className="block text-xs text-gray-400">{list(route.currencies)}</span></td><td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">{list(route.methods)}<span className="block text-xs text-gray-400">{route.flow || "—"}</span></td><td className="px-5 py-4"><span className={Number(route.open_error_count || 0) ? "text-error-600" : "text-success-600"}>{Number(route.open_error_count || 0)} ошибок</span><span className="block text-xs text-gray-400">{Number(route.open_warning_count || 0)} предупреждений{route.is_stale ? " · устарел" : ""}</span></td><td className="px-5 py-4"><StatusPill status={route.status}/></td><td className="px-5 py-4 text-right"><Link to={`/psps/${route.provider_id}?route=${route.route_id}&tab=offers`} className="text-sm font-semibold text-brand-500">Редактировать →</Link></td></tr>)}</tbody></table></div></Panel>)}{!groups.length&&<Panel><EmptyState title="Офферы не найдены" description="Сбросьте часть фильтров или добавьте оффер из workspace нужного PSP."/></Panel>}</div>
+    <div className="space-y-5">{groups.map(({provider, routes:providerRoutes})=><Panel key={provider.id} className="overflow-hidden !p-0"><div className="flex flex-col gap-3 border-b border-gray-200 bg-gray-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800 dark:bg-white/[0.03]"><div><div className="flex items-center gap-3"><h2 className="text-lg font-semibold text-gray-900 dark:text-white">{provider.name}</h2><span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">{providerRoutes.length} офферов</span></div><p className="mt-1 text-xs text-gray-400">{provider.code || "внутренний код не указан"}</p></div><Link to={`/psps/${provider.id}?tab=offers`} className="text-sm font-semibold text-brand-500">Открыть PSP и добавить оффер →</Link></div><div className="overflow-x-auto"><table className="min-w-full"><thead><tr>{["Оффер", "GEO и валюта", "Метод и поток", "Проверки", "Статус", ""].map((head)=><th key={head} className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">{head}</th>)}</tr></thead><tbody className="divide-y divide-gray-100 dark:divide-gray-800">{providerRoutes.map((route)=><tr key={route.route_id} className="hover:bg-gray-50/70 dark:hover:bg-white/[0.02]"><td className="px-5 py-4"><strong className="text-sm text-gray-900 dark:text-white">{route.client_title || route.route_code}</strong><span className="block text-xs text-gray-400">{route.route_code} · v{route.batch_version || "—"}</span></td><td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">{list(route.geos)}<span className="block text-xs text-gray-400">{list(route.currencies)}</span></td><td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">{list(route.methods)}<span className="block text-xs text-gray-400">{route.flow || "—"}</span></td><td className="px-5 py-4"><span className={Number(route.open_error_count || 0) ? "text-error-600" : "text-success-600"}>{Number(route.open_error_count || 0)} ошибок</span><span className="block text-xs text-gray-400">{Number(route.open_warning_count || 0)} предупреждений{route.is_stale ? " · устарел" : ""}</span></td><td className="px-5 py-4"><StatusPill status={route.status}/></td><td className="px-5 py-4 text-right"><Link to={`/psps/${route.provider_id}?route=${route.route_id}&tab=offers`} className="text-sm font-semibold text-brand-500">Редактировать →</Link></td></tr>)}</tbody></table></div></Panel>)}{!groups.length&&<Panel><EmptyState title="Офферы не найдены" description="Сбросьте часть фильтров или добавьте оффер из workspace нужного PSP."/></Panel>}</div></>}
   </PageFrame>;
 }
 
