@@ -498,9 +498,9 @@ Status: `VERIFIED` — factual baseline retained for rollout history.
 This earlier rollout baseline completed before route-level publication. Current supply status is
 recorded in the 2026-08-02 production section above.
 
-Security note: Supabase advisor reports `offerpsp_client_shortlist` as a
-`SECURITY DEFINER` view. Anonymous access is revoked, the view filters on
-`auth.uid()`, and direct-client/agent/unrelated-client isolation passed production E2E.
+Security note: the legacy `offerpsp_client_shortlist` view is no longer used by the portal.
+Migration `remove_legacy_client_shortlist_view` removes this redundant exposed surface; the portal
+and its isolation tests use the current `list_offerpsp_client_offers` RPC.
 
 ## Truly not implemented
 

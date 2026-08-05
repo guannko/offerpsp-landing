@@ -186,6 +186,7 @@ async function applyMigrations() {
     "20260805152500_aibot_n8n_service_rpc.sql",
     "20260805153500_aibot_legacy_table_rls.sql",
     "20260805161000_offerpsp_mail_center.sql",
+    "20260805181309_remove_legacy_client_shortlist_view.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -225,24 +226,18 @@ async function verifyWorkspaceGrants() {
     has_table_privilege('authenticated', 'public.offerpsp_organizations', 'TRUNCATE') as organizations_truncate,
     has_table_privilege('authenticated', 'public.offerpsp_organizations', 'TRIGGER') as organizations_trigger,
     has_table_privilege('authenticated', 'public.offerpsp_organizations', 'REFERENCES') as organizations_references,
-    has_table_privilege('authenticated', 'public.offerpsp_client_shortlist', 'SELECT') as client_view_select,
-    has_table_privilege('authenticated', 'public.offerpsp_client_shortlist', 'INSERT') as client_view_insert,
-    has_table_privilege('authenticated', 'public.offerpsp_client_shortlist', 'UPDATE') as client_view_update,
-    has_table_privilege('authenticated', 'public.offerpsp_client_shortlist', 'DELETE') as client_view_delete,
-    has_table_privilege('authenticated', 'public.offerpsp_client_shortlist', 'TRUNCATE') as client_view_truncate
+    to_regclass('public.offerpsp_client_shortlist') is null as legacy_client_view_removed
   `);
   const grants = result.rows[0];
   if (
     !grants.organizations_select || !grants.organizations_insert ||
     !grants.organizations_update || !grants.organizations_delete ||
     grants.organizations_truncate || grants.organizations_trigger ||
-    grants.organizations_references || !grants.client_view_select ||
-    grants.client_view_insert || grants.client_view_update ||
-    grants.client_view_delete || grants.client_view_truncate
+    grants.organizations_references || !grants.legacy_client_view_removed
   ) {
     throw new Error("Workspace table and view grants are broader than required");
   }
-  process.stdout.write("PASS minimal workspace table and client-view grants\n");
+  process.stdout.write("PASS minimal workspace grants with legacy client view removed\n");
 }
 
 async function verifyClientPolicyBoundary() {
@@ -1040,7 +1035,7 @@ async function verifyAgentWorkspaceAndPricing() {
   if (!workspace.rows.some((row) => row.lead_id === leadId && row.access_mode === "agent")) {
     throw new Error("Active agent cannot see the assigned merchant workspace");
   }
-  const options = await query("select * from public.offerpsp_client_shortlist where lead_id = $1", [leadId]);
+  const options = await query("select * from public.list_offerpsp_client_offers($1)", [leadId]);
   if (options.rows.length !== 1 || Number(options.rows[0].client_fees[0].client_percent) !== 7) {
     throw new Error(`Agent final merchant rate is incorrect: ${JSON.stringify(options.rows)}`);
   }
@@ -1055,7 +1050,7 @@ async function verifyAgentWorkspaceAndPricing() {
 
   await setUser(OTHER_CLIENT_ID);
   const foreignWorkspace = await query("select * from public.list_offerpsp_workspace_requests()");
-  const foreignOptions = await query("select * from public.offerpsp_client_shortlist where lead_id = $1", [leadId]);
+  const foreignOptions = await query("select * from public.list_offerpsp_client_offers($1)", [leadId]);
   if (foreignWorkspace.rows.some((row) => row.lead_id === leadId) || foreignOptions.rows.length) {
     throw new Error("Foreign client can access an agent-managed merchant");
   }
