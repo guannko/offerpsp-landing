@@ -569,15 +569,17 @@ The first operational UI is deployed. Daily-use refinement remains.
   object. Production E2E cleanup left the 12 published routes unchanged.
 - [ ] Connect incoming mailbox messages and attachments to the source adapters before the existing
   queue/parser worker. Activation remains blocked by the invalid GoDaddy IMAP credential above.
-- [ ] Add OCR for scanned PDF/image sources.
+- [x] Add browser-side English/Russian OCR for scanned PDF pages and PNG/JPEG/WebP sources.
+  Domain labels are normalized before parsing, and the canonical `GEO - Country` header is accepted.
+  Production E2E converted a generated PNG rate card into one complete India/INR/UPI draft route
+  with zero blocking anomalies; the exact job, batch, route, provider and Storage object were purged.
 - [x] Surface new draft parses, parser failures, blocking anomalies and duplicates in the staff
   review queue. The Command Center shows the attention count; the intake screen refreshes every
   15 seconds and supports direct review, retry and dismissal.
 - [ ] Link Telegram ingestion to partner freshness reminders.
 
 The production queue, AIBot transport, automatic text parser and private admin-file ingestion are
-connected. Incoming mailbox activation, OCR and partner freshness automation remain separate next
-steps.
+connected. Incoming mailbox activation and partner freshness automation remain separate next steps.
 
 ### P2 — Analytics
 

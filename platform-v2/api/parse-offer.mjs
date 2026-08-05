@@ -29,6 +29,9 @@ export default async function handler(request, response) {
   }
 
   try {
+    const sourceMetadata = input.source_metadata && typeof input.source_metadata === "object"
+      ? input.source_metadata
+      : {};
     const payload = parseOfferSource({
       providerKey: input.provider_key,
       providerName: input.provider_name,
@@ -41,11 +44,9 @@ export default async function handler(request, response) {
       sourceReference: input.source_reference || "api-source",
       sourceFormat: input.source_format,
       originalSource: input.original_source,
-      extractionMethod: input.extraction_method || "plain-text",
-      extractorVersion: input.extractor_version,
-      sourceMetadata: input.source_metadata && typeof input.source_metadata === "object"
-        ? input.source_metadata
-        : {},
+      extractionMethod: input.extraction_method || sourceMetadata.extraction_method || "plain-text",
+      extractorVersion: input.extractor_version || sourceMetadata.extractor_version,
+      sourceMetadata,
     });
     return sendJson(response, 200, payload);
   } catch (error) {
