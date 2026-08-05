@@ -134,6 +134,7 @@ function startsBlock(line) {
   const value = line.trim();
   if (!value) return false;
   return /^(?:[🇦-🇿]{2}|🌎|🌍)\s*/u.test(value)
+    || /^(?:geo|гео)\s*[-:—]/iu.test(value)
     || /^(?:классический p2p|турция(?:\s|$)|payouts?\s+-\s+cards|offers?\s+rf|оффер\s+рф)/iu.test(value)
     || /^(?:trustly|ideal|apple\s*pay\s*\/\s*google\s*pay)\b/i.test(value)
     || /^(?:australia|poland|india|argentina|south korea)\b/i.test(value);

@@ -3,6 +3,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { parseOfferSource } from "../platform-v2/api/_lib/offer-parser.mjs";
 
 const pgliteRoot = process.argv[2];
 if (!pgliteRoot) {
@@ -1659,7 +1660,39 @@ async function verifyPrivateSourceStorage() {
   process.stdout.write("PASS private source bucket, size boundary and staff-only storage policies\n");
 }
 
+function verifyCanonicalGeoHeaderParsing() {
+  const payload = parseOfferSource({
+    providerName: "OCR Header Fixture",
+    sourceType: "admin_file",
+    sourceReference: "ocr-fixture.png",
+    sourceText: `GEO - India (UPI)
+Currency - INR
+Type of traffic - Both (FTD and Trusted)
+Method: UPI
+
+PayIn
+Min/Max per transaction PayIn 500-50000 INR
+MDR PayIn - 7.5%
+
+PayOut
+Min/Max per transaction PayOut 2000-50000 INR
+MDR PayOut - 3.0%
+
+Settlement period: T+1`,
+  });
+  const route = payload.batch.routes[0];
+  if (payload.batch.routes.length !== 1
+      || !route.geos.includes("IN")
+      || !route.currencies.includes("INR")
+      || route.flow !== "both"
+      || route.fees.length !== 2) {
+    throw new Error("Canonical GEO header did not produce one complete normalized route");
+  }
+  process.stdout.write("PASS canonical GEO header and OCR-style offer parsing\n");
+}
+
 try {
+  verifyCanonicalGeoHeaderParsing();
   await bootstrap();
   await applyMigrations();
   await verifyLeadGrants();

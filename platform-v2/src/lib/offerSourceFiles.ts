@@ -17,6 +17,11 @@ const normalizeText = (value: string) => value
   .replace(/\n{4,}/g, "\n\n\n")
   .trim();
 
+const normalizeOcrText = (value: string) => normalizeText(value)
+  .replace(/\bPayl[iI]n\b/g, "PayIn")
+  .replace(/[МM][ОO0][ЕER]\s+[РP][аa][уy][!Il1n]*/giu, "MDR PayIn")
+  .replace(/\bPay0ut\b/gi, "PayOut");
+
 const digestHex = async (buffer: ArrayBuffer) => {
   const digest = await crypto.subtle.digest("SHA-256", buffer);
   return Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, "0")).join("");
@@ -40,7 +45,7 @@ async function extractImageWithOcr(image: File, onProgress?: ExtractionProgress)
   const worker = await createOcrWorker();
   try {
     const result = await worker.recognize(image);
-    return normalizeText(result.data.text);
+    return normalizeOcrText(result.data.text);
   } finally {
     await worker.terminate();
   }
@@ -77,7 +82,7 @@ async function extractPdf(buffer: ArrayBuffer, onProgress?: ExtractionProgress) 
       if (!context) throw new Error("Браузер не смог подготовить страницу PDF для OCR.");
       await page.render({ canvas, canvasContext: context, viewport }).promise;
       const recognized = await ocrWorker.recognize(canvas);
-      pages.push(normalizeText(recognized.data.text));
+      pages.push(normalizeOcrText(recognized.data.text));
     }
   } finally {
     if (ocrWorker) await ocrWorker.terminate();
