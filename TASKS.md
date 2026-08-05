@@ -1,9 +1,33 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-08-04
+Updated: 2026-08-05
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
+
+## AIBot security and OfferPSP mail center — 2026-08-05
+
+Status: `VERIFIED` in production except for inbound mailbox activation.
+
+- [x] Legacy AIBot tables `casino_leads`, `psp_providers`, `bot_tasks`, `chat_logs` and
+  `email_drafts` now have RLS enabled; direct `anon`/`authenticated` access is revoked.
+- [x] Ten n8n workflows use the dedicated service-role credential and service-only RPCs. Active
+  workflows were republished and the casino runtime smoke returned HTTP 200 with 50 rows.
+- [x] Existing data remained intact after hardening: 222 casinos, 77 research PSPs and 13 bot tasks.
+- [x] The production mail center provides inbox/thread search, unread and follow-up states,
+  archive, conversation view, replies and manual links to merchants, casinos and PSPs.
+- [x] Incoming messages are grouped into threads and automatically linked by sender email when a
+  matching merchant, casino or research PSP exists.
+- [x] Production migrations `aibot_n8n_service_rpc`, `aibot_legacy_table_rls` and
+  `offerpsp_mail_center` are applied. New mail tables deny direct `anon`/`authenticated` access.
+- [x] Production cockpit deployment `dpl_9QKSjs3RqxYLbHp383La1HQ92Qpc` is `READY` at
+  `https://ops-7q4m2x9k8v3n.vercel.app`; authenticated desktop/mobile mail-center smoke passed.
+- [x] Production mail E2E verified ingest, unread counter, opening, follow-up state and cleanup.
+- [x] Outgoing mail through the active Brevo/n8n sender remains operational for
+  `bizdev@offerpsp.com`.
+- [ ] `BLOCKED`: activate n8n workflow `N0GEPhmvvRD4KRhw` for incoming mail after the current
+  GoDaddy IMAP password for `bizdev@offerpsp.com` is installed. The archived Titan and GoDaddy
+  credentials are rejected by the live mailbox; the prepared workflow remains inactive.
 
 ## Editable research base and scalable offer catalogue — 2026-08-04
 
@@ -21,8 +45,8 @@ Status: `VERIFIED` for database migration, access isolation, local build and reg
   and 77 research-PSP records. CRUD and lifecycle RPCs are denied to `anon` and check staff identity.
 - [x] All 27 migrations and the full route → shortlist → client → PSP review → Telegram → Zoom → won
   regression pass in isolated PGlite, including research CRUD and non-staff denial.
-- [ ] Legacy AIBot tables still have broad direct `anon` grants and disabled RLS. This is pre-existing
-  and must be migrated together with the anon-based n8n workflows, not revoked blindly during UI work.
+- [x] Legacy AIBot tables and dependent n8n workflows were hardened together on 2026-08-05; direct
+  browser access is closed and operational workflows use service-only RPCs.
 
 ## Captain's Bridge — isolated production cockpit 2026-08-03
 
@@ -51,9 +75,8 @@ visual smoke of the new internal pages remains to be repeated after staff sign-i
   message and the workflow now skips the optional Notion update when no draft ID is supplied.
 - [x] The public sign-in page and frontend bundle no longer disclose the owner email or send it as
   a Google `login_hint`; the exact account restriction remains enforced by the database function.
-- [ ] Repeat desktop/mobile authenticated browser smoke after signing into the new Vercel domain.
-- [ ] Separate security-hardening project for legacy AIBot tables with disabled RLS; changing this
-  now would break existing anon-based n8n workflows and was intentionally not mixed into rollout.
+- [x] Authenticated desktop and mobile cockpit smoke passed on the isolated Vercel domain.
+- [x] Legacy AIBot security hardening completed together with dependent n8n workflow migration.
 
 ## Control Bridge V2 — local frontend migration 2026-08-03
 
@@ -559,5 +582,5 @@ private binary storage are not connected yet.
 - Do not hard-code Antarex or any other PSP margin in source code. Configure margin through the
   versioned staff policy and verify the effective client rate before publication.
 - A real client test must use a different authenticated account/session from staff.
-- The legacy public `psp_providers` table remains in place until n8n dependencies are
-  verified and migrated safely.
+- The legacy `psp_providers` table remains the AIBot research source, but it is no longer public:
+  n8n uses service-only access and the cockpit reads it through staff-checked RPCs.
