@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import PageMeta from "../components/common/PageMeta";
 import {
   EmptyState,
@@ -12,7 +12,7 @@ import {
 } from "../components/control/Ui";
 import { useControlBridge } from "../context/ControlBridgeContext";
 import { supabase } from "../lib/supabase";
-import type { Lead } from "../types/offerpsp";
+import type { Lead, OfferIngestionJob } from "../types/offerpsp";
 
 const activeStatuses = ["new", "qualifying", "needs_clarification", "matching", "matched", "shortlist_ready", "shared", "option_selected", "dossier_ready", "provider_reviewing", "provider_needs_info", "provider_accepted", "telegram_created", "zoom_scheduled", "negotiating"];
 
@@ -26,7 +26,7 @@ function PageFrame({ title, description, children }: { title: string; descriptio
 }
 
 export function CommandCenter() {
-  const { leads, providers, routes, organizations, lastUpdatedAt, refreshing, refresh } = useControlBridge();
+  const { leads, providers, routes, organizations, ingestionJobs, lastUpdatedAt, refreshing, refresh } = useControlBridge();
   const operationalLeads = leads.filter((lead) => lead.record_state !== "archived" && !["closed", "spam"].includes(lead.status || ""));
   const operationalProviders = providers.filter((provider) => provider.relationship_status !== "archived");
   const stats = useMemo(() => ({
@@ -38,13 +38,15 @@ export function CommandCenter() {
     staleRoutes: routes.filter((route) => route.is_stale).length,
     blockedRoutes: routes.filter((route) => Number(route.open_error_count || 0) > 0).length,
     agents: organizations.filter((organization) => organization.organization_type === "agent" && organization.status === "active").length,
-  }), [operationalLeads, routes, organizations]);
+    offerReviews: ingestionJobs.filter((job) => ["review", "failed", "duplicate"].includes(job.status) || Number(job.blocking_anomaly_count || 0) > 0).length,
+  }), [operationalLeads, routes, organizations, ingestionJobs]);
 
   const attention = [
     { label: "Новые заявки", count: stats.newLeads, path: "/inbox", hint: "нужно проверить и назначить ответственного" },
     { label: "Запросы без владельца", count: stats.unassigned, path: "/pipeline", hint: "могут зависнуть без следующего действия" },
     { label: "Нужны данные", count: stats.needsData, path: "/merchants", hint: "ждём уточнения от мерча или PSP" },
     { label: "Маршруты с ошибками", count: stats.blockedRoutes, path: "/offers", hint: "нельзя публиковать до исправления" },
+    { label: "Офферы ждут проверки", count: stats.offerReviews, path: "/offers?workspace=intake", hint: "новые разборы, ошибки и дубли находятся в очереди контроля" },
     { label: "Устаревшие маршруты", count: stats.staleRoutes, path: "/offers", hint: "нужно подтвердить актуальность у PSP" },
   ].filter((item) => item.count > 0);
 
@@ -159,22 +161,6 @@ export function ProvidersPage() {
   return <PageFrame title="PSP" description="Закрытый реестр PSP."><PageHeading eyebrow="Private supply" title="PSP и партнёры" description="Настоящие названия, контакты, tier и история доступны только команде OfferPSP." action={<Link to="/psps/new" className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white">Добавить PSP</Link>}/><Panel className="mb-5"><div className="flex flex-wrap gap-2">{[["active","Рабочие"],["history","Архив"],["all","Все"]].map(([value,label]) => <button key={value} onClick={() => setScope(value as typeof scope)} className={`rounded-lg px-3 py-2 text-sm ${scope === value ? "bg-brand-500 text-white" : "bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300"}`}>{label}</button>)}</div><p className="mt-3 text-xs text-gray-400">Показано {visible.length} из {providers.length}. Ушедшие и тестовые PSP остаются в истории, но не мешают работе.</p></Panel><div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">{visible.map((provider) => <Panel key={provider.id}><div className="flex items-start justify-between"><div><span className="text-xs font-semibold uppercase tracking-wide text-brand-500">{provider.internal_code || "PSP"}</span><h2 className="mt-2 text-xl font-semibold text-gray-900 dark:text-white">{provider.brand_name}</h2><p className="mt-1 text-sm text-gray-500">{provider.legal_name || provider.website || "Юридические данные не заполнены"}</p></div><StatusPill status={provider.relationship_status}/></div><div className="mt-5 grid grid-cols-3 gap-3 border-t border-gray-100 pt-4 text-center dark:border-gray-800"><div><strong className="block text-lg text-gray-900 dark:text-white">{provider.route_count || 0}</strong><span className="text-xs text-gray-400">офферов</span></div><div><strong className="block text-lg text-gray-900 dark:text-white">{provider.published_route_count || 0}</strong><span className="text-xs text-gray-400">live</span></div><div><strong className="block text-lg text-gray-900 dark:text-white">{provider.strategic_priority ?? "—"}</strong><span className="text-xs text-gray-400">приоритет</span></div></div><Link to={`/psps/${provider.id}`} className="mt-5 block w-full rounded-lg border border-gray-200 px-4 py-2 text-center text-sm font-medium text-gray-700 hover:border-brand-300 hover:text-brand-500 dark:border-gray-700 dark:text-gray-300">Открыть workspace</Link></Panel>)}{!visible.length && <Panel className="lg:col-span-2 xl:col-span-3"><EmptyState title="PSP не найдены" description="Измените фильтр или добавьте нового партнёра."/></Panel>}</div></PageFrame>;
 }
 
-type OfferIngestionJob = {
-  id: string;
-  provider_name: string;
-  provider_code?: string | null;
-  source_type: string;
-  source_reference?: string | null;
-  source_text: string;
-  status: string;
-  route_count: number;
-  blocking_anomaly_count: number;
-  error_message?: string | null;
-  received_at: string;
-  processed_at?: string | null;
-  batch_version?: number | null;
-};
-
 function OfferIntakePanel({ providerNames, onImported }: { providerNames: string[]; onImported: () => Promise<void> }) {
   const [jobs, setJobs] = useState<OfferIngestionJob[]>([]);
   const [providerName, setProviderName] = useState("");
@@ -189,7 +175,11 @@ function OfferIntakePanel({ providerNames, onImported }: { providerNames: string
     if (result.error) setMessage(result.error.message);
     else setJobs((result.data || []) as OfferIngestionJob[]);
   };
-  useEffect(() => { void loadJobs(); }, []);
+  useEffect(() => {
+    void loadJobs();
+    const timer = window.setInterval(() => void loadJobs(), 15000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const enqueue = async () => {
     if (!providerName.trim() || !sourceText.trim()) {
@@ -233,8 +223,9 @@ function OfferIntakePanel({ providerNames, onImported }: { providerNames: string
     setSourceType("admin_file");
   };
 
-  const openJobs = jobs.filter((job) => !["dismissed", "imported", "duplicate"].includes(job.status));
-  const historyJobs = jobs.filter((job) => ["dismissed", "imported", "duplicate"].includes(job.status));
+  const attentionJobs = jobs.filter((job) => ["review", "failed", "duplicate"].includes(job.status) || Number(job.blocking_anomaly_count || 0) > 0);
+  const processingJobs = jobs.filter((job) => ["queued", "processing"].includes(job.status));
+  const historyJobs = jobs.filter((job) => ["dismissed", "imported"].includes(job.status));
   const field = "min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-brand-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200";
 
   return <div className="space-y-5">
@@ -255,8 +246,10 @@ function OfferIntakePanel({ providerNames, onImported }: { providerNames: string
       {message&&<div className="mt-4 rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-700 dark:bg-white/[0.04] dark:text-gray-300">{message}</div>}
     </Panel>
     <Panel>
-      <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Очередь разбора</h2><p className="mt-1 text-sm text-gray-500">Видно источник, результат нормализации, ошибки и дубли.</p></div><button onClick={()=>void loadJobs()} className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300">Обновить</button></div>
-      <div className="mt-5 divide-y divide-gray-100 dark:divide-gray-800">{openJobs.map((job)=><div key={job.id} className="grid gap-4 py-4 first:pt-0 lg:grid-cols-[1fr_180px_180px_auto]"><div className="min-w-0"><strong className="text-sm text-gray-900 dark:text-white">{job.provider_name}</strong><span className="mt-1 block truncate text-xs text-gray-400">{job.source_type} · {job.source_reference || "без ссылки"}</span><details className="mt-2"><summary className="cursor-pointer text-xs font-semibold text-brand-500">Показать исходник</summary><pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-gray-50 p-3 text-xs text-gray-600 dark:bg-white/[0.03] dark:text-gray-300">{job.source_text}</pre></details></div><div><span className="text-xs text-gray-400">Получен</span><strong className="mt-1 block text-sm text-gray-700 dark:text-gray-300">{date(job.received_at)}</strong></div><div><StatusPill status={job.status}/><span className="mt-2 block text-xs text-gray-400">{job.route_count} маршрутов · {job.blocking_anomaly_count} блокеров</span>{job.error_message&&<span className="mt-1 block text-xs text-error-600">{job.error_message}</span>}</div><div className="flex items-start gap-2">{job.status==="failed"&&<button disabled={busy} onClick={()=>void changeState(job.id,"queued")} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold dark:border-gray-700">Повторить</button>}<button disabled={busy} onClick={()=>void changeState(job.id,"dismissed")} className="rounded-lg border border-error-200 px-3 py-2 text-xs font-semibold text-error-600">Убрать</button></div></div>)}{!openJobs.length&&<EmptyState title="Очередь пуста" description="Новые офферы из Telegram, email и админки появятся здесь."/>}</div>
+      <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Очередь контроля</h2><p className="mt-1 text-sm text-gray-500">Новые разборы, ошибки и дубли остаются здесь до решения сотрудника.</p></div><button onClick={()=>void loadJobs()} className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300">Обновить</button></div>
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3"><Metric label="Требуют решения" value={attentionJobs.length} hint="review, ошибки и дубли" tone={attentionJobs.length ? "warning" : "default"}/><Metric label="Обрабатываются" value={processingJobs.length} hint="очередь и работа парсера"/><Metric label="Завершены" value={historyJobs.length} hint="импортированы или закрыты" tone="success"/></div>
+      <div className="mt-5 divide-y divide-gray-100 dark:divide-gray-800">{attentionJobs.map((job)=><div key={job.id} className="grid gap-4 py-4 first:pt-0 lg:grid-cols-[1fr_180px_180px_auto]"><div className="min-w-0"><strong className="text-sm text-gray-900 dark:text-white">{job.provider_name}</strong><span className="mt-1 block truncate text-xs text-gray-400">{job.source_type} · {job.source_reference || "без ссылки"}</span><details className="mt-2"><summary className="cursor-pointer text-xs font-semibold text-brand-500">Показать исходник</summary><pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-gray-50 p-3 text-xs text-gray-600 dark:bg-white/[0.03] dark:text-gray-300">{job.source_text}</pre></details></div><div><span className="text-xs text-gray-400">Получен</span><strong className="mt-1 block text-sm text-gray-700 dark:text-gray-300">{date(job.received_at)}</strong></div><div><StatusPill status={job.status}/><span className="mt-2 block text-xs text-gray-400">{job.route_count} маршрутов · {job.blocking_anomaly_count} блокеров</span>{job.error_message&&<span className="mt-1 block text-xs text-error-600">{job.error_message}</span>}</div><div className="flex flex-wrap items-start gap-2">{job.provider_id&&job.status==="review"&&<Link to={`/psps/${job.provider_id}?tab=offers`} className="rounded-lg bg-brand-500 px-3 py-2 text-xs font-semibold text-white">Проверить</Link>}{job.status==="failed"&&<button disabled={busy} onClick={()=>void changeState(job.id,"queued")} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold dark:border-gray-700">Повторить</button>}<button disabled={busy} onClick={()=>void changeState(job.id,"dismissed")} className="rounded-lg border border-error-200 px-3 py-2 text-xs font-semibold text-error-600">Убрать</button></div></div>)}{!attentionJobs.length&&<EmptyState title="Ничего не требует решения" description="Ошибки, дубли и новые draft-разборы появятся здесь автоматически."/>}</div>
+      {processingJobs.length>0&&<details className="mt-5 border-t border-gray-100 pt-4 dark:border-gray-800" open><summary className="cursor-pointer text-sm font-semibold text-gray-600 dark:text-gray-300">Сейчас обрабатываются · {processingJobs.length}</summary><div className="mt-3 space-y-2">{processingJobs.map((job)=><div key={job.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-gray-50 px-4 py-3 text-sm dark:bg-white/[0.03]"><span><strong className="text-gray-800 dark:text-white">{job.provider_name}</strong> · {job.source_reference || job.source_type}</span><StatusPill status={job.status}/></div>)}</div></details>}
       {historyJobs.length>0&&<details className="mt-5 border-t border-gray-100 pt-4 dark:border-gray-800"><summary className="cursor-pointer text-sm font-semibold text-gray-600 dark:text-gray-300">История · {historyJobs.length}</summary><div className="mt-3 space-y-2">{historyJobs.map((job)=><div key={job.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-gray-50 px-4 py-3 text-sm dark:bg-white/[0.03]"><span><strong className="text-gray-800 dark:text-white">{job.provider_name}</strong> · {job.source_reference || job.source_type}</span><span className="flex items-center gap-3"><span className="text-xs text-gray-400">{job.route_count} маршрутов</span><StatusPill status={job.status}/></span></div>)}</div></details>}
     </Panel>
   </div>;
@@ -264,7 +257,8 @@ function OfferIntakePanel({ providerNames, onImported }: { providerNames: string
 
 export function OffersPage() {
   const { routes, providers: registryProviders, refresh } = useControlBridge();
-  const [workspace, setWorkspace] = useState<"catalog" | "intake">("catalog");
+  const [searchParams] = useSearchParams();
+  const [workspace, setWorkspace] = useState<"catalog" | "intake">(searchParams.get("workspace") === "intake" ? "intake" : "catalog");
   const [status, setStatus] = useState("all");
   const [providerId, setProviderId] = useState("all");
   const [geo, setGeo] = useState("all");

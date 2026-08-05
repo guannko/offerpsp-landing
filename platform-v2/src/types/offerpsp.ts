@@ -221,6 +221,24 @@ export type AgentMarginPolicy = {
   active?: boolean | null;
 };
 
+export type OfferIngestionJob = {
+  id: string;
+  provider_id?: string | null;
+  provider_name: string;
+  provider_code?: string | null;
+  source_type: string;
+  source_reference?: string | null;
+  source_text: string;
+  status: string;
+  batch_id?: string | null;
+  route_count: number;
+  blocking_anomaly_count: number;
+  error_message?: string | null;
+  received_at: string;
+  processed_at?: string | null;
+  batch_version?: number | null;
+};
+
 export type ControlBridgeData = {
   user: User | null;
   staff: StaffMember | null;
@@ -230,6 +248,7 @@ export type ControlBridgeData = {
   organizations: Organization[];
   assignments: AgentAssignment[];
   agentMarginPolicies: AgentMarginPolicy[];
+  ingestionJobs: OfferIngestionJob[];
   commissionSummary: Record<string, number>;
   captainsBridge: CaptainsBridgeSnapshot;
   mailCenter: MailCenterSnapshot;

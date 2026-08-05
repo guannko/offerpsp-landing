@@ -20,6 +20,7 @@ import type {
   StaffMember,
   CaptainsBridgeSnapshot,
   MailCenterSnapshot,
+  OfferIngestionJob,
 } from "../types/offerpsp";
 
 type ControlBridgeContextValue = ControlBridgeData & {
@@ -36,6 +37,7 @@ const emptyData: ControlBridgeData = {
   organizations: [],
   assignments: [],
   agentMarginPolicies: [],
+  ingestionJobs: [],
   commissionSummary: {},
   captainsBridge: { casino_leads: [], psp_providers: [], email_drafts: [], telegram_log: [], bot_tasks: [], offerpsp_tasks: [] },
   mailCenter: { metrics: { threads: 0, unread: 0, awaiting_reply: 0, follow_up: 0 }, threads: [], messages: [] },
@@ -104,16 +106,17 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const [leadsResult, managementResult, supplyResult, coverageResult, captainsResult, mailResult] = await Promise.all([
+    const [leadsResult, managementResult, supplyResult, coverageResult, captainsResult, mailResult, ingestionResult] = await Promise.all([
       supabase.from("offerpsp_leads").select("*").order("submitted_at", { ascending: false }),
       supabase.rpc("get_offerpsp_management_registry"),
       supabase.rpc("list_offerpsp_supply"),
       supabase.rpc("get_offerpsp_supply_coverage"),
       supabase.rpc("get_offerpsp_captains_bridge"),
       supabase.rpc("get_offerpsp_mail_center", { p_limit: 250 }),
+      supabase.rpc("list_offerpsp_ingestion_jobs", { p_limit: 100 }),
     ]);
 
-    const firstError = [leadsResult.error, managementResult.error, supplyResult.error, coverageResult.error, captainsResult.error, mailResult.error].find(Boolean);
+    const firstError = [leadsResult.error, managementResult.error, supplyResult.error, coverageResult.error, captainsResult.error, mailResult.error, ingestionResult.error].find(Boolean);
     const management = (managementResult.data || {}) as Record<string, unknown>;
     const supply = (supplyResult.data || {}) as Record<string, unknown>;
     const coverage = (coverageResult.data || {}) as Record<string, unknown>;
@@ -127,6 +130,7 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
       organizations: asArray<Organization>(management.organizations),
       assignments: asArray<AgentAssignment>(management.assignments),
       agentMarginPolicies: asArray<AgentMarginPolicy>(management.agent_margin_policies),
+      ingestionJobs: asArray<OfferIngestionJob>(ingestionResult.data),
       commissionSummary: (management.commission_summary || {}) as Record<string, number>,
       captainsBridge: (captainsResult.data || emptyData.captainsBridge) as CaptainsBridgeSnapshot,
       mailCenter: (mailResult.data || emptyData.mailCenter) as MailCenterSnapshot,
