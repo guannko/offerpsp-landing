@@ -48,6 +48,7 @@ async function bootstrap() {
     create role authenticated nologin;
     create role service_role nologin bypassrls;
     create schema auth;
+    create schema storage;
     create table auth.users (
       id uuid primary key,
       email text
@@ -70,6 +71,22 @@ async function bootstrap() {
         'app_metadata', jsonb_build_object('provider', 'google')
       );
     $$;
+
+    create table storage.buckets (
+      id text primary key,
+      name text not null,
+      public boolean not null default false,
+      file_size_limit bigint,
+      allowed_mime_types text[]
+    );
+    create table storage.objects (
+      id uuid primary key default gen_random_uuid(),
+      bucket_id text not null references storage.buckets(id) on delete cascade,
+      name text not null,
+      owner_id text,
+      created_at timestamptz not null default now()
+    );
+    alter table storage.objects enable row level security;
 
     create table public.offerpsp_leads (
       lead_id uuid primary key default gen_random_uuid(),
@@ -195,6 +212,7 @@ async function applyMigrations() {
     "20260805183500_offerpsp_offer_ingestion_queue.sql",
     "20260805193000_offerpsp_offer_ingestion_worker.sql",
     "20260805195500_offerpsp_ingestion_worker_response.sql",
+    "20260805233000_offerpsp_private_source_storage.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -1609,6 +1627,29 @@ async function verifyMailCenter() {
   process.stdout.write("PASS threaded email inbox, reply grouping, state controls and staff isolation\n");
 }
 
+async function verifyPrivateSourceStorage() {
+  const bucket = await query(`select public, file_size_limit, allowed_mime_types
+    from storage.buckets where id = 'offerpsp-private-sources'`);
+  if (bucket.rows.length !== 1 || bucket.rows[0].public
+      || Number(bucket.rows[0].file_size_limit) !== 15 * 1024 * 1024
+      || !bucket.rows[0].allowed_mime_types.includes("application/pdf")) {
+    throw new Error("OfferPSP source bucket is missing or not private");
+  }
+
+  const policies = await query(`select policyname, cmd, roles, qual, with_check
+    from pg_policies
+    where schemaname = 'storage' and tablename = 'objects'
+      and policyname like 'offerpsp_staff_%_private_sources'
+    order by policyname`);
+  const commands = new Set(policies.rows.map((policy) => policy.cmd));
+  if (policies.rows.length !== 4
+      || !["SELECT", "INSERT", "UPDATE", "DELETE"].every((command) => commands.has(command))
+      || policies.rows.some((policy) => !policy.roles.includes("authenticated"))) {
+    throw new Error("OfferPSP private source storage policies are incomplete");
+  }
+  process.stdout.write("PASS private source bucket, size boundary and staff-only storage policies\n");
+}
+
 try {
   await bootstrap();
   await applyMigrations();
@@ -1634,6 +1675,7 @@ try {
   await verifyResearchCrud();
   await verifyAibotServiceBoundary();
   await verifyMailCenter();
+  await verifyPrivateSourceStorage();
   process.stdout.write("PASS all OfferPSP migration checks\n");
 } catch (error) {
   process.stderr.write(`FAIL ${error.message}\n`);

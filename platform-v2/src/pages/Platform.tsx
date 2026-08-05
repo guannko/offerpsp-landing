@@ -12,6 +12,7 @@ import {
 } from "../components/control/Ui";
 import { useControlBridge } from "../context/ControlBridgeContext";
 import { supabase } from "../lib/supabase";
+import { extractOfferSource, safeStorageName } from "../lib/offerSourceFiles";
 import type { Lead, OfferIngestionJob } from "../types/offerpsp";
 
 const activeStatuses = ["new", "qualifying", "needs_clarification", "matching", "matched", "shortlist_ready", "shared", "option_selected", "dossier_ready", "provider_reviewing", "provider_needs_info", "provider_accepted", "telegram_created", "zoom_scheduled", "negotiating"];
@@ -167,6 +168,8 @@ function OfferIntakePanel({ providerNames, onImported }: { providerNames: string
   const [sourceType, setSourceType] = useState("telegram");
   const [sourceReference, setSourceReference] = useState("");
   const [sourceText, setSourceText] = useState("");
+  const [sourceFile, setSourceFile] = useState<File | null>(null);
+  const [fileMetadata, setFileMetadata] = useState<Awaited<ReturnType<typeof extractOfferSource>> | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -187,18 +190,48 @@ function OfferIntakePanel({ providerNames, onImported }: { providerNames: string
       return;
     }
     setBusy(true); setMessage("");
+    let queuedReference = sourceReference.trim() || null;
+    let uploadedPath: string | null = null;
+    const metadata: Record<string, unknown> = { entrypoint: "control_bridge", publication_allowed: false };
+    if (sourceFile && fileMetadata) {
+      uploadedPath = `${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}-${safeStorageName(sourceFile.name)}`;
+      const uploaded = await supabase.storage.from("offerpsp-private-sources").upload(uploadedPath, sourceFile, {
+        contentType: sourceFile.type || undefined,
+        upsert: false,
+      });
+      if (uploaded.error) {
+        setBusy(false);
+        setMessage(`Не удалось сохранить оригинал: ${uploaded.error.message}`);
+        return;
+      }
+      queuedReference = `storage://offerpsp-private-sources/${uploadedPath}`;
+      Object.assign(metadata, {
+        original_filename: sourceFile.name,
+        original_mime_type: fileMetadata.mimeType,
+        original_size_bytes: fileMetadata.size,
+        original_sha256: fileMetadata.sha256,
+        extraction_method: fileMetadata.extractionMethod,
+        extractor_version: "offerpsp-browser-source-extractor-v1",
+        submitted_reference: sourceReference.trim() || null,
+      });
+    }
     const result = await supabase.rpc("enqueue_offerpsp_source", {
       p_provider_name: providerName.trim(),
       p_source_type: sourceType,
       p_source_text: sourceText,
-      p_source_reference: sourceReference.trim() || null,
-      p_source_metadata: { entrypoint: "control_bridge", publication_allowed: false },
+      p_source_reference: queuedReference,
+      p_source_metadata: metadata,
     });
     setBusy(false);
-    if (result.error) { setMessage(result.error.message); return; }
+    if (result.error) {
+      if (uploadedPath) await supabase.storage.from("offerpsp-private-sources").remove([uploadedPath]);
+      setMessage(result.error.message);
+      return;
+    }
     const duplicate = Boolean((result.data as { duplicate?: boolean } | null)?.duplicate);
+    if (duplicate && uploadedPath) await supabase.storage.from("offerpsp-private-sources").remove([uploadedPath]);
     setMessage(duplicate ? "Этот источник уже есть в очереди — дубль не создан." : "Источник принят в закрытую очередь.");
-    if (!duplicate) { setSourceText(""); setSourceReference(""); }
+    if (!duplicate) { setSourceText(""); setSourceReference(""); setSourceFile(null); setFileMetadata(null); }
     await loadJobs();
     await onImported();
   };
@@ -211,16 +244,23 @@ function OfferIntakePanel({ providerNames, onImported }: { providerNames: string
     else { setMessage(status === "queued" ? "Источник возвращён в очередь." : "Источник убран из рабочей очереди."); await loadJobs(); }
   };
 
-  const readTextFile = async (file?: File) => {
+  const readSourceFile = async (file?: File) => {
     if (!file) return;
-    const allowed = /\.(txt|md|csv|tsv|json|html|xml)$/i.test(file.name);
-    if (!allowed) {
-      setMessage("PDF, DOCX и XLSX принимаются через универсальный extractor; здесь загрузите TXT/CSV/JSON или вставьте извлечённый текст.");
-      return;
+    setBusy(true); setMessage("Извлекаю текст и проверяю файл…");
+    try {
+      const extracted = await extractOfferSource(file);
+      setSourceText(extracted.text);
+      setSourceReference(file.name);
+      setSourceType("admin_file");
+      setSourceFile(file);
+      setFileMetadata(extracted);
+      setMessage(`${file.name}: текст извлечён, оригинал будет сохранён приватно после принятия.`);
+    } catch (error) {
+      setSourceFile(null); setFileMetadata(null);
+      setMessage(error instanceof Error ? error.message : "Не удалось прочитать файл.");
+    } finally {
+      setBusy(false);
     }
-    setSourceText(await file.text());
-    setSourceReference(file.name);
-    setSourceType("admin_file");
   };
 
   const attentionJobs = jobs.filter((job) => ["review", "failed", "duplicate"].includes(job.status) || Number(job.blocking_anomaly_count || 0) > 0);
@@ -238,7 +278,8 @@ function OfferIntakePanel({ providerNames, onImported }: { providerNames: string
             <input list="offerpsp-provider-names" className={field} value={providerName} onChange={(event)=>setProviderName(event.target.value)} placeholder="Название PSP"/>
             <datalist id="offerpsp-provider-names">{providerNames.map((name)=><option key={name} value={name}/>)}</datalist>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><select className={field} value={sourceType} onChange={(event)=>setSourceType(event.target.value)}><option value="telegram">Telegram</option><option value="email">Email</option><option value="admin_text">Ручной текст</option><option value="admin_file">Файл</option><option value="api">API</option></select><input className={field} value={sourceReference} onChange={(event)=>setSourceReference(event.target.value)} placeholder="Ссылка / message ID"/></div>
-            <label className="flex cursor-pointer items-center justify-center rounded-lg border border-dashed border-gray-300 px-4 py-3 text-sm font-semibold text-gray-600 hover:border-brand-400 hover:text-brand-500 dark:border-gray-700 dark:text-gray-300">Загрузить TXT / CSV / JSON<input type="file" className="hidden" accept=".txt,.md,.csv,.tsv,.json,.html,.xml" onChange={(event)=>void readTextFile(event.target.files?.[0])}/></label>
+            <label className="flex cursor-pointer items-center justify-center rounded-lg border border-dashed border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-600 hover:border-brand-400 hover:text-brand-500 dark:border-gray-700 dark:text-gray-300">Загрузить PDF / DOCX / XLSX / TXT<input type="file" className="hidden" accept=".txt,.md,.csv,.tsv,.json,.html,.xml,.pdf,.docx,.xlsx" onChange={(event)=>void readSourceFile(event.target.files?.[0])}/></label>
+            {sourceFile&&fileMetadata&&<div className="rounded-lg bg-success-50 px-3 py-2 text-xs text-success-700 dark:bg-success-500/10 dark:text-success-300"><strong>{sourceFile.name}</strong><span className="mt-1 block">{Math.ceil(fileMetadata.size/1024)} КБ · {fileMetadata.format.toUpperCase()} · приватный оригинал</span></div>}
           </div>
         </div>
         <div><textarea className={`${field} min-h-64 resize-y p-4 font-mono leading-6`} value={sourceText} onChange={(event)=>setSourceText(event.target.value)} placeholder="Вставьте оффер ровно в том виде, в котором его прислал PSP…"/><div className="mt-3 flex flex-wrap items-center justify-between gap-3"><span className="text-xs text-gray-400">Исходник и его hash сохраняются; результат всегда создаётся как draft/review.</span><button disabled={busy} onClick={()=>void enqueue()} className="rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy ? "Сохраняю…" : "Принять оффер"}</button></div></div>
