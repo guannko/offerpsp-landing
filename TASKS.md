@@ -554,7 +554,14 @@ The first operational UI is deployed. Daily-use refinement remains.
   audit entry. Anonymous and non-staff access is denied. Production migration
   `offerpsp_organization_member_management` and cockpit deployment
   `dpl_3jp9GVd1UwgWw48J7iXsogxSbXcY` are verified.
-- [ ] Agent onboarding/invitation flow and managed-client switcher optimized for larger portfolios.
+- [x] Agent onboarding/invitation flow and managed-client switcher are in production. Staff can
+  invite a new member by email or attach an existing Supabase user without exposing the service
+  role key; Edge Function `offerpsp-invite-member` v1 verifies JWT and active staff access before
+  sending the invite and assigning the role. The merchant/agent portal now has RU/EN portfolio
+  search, result count and a bounded scrollable request switcher for larger portfolios. Cockpit
+  deployment `dpl_47Tagpcb2qd7fF31Hfw5nvYD38Ud` and portal deployment
+  `dpl_DmxffiYbVYMMtafEmhhmQ1Hu9srz` are verified. The first real invite-email acceptance will be
+  verified with an actual subagent instead of creating a fake production user.
 - [ ] Agent commission approval, earned/paid workflow and downloadable statements.
 - [ ] Co-branded agent workspace settings; white-label domains remain a later product decision.
 
