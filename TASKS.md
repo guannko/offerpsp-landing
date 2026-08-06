@@ -5,6 +5,27 @@ Updated: 2026-08-06
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## Navigation and functional semantics — 2026-08-06
+
+Status: `PARTIAL`. Misleading production labels have been corrected locally; deployment and
+authenticated visual verification are still required.
+
+- [x] Rename `Задачи и календарь` to the actual `Задачи OfferPSP и AIBot`; the current module is a
+  combined queue and does not contain a calendar.
+- [x] Rename the integrations navigation to `Состояние интеграций`; the current screen monitors
+  health and loaded data but does not configure external services.
+- [x] Distinguish direct health checks from indirect data presence. An empty Telegram journal no
+  longer claims that Telegram is broken, and n8n data presence is not presented as a live health
+  check.
+- [x] Correct the inbox, merchant, communications and agent-ledger copy so each screen describes
+  only the data and actions it actually exposes.
+- [ ] `P1` Turn the combined task queue into a task manager: create/edit/assign/complete, filters,
+  entity links and due dates. Add calendar/Zoom/freshness views only when those views exist.
+- [ ] `P1` Add outbound Telegram conversations and actions before describing the Telegram journal
+  as a full communication channel.
+- [ ] `P1` Add integration configuration and operational controls before renaming the monitoring
+  screen back to a generic `Интеграции` module.
+
 ## Universal offer operations — 2026-08-06
 
 Status: `VERIFIED`. The provider-independent database workflow and cockpit controls are deployed

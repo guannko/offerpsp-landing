@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import {
   BoltIcon,
   BoxCubeIcon,
-  CalenderIcon,
   ChatIcon,
   DollarLineIcon,
   GridIcon,
@@ -61,9 +60,9 @@ export const platformModules: PlatformModule[] = [
   { id: "dealDesk", label: "Сделки", shortLabel: "Сделки", path: "/deals", icon: <TaskIcon />, enabled: featureFlags.dealDesk, group: "operations" },
   { id: "intelligence", label: "База AIBot", shortLabel: "База AIBot", path: "/intelligence", icon: <BoltIcon />, enabled: featureFlags.intelligence, group: "growth" },
   { id: "communications", label: "Коммуникации", shortLabel: "Связь", path: "/communications", icon: <ChatIcon />, enabled: featureFlags.communications, group: "growth" },
-  { id: "tasks", label: "Задачи и календарь", shortLabel: "Задачи", path: "/operations", icon: <CalenderIcon />, enabled: featureFlags.tasks, group: "growth" },
+  { id: "tasks", label: "Задачи OfferPSP и AIBot", shortLabel: "Задачи", path: "/operations", icon: <TaskIcon />, enabled: featureFlags.tasks, group: "growth" },
   { id: "agents", label: "Субагенты", shortLabel: "Агенты", path: "/agents", icon: <UserCircleIcon />, enabled: featureFlags.agents, group: "growth" },
   { id: "analytics", label: "Аналитика", shortLabel: "Аналитика", path: "/analytics", icon: <PieChartIcon />, enabled: featureFlags.analytics, group: "control" },
   { id: "finance", label: "Финансы", shortLabel: "Финансы", path: "/finance", icon: <DollarLineIcon />, enabled: featureFlags.finance, group: "control" },
-  { id: "integrations", label: "Интеграции", shortLabel: "Интеграции", path: "/integrations", icon: <PlugInIcon />, enabled: featureFlags.integrations, group: "control" },
+  { id: "integrations", label: "Состояние интеграций", shortLabel: "Системы", path: "/integrations", icon: <PlugInIcon />, enabled: featureFlags.integrations, group: "control" },
 ];
