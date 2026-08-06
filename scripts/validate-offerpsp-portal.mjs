@@ -72,6 +72,9 @@ assert.match(appSource, /if \(status === "won"\) return \["nextWon", "nextWonCop
 assert.match(htmlSource, /id="requestList"/);
 assert.match(htmlSource, /id="portfolioSearch"/);
 assert.match(appSource, /state\.portfolioQuery/);
+assert.match(appSource, /rpc\("get_offerpsp_my_agent_brand"/);
+assert.match(appSource, /Powered by OfferPSP/);
+assert.match(appSource, /safeHttpsUrl\(brand\?\.brand_logo_url\)/);
 assert.match(htmlSource, /data-i18n="newRequest"/);
 assert.match(htmlSource, /id="dealSection"/);
 assert.match(htmlSource, /id="clientDossierForm"/);

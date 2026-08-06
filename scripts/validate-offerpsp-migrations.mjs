@@ -221,6 +221,7 @@ async function applyMigrations() {
     "20260806043000_offerpsp_introduction_preparation.sql",
     "20260806062850_offerpsp_organization_member_management.sql",
     "20260806071110_offerpsp_agent_commission_workflow.sql",
+    "20260806080000_offerpsp_agent_cobrand_settings.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -1334,7 +1335,47 @@ async function verifyAgentWorkspaceAndPricing() {
     throw new Error("Agent commission grants are unsafe");
   }
 
+  const savedBrand = await query(
+    "select public.save_offerpsp_agent_brand_settings($1, $2::jsonb) as value",
+    [agentOrgId, JSON.stringify({
+      co_brand_enabled: true,
+      brand_display_name: "Validation Pay",
+      brand_tagline_ru: "Платёжный партнёр",
+      brand_tagline_en: "Payment partner",
+      brand_logo_url: "https://example.com/logo.png",
+      brand_accent_color: "#2457FF",
+      brand_support_email: "support@example.com",
+    })],
+  );
+  if (!savedBrand.rows[0].value.co_brand_enabled
+      || savedBrand.rows[0].value.brand_display_name !== "Validation Pay"
+      || savedBrand.rows[0].value.brand_accent_color !== "#2457FF") {
+    throw new Error(`Agent co-brand settings were not saved: ${JSON.stringify(savedBrand.rows[0].value)}`);
+  }
+  await expectQueryFailure(
+    "select public.save_offerpsp_agent_brand_settings($1, $2::jsonb)",
+    [agentOrgId, JSON.stringify({ co_brand_enabled: true, brand_display_name: "Unsafe", brand_logo_url: "javascript:alert(1)" })],
+    "Brand logo URL must use HTTPS",
+  );
+  const brandGrants = await query(`select
+    has_function_privilege('authenticated', 'public.get_offerpsp_agent_brand_settings(uuid)', 'EXECUTE') as staff_get,
+    has_function_privilege('authenticated', 'public.save_offerpsp_agent_brand_settings(uuid,jsonb)', 'EXECUTE') as staff_save,
+    has_function_privilege('authenticated', 'public.get_offerpsp_my_agent_brand(uuid)', 'EXECUTE') as member_get,
+    has_function_privilege('anon', 'public.get_offerpsp_agent_brand_settings(uuid)', 'EXECUTE') as anon_staff_get,
+    has_function_privilege('anon', 'public.save_offerpsp_agent_brand_settings(uuid,jsonb)', 'EXECUTE') as anon_staff_save,
+    has_function_privilege('anon', 'public.get_offerpsp_my_agent_brand(uuid)', 'EXECUTE') as anon_member_get
+  `);
+  if (!brandGrants.rows[0].staff_get || !brandGrants.rows[0].staff_save || !brandGrants.rows[0].member_get
+      || brandGrants.rows[0].anon_staff_get || brandGrants.rows[0].anon_staff_save || brandGrants.rows[0].anon_member_get) {
+    throw new Error("Agent co-brand RPC grants are unsafe");
+  }
+
   await setUser(AGENT_ID);
+  const memberBrand = await query("select public.get_offerpsp_my_agent_brand($1) as value", [agentOrgId]);
+  if (memberBrand.rows[0].value.brand_display_name !== "Validation Pay"
+      || memberBrand.rows[0].value.brand_support_email !== "support@example.com") {
+    throw new Error(`Agent member cannot load safe co-brand settings: ${JSON.stringify(memberBrand.rows[0].value)}`);
+  }
   const workspace = await query("select * from public.list_offerpsp_workspace_requests()");
   if (!workspace.rows.some((row) => row.lead_id === leadId && row.access_mode === "agent")) {
     throw new Error("Active agent cannot see the assigned merchant workspace");
@@ -1353,6 +1394,10 @@ async function verifyAgentWorkspaceAndPricing() {
   }
 
   await setUser(OTHER_CLIENT_ID);
+  const foreignBrand = await query("select public.get_offerpsp_my_agent_brand($1) as value", [agentOrgId]);
+  if (foreignBrand.rows[0].value !== null) {
+    throw new Error("Foreign client can read agent co-brand settings");
+  }
   const foreignWorkspace = await query("select * from public.list_offerpsp_workspace_requests()");
   const foreignOptions = await query("select * from public.list_offerpsp_client_offers($1)", [leadId]);
   if (foreignWorkspace.rows.some((row) => row.lead_id === leadId) || foreignOptions.rows.length) {

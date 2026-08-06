@@ -165,7 +165,7 @@ const STATUS_KEYS = {
 
 const state = {
   user: null, requests: [], lead: null, allOptions: [], options: [], allDeals: [], deals: [], organizations: [],
-  profile: null, conversationId: null, messages: [], language: "ru", portfolioQuery: "",
+  agentBrand: null, profile: null, conversationId: null, messages: [], language: "ru", portfolioQuery: "",
 };
 const ids = [
   "authView", "portalView", "loginForm", "emailInput", "passwordInput", "googleLoginButton", "magicLinkButton",
@@ -186,6 +186,14 @@ function t(key) { return COPY[state.language]?.[key] || COPY.en[key] || key; }
 function escapeHtml(value) {
   return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+}
+function safeHttpsUrl(value) {
+  try {
+    const url = new URL(String(value || ""));
+    return url.protocol === "https:" ? url.href : "";
+  } catch {
+    return "";
+  }
 }
 function setStatus(element, message = "", type = "") {
   element.textContent = message;
@@ -397,7 +405,23 @@ function renderWorkspace() {
   const agent = state.organizations.find((organization) => organization.organization_type === "agent");
   elements.agentBanner.classList.toggle("is-hidden", !agent);
   if (agent) {
-    elements.agentBanner.innerHTML = `<strong>${escapeHtml(t("managedByAgent"))}: ${escapeHtml(agent.name)}</strong><span>${escapeHtml(agent.managed_merchants)} ${escapeHtml(t("managedClients"))}</span>`;
+    const brand = state.agentBrand?.co_brand_enabled ? state.agentBrand : null;
+    const displayName = brand?.brand_display_name || agent.name;
+    const tagline = state.language === "ru" ? brand?.brand_tagline_ru : brand?.brand_tagline_en;
+    const logoUrl = safeHttpsUrl(brand?.brand_logo_url);
+    const accent = /^#[0-9A-F]{6}$/i.test(brand?.brand_accent_color || "") ? brand.brand_accent_color : "#A7F3D0";
+    const supportEmail = brand?.brand_support_email || "";
+    elements.agentBanner.style.setProperty("--agent-accent", accent);
+    elements.agentBanner.innerHTML = brand ? `
+      <div class="agent-brand-main">
+        ${logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="">` : `<span class="agent-brand-mark">${escapeHtml(displayName.slice(0, 2).toUpperCase())}</span>`}
+        <span><strong>${escapeHtml(displayName)}</strong>${tagline ? `<small>${escapeHtml(tagline)}</small>` : ""}</span>
+      </div>
+      <div class="agent-brand-meta"><span>Powered by OfferPSP</span>${supportEmail ? `<a href="mailto:${escapeHtml(supportEmail)}">${escapeHtml(supportEmail)}</a>` : ""}</div>
+    ` : `<strong>${escapeHtml(t("managedByAgent"))}: ${escapeHtml(agent.name)}</strong><span>${escapeHtml(agent.managed_merchants)} ${escapeHtml(t("managedClients"))}</span>`;
+  } else {
+    state.agentBrand = null;
+    elements.agentBanner.removeAttribute("style");
   }
 
   elements.noRequestState.classList.toggle("is-hidden", state.requests.length > 0);
@@ -558,6 +582,11 @@ async function loadWorkspace(preferredLeadId = state.lead?.lead_id) {
   state.allOptions = optionsResult.error ? [] : optionsResult.data || [];
   state.allDeals = dealsResult.error ? [] : dealsResult.data || [];
   state.organizations = organizationsResult.error ? [] : organizationsResult.data || [];
+  const agent = state.organizations.find((organization) => organization.organization_type === "agent");
+  if (agent) {
+    const brandResult = await supabase.rpc("get_offerpsp_my_agent_brand", { p_organization_id: agent.organization_id });
+    state.agentBrand = brandResult.error ? null : brandResult.data;
+  } else state.agentBrand = null;
   const selected = state.requests.find((request) => request.lead_id === preferredLeadId) || state.requests[0] || null;
   await selectRequest(selected?.lead_id);
 }

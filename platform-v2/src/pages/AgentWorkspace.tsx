@@ -12,12 +12,22 @@ type OrganizationMember = { id: string; organization_id: string; user_id: string
 type MemberDraft = { id?: string; email: string; role: OrganizationMember["role"]; active: boolean };
 type AgentCommission = { id: string; merchant_organization_id?: string | null; merchant_name?: string | null; lead_company?: string | null; basis: string; basis_amount?: number | null; commission_percent?: number | null; commission_fixed?: number | null; currency?: string | null; amount?: number | null; status: "projected" | "approved" | "earned" | "paid" | "void"; period_start?: string | null; period_end?: string | null; notes?: string | null; created_at: string };
 type CommissionDraft = { merchantId: string; basis: string; basisAmount: string; percent: string; fixed: string; amount: string; currency: string; periodStart: string; periodEnd: string; notes: string };
+type AgentBrandDraft = {
+  co_brand_enabled: boolean;
+  brand_display_name: string;
+  brand_tagline_ru: string;
+  brand_tagline_en: string;
+  brand_logo_url: string;
+  brand_accent_color: string;
+  brand_support_email: string;
+};
 
 const fieldClass = "w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-800 outline-none focus:border-brand-400 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white";
 const emptyAgent: AgentDraft = { name: "", legal_name: "", status: "active", relationship_tier: "standard", relationship_notes: "" };
 const emptyMargin: MarginDraft = { merchantId: "", flow: "all", mode: "percentage_points", percent: "", fixed: "", currency: "", notes: "" };
 const emptyMember: MemberDraft = { email: "", role: "manager", active: true };
 const emptyCommission: CommissionDraft = { merchantId: "", basis: "revenue_share", basisAmount: "", percent: "", fixed: "", amount: "", currency: "EUR", periodStart: "", periodEnd: "", notes: "" };
+const emptyBrand: AgentBrandDraft = { co_brand_enabled: false, brand_display_name: "", brand_tagline_ru: "", brand_tagline_en: "", brand_logo_url: "", brand_accent_color: "#FF477D", brand_support_email: "" };
 const nextCommissionStatus = (status: AgentCommission["status"]): AgentCommission["status"] | null => ({ projected: "approved", approved: "earned", earned: "paid", paid: null, void: null }[status] as AgentCommission["status"] | null);
 
 export default function AgentWorkspace() {
@@ -35,6 +45,7 @@ export default function AgentWorkspace() {
   const [member, setMember] = useState<MemberDraft>(emptyMember);
   const [commissions, setCommissions] = useState<AgentCommission[]>([]);
   const [commission, setCommission] = useState<CommissionDraft>(emptyCommission);
+  const [brand, setBrand] = useState<AgentBrandDraft>(emptyBrand);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
@@ -72,6 +83,24 @@ export default function AgentWorkspace() {
 
   useEffect(() => { void loadCommissions(); }, [loadCommissions]);
 
+  const loadBrand = useCallback(async () => {
+    if (!agentId || isNew) return;
+    const result = await supabase.rpc("get_offerpsp_agent_brand_settings", { p_organization_id: agentId });
+    if (result.error) { setMessage({ tone: "error", text: result.error.message }); return; }
+    const value = (result.data || {}) as Partial<AgentBrandDraft>;
+    setBrand({
+      co_brand_enabled: Boolean(value.co_brand_enabled),
+      brand_display_name: value.brand_display_name || "",
+      brand_tagline_ru: value.brand_tagline_ru || "",
+      brand_tagline_en: value.brand_tagline_en || "",
+      brand_logo_url: value.brand_logo_url || "",
+      brand_accent_color: value.brand_accent_color || "#FF477D",
+      brand_support_email: value.brand_support_email || "",
+    });
+  }, [agentId, isNew]);
+
+  useEffect(() => { void loadBrand(); }, [loadBrand]);
+
   async function saveAgent() {
     const data = await execute("agent", async () => { const result = await supabase.rpc("save_offerpsp_organization", { p_organization_id: isNew ? null : agentId, p_organization_type: "agent", p_payload: draft }); return { data: result.data, error: result.error }; }, "Карточка субагента сохранена.");
     if (isNew && data && typeof data === "object" && "id" in data) navigate(`/agents/${String((data as { id: unknown }).id)}`, { replace: true });
@@ -80,6 +109,18 @@ export default function AgentWorkspace() {
   async function saveAssignment() {
     if (!agentId || !merchantId) return;
     await execute("assignment", async () => { const result = await supabase.rpc("set_offerpsp_agent_assignment", { p_agent_organization_id: agentId, p_merchant_organization_id: merchantId, p_status: assignmentStatus }); return { data: result.data, error: result.error }; }, "Закрепление мерча обновлено.");
+  }
+
+  async function saveBrand() {
+    if (!agentId) return;
+    const saved = await execute("brand", async () => {
+      const result = await supabase.rpc("save_offerpsp_agent_brand_settings", {
+        p_organization_id: agentId,
+        p_payload: brand,
+      });
+      return { data: result.data, error: result.error };
+    }, "Co-brand кабинет субагента обновлён.");
+    if (saved) await loadBrand();
   }
 
   async function saveMargin() {
@@ -183,6 +224,27 @@ export default function AgentWorkspace() {
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
       <Panel><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Профиль</h2><div className="mt-5 space-y-4"><Field label="Название"><input className={fieldClass} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })}/></Field><Field label="Юридическое имя"><input className={fieldClass} value={draft.legal_name || ""} onChange={(event) => setDraft({ ...draft, legal_name: event.target.value })}/></Field><div className="grid grid-cols-2 gap-3"><Field label="Статус"><select className={fieldClass} value={draft.status || "active"} onChange={(event) => setDraft({ ...draft, status: event.target.value })}>{["pending", "active", "paused", "archived"].map((value) => <option key={value}>{value}</option>)}</select></Field><Field label="Tier"><select className={fieldClass} value={draft.relationship_tier || "standard"} onChange={(event) => setDraft({ ...draft, relationship_tier: event.target.value })}>{["top", "core", "standard", "watchlist"].map((value) => <option key={value}>{value}</option>)}</select></Field></div><Field label="Заметки"><textarea className={fieldClass} value={draft.relationship_notes || ""} onChange={(event) => setDraft({ ...draft, relationship_notes: event.target.value })}/></Field><button disabled={!draft.name.trim() || Boolean(busy)} onClick={() => void saveAgent()} className="w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy === "agent" ? "Сохраняю…" : "Сохранить субагента"}</button></div></Panel>
       {!isNew && <div className="space-y-6">
+        <Panel>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Co-branded workspace</p><h2 className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">Бренд кабинета агента</h2><p className="mt-1 text-sm text-gray-500">Клиент видит бренд агента вместе с подписью Powered by OfferPSP. Внутренние PSP и слои маржи не раскрываются.</p></div>
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300"><input type="checkbox" checked={brand.co_brand_enabled} onChange={(event) => setBrand({ ...brand, co_brand_enabled: event.target.checked })} className="accent-[#ff477d]"/>Включить</label>
+          </div>
+          <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="space-y-3">
+              <Field label="Название бренда"><input maxLength={80} className={fieldClass} value={brand.brand_display_name} onChange={(event) => setBrand({ ...brand, brand_display_name: event.target.value })} placeholder={agent?.name || "Partner"}/></Field>
+              <Field label="Подпись RU"><input maxLength={180} className={fieldClass} value={brand.brand_tagline_ru} onChange={(event) => setBrand({ ...brand, brand_tagline_ru: event.target.value })} placeholder="Ваш платёжный партнёр"/></Field>
+              <Field label="Подпись EN"><input maxLength={180} className={fieldClass} value={brand.brand_tagline_en} onChange={(event) => setBrand({ ...brand, brand_tagline_en: event.target.value })} placeholder="Your payment partner"/></Field>
+              <Field label="Логотип (HTTPS URL)"><input type="url" className={fieldClass} value={brand.brand_logo_url} onChange={(event) => setBrand({ ...brand, brand_logo_url: event.target.value })} placeholder="https://…/logo.png"/></Field>
+              <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-3"><Field label="Акцент"><input type="color" className={`${fieldClass} h-11 p-1`} value={brand.brand_accent_color || "#FF477D"} onChange={(event) => setBrand({ ...brand, brand_accent_color: event.target.value.toUpperCase() })}/></Field><Field label="Email поддержки"><input type="email" className={fieldClass} value={brand.brand_support_email} onChange={(event) => setBrand({ ...brand, brand_support_email: event.target.value })} placeholder="support@partner.com"/></Field></div>
+              <button disabled={Boolean(busy) || (brand.co_brand_enabled && !brand.brand_display_name.trim())} onClick={() => void saveBrand()} className="w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy === "brand" ? "Сохраняю…" : "Сохранить оформление"}</button>
+            </div>
+            <div className="rounded-2xl border border-gray-200 p-5 dark:border-gray-800" style={{ borderColor: brand.brand_accent_color || undefined }}>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Предпросмотр для мерча</p>
+              <div className="mt-5 flex items-center gap-4">{brand.brand_logo_url ? <img src={brand.brand_logo_url} alt="" className="h-12 w-12 rounded-xl object-contain"/> : <span className="grid h-12 w-12 place-items-center rounded-xl text-sm font-bold text-white" style={{ background: brand.brand_accent_color || "#FF477D" }}>{(brand.brand_display_name || agent?.name || "A").slice(0, 2).toUpperCase()}</span>}<div><strong className="block text-lg text-gray-900 dark:text-white">{brand.brand_display_name || agent?.name}</strong><span className="text-sm text-gray-500">{brand.brand_tagline_ru || "Агентский платёжный кабинет"}</span></div></div>
+              <div className="mt-5 border-t border-gray-100 pt-4 text-xs text-gray-400 dark:border-gray-800">Powered by <strong className="text-gray-600 dark:text-gray-300">OfferPSP</strong>{brand.brand_support_email ? ` · ${brand.brand_support_email}` : ""}</div>
+            </div>
+          </div>
+        </Panel>
         <Panel><div className="flex items-start justify-between gap-4"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Участники и роли</h2><p className="mt-1 text-sm text-gray-500">Owner управляет организацией, admin — командой, manager — мерчами, viewer имеет только просмотр.</p></div><span className="text-xs text-gray-400">{members.filter((item) => item.active).length} активных</span></div><div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]"><div className="space-y-2">{members.map((item) => <button key={item.id} onClick={() => setMember({ id: item.id, email: item.email, role: item.role, active: item.active })} className={`flex w-full items-center justify-between rounded-xl border p-3 text-left ${member.id === item.id ? "border-brand-300 bg-brand-50/50 dark:border-brand-500/40 dark:bg-brand-500/10" : "border-gray-200 dark:border-gray-800"}`}><div className="min-w-0"><strong className="block truncate text-sm text-gray-900 dark:text-white">{item.email}</strong><span className="mt-1 block text-xs text-gray-400">{item.role}</span></div><StatusPill status={item.active ? "active" : "archived"}/></button>)}{!members.length && <EmptyState title="Команда не добавлена" description="Пригласите участника по email и назначьте ему роль."/>}</div><div className="space-y-3 rounded-xl bg-gray-50 p-4 dark:bg-white/[0.03]"><Field label="Google / рабочий email"><input type="email" disabled={Boolean(member.id)} className={fieldClass} value={member.email} onChange={(event) => setMember({ ...member, email: event.target.value })} placeholder="partner@company.com"/></Field><Field label="Роль"><select className={fieldClass} value={member.role} onChange={(event) => setMember({ ...member, role: event.target.value as MemberDraft["role"] })}><option value="owner">Owner</option><option value="admin">Admin</option><option value="manager">Manager</option><option value="viewer">Viewer</option></select></Field><label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300"><input type="checkbox" checked={member.active} onChange={(event) => setMember({ ...member, active: event.target.checked })} className="accent-[#ff477d]"/>Доступ активен</label><p className="text-xs leading-5 text-gray-400">Новый пользователь получит защищённое приглашение на email. Уже зарегистрированному участнику роль назначится сразу.</p><div className="flex gap-2"><button disabled={!member.email.trim() || Boolean(busy)} onClick={() => void (member.id ? saveMember() : inviteMember())} className="flex-1 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40">{busy === "member" || busy === "invite" ? "Сохраняю…" : member.id ? "Обновить доступ" : "Пригласить и добавить"}</button>{member.id && <button onClick={() => setMember(emptyMember)} className="rounded-lg border border-gray-200 px-4 text-sm dark:border-gray-700">Новый</button>}</div></div></div></Panel>
         <Panel><div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Закреплённые мерчи</h2><span className="text-xs text-gray-400">{agentAssignments.length}</span></div><div className="mt-4 space-y-2">{agentAssignments.map((item) => <div key={item.id} className="flex items-center justify-between rounded-xl border border-gray-200 p-3 dark:border-gray-800"><div><strong className="text-sm text-gray-900 dark:text-white">{item.merchant_name}</strong><span className="block text-xs text-gray-400">атрибуция и защита лида</span></div><StatusPill status={item.status}/></div>)}{!agentAssignments.length && <EmptyState title="Мерчи не закреплены" description="Добавьте существующую merchant organization к портфелю агента."/>}</div><div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_180px_auto]"><select className={fieldClass} value={merchantId} onChange={(event) => setMerchantId(event.target.value)}><option value="">Выберите мерча</option>{merchants.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><select className={fieldClass} value={assignmentStatus} onChange={(event) => setAssignmentStatus(event.target.value)}>{["pending", "active", "paused", "ended"].map((value) => <option key={value}>{value}</option>)}</select><button disabled={!merchantId || Boolean(busy)} onClick={() => void saveAssignment()} className="rounded-lg bg-brand-500 px-5 text-sm font-semibold text-white disabled:opacity-40">Закрепить</button></div></Panel>
         <Panel><div className="flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Pricing chain</p><h2 className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">Наценка субагента</h2></div><span className="text-xs text-gray-400">версий: {policies.length}</span></div><div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-3"><select className={fieldClass} value={margin.merchantId} onChange={(event) => setMargin({ ...margin, merchantId: event.target.value })}><option value="">Для всех мерчей</option>{merchants.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><select className={fieldClass} value={margin.flow} onChange={(event) => setMargin({ ...margin, flow: event.target.value })}>{["all", "payin", "payout", "settlement", "refund", "chargeback"].map((value) => <option key={value}>{value}</option>)}</select><select className={fieldClass} value={margin.mode} onChange={(event) => setMargin({ ...margin, mode: event.target.value })}>{["percentage_points", "relative_percent", "fixed", "hybrid", "override"].map((value) => <option key={value}>{value}</option>)}</select><input type="number" step="0.01" className={fieldClass} value={margin.percent} onChange={(event) => setMargin({ ...margin, percent: event.target.value })} placeholder="Процент"/><input type="number" step="0.01" className={fieldClass} value={margin.fixed} onChange={(event) => setMargin({ ...margin, fixed: event.target.value })} placeholder="Fixed"/><input className={fieldClass} value={margin.currency} onChange={(event) => setMargin({ ...margin, currency: event.target.value })} placeholder="Currency"/></div><div className="mt-3 flex gap-3"><input className={fieldClass} value={margin.notes} onChange={(event) => setMargin({ ...margin, notes: event.target.value })} placeholder="Причина новой версии"/><button disabled={Boolean(busy) || (margin.mode !== "override" && !margin.percent && !margin.fixed)} onClick={() => void saveMargin()} className="shrink-0 rounded-lg bg-brand-500 px-5 text-sm font-semibold text-white disabled:opacity-40">Применить</button></div><div className="mt-5 flex flex-wrap gap-2">{policies.filter((item) => item.active).map((item) => <span key={item.id} className="rounded-full bg-gray-100 px-3 py-1.5 text-xs text-gray-700 dark:bg-white/5 dark:text-gray-300">{merchants.find((merchant) => merchant.id === item.merchant_organization_id)?.name || "Все мерчи"} · {item.flow} · {item.percent_value ?? item.fixed_value ?? item.mode}</span>)}</div></Panel>

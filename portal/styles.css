@@ -717,14 +717,38 @@ textarea::placeholder { color: #646a78; }
   gap: 20px;
   margin-bottom: 16px;
   padding: 14px 18px;
-  border: 1px solid rgba(167, 243, 208, .2);
+  border: 1px solid color-mix(in srgb, var(--agent-accent, var(--mint)) 36%, transparent);
   border-radius: 14px;
-  color: var(--mint);
-  background: rgba(167, 243, 208, .04);
+  color: var(--agent-accent, var(--mint));
+  background: color-mix(in srgb, var(--agent-accent, var(--mint)) 7%, transparent);
   font-size: 11px;
 }
 
 .agent-banner span { color: var(--muted); }
+
+.agent-brand-main,
+.agent-brand-meta {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.agent-brand-main img,
+.agent-brand-mark {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border-radius: 10px;
+}
+
+.agent-brand-main img { object-fit: contain; background: #fff; }
+.agent-brand-mark { display: grid; place-items: center; color: var(--ink); background: var(--agent-accent, var(--mint)); font-weight: 900; }
+.agent-brand-main strong,
+.agent-brand-main small { display: block; }
+.agent-brand-main strong { color: var(--paper); font-size: 13px; }
+.agent-brand-main small { margin-top: 3px; color: var(--muted); }
+.agent-brand-meta { justify-content: flex-end; flex-wrap: wrap; }
+.agent-brand-meta a { color: var(--agent-accent, var(--mint)); text-decoration: none; }
 
 .workspace-grid {
   display: grid;
