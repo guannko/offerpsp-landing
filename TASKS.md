@@ -548,7 +548,12 @@ The first operational UI is deployed. Daily-use refinement remains.
 
 - [x] Staff editor for agent/merchant organizations, relationship tier/status, merchant assignments
   and versioned agent margin policies in production.
-- [ ] Organization-member and role management UI.
+- [x] Organization-member and role management UI in production: staff can add an existing
+  Supabase user to an agent organization, change `owner`/`admin`/`manager`/`viewer`, suspend and
+  restore access, while the database prevents removal of the last active owner and records an
+  audit entry. Anonymous and non-staff access is denied. Production migration
+  `offerpsp_organization_member_management` and cockpit deployment
+  `dpl_3jp9GVd1UwgWw48J7iXsogxSbXcY` are verified.
 - [ ] Agent onboarding/invitation flow and managed-client switcher optimized for larger portfolios.
 - [ ] Agent commission approval, earned/paid workflow and downloadable statements.
 - [ ] Co-branded agent workspace settings; white-label domains remain a later product decision.
