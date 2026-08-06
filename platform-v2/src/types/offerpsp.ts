@@ -135,7 +135,48 @@ export type TelegramLog = {
 export type WorkTask = {
   id: string | number; lead_id?: string | null; title?: string | null; details?: string | null;
   task_type?: string | null; status?: string | null; priority?: string | number | null;
-  due_at?: string | null; scheduled_for?: string | null; created_at?: string | null; payload?: unknown;
+  due_at?: string | null; scheduled_for?: string | null; created_at?: string | null; updated_at?: string | null;
+  completed_at?: string | null; assigned_to?: string | null; created_by?: string | null; source?: string | null;
+  automation_ref?: string | null; metadata?: Record<string, unknown> | null; payload?: unknown;
+  merchant_name?: string | null; assignee_name?: string | null;
+};
+
+export type OperationsStaff = {
+  user_id: string;
+  display_name: string;
+  email?: string | null;
+  role?: string | null;
+};
+
+export type OperationsWorkspaceSnapshot = {
+  tasks: WorkTask[];
+  aibot_tasks: WorkTask[];
+  staff: OperationsStaff[];
+  generated_at?: string | null;
+};
+
+export type IntegrationSetting = {
+  key: "supabase" | "n8n" | "email" | "telegram";
+  display_name: string;
+  enabled: boolean;
+  configuration: Record<string, string | boolean | number | null>;
+  last_tested_at?: string | null;
+  last_test_status?: "success" | "failed" | null;
+  last_error?: string | null;
+  updated_at?: string | null;
+};
+
+export type TelegramDelivery = {
+  id: string;
+  chat_id: string;
+  message_text: string;
+  status: "sent" | "failed";
+  external_message_id?: string | null;
+  lead_id?: string | null;
+  merchant_name?: string | null;
+  error_message?: string | null;
+  created_at: string;
+  sent_at?: string | null;
 };
 
 export type CaptainsBridgeSnapshot = {

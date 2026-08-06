@@ -20,6 +20,13 @@ export default async function handler(request, response) {
   const isStaff = staffResponse.ok ? await staffResponse.json() : false;
   if (isStaff !== true) return json(response, 403, { success: false, error: "Active OfferPSP staff account required" });
 
+  const settingsResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/get_offerpsp_integration_settings`, { method: "POST", headers: { apikey: supabaseKey, Authorization: authorization, "Content-Type": "application/json" }, body: "{}" });
+  const settings = settingsResponse.ok ? await settingsResponse.json() : [];
+  const n8nSettings = Array.isArray(settings) ? settings.find((item) => item.key === "n8n") : null;
+  const emailSettings = Array.isArray(settings) ? settings.find((item) => item.key === "email") : null;
+  if (!n8nSettings?.enabled || n8nSettings.configuration?.operations_enabled !== true) return json(response, 409, { success: false, error: "n8n operational automations are disabled in integration settings" });
+  if (!emailSettings?.enabled) return json(response, 409, { success: false, error: "Email channel is disabled in integration settings" });
+
   const body = typeof request.body === "string" ? JSON.parse(request.body || "{}") : (request.body || {});
   const to = String(body.to || "").trim().toLowerCase();
   const subject = String(body.subject || "").trim();
@@ -27,7 +34,8 @@ export default async function handler(request, response) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to) || !subject || !emailBody) return json(response, 400, { success: false, error: "Valid recipient, subject and body are required" });
   if (subject.length > 240 || emailBody.length > 50000) return json(response, 400, { success: false, error: "Email is too large" });
 
-  const delivery = await fetch(senderUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to, subject, body: emailBody, from_name: "OfferPSP", from_email: "bizdev@offerpsp.com", reply_to: "bizdev@offerpsp.com", lead_id: body.lead_id || null }) });
+  const configuration = emailSettings.configuration || {};
+  const delivery = await fetch(senderUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to, subject, body: emailBody, from_name: configuration.from_name || "OfferPSP", from_email: configuration.from_email || "bizdev@offerpsp.com", reply_to: configuration.reply_to || "bizdev@offerpsp.com", lead_id: body.lead_id || null }) });
   const result = await delivery.json().catch(() => ({}));
   if (!delivery.ok || result.success === false) return json(response, 502, { success: false, error: result.message || "Email sender failed" });
   return json(response, 200, { success: true, to });

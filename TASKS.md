@@ -7,14 +7,15 @@ Code or a passing local test is not evidence that production has been updated.
 
 ## Navigation and functional semantics — 2026-08-06
 
-Status: `VERIFIED`. The semantic audit covered every cockpit route; corrected labels and factual
-descriptions are deployed in production as `dpl_DjqgsZMqRcuz7z1Bwuq9arpEazP9` and were verified
-through the authenticated interface.
+Status: `VERIFIED`. The semantic corrections and the three previously missing operational modules
+are deployed in production as `dpl_Gnvz47wtTHrpvNdwpcHqViY7mg6h` and were verified through the
+authenticated interface.
 
-- [x] Rename `Задачи и календарь` to the actual `Задачи OfferPSP и AIBot`; the current module is a
-  combined queue and does not contain a calendar.
-- [x] Rename the integrations navigation to `Состояние интеграций`; the current screen monitors
-  health and loaded data but does not configure external services.
+- [x] The operational module is now a full `Задачи и календарь` workspace: staff can create, edit,
+  assign, filter, schedule, complete and remove human tasks; due dates are shown in month/list
+  calendar views; AIBot missions remain deliberately read-only.
+- [x] The `Интеграции` workspace now contains safe operational settings and health checks for
+  Supabase, n8n, Email Sender and Telegram. Credentials remain in server-side secret storage.
 - [x] Distinguish direct health checks from indirect data presence. An empty Telegram journal no
   longer claims that Telegram is broken, and n8n data presence is not presented as a live health
   check.
@@ -23,12 +24,14 @@ through the authenticated interface.
 - [x] Authenticated production smoke covered Command Center, Inbox, Pipeline, Merchants, PSP,
   Offers, Lead Intelligence, Deals, AIBot research, Communications, Tasks, Subagents, Analytics
   and Integration Status. Their navigation labels now match the visible function.
-- [ ] `P1` Turn the combined task queue into a task manager: create/edit/assign/complete, filters,
-  entity links and due dates. Add calendar/Zoom/freshness views only when those views exist.
-- [ ] `P1` Add outbound Telegram conversations and actions before describing the Telegram journal
-  as a full communication channel.
-- [ ] `P1` Add integration configuration and operational controls before renaming the monitoring
-  screen back to a generic `Интеграции` module.
+- [x] Outbound Telegram is available from Communications: staff selects a merchant optionally,
+  enters a chat ID and sends through a protected n8n gateway. Delivery status and external message
+  ID are recorded in a private staff-only history.
+- [x] Production UI smoke created, updated and removed a task, opened the calendar, saved Email
+  settings, ran an integration health check and sent Telegram message `411` through the interface.
+- [x] Production database keeps 4 OfferPSP tasks, 13 AIBot missions, 4 safe integration settings and
+  1 Telegram delivery record after synthetic task cleanup. Anonymous RPC execution and direct
+  authenticated access to private settings/history remain denied.
 
 ## Universal offer operations — 2026-08-06
 

@@ -229,6 +229,8 @@ async function applyMigrations() {
     "20260806164710_offerpsp_manual_compliance_review.sql",
     "20260806170000_offerpsp_admin_p0_hardening.sql",
     "20260806194000_offerpsp_individual_offer_publication.sql",
+    "20260806211500_offerpsp_operations_integrations.sql",
+    "20260806222500_offerpsp_operations_indexes.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -2151,6 +2153,93 @@ async function verifyFreshnessReminders() {
   process.stdout.write("PASS n8n freshness queue, notification cooldown, task deduplication and confirmation cleanup\n");
 }
 
+async function verifyOperationsAndIntegrations() {
+  await setUser(STAFF_ID);
+  await setRole("authenticated");
+
+  const created = await query(
+    "select public.save_offerpsp_task(null, $1::jsonb) as value",
+    [JSON.stringify({
+      title: "Operations validation task",
+      details: "Created by the isolated regression suite",
+      status: "pending",
+      priority: "high",
+      due_at: "2030-01-15T10:00:00Z",
+      assigned_to: STAFF_ID,
+    })],
+  );
+  const taskId = created.rows[0].value.id;
+  const workspace = await query("select public.get_offerpsp_operations_workspace() as value");
+  const task = workspace.rows[0].value.tasks.find((item) => item.id === taskId);
+  if (!task || task.priority !== "high" || !task.assignee_name) {
+    throw new Error("Operations workspace did not return the created task and assignee");
+  }
+
+  await query(
+    "select public.save_offerpsp_task($1, $2::jsonb)",
+    [taskId, JSON.stringify({
+      title: "Operations validation task updated",
+      details: "Completed",
+      status: "done",
+      priority: "normal",
+      due_at: "2030-01-15T10:00:00Z",
+      assigned_to: STAFF_ID,
+    })],
+  );
+  const completed = await query("select status, completed_at from public.offerpsp_tasks where id = $1", [taskId]);
+  if (completed.rows[0].status !== "done" || !completed.rows[0].completed_at) {
+    throw new Error("Task completion state was not persisted");
+  }
+  await query("select public.delete_offerpsp_task($1)", [taskId]);
+  const deleted = await query("select count(*)::integer as count from public.offerpsp_tasks where id = $1", [taskId]);
+  if (deleted.rows[0].count !== 0) throw new Error("Staff-created task was not deleted");
+
+  await query(
+    "select public.save_offerpsp_integration_settings('telegram', true, $1::jsonb)",
+    [JSON.stringify({ default_chat_id: "1124622535", lead_notifications: true, error_notifications: false })],
+  );
+  const settings = await query("select public.get_offerpsp_integration_settings() as value");
+  const telegram = settings.rows[0].value.find((item) => item.key === "telegram");
+  if (!telegram || telegram.configuration.default_chat_id !== "1124622535"
+      || telegram.configuration.error_notifications !== false) {
+    throw new Error("Safe integration settings were not persisted");
+  }
+  await query(
+    "select public.record_offerpsp_telegram_message($1, $2, 'sent', 'validation-1', null, null)",
+    ["1124622535", "OfferPSP Telegram validation"],
+  );
+  const messages = await query("select public.list_offerpsp_telegram_messages(10) as value");
+  if (!messages.rows[0].value.some((item) => item.external_message_id === "validation-1")) {
+    throw new Error("Telegram delivery log was not returned");
+  }
+
+  const grants = await query(`select
+    has_function_privilege('authenticated', 'public.get_offerpsp_operations_workspace()', 'EXECUTE') as staff_tasks,
+    has_function_privilege('authenticated', 'public.get_offerpsp_integration_settings()', 'EXECUTE') as staff_integrations,
+    has_function_privilege('anon', 'public.get_offerpsp_operations_workspace()', 'EXECUTE') as anon_tasks,
+    has_function_privilege('anon', 'public.get_offerpsp_integration_settings()', 'EXECUTE') as anon_integrations,
+    has_table_privilege('authenticated', 'private.offerpsp_integration_settings', 'SELECT') as direct_settings,
+    has_table_privilege('authenticated', 'private.offerpsp_telegram_messages', 'SELECT') as direct_messages`);
+  const boundary = grants.rows[0];
+  if (!boundary.staff_tasks || !boundary.staff_integrations || boundary.anon_tasks
+      || boundary.anon_integrations || boundary.direct_settings || boundary.direct_messages) {
+    throw new Error("Operations and integration grants exceed the staff RPC-only boundary");
+  }
+
+  await setUser(CLIENT_ID);
+  await expectQueryFailure(
+    "select public.get_offerpsp_operations_workspace()",
+    [],
+    "OfferPSP staff access required",
+  );
+  await expectQueryFailure(
+    "select public.get_offerpsp_integration_settings()",
+    [],
+    "OfferPSP staff access required",
+  );
+  process.stdout.write("PASS task CRUD, calendar data, safe integration settings, Telegram log and staff-only grants\n");
+}
+
 function verifyCanonicalGeoHeaderParsing() {
   const payload = parseOfferSource({
     providerName: "OCR Header Fixture",
@@ -2196,6 +2285,7 @@ try {
   await verify360WorkspaceGrants();
   await verifyResearchCrudGrants();
   await seedUsers();
+  await verifyOperationsAndIntegrations();
   await verifyPortalLeadClaims();
   await verifyPreComplianceGate();
   await importPreparedDrafts();
