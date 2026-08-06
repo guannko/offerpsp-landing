@@ -7,8 +7,9 @@ Code or a passing local test is not evidence that production has been updated.
 
 ## Navigation and functional semantics — 2026-08-06
 
-Status: `PARTIAL`. Misleading production labels have been corrected locally; deployment and
-authenticated visual verification are still required.
+Status: `VERIFIED`. The semantic audit covered every cockpit route; corrected labels and factual
+descriptions are deployed in production as `dpl_DjqgsZMqRcuz7z1Bwuq9arpEazP9` and were verified
+through the authenticated interface.
 
 - [x] Rename `Задачи и календарь` to the actual `Задачи OfferPSP и AIBot`; the current module is a
   combined queue and does not contain a calendar.
@@ -19,6 +20,9 @@ authenticated visual verification are still required.
   check.
 - [x] Correct the inbox, merchant, communications and agent-ledger copy so each screen describes
   only the data and actions it actually exposes.
+- [x] Authenticated production smoke covered Command Center, Inbox, Pipeline, Merchants, PSP,
+  Offers, Lead Intelligence, Deals, AIBot research, Communications, Tasks, Subagents, Analytics
+  and Integration Status. Their navigation labels now match the visible function.
 - [ ] `P1` Turn the combined task queue into a task manager: create/edit/assign/complete, filters,
   entity links and due dates. Add calendar/Zoom/freshness views only when those views exist.
 - [ ] `P1` Add outbound Telegram conversations and actions before describing the Telegram journal
