@@ -44,8 +44,9 @@ Classification controls routing but does not expose private PSP identities to th
 
 The n8n worker uses two service-only RPCs.
 
-Prepared workflow: `wiEFFDaHd3uaJoJi` (`OfferPSP | Pre-Compliance PRO`). It remains inactive until
-the production migration is applied and its first controlled execution is verified.
+Production workflow: `wiEFFDaHd3uaJoJi` (`OfferPSP | Pre-Compliance PRO`). It is active and its
+controlled production executions `320586` and `320600` completed successfully using the dedicated
+OfferPSP service-role credential.
 
 1. `claim_offerpsp_pre_compliance_jobs(limit)` atomically claims pending or stale jobs. A job stuck in `screening` for 30 minutes becomes available again.
 2. `record_offerpsp_pre_compliance_screening(lead_id, payload)` saves evidence and scores. It always leaves the case awaiting a staff decision.
@@ -129,3 +130,19 @@ Every decision is immutable history. A later decision creates a new record rathe
 - Staff use read/decision RPCs guarded by `is_offerpsp_staff()`.
 - n8n receives only service worker RPCs and cannot clear a lead.
 - Shortlist creation and sharing are blocked in the database until clearance, including manual shortcuts.
+
+## Production verification — 2026-08-06
+
+- Supabase migrations `offerpsp_pre_compliance_module` and
+  `offerpsp_pre_compliance_indexes` are applied.
+- The production matching RPC checks `private.offerpsp_compliance_ready(lead_id)` before rebuilding
+  matches. A separate `offerpsp_shortlist_compliance_gate` trigger blocks both draft creation and
+  sharing before clearance.
+- Cockpit deployment `dpl_DJSBz96i3yeYNKnizTaWaSKso1Dm` is `READY` at
+  `https://ops-7q4m2x9k8v3n.vercel.app`.
+- The external MBA request is normalized from `South Korea` to `KR`, classified as `subagent`, and
+  scored: authenticity `100`, compliance readiness `54`, commercial value `100`, completeness
+  `64`, low risk, confidence `0.72`.
+- MBA remains in `screening` with no staff decision. Matching is locked until a staff member records
+  `cleared`; the recommended current action is `needs_info` for represented merchant names and
+  sites, licence per merchant, payment methods, and PayIn/PayOut requirements.

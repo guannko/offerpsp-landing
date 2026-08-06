@@ -7,8 +7,8 @@ Code or a passing local test is not evidence that production has been updated.
 
 ## Pre-Compliance PRO module — 2026-08-06
 
-Status: `VERIFIED` locally; production migration, workflow activation and cockpit deployment are
-not started.
+Status: `VERIFIED` in production. The first real external request is screened and remains locked
+until a staff decision.
 
 - [x] A separately entitled `pre_compliance` PRO module has its own navigation, queue and merchant
   workspace rather than being embedded as an unlicensed feature flag.
@@ -20,13 +20,22 @@ not started.
   active staff member records a `cleared` decision. Automated screening can never clear a lead.
 - [x] Private evidence, submission signals and immutable decision history are reachable only via
   staff/service RPCs. Raw IP storage is not part of the contract.
-- [x] n8n draft workflow `wiEFFDaHd3uaJoJi` (`OfferPSP | Pre-Compliance PRO`) is created inactive
-  and validates with 8 nodes, 7 connections, 0 errors and 0 warnings.
-- [x] All 43 migrations, security grants and the full offer → shortlist → PSP review → Telegram →
+- [x] n8n workflow `wiEFFDaHd3uaJoJi` (`OfferPSP | Pre-Compliance PRO`) is active and validates
+  with 8 nodes, 7 connections, 0 errors and 0 warnings. Controlled production executions
+  `320586` and `320600` completed successfully using the dedicated service-role credential.
+- [x] All 44 migrations, security grants and the full offer → shortlist → PSP review → Telegram →
   Zoom → won regression pass in isolated PGlite. Cockpit build passes; lint has no errors.
-- [ ] Rollout order: snapshot → migration → read/grant checks → activate n8n worker → verify one
-  controlled case → deploy cockpit → verify the real MBA request → confirm inbox/command-center
-  counters and matching lock.
+- [x] Production migrations `offerpsp_pre_compliance_module` and
+  `offerpsp_pre_compliance_indexes` are applied. Private compliance tables deny direct
+  `anon`/`authenticated` access; matching and shortlist creation are database-gated by staff
+  clearance.
+- [x] Cockpit production deployment `dpl_DJSBz96i3yeYNKnizTaWaSKso1Dm` is `READY` at
+  `https://ops-7q4m2x9k8v3n.vercel.app`; authenticated queue and merchant-dossier smoke passed.
+- [x] The real MBA request is normalized to `KR`, classified as `subagent`, scored
+  `100 / 54 / 100 / 64`, and remains in `screening` with no staff decision. Its false legacy
+  shortlist was archived and matching remains locked.
+- [ ] Staff decision for MBA: request represented merchant names/sites, licence per merchant,
+  payment methods and PayIn/PayOut requirements before clearance.
 
 ## Agent operations — 2026-08-06
 
