@@ -219,6 +219,7 @@ async function applyMigrations() {
     "20260806015000_offerpsp_freshness_reminders.sql",
     "20260806030000_offerpsp_deal_outcomes.sql",
     "20260806043000_offerpsp_introduction_preparation.sql",
+    "20260806062850_offerpsp_organization_member_management.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -1203,10 +1204,31 @@ async function verifyAgentWorkspaceAndPricing() {
   `, [STAFF_ID]);
   const agentOrgId = organizations.rows.find((row) => row.organization_type === "agent").id;
   const merchantOrgId = organizations.rows.find((row) => row.organization_type === "merchant").id;
-  await query(`
-    insert into public.offerpsp_organization_members (organization_id, user_id, role, active, created_by)
-    values ($1, $2, 'owner', true, $3)
-  `, [agentOrgId, AGENT_ID, STAFF_ID]);
+  const primaryMember = await query(
+    "select public.save_offerpsp_organization_member($1, null, 'agent@example.com', 'owner', true) as value",
+    [agentOrgId],
+  );
+  await expectQueryFailure(
+    "select public.save_offerpsp_organization_member($1, $2, 'agent@example.com', 'manager', true)",
+    [agentOrgId, primaryMember.rows[0].value.id],
+    "Organization must keep at least one active owner",
+  );
+  await query(
+    "select public.save_offerpsp_organization_member($1, null, 'client@example.com', 'owner', true)",
+    [agentOrgId],
+  );
+  await query(
+    "select public.save_offerpsp_organization_member($1, $2, 'agent@example.com', 'manager', true)",
+    [agentOrgId, primaryMember.rows[0].value.id],
+  );
+  const memberRegistry = await query(
+    "select public.get_offerpsp_organization_members($1) as value",
+    [agentOrgId],
+  );
+  if (memberRegistry.rows[0].value.length !== 2
+      || !memberRegistry.rows[0].value.some((member) => member.email === "agent@example.com" && member.role === "manager")) {
+    throw new Error(`Organization member registry is incomplete: ${JSON.stringify(memberRegistry.rows[0].value)}`);
+  }
   await query(`
     insert into public.offerpsp_agent_clients (
       agent_organization_id, merchant_organization_id, status, created_by
@@ -1285,6 +1307,26 @@ async function verifyAgentWorkspaceAndPricing() {
   const foreignOptions = await query("select * from public.list_offerpsp_client_offers($1)", [leadId]);
   if (foreignWorkspace.rows.some((row) => row.lead_id === leadId) || foreignOptions.rows.length) {
     throw new Error("Foreign client can access an agent-managed merchant");
+  }
+  await expectQueryFailure(
+    "select public.get_offerpsp_organization_members($1)",
+    [agentOrgId],
+    "OfferPSP staff access required",
+  );
+  await expectQueryFailure(
+    "select public.save_offerpsp_organization_member($1, null, 'other@example.com', 'viewer', true)",
+    [agentOrgId],
+    "OfferPSP staff access required",
+  );
+  const memberGrants = await query(`select
+    has_function_privilege('authenticated', 'public.get_offerpsp_organization_members(uuid)', 'EXECUTE') as staff_list,
+    has_function_privilege('authenticated', 'public.save_offerpsp_organization_member(uuid,uuid,text,text,boolean)', 'EXECUTE') as staff_save,
+    has_function_privilege('anon', 'public.get_offerpsp_organization_members(uuid)', 'EXECUTE') as anon_list,
+    has_function_privilege('anon', 'public.save_offerpsp_organization_member(uuid,uuid,text,text,boolean)', 'EXECUTE') as anon_save
+  `);
+  if (!memberGrants.rows[0].staff_list || !memberGrants.rows[0].staff_save
+      || memberGrants.rows[0].anon_list || memberGrants.rows[0].anon_save) {
+    throw new Error("Organization member management RPC grants are unsafe");
   }
   process.stdout.write("PASS agent ownership, missing-margin gate, final resale rate and foreign isolation\n");
 }
