@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import PageMeta from "../components/common/PageMeta";
 import {
   EmptyState,
@@ -326,6 +326,7 @@ function OfferIntakePanel({ providerNames, onImported }: { providerNames: string
 
 export function OffersPage() {
   const { routes, providers: registryProviders, refresh } = useControlBridge();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [workspace, setWorkspace] = useState<"catalog" | "intake">(searchParams.get("workspace") === "intake" ? "intake" : "catalog");
   const [status, setStatus] = useState("all");
@@ -336,6 +337,10 @@ export function OffersPage() {
   const [flow, setFlow] = useState("all");
   const [health, setHealth] = useState("all");
   const [query, setQuery] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [creatingBusy, setCreatingBusy] = useState(false);
+  const [creatingError, setCreatingError] = useState<string | null>(null);
+  const [offerDraft, setOfferDraft] = useState({ provider_id: "", client_title: "", flow: "payin", geos: "", currencies: "", methods: "", source_reference: "" });
   const providers = useMemo(() => Array.from(new Map(routes.map((route)=>[route.provider_id, { id: route.provider_id, name: route.provider_name || route.provider_code || "Без названия", code: route.provider_code }])).values()).sort((a,b)=>a.name.localeCompare(b.name)), [routes]);
   const geos = useMemo(()=>Array.from(new Set(routes.flatMap((route)=>route.geos || []).filter(Boolean))).sort(), [routes]);
   const currencies = useMemo(()=>Array.from(new Set(routes.flatMap((route)=>route.currencies || []).filter(Boolean))).sort(), [routes]);
@@ -358,8 +363,20 @@ export function OffersPage() {
   const groups = useMemo(()=>providers.map((provider)=>({provider, routes:visible.filter((route)=>route.provider_id===provider.id)})).filter((group)=>group.routes.length), [providers, visible]);
   const selectClass = "h-10 min-w-0 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-brand-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200";
   const reset = () => { setStatus("all"); setProviderId("all"); setGeo("all"); setCurrency("all"); setMethod("all"); setFlow("all"); setHealth("all"); setQuery(""); };
+  const createOffer = async () => {
+    if (!offerDraft.provider_id || !offerDraft.client_title.trim()) return;
+    setCreatingBusy(true); setCreatingError(null);
+    const result = await supabase.rpc("create_offerpsp_manual_route", { p_provider_id: offerDraft.provider_id, p_payload: { client_title: offerDraft.client_title.trim(), flow: offerDraft.flow, coverage_scope: "specific", geos: offerDraft.geos.split(",").map((item)=>item.trim()).filter(Boolean), currencies: offerDraft.currencies.split(",").map((item)=>item.trim()).filter(Boolean), methods: offerDraft.methods.split(",").map((item)=>item.trim()).filter(Boolean), traffic_types: [], verticals: [], source_reference: offerDraft.source_reference.trim() || "Staff manual offer", fees: [], limits: [], settlements: [] } });
+    setCreatingBusy(false);
+    if (result.error) { setCreatingError(result.error.message); return; }
+    const data = result.data as { route_id?: string } | null;
+    if (!data?.route_id) { setCreatingError("Черновик создан, но система не вернула его ID."); return; }
+    await refresh();
+    navigate(`/psps/${offerDraft.provider_id}?route=${data.route_id}&tab=offers`);
+  };
   return <PageFrame title="Офферы" description="Маршруты и rate cards.">
-    <PageHeading eyebrow="Offer operations" title="Офферы и маршруты" description="Каталог, единый приём источников и очередь проверки — в одном рабочем модуле." action={<div className="flex rounded-lg border border-gray-200 p-1 dark:border-gray-700">{[["catalog","Каталог"],["intake","Приём офферов"]].map(([value,label])=><button key={value} onClick={()=>setWorkspace(value as "catalog"|"intake")} className={`rounded-md px-4 py-2 text-sm font-semibold ${workspace===value?"bg-brand-500 text-white":"text-gray-600 dark:text-gray-300"}`}>{label}</button>)}</div>}/>
+    <PageHeading eyebrow="Offer operations" title="Офферы и маршруты" description="Каталог, единый приём источников и очередь проверки — в одном рабочем модуле." action={<div className="flex flex-wrap gap-2"><button onClick={()=>setCreating(!creating)} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white">{creating?"Закрыть":"+ Новый оффер"}</button><div className="flex rounded-lg border border-gray-200 p-1 dark:border-gray-700">{[["catalog","Каталог"],["intake","Приём офферов"]].map(([value,label])=><button key={value} onClick={()=>setWorkspace(value as "catalog"|"intake")} className={`rounded-md px-4 py-2 text-sm font-semibold ${workspace===value?"bg-brand-500 text-white":"text-gray-600 dark:text-gray-300"}`}>{label}</button>)}</div></div>}/>
+    {creating && <Panel className="mb-5"><div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Нормализованный оффер</p><h2 className="mt-2 text-xl font-semibold text-gray-900 dark:text-white">Создать черновик для любого PSP</h2><p className="mt-1 text-sm text-gray-500">После создания откроется полный редактор ставок, лимитов, settlement и маржи.</p></div><Link to="/psps/new" className="text-sm font-semibold text-brand-500">Сначала добавить новый PSP →</Link></div>{creatingError&&<div className="mt-4"><ErrorBanner message={creatingError}/></div>}<div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4"><select value={offerDraft.provider_id} onChange={(event)=>setOfferDraft({...offerDraft,provider_id:event.target.value})} className={selectClass}><option value="">Выберите PSP</option>{registryProviders.filter((provider)=>provider.relationship_status!=="archived").sort((a,b)=>a.brand_name.localeCompare(b.brand_name)).map((provider)=><option key={provider.id} value={provider.id}>{provider.brand_name} · {provider.internal_code||"без кода"}</option>)}</select><input value={offerDraft.client_title} onChange={(event)=>setOfferDraft({...offerDraft,client_title:event.target.value})} className={selectClass} placeholder="Название оффера"/><select value={offerDraft.flow} onChange={(event)=>setOfferDraft({...offerDraft,flow:event.target.value})} className={selectClass}><option value="payin">PayIn</option><option value="payout">PayOut</option><option value="both">PayIn + PayOut</option></select><input value={offerDraft.geos} onChange={(event)=>setOfferDraft({...offerDraft,geos:event.target.value})} className={selectClass} placeholder="GEO: IN, BR, MX"/><input value={offerDraft.currencies} onChange={(event)=>setOfferDraft({...offerDraft,currencies:event.target.value})} className={selectClass} placeholder="Валюты: INR, BRL"/><input value={offerDraft.methods} onChange={(event)=>setOfferDraft({...offerDraft,methods:event.target.value})} className={selectClass} placeholder="Методы: UPI, PIX"/><input value={offerDraft.source_reference} onChange={(event)=>setOfferDraft({...offerDraft,source_reference:event.target.value})} className={selectClass} placeholder="Источник: Telegram / PDF / XLSX"/><button onClick={()=>void createOffer()} disabled={!offerDraft.provider_id||!offerDraft.client_title.trim()||creatingBusy} className="h-10 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white disabled:opacity-40">{creatingBusy?"Создаю…":"Создать и заполнить"}</button></div></Panel>}
     {workspace === "intake" ? <OfferIntakePanel providerNames={registryProviders.map((provider)=>provider.brand_name).sort()} onImported={refresh}/> : <>
     <Panel className="mb-5">
       <div className="flex flex-wrap gap-2">{[["all","Все"],["published","Опубликованы"],["draft","Черновики"],["review","На проверке"],["paused","Пауза"],["archived","Архив"]].map(([value,label]) => <button key={value} onClick={() => setStatus(value)} className={`rounded-lg px-3 py-2 text-sm ${status === value ? "bg-brand-500 text-white" : "bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300"}`}>{label}</button>)}</div>

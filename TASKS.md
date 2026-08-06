@@ -5,6 +5,29 @@ Updated: 2026-08-06
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## Universal offer operations — 2026-08-06
+
+Status: `PARTIAL`. Database workflow is verified in production; the new cockpit UI is awaiting the
+deployment and authenticated visual smoke recorded below.
+
+- [x] Antarex and every other incomplete PSP are outside the critical path. Draft/review routes do
+  not block publication, pause, revision or matching of unrelated offers.
+- [x] The catalog has a provider-independent `+ Новый оффер` flow: select any active PSP, create a
+  normalized draft and continue directly in the full rate/limit/settlement editor.
+- [x] A single validated offer can be published without superseding or archiving unrelated live
+  routes from the same PSP. Publishing a revision archives only its previous live version.
+- [x] Every editable offer can be copied; published/paused offers produce a separate editable
+  revision, preserving the live version until the replacement is published.
+- [x] Existing controls remain generic: edit, pause, resume, archive, margin versions, source intake
+  from Telegram/email/admin text/PDF/DOCX/XLSX/images and the review/error/duplicate queue.
+- [x] Production migration `offerpsp_individual_offer_publication` is applied. Staff execution is
+  allowed, anonymous execution is denied; the current 12 published and 24 unpublished routes were
+  unchanged by the rollout.
+- [x] All 46 migrations and the full regression suite pass in isolated PGlite, including explicit
+  proof that individual publication and revision do not mutate neighbouring live routes.
+- [ ] Deploy the cockpit UI and complete authenticated desktop/mobile visual smoke for create,
+  copy and publish controls without creating a synthetic production offer.
+
 ## Production black-box audit — 2026-08-06
 
 Status: `PARTIAL`. Full report: `docs/OFFERPSP-ADMIN-BLACKBOX-AUDIT-2026-08-06.md`.

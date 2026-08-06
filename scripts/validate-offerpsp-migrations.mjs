@@ -228,6 +228,7 @@ async function applyMigrations() {
     "20260806132300_offerpsp_pre_compliance_indexes.sql",
     "20260806164710_offerpsp_manual_compliance_review.sql",
     "20260806170000_offerpsp_admin_p0_hardening.sql",
+    "20260806194000_offerpsp_individual_offer_publication.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -875,6 +876,82 @@ async function verifyRouteLevelPublication() {
     throw new Error(`Route-level publication changed excluded-route isolation: ${JSON.stringify(states.rows)}`);
   }
   process.stdout.write("PASS valid routes publish while malformed routes stay archived\n");
+}
+
+async function verifyIndividualOfferPublication() {
+  await setUser(STAFF_ID);
+  await setRole("authenticated");
+  const provider = await query(
+    "select public.upsert_offerpsp_provider('Individual Offer Fixture', null, null, null, 'active', 1, true, 'Validation only') as value",
+  );
+  const providerId = (await query(
+    "select id from private.offerpsp_providers where internal_code = $1",
+    [provider.rows[0].value.internal_code],
+  )).rows[0].id;
+  await query("select public.confirm_offerpsp_provider_freshness($1)", [providerId]);
+
+  const payload = (title, geo, currency, method) => JSON.stringify({
+    client_title: title,
+    coverage_scope: "specific",
+    geos: [geo],
+    currencies: [currency],
+    flow: "payin",
+    methods: [method],
+    freshness_days: 30,
+    fees: [{ flow: "payin", fee_type: "percent", base_percent: 5, applies_on: "success" }],
+    limits: [{ flow: "payin", currency, minimum_amount: 100, maximum_amount: 10000 }],
+    settlements: [{ currency: "USDT", period: "T+1" }],
+  });
+
+  const first = await query(
+    "select public.create_offerpsp_manual_route($1, $2::jsonb) as value",
+    [providerId, payload("Independent route one", "IN", "INR", "UPI")],
+  );
+  const second = await query(
+    "select public.create_offerpsp_manual_route($1, $2::jsonb) as value",
+    [providerId, payload("Independent route two", "BR", "BRL", "PIX")],
+  );
+  await query("select public.publish_offerpsp_route($1)", [first.rows[0].value.route_id]);
+  await query("select public.publish_offerpsp_route($1)", [second.rows[0].value.route_id]);
+
+  const initialStates = await query(
+    "select id, status from private.offerpsp_offer_routes where id = any($1::uuid[]) order by id",
+    [[first.rows[0].value.route_id, second.rows[0].value.route_id]],
+  );
+  if (initialStates.rows.some((route) => route.status !== "published")) {
+    throw new Error(`Publishing one offer changed an unrelated live offer: ${JSON.stringify(initialStates.rows)}`);
+  }
+
+  const revision = await query(
+    "select public.revise_offerpsp_route($1) as value",
+    [first.rows[0].value.route_id],
+  );
+  await query("select public.publish_offerpsp_route($1)", [revision.rows[0].value.route_id]);
+  const finalStates = await query(
+    "select id, status from private.offerpsp_offer_routes where id = any($1::uuid[])",
+    [[first.rows[0].value.route_id, second.rows[0].value.route_id, revision.rows[0].value.route_id]],
+  );
+  const state = Object.fromEntries(finalStates.rows.map((route) => [route.id, route.status]));
+  if (state[first.rows[0].value.route_id] !== "archived"
+      || state[second.rows[0].value.route_id] !== "published"
+      || state[revision.rows[0].value.route_id] !== "published") {
+    throw new Error(`Offer revision did not isolate unrelated routes: ${JSON.stringify(finalStates.rows)}`);
+  }
+
+  const grants = await query(`select
+    has_function_privilege('authenticated', 'public.publish_offerpsp_route(uuid)', 'EXECUTE') as staff_publish,
+    has_function_privilege('anon', 'public.publish_offerpsp_route(uuid)', 'EXECUTE') as anon_publish`);
+  if (!grants.rows[0].staff_publish || grants.rows[0].anon_publish) {
+    throw new Error("Individual offer publication grants are broader than the staff-only contract");
+  }
+  await setUser(OTHER_CLIENT_ID);
+  await expectQueryFailure(
+    "select public.publish_offerpsp_route($1)",
+    [revision.rows[0].value.route_id],
+    "OfferPSP staff access required",
+  );
+  await setUser(STAFF_ID);
+  process.stdout.write("PASS individual offer publication, revision isolation and staff-only boundary\n");
 }
 
 async function runEndToEndFixture() {
@@ -2125,6 +2202,7 @@ try {
   await verifyOfferIngestionQueue();
   await verifySupplyOperations();
   await verifyRouteLevelPublication();
+  await verifyIndividualOfferPublication();
   await runEndToEndFixture();
   await verifyAgentWorkspaceAndPricing();
   await verifyEntityLifecycle();
