@@ -220,6 +220,7 @@ async function applyMigrations() {
     "20260806030000_offerpsp_deal_outcomes.sql",
     "20260806043000_offerpsp_introduction_preparation.sql",
     "20260806062850_offerpsp_organization_member_management.sql",
+    "20260806071110_offerpsp_agent_commission_workflow.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -1284,6 +1285,55 @@ async function verifyAgentWorkspaceAndPricing() {
   );
   await query("select public.share_offerpsp_shortlist($1)", [shortlist.rows[0].value.shortlist_id]);
 
+  const commission = await query(
+    "select public.save_offerpsp_agent_commission($1, null, $2::jsonb) as value",
+    [agentOrgId, JSON.stringify({
+      merchant_organization_id: merchantOrgId,
+      lead_id: leadId,
+      basis: "revenue_share",
+      basis_amount: 10000,
+      commission_percent: 5,
+      amount: 500,
+      currency: "EUR",
+      period_start: "2026-08-01",
+      period_end: "2026-08-31",
+      notes: "Validation commission",
+    })],
+  );
+  const commissionId = commission.rows[0].value.id;
+  await expectQueryFailure(
+    "select public.set_offerpsp_agent_commission_status($1, 'paid')",
+    [commissionId],
+    "Invalid commission status transition",
+  );
+  await query("select public.set_offerpsp_agent_commission_status($1, 'approved')", [commissionId]);
+  await query("select public.set_offerpsp_agent_commission_status($1, 'earned')", [commissionId]);
+  await query("select public.set_offerpsp_agent_commission_status($1, 'paid')", [commissionId]);
+  await expectQueryFailure(
+    "select public.save_offerpsp_agent_commission($1, $2, $3::jsonb)",
+    [agentOrgId, commissionId, JSON.stringify({ amount: 900, currency: "EUR" })],
+    "Only projected commissions can be edited",
+  );
+  const ledger = await query("select public.list_offerpsp_agent_commissions($1) as value", [agentOrgId]);
+  if (ledger.rows[0].value.length !== 1
+      || ledger.rows[0].value[0].status !== "paid"
+      || !ledger.rows[0].value[0].paid_at
+      || ledger.rows[0].value[0].merchant_name !== "Agent Merchant Org") {
+    throw new Error(`Agent commission workflow is incomplete: ${JSON.stringify(ledger.rows[0].value)}`);
+  }
+  const commissionGrants = await query(`select
+    has_function_privilege('authenticated', 'public.list_offerpsp_agent_commissions(uuid)', 'EXECUTE') as staff_list,
+    has_function_privilege('authenticated', 'public.save_offerpsp_agent_commission(uuid,uuid,jsonb)', 'EXECUTE') as staff_save,
+    has_function_privilege('authenticated', 'public.set_offerpsp_agent_commission_status(uuid,text,text)', 'EXECUTE') as staff_status,
+    has_function_privilege('anon', 'public.list_offerpsp_agent_commissions(uuid)', 'EXECUTE') as anon_list,
+    has_table_privilege('authenticated', 'private.offerpsp_agent_commissions', 'SELECT') as direct_read
+  `);
+  if (!commissionGrants.rows[0].staff_list || !commissionGrants.rows[0].staff_save
+      || !commissionGrants.rows[0].staff_status || commissionGrants.rows[0].anon_list
+      || commissionGrants.rows[0].direct_read) {
+    throw new Error("Agent commission grants are unsafe");
+  }
+
   await setUser(AGENT_ID);
   const workspace = await query("select * from public.list_offerpsp_workspace_requests()");
   if (!workspace.rows.some((row) => row.lead_id === leadId && row.access_mode === "agent")) {
@@ -1328,7 +1378,7 @@ async function verifyAgentWorkspaceAndPricing() {
       || memberGrants.rows[0].anon_list || memberGrants.rows[0].anon_save) {
     throw new Error("Organization member management RPC grants are unsafe");
   }
-  process.stdout.write("PASS agent ownership, missing-margin gate, final resale rate and foreign isolation\n");
+  process.stdout.write("PASS agent ownership, resale rate, commission workflow and foreign isolation\n");
 }
 
 async function verifyEntityLifecycle() {
