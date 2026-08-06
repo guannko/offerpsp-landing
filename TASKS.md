@@ -7,8 +7,8 @@ Code or a passing local test is not evidence that production has been updated.
 
 ## Universal offer operations — 2026-08-06
 
-Status: `PARTIAL`. Database workflow is verified in production; the new cockpit UI is awaiting the
-deployment and authenticated visual smoke recorded below.
+Status: `VERIFIED`. The provider-independent database workflow and cockpit controls are deployed
+and verified with an authenticated production smoke test.
 
 - [x] Antarex and every other incomplete PSP are outside the critical path. Draft/review routes do
   not block publication, pause, revision or matching of unrelated offers.
@@ -25,8 +25,9 @@ deployment and authenticated visual smoke recorded below.
   unchanged by the rollout.
 - [x] All 46 migrations and the full regression suite pass in isolated PGlite, including explicit
   proof that individual publication and revision do not mutate neighbouring live routes.
-- [ ] Deploy the cockpit UI and complete authenticated desktop/mobile visual smoke for create,
-  copy and publish controls without creating a synthetic production offer.
+- [x] Production deployment `dpl_4ky5LKB7bbNtQZLVzHg4pCzgih8n` is `READY` on the private cockpit
+  domain. Authenticated desktop smoke confirmed the global create form, BR-Pay pause/revision
+  controls and Antarex publish/copy/archive controls without creating a synthetic production offer.
 
 ## Production black-box audit — 2026-08-06
 
