@@ -562,7 +562,12 @@ The first operational UI is deployed. Daily-use refinement remains.
   deployment `dpl_47Tagpcb2qd7fF31Hfw5nvYD38Ud` and portal deployment
   `dpl_DmxffiYbVYMMtafEmhhmQ1Hu9srz` are verified. The first real invite-email acceptance will be
   verified with an actual subagent instead of creating a fake production user.
-- [ ] Agent commission approval, earned/paid workflow and downloadable statements.
+- [x] Agent commission ledger in production: staff records projected commission amounts and basis,
+  advances them only through `projected → approved → earned → paid`, can void a non-terminal entry,
+  cannot edit paid history or skip stages, and downloads the full ledger as CSV. Private financial
+  rows remain RPC-only and every change is audited. Production migration
+  `offerpsp_agent_commission_workflow` and cockpit deployment
+  `dpl_Cy9HrK4NJ19MrVMPAfBVX2WZoLVC` are verified.
 - [ ] Co-branded agent workspace settings; white-label domains remain a later product decision.
 
 ### P1 — Telegram ingestion
