@@ -259,6 +259,47 @@ export type FreshnessReminder = {
   message_en: string;
 };
 
+export type ModuleEntitlement = {
+  module_key: string;
+  name: string;
+  description?: string | null;
+  minimum_plan: "core" | "pro" | "enterprise";
+  version: string;
+  enabled: boolean;
+  plan?: string | null;
+  status?: string | null;
+  valid_until?: string | null;
+  configuration?: Record<string, unknown>;
+};
+
+export type ComplianceCaseSummary = {
+  case_id: string;
+  lead_id: string;
+  company: string;
+  contact_name?: string | null;
+  work_email?: string | null;
+  company_url?: string | null;
+  vertical?: string | null;
+  geos?: string | null;
+  target_geos?: string[] | null;
+  lead_status?: string | null;
+  assigned_to?: string | null;
+  case_status: "pending" | "screening" | "needs_info" | "cleared" | "hold" | "rejected" | "spam";
+  classification: "merchant" | "subagent" | "psp" | "consultant" | "other" | "unknown";
+  authenticity_score?: number | null;
+  compliance_readiness_score?: number | null;
+  commercial_value_score?: number | null;
+  completeness_score?: number | null;
+  risk_level: "low" | "medium" | "high" | "critical" | "unknown";
+  summary?: string | null;
+  missing_information?: string[] | null;
+  red_flag_count?: number;
+  yellow_flag_count?: number;
+  last_screened_at?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
 export type ControlBridgeData = {
   user: User | null;
   staff: StaffMember | null;
@@ -270,6 +311,8 @@ export type ControlBridgeData = {
   agentMarginPolicies: AgentMarginPolicy[];
   ingestionJobs: OfferIngestionJob[];
   freshnessReminders: FreshnessReminder[];
+  moduleEntitlements: ModuleEntitlement[];
+  complianceCases: ComplianceCaseSummary[];
   commissionSummary: Record<string, number>;
   captainsBridge: CaptainsBridgeSnapshot;
   mailCenter: MailCenterSnapshot;

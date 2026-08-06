@@ -75,10 +75,35 @@ type Shortlist = {
   offerpsp_shortlist_items?: ShortlistItem[];
 };
 
-type Tab = "overview" | "profile" | "contacts" | "matching" | "preview" | "deal" | "communications" | "documents" | "tasks" | "activity";
+type ComplianceCase = {
+  id: string;
+  case_status: string;
+  classification: string;
+  authenticity_score?: number | null;
+  compliance_readiness_score?: number | null;
+  commercial_value_score?: number | null;
+  completeness_score?: number | null;
+  risk_level?: string | null;
+  summary?: string | null;
+  missing_information?: string[] | null;
+  red_flags?: Array<{ title?: string; detail?: string } | string>;
+  yellow_flags?: Array<{ title?: string; detail?: string } | string>;
+  source_links?: Array<{ url?: string; label?: string; kind?: string }>;
+  last_screened_at?: string | null;
+};
+
+type ComplianceWorkspace = {
+  case: ComplianceCase;
+  signals?: Record<string, unknown>;
+  checks?: Array<{ id: string; check_key: string; check_status: string; title: string; detail?: string | null; score?: number | null; source_url?: string | null }>;
+  decisions?: Array<{ id: string; decision: string; classification: string; notes?: string | null; created_at: string }>;
+};
+
+type Tab = "overview" | "compliance" | "profile" | "contacts" | "matching" | "preview" | "deal" | "communications" | "documents" | "tasks" | "activity";
 
 const tabs: Array<{ id: Tab; label: string }> = [
   { id: "overview", label: "Обзор" },
+  { id: "compliance", label: "Проверка" },
   { id: "profile", label: "Профиль" },
   { id: "contacts", label: "Контакты" },
   { id: "matching", label: "Офферы" },
@@ -90,7 +115,7 @@ const tabs: Array<{ id: Tab; label: string }> = [
   { id: "activity", label: "История" },
 ];
 
-const textList = (value: unknown) => Array.isArray(value) && value.length ? value.join(", ") : "—";
+const textList = (value: unknown) => Array.isArray(value) && value.length ? value.join(", ") : typeof value === "string" && value.trim() ? value : "—";
 
 function feeText(fee?: { client_percent?: number; client_fixed?: number; client_fixed_currency?: string }) {
   if (!fee) return "—";
@@ -121,12 +146,13 @@ function isShareable(shortlist?: Shortlist) {
 export default function MerchantWorkspace() {
   const { leadId } = useParams();
   const [searchParams] = useSearchParams();
-  const { leads, routes, loading: bridgeLoading, refresh } = useControlBridge();
+  const { leads, routes, moduleEntitlements, loading: bridgeLoading, refresh } = useControlBridge();
   const lead = leads.find((candidate) => candidate.lead_id === leadId);
   const [tab, setTab] = useState<Tab>("overview");
   const [matches, setMatches] = useState<Match[]>([]);
   const [shortlists, setShortlists] = useState<Shortlist[]>([]);
   const [dealWorkspace, setDealWorkspace] = useState<DealWorkspace | null>(null);
+  const [complianceWorkspace, setComplianceWorkspace] = useState<ComplianceWorkspace | null>(null);
   const [selectedMatches, setSelectedMatches] = useState<string[]>([]);
   const [selectedRoutes, setSelectedRoutes] = useState<string[]>([]);
   const [search, setSearch] = useState("");
@@ -138,7 +164,8 @@ export default function MerchantWorkspace() {
   const loadWorkspace = useCallback(async () => {
     if (!leadId) return;
     setLoading(true);
-    const [matchesResult, shortlistsResult, dealResult, historyResult] = await Promise.all([
+    const complianceEnabled = moduleEntitlements.some((item) => item.module_key === "pre_compliance" && item.enabled);
+    const [matchesResult, shortlistsResult, dealResult, historyResult, complianceResult] = await Promise.all([
       supabase.rpc("list_offerpsp_route_matches", { p_lead_id: leadId }),
       supabase
         .from("offerpsp_shortlists")
@@ -147,16 +174,18 @@ export default function MerchantWorkspace() {
         .order("version", { ascending: false }),
       supabase.rpc("get_offerpsp_staff_request_workspace", { p_lead_id: leadId }),
       supabase.rpc("get_offerpsp_deal_history", { p_lead_id: leadId }),
+      complianceEnabled ? supabase.rpc("get_offerpsp_pre_compliance_case", { p_lead_id: leadId }) : Promise.resolve({ data: null, error: null }),
     ]);
-    const error = matchesResult.error || shortlistsResult.error || dealResult.error || historyResult.error;
+    const error = matchesResult.error || shortlistsResult.error || dealResult.error || historyResult.error || complianceResult.error;
     if (error) setMessage({ tone: "error", text: error.message });
     setMatches(Array.isArray(matchesResult.data) ? matchesResult.data as Match[] : []);
     setShortlists(Array.isArray(shortlistsResult.data) ? shortlistsResult.data as Shortlist[] : []);
     const dealData = dealResult.data && typeof dealResult.data === "object" ? dealResult.data as DealWorkspace : null;
     const historyData = historyResult.data && typeof historyResult.data === "object" ? historyResult.data as Pick<DealWorkspace, "metrics" | "outcomes" | "history"> : null;
     setDealWorkspace(dealData ? { ...dealData, ...(historyData || {}) } : historyData);
+    setComplianceWorkspace(complianceResult.data && typeof complianceResult.data === "object" ? complianceResult.data as ComplianceWorkspace : null);
     setLoading(false);
-  }, [leadId]);
+  }, [leadId, moduleEntitlements]);
 
   useEffect(() => {
     if (!bridgeLoading && lead) void loadWorkspace();
@@ -244,6 +273,21 @@ export default function MerchantWorkspace() {
     }, "Shortlist отправлен в кабинет клиента.");
   }
 
+  async function saveComplianceDecision(input: { decision: string; classification: string; notes: string; summary: string; missing: string[] }) {
+    if (!leadId) return;
+    await runAction("compliance", async () => {
+      const result = await supabase.rpc("save_offerpsp_pre_compliance_decision", {
+        p_lead_id: leadId,
+        p_decision: input.decision,
+        p_classification: input.classification,
+        p_notes: input.notes || null,
+        p_missing_information: input.missing,
+        p_summary: input.summary || null,
+      });
+      return { error: result.error };
+    }, input.decision === "cleared" ? "Лид допущен. Matching разблокирован." : "Решение сохранено в истории проверки.");
+  }
+
   if (bridgeLoading) return <SkeletonPage />;
   if (!lead) return <><PageMeta title="Мерч не найден | OfferPSP" description="Merchant workspace"/><ErrorBanner message="Мерч не найден или заявка находится в архиве."/><Link className="text-sm font-medium text-brand-500" to="/merchants">← Вернуться к мерчам</Link></>;
 
@@ -257,7 +301,7 @@ export default function MerchantWorkspace() {
       </div>
       <div className="flex flex-wrap gap-2">
         <button onClick={() => void Promise.all([loadWorkspace(), entityWorkspace.refresh()])} disabled={loading || entityWorkspace.loading || Boolean(busy)} className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-brand-300 hover:text-brand-500 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300">Обновить</button>
-        <button onClick={() => setTab("matching")} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600">Подобрать и отправить офферы</button>
+        <button onClick={() => setTab(complianceWorkspace?.case.case_status === "cleared" ? "matching" : "compliance")} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600">{complianceWorkspace?.case.case_status === "cleared" ? "Подобрать и отправить офферы" : "Проверить заявку"}</button>
       </div>
     </div>
 
@@ -270,6 +314,8 @@ export default function MerchantWorkspace() {
 
     {loading ? <SkeletonPage/> : tab === "overview"
       ? <Overview lead={lead} matches={matches} shortlist={latest}/>
+      : tab === "compliance"
+        ? <CompliancePanel workspace={complianceWorkspace} busy={busy} onSave={(input) => void saveComplianceDecision(input)}/>
       : tab === "profile"
         ? <MerchantProfileEditor lead={lead} onChanged={async () => { await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]); }}/>
       : tab === "contacts"
@@ -288,6 +334,7 @@ export default function MerchantWorkspace() {
             runMatching={() => void runMatching()}
             createMatched={() => void createMatchedShortlist()}
             createManual={() => void createManualShortlist()}
+            complianceReady={complianceWorkspace?.case.case_status === "cleared"}
           />
       : tab === "preview"
           ? <Preview shortlist={latest} busy={busy} onShare={() => void shareLatest()}/>
@@ -303,11 +350,70 @@ export default function MerchantWorkspace() {
   </>;
 }
 
+function CompliancePanel({ workspace, busy, onSave }: {
+  workspace: ComplianceWorkspace | null;
+  busy: string | null;
+  onSave: (input: { decision: string; classification: string; notes: string; summary: string; missing: string[] }) => void;
+}) {
+  const [classification, setClassification] = useState("unknown");
+  const [summary, setSummary] = useState("");
+  const [missing, setMissing] = useState("");
+  const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    setClassification(workspace?.case.classification || "unknown");
+    setSummary(workspace?.case.summary || "");
+    setMissing((workspace?.case.missing_information || []).join("\n"));
+  }, [workspace]);
+
+  if (!workspace) return <Panel><EmptyState title="Досье проверки ещё не создано" description="Обновите данные. Если модуль только что подключён, сначала должна быть применена его миграция."/></Panel>;
+  const item = workspace.case;
+  const scores = [
+    ["Подлинность", item.authenticity_score],
+    ["Готовность досье", item.compliance_readiness_score],
+    ["Коммерческая ценность", item.commercial_value_score],
+    ["Полнота заявки", item.completeness_score],
+  ] as const;
+  const submit = (decision: string) => onSave({
+    decision,
+    classification,
+    notes,
+    summary,
+    missing: missing.split("\n").map((value) => value.trim()).filter(Boolean),
+  });
+
+  return <div className="grid grid-cols-1 gap-6 xl:grid-cols-5">
+    <div className="space-y-6 xl:col-span-3">
+      <Panel>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">PRO · Pre-Compliance</p><h2 className="mt-2 text-xl font-semibold text-gray-900 dark:text-white">Предварительное досье</h2><p className="mt-1 text-sm text-gray-500">Автоматическая проверка не допускает лид сама — решение остаётся за командой.</p></div><div className="flex items-center gap-2"><StatusPill status={item.case_status}/><span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600 dark:bg-white/5 dark:text-gray-300">риск: {item.risk_level || "unknown"}</span></div></div>
+        <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">{scores.map(([label, value]) => <div key={label} className="rounded-xl bg-gray-50 p-4 dark:bg-white/[0.03]"><strong className="text-2xl text-gray-900 dark:text-white">{value ?? "—"}</strong><span className="mt-1 block text-xs text-gray-500">{label}</span></div>)}</div>
+      </Panel>
+      <Panel>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Проверки и доказательства</h3>
+        <div className="mt-4 space-y-3">{workspace.checks?.length ? workspace.checks.map((check) => <div key={check.id} className="rounded-xl border border-gray-200 p-4 dark:border-gray-800"><div className="flex items-start justify-between gap-3"><div><strong className="text-sm text-gray-900 dark:text-white">{check.title}</strong><p className="mt-1 text-sm text-gray-500">{check.detail || check.check_key}</p>{check.source_url && <a href={check.source_url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-semibold text-brand-500">Открыть источник ↗</a>}</div><StatusPill status={check.check_status}/></div></div>) : <EmptyState title="Автопроверка ещё не запускалась" description="После подключения workflow здесь появятся домен, сайт, email, сеть, лицензия, санкционные и репутационные сигналы."/>}</div>
+      </Panel>
+      {!!workspace.decisions?.length && <Panel><h3 className="text-lg font-semibold text-gray-900 dark:text-white">История решений</h3><div className="mt-4 divide-y divide-gray-100 dark:divide-gray-800">{workspace.decisions.map((decision) => <div key={decision.id} className="py-3"><div className="flex items-center justify-between gap-3"><StatusPill status={decision.decision}/><span className="text-xs text-gray-400">{new Date(decision.created_at).toLocaleString("ru-RU")}</span></div><p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{decision.notes || `Классификация: ${decision.classification}`}</p></div>)}</div></Panel>}
+    </div>
+    <Panel className="h-fit xl:col-span-2">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Решение по заявке</h3>
+      <label className="mt-5 block text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">Кто перед нами</label>
+      <select value={classification} onChange={(event) => setClassification(event.target.value)} className="mt-2 h-11 w-full rounded-lg border border-gray-200 bg-transparent px-3 text-sm dark:border-gray-700">{[["unknown","Не определено"],["merchant","Мерч"],["subagent","Субагент"],["psp","PSP"],["consultant","Консультант"],["other","Другое"]].map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select>
+      <label className="mt-4 block text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">Вывод проверки</label>
+      <textarea value={summary} onChange={(event) => setSummary(event.target.value)} rows={4} className="mt-2 w-full rounded-lg border border-gray-200 bg-transparent p-3 text-sm dark:border-gray-700" placeholder="Что подтверждено, какие риски и почему лид полезен"/>
+      <label className="mt-4 block text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">Что запросить у заявителя</label>
+      <textarea value={missing} onChange={(event) => setMissing(event.target.value)} rows={5} className="mt-2 w-full rounded-lg border border-gray-200 bg-transparent p-3 text-sm dark:border-gray-700" placeholder={"Один пункт на строку\nСайты операторов\nЛицензии\nPayIn / PayOut"}/>
+      <label className="mt-4 block text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">Внутренняя заметка</label>
+      <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} className="mt-2 w-full rounded-lg border border-gray-200 bg-transparent p-3 text-sm dark:border-gray-700" placeholder="Почему принято это решение"/>
+      <div className="mt-5 grid grid-cols-2 gap-2"><button onClick={() => submit("cleared")} disabled={busy === "compliance"} className="rounded-lg bg-success-600 px-3 py-3 text-sm font-semibold text-white disabled:opacity-50">Допустить</button><button onClick={() => submit("needs_info")} disabled={busy === "compliance"} className="rounded-lg bg-warning-500 px-3 py-3 text-sm font-semibold text-white disabled:opacity-50">Запросить данные</button><button onClick={() => submit("hold")} disabled={busy === "compliance"} className="rounded-lg border border-gray-200 px-3 py-3 text-sm font-semibold text-gray-700 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300">На паузу</button><button onClick={() => submit("rejected")} disabled={busy === "compliance"} className="rounded-lg bg-error-600 px-3 py-3 text-sm font-semibold text-white disabled:opacity-50">Отклонить</button><button onClick={() => submit("spam")} disabled={busy === "compliance"} className="col-span-2 rounded-lg border border-error-200 px-3 py-3 text-sm font-semibold text-error-600 disabled:opacity-50">Пометить как спам</button></div>
+    </Panel>
+  </div>;
+}
+
 function toggle(values: string[], value: string) {
   return values.includes(value) ? values.filter((candidate) => candidate !== value) : [...values, value];
 }
 
-function MatchingPanel({ matches, selectedMatches, setSelectedMatches, publishedRoutes, selectedRoutes, setSelectedRoutes, search, setSearch, busy, runMatching, createMatched, createManual }: {
+function MatchingPanel({ matches, selectedMatches, setSelectedMatches, publishedRoutes, selectedRoutes, setSelectedRoutes, search, setSearch, busy, runMatching, createMatched, createManual, complianceReady }: {
   matches: Match[];
   selectedMatches: string[];
   setSelectedMatches: (value: string[]) => void;
@@ -320,15 +426,17 @@ function MatchingPanel({ matches, selectedMatches, setSelectedMatches, published
   runMatching: () => void;
   createMatched: () => void;
   createManual: () => void;
+  complianceReady: boolean;
 }) {
   return <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
     <Panel>
+      {!complianceReady && <div className="mb-5 rounded-xl border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-700">Matching заблокирован: сначала откройте вкладку «Проверка» и примите решение по заявке.</div>}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Автоподбор</p><h2 className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">Офферы по запросу мерча</h2><p className="mt-1 text-sm text-gray-500">Matching — подсказка. Финальное решение всегда за нами.</p></div>
-        <button onClick={runMatching} disabled={Boolean(busy)} className="shrink-0 rounded-lg border border-brand-200 px-3 py-2 text-sm font-medium text-brand-600 hover:bg-brand-50 disabled:opacity-50 dark:border-brand-800 dark:text-brand-300">{busy === "matching" ? "Подбираю…" : "Запустить подбор"}</button>
+        <button onClick={runMatching} disabled={Boolean(busy) || !complianceReady} className="shrink-0 rounded-lg border border-brand-200 px-3 py-2 text-sm font-medium text-brand-600 hover:bg-brand-50 disabled:opacity-50 dark:border-brand-800 dark:text-brand-300">{busy === "matching" ? "Подбираю…" : "Запустить подбор"}</button>
       </div>
       <div className="mt-5 space-y-3">{matches.length ? matches.map((match) => <SelectionCard key={match.match_id} selected={selectedMatches.includes(match.match_id)} onChange={() => setSelectedMatches(toggle(selectedMatches, match.match_id))} title={`${match.provider_name || "PSP"} · ${match.client_title || match.route_code || "Маршрут"}`} meta={`${textList(match.geos)} · ${textList(match.currencies)} · ${textList(match.methods)} · ${String(match.flow || "—").toUpperCase()}`} aside={`${match.score ?? "—"}`} detail={(match.client_pricing || []).map((fee) => `${fee.flow || "fee"}: ${feeText(fee)}`).join(" · ") || "Ставка требует проверки"}/>) : <EmptyState title="Кандидатов пока нет" description="Запустите matching или выберите любой опубликованный оффер справа."/>}</div>
-      {matches.length > 0 && <button onClick={createMatched} disabled={!selectedMatches.length || Boolean(busy)} className="mt-5 w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-40">{busy === "matched-shortlist" ? "Создаю…" : `Создать shortlist из выбранных (${selectedMatches.length})`}</button>}
+      {matches.length > 0 && <button onClick={createMatched} disabled={!selectedMatches.length || Boolean(busy) || !complianceReady} className="mt-5 w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-40">{busy === "matched-shortlist" ? "Создаю…" : `Создать shortlist из выбранных (${selectedMatches.length})`}</button>}
     </Panel>
 
     <Panel>
@@ -336,7 +444,7 @@ function MatchingPanel({ matches, selectedMatches, setSelectedMatches, published
       <p className="mt-1 text-sm text-gray-500">Можно отправить решение вне исходного запроса. Клиент увидит анонимный Telegram‑формат, а настоящий PSP останется внутри системы.</p>
       <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Поиск: GEO, валюта, метод, PSP…" className="mt-5 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:text-white"/>
       <div className="mt-4 max-h-[520px] space-y-3 overflow-y-auto pr-1">{publishedRoutes.length ? publishedRoutes.map((route) => <SelectionCard key={route.route_id} selected={selectedRoutes.includes(route.route_id)} onChange={() => setSelectedRoutes(toggle(selectedRoutes, route.route_id))} title={route.client_title || route.route_code || "Оффер"} meta={`${textList(route.geos)} · ${textList(route.currencies)} · ${textList(route.methods)} · ${String(route.flow || "—").toUpperCase()}`} detail={`${route.provider_name || "PSP"} · ${route.provider_code || ""}`} aside={route.is_stale ? "устарел" : "готов"}/>) : <EmptyState title="Подходящих опубликованных офферов нет" description="Проверьте фильтр, публикацию и наличие клиентской маржи."/>}</div>
-      <button onClick={createManual} disabled={!selectedRoutes.length || Boolean(busy)} className="mt-5 w-full rounded-lg bg-gray-900 px-4 py-3 text-sm font-semibold text-white hover:bg-black disabled:opacity-40 dark:bg-white dark:text-gray-900">{busy === "manual-shortlist" ? "Создаю…" : `Создать ручной shortlist (${selectedRoutes.length})`}</button>
+      <button onClick={createManual} disabled={!selectedRoutes.length || Boolean(busy) || !complianceReady} className="mt-5 w-full rounded-lg bg-gray-900 px-4 py-3 text-sm font-semibold text-white hover:bg-black disabled:opacity-40 dark:bg-white dark:text-gray-900">{busy === "manual-shortlist" ? "Создаю…" : `Создать ручной shortlist (${selectedRoutes.length})`}</button>
     </Panel>
   </div>;
 }

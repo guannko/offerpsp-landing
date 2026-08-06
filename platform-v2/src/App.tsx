@@ -21,6 +21,7 @@ import {
   ProvidersPage,
 } from "./pages/Platform";
 import { CommunicationsWorkspace, IntelligenceWorkspace, IntegrationsWorkspace, TasksWorkspace } from "./pages/CaptainPages";
+import CompliancePage from "./pages/CompliancePage";
 
 export default function App() {
   const basename = import.meta.env.BASE_URL === "/" ? undefined : import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -35,6 +36,7 @@ export default function App() {
       <Route path="/psps" element={<ProvidersPage/>}/>
       <Route path="/psps/:providerId" element={<ProviderWorkspace/>}/>
       <Route path="/offers" element={<OffersPage/>}/>
+      <Route path="/compliance" element={<CompliancePage/>}/>
       <Route path="/matching" element={<ModulePage module="matching"/>}/>
       <Route path="/deals" element={<DealDeskPage/>}/>
       <Route path="/intelligence" element={<IntelligenceWorkspace/>}/>

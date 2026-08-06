@@ -5,6 +5,29 @@ Updated: 2026-08-06
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## Pre-Compliance PRO module — 2026-08-06
+
+Status: `VERIFIED` locally; production migration, workflow activation and cockpit deployment are
+not started.
+
+- [x] A separately entitled `pre_compliance` PRO module has its own navigation, queue and merchant
+  workspace rather than being embedded as an unlicensed feature flag.
+- [x] Every new request receives a private case, normalized GEO/methods and a high-priority review
+  task. The old automatic legacy shortlist trigger is removed.
+- [x] Four independent scores cover authenticity, compliance readiness, commercial value and form
+  completeness; roles distinguish direct merchants, subagents, PSPs and consultants.
+- [x] Database gates block automatic matching, manual shortlist creation and sharing until an
+  active staff member records a `cleared` decision. Automated screening can never clear a lead.
+- [x] Private evidence, submission signals and immutable decision history are reachable only via
+  staff/service RPCs. Raw IP storage is not part of the contract.
+- [x] n8n draft workflow `wiEFFDaHd3uaJoJi` (`OfferPSP | Pre-Compliance PRO`) is created inactive
+  and validates with 8 nodes, 7 connections, 0 errors and 0 warnings.
+- [x] All 43 migrations, security grants and the full offer → shortlist → PSP review → Telegram →
+  Zoom → won regression pass in isolated PGlite. Cockpit build passes; lint has no errors.
+- [ ] Rollout order: snapshot → migration → read/grant checks → activate n8n worker → verify one
+  controlled case → deploy cockpit → verify the real MBA request → confirm inbox/command-center
+  counters and matching lock.
+
 ## Agent operations — 2026-08-06
 
 Status: `VERIFIED` in production; the first real invitation acceptance and visible co-brand smoke

@@ -7,7 +7,7 @@ import { useSidebar } from "../context/SidebarContext";
 
 export default function AppHeader() {
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
-  const { staff, user, signOut, leads, providers, routes } = useControlBridge();
+  const { staff, user, signOut, leads, providers, routes, complianceCases } = useControlBridge();
   const location = useLocation();
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -16,7 +16,8 @@ export default function AppHeader() {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const activeModule = platformModules.find((item) => item.path === "/" ? location.pathname === "/" : location.pathname.startsWith(item.path));
-  const attentionCount = leads.filter((lead) => ["new", "needs_clarification", "provider_needs_info"].includes(lead.status || "")).length + routes.filter((route) => route.is_stale || Number(route.open_error_count || 0) > 0).length;
+  const attentionLeadIds = new Set(complianceCases.filter((item) => ["pending", "screening", "needs_info", "hold"].includes(item.case_status)).map((item) => item.lead_id));
+  const attentionCount = leads.filter((lead) => ["new", "needs_clarification", "provider_needs_info"].includes(lead.status || "") || attentionLeadIds.has(lead.lead_id)).length + routes.filter((route) => route.is_stale || Number(route.open_error_count || 0) > 0).length;
   const searchResults = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return [];

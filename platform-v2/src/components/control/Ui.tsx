@@ -32,6 +32,13 @@ export const statusLabels: Record<string, string> = {
   duplicate: "Дубль",
   failed: "Ошибка разбора",
   dismissed: "Убран",
+  pending: "Ожидает проверки",
+  screening: "Проверяется",
+  needs_info: "Нужны данные",
+  cleared: "Допущен",
+  hold: "На паузе",
+  rejected: "Отклонён",
+  spam: "Спам",
 };
 
 export function PageHeading({ eyebrow, title, description, action }: { eyebrow: string; title: string; description: string; action?: ReactNode }) {
@@ -69,9 +76,9 @@ export function Metric({ label, value, hint, tone = "default" }: { label: string
 
 export function StatusPill({ status }: { status?: string | null }) {
   const normalized = status || "unknown";
-  const tone = normalized === "won" || normalized === "published" || normalized === "active"
+  const tone = normalized === "won" || normalized === "published" || normalized === "active" || normalized === "cleared"
     ? "bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-300"
-    : normalized === "lost" || normalized === "provider_declined"
+    : normalized === "lost" || normalized === "provider_declined" || normalized === "rejected" || normalized === "spam"
       ? "bg-error-50 text-error-700 dark:bg-error-500/10 dark:text-error-300"
       : normalized.includes("needs") || normalized === "draft" || normalized === "queued"
         ? "bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-300"

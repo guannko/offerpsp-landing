@@ -22,6 +22,8 @@ import type {
   MailCenterSnapshot,
   OfferIngestionJob,
   FreshnessReminder,
+  ModuleEntitlement,
+  ComplianceCaseSummary,
 } from "../types/offerpsp";
 
 type ControlBridgeContextValue = ControlBridgeData & {
@@ -40,6 +42,8 @@ const emptyData: ControlBridgeData = {
   agentMarginPolicies: [],
   ingestionJobs: [],
   freshnessReminders: [],
+  moduleEntitlements: [],
+  complianceCases: [],
   commissionSummary: {},
   captainsBridge: { casino_leads: [], psp_providers: [], email_drafts: [], telegram_log: [], bot_tasks: [], offerpsp_tasks: [] },
   mailCenter: { metrics: { threads: 0, unread: 0, awaiting_reply: 0, follow_up: 0 }, threads: [], messages: [] },
@@ -108,7 +112,7 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const [leadsResult, managementResult, supplyResult, coverageResult, captainsResult, mailResult, ingestionResult, freshnessResult] = await Promise.all([
+    const [leadsResult, managementResult, supplyResult, coverageResult, captainsResult, mailResult, ingestionResult, freshnessResult, entitlementsResult, complianceResult] = await Promise.all([
       supabase.from("offerpsp_leads").select("*").order("submitted_at", { ascending: false }),
       supabase.rpc("get_offerpsp_management_registry"),
       supabase.rpc("list_offerpsp_supply"),
@@ -117,9 +121,11 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
       supabase.rpc("get_offerpsp_mail_center", { p_limit: 250 }),
       supabase.rpc("list_offerpsp_ingestion_jobs", { p_limit: 100 }),
       supabase.rpc("list_offerpsp_freshness_reminders"),
+      supabase.rpc("get_offerpsp_module_entitlements"),
+      supabase.rpc("get_offerpsp_pre_compliance_registry"),
     ]);
 
-    const firstError = [leadsResult.error, managementResult.error, supplyResult.error, coverageResult.error, captainsResult.error, mailResult.error, ingestionResult.error, freshnessResult.error].find(Boolean);
+    const firstError = [leadsResult.error, managementResult.error, supplyResult.error, coverageResult.error, captainsResult.error, mailResult.error, ingestionResult.error, freshnessResult.error, entitlementsResult.error, complianceResult.error].find(Boolean);
     const management = (managementResult.data || {}) as Record<string, unknown>;
     const supply = (supplyResult.data || {}) as Record<string, unknown>;
     const coverage = (coverageResult.data || {}) as Record<string, unknown>;
@@ -135,6 +141,8 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
       agentMarginPolicies: asArray<AgentMarginPolicy>(management.agent_margin_policies),
       ingestionJobs: asArray<OfferIngestionJob>(ingestionResult.data),
       freshnessReminders: asArray<FreshnessReminder>(freshnessResult.data),
+      moduleEntitlements: asArray<ModuleEntitlement>(entitlementsResult.data),
+      complianceCases: asArray<ComplianceCaseSummary>(complianceResult.data),
       commissionSummary: (management.commission_summary || {}) as Record<string, number>,
       captainsBridge: (captainsResult.data || emptyData.captainsBridge) as CaptainsBridgeSnapshot,
       mailCenter: (mailResult.data || emptyData.mailCenter) as MailCenterSnapshot,

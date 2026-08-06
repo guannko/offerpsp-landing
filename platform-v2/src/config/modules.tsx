@@ -25,6 +25,8 @@ export type PlatformModule = {
   icon: ReactNode;
   enabled: boolean;
   group: "operations" | "growth" | "control";
+  badge?: string;
+  requiresEntitlement?: string;
 };
 
 export const featureFlags = {
@@ -34,6 +36,7 @@ export const featureFlags = {
   merchants: true,
   providers: true,
   offers: true,
+  compliance: true,
   matching: false,
   dealDesk: true,
   intelligence: true,
@@ -53,6 +56,7 @@ export const platformModules: PlatformModule[] = [
   { id: "merchants", label: "Мерчи", shortLabel: "Мерчи", path: "/merchants", icon: <GroupIcon />, enabled: featureFlags.merchants, group: "operations" },
   { id: "providers", label: "PSP", shortLabel: "PSP", path: "/psps", icon: <BoxCubeIcon />, enabled: featureFlags.providers, group: "operations" },
   { id: "offers", label: "Офферы", shortLabel: "Офферы", path: "/offers", icon: <PageIcon />, enabled: featureFlags.offers, group: "operations" },
+  { id: "compliance", label: "Проверка лидов", shortLabel: "Compliance", path: "/compliance", icon: <TaskIcon />, enabled: featureFlags.compliance, group: "operations", badge: "PRO", requiresEntitlement: "pre_compliance" },
   { id: "matching", label: "Подбор решений", shortLabel: "Matching", path: "/matching", icon: <ShootingStarIcon />, enabled: featureFlags.matching, group: "operations" },
   { id: "dealDesk", label: "Сделки", shortLabel: "Сделки", path: "/deals", icon: <TaskIcon />, enabled: featureFlags.dealDesk, group: "operations" },
   { id: "intelligence", label: "База AIBot", shortLabel: "База AIBot", path: "/intelligence", icon: <BoltIcon />, enabled: featureFlags.intelligence, group: "growth" },

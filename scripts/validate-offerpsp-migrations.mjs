@@ -222,6 +222,8 @@ async function applyMigrations() {
     "20260806062850_offerpsp_organization_member_management.sql",
     "20260806071110_offerpsp_agent_commission_workflow.sql",
     "20260806080000_offerpsp_agent_cobrand_settings.sql",
+    "20260806123857_offerpsp_pre_compliance_module.sql",
+    "20260806132300_offerpsp_pre_compliance_indexes.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -335,6 +337,28 @@ async function verifyManagementOperationGrants() {
   process.stdout.write("PASS staff-only management RPC grants with anon denied\n");
 }
 
+async function verifyPreComplianceGrants() {
+  const result = await query(`select
+    has_function_privilege('authenticated', 'public.get_offerpsp_module_entitlements()', 'EXECUTE') as staff_entitlements,
+    has_function_privilege('authenticated', 'public.get_offerpsp_pre_compliance_registry()', 'EXECUTE') as staff_registry,
+    has_function_privilege('authenticated', 'public.get_offerpsp_pre_compliance_case(uuid)', 'EXECUTE') as staff_case,
+    has_function_privilege('authenticated', 'public.save_offerpsp_pre_compliance_decision(uuid,text,text,text,text[],text)', 'EXECUTE') as staff_decision,
+    has_function_privilege('authenticated', 'public.record_offerpsp_pre_compliance_screening(uuid,jsonb)', 'EXECUTE') as staff_screen,
+    has_function_privilege('service_role', 'public.record_offerpsp_pre_compliance_screening(uuid,jsonb)', 'EXECUTE') as service_screen,
+    has_function_privilege('service_role', 'public.claim_offerpsp_pre_compliance_jobs(integer)', 'EXECUTE') as service_claim,
+    has_function_privilege('authenticated', 'public.claim_offerpsp_pre_compliance_jobs(integer)', 'EXECUTE') as staff_claim,
+    has_function_privilege('anon', 'public.get_offerpsp_pre_compliance_registry()', 'EXECUTE') as anon_registry,
+    has_table_privilege('authenticated', 'private.offerpsp_compliance_cases', 'SELECT') as direct_cases,
+    has_table_privilege('authenticated', 'private.offerpsp_submission_signals', 'SELECT') as direct_signals
+  `);
+  const grants = result.rows[0];
+  if (!grants.staff_entitlements || !grants.staff_registry || !grants.staff_case || !grants.staff_decision
+      || grants.staff_screen || grants.staff_claim || !grants.service_screen || !grants.service_claim || grants.anon_registry || grants.direct_cases || grants.direct_signals) {
+    throw new Error("Pre-compliance grants do not match the paid staff/service RPC boundary");
+  }
+  process.stdout.write("PASS paid pre-compliance entitlement and staff/service isolation\n");
+}
+
 async function verifyCaptainsBridgeGrants() {
   const result = await query(`select
     has_function_privilege('authenticated', 'public.get_offerpsp_captains_bridge()', 'EXECUTE') as authenticated_registry,
@@ -412,31 +436,88 @@ async function seedUsers() {
   `);
 }
 
-async function verifyLegacyShortlistBlocked() {
+async function clearPreCompliance(leadId, classification = "merchant") {
+  await setUser(STAFF_ID);
+  await setRole("authenticated");
+  return query(
+    "select public.save_offerpsp_pre_compliance_decision($1, 'cleared', $2, 'Validation clearance', '{}'::text[], 'Validation fixture cleared') as value",
+    [leadId, classification],
+  );
+}
+
+async function verifyPreComplianceGate() {
   await setUser(STAFF_ID);
   const lead = await query(`
     insert into public.offerpsp_leads (
-      name, work_email, company, vertical, geos, source, status, consent
+      name, work_email, company, company_url, vertical, geos, methods, source, status, consent
     ) values (
-      'Legacy Fixture', 'legacy@example.com', 'Legacy Fixture Merchant',
-      'iGaming', 'India', 'legacy-shortlist-regression', 'new', true
+      'Compliance Fixture', 'compliance@example.com', 'Compliance Fixture Merchant',
+      'https://compliance.invalid', 'iGaming', 'South Korea', 'UPI',
+      'pre-compliance-regression', 'new', true
     ) returning lead_id
   `);
-  const shortlist = await query(
-    "select id from public.offerpsp_shortlists where lead_id = $1 and status = 'draft' order by version desc limit 1",
+  const leadId = lead.rows[0].lead_id;
+  const state = await query(
+    `select l.status, l.target_geos, l.requested_methods, c.case_status, c.completeness_score,
+      (select count(*)::integer from public.offerpsp_matches m where m.lead_id = l.lead_id) as legacy_matches,
+      (select count(*)::integer from public.offerpsp_shortlists s where s.lead_id = l.lead_id) as shortlists,
+      (select count(*)::integer from public.offerpsp_tasks t where t.lead_id = l.lead_id and t.metadata ->> 'module' = 'pre_compliance') as review_tasks
+     from public.offerpsp_leads l
+     join private.offerpsp_compliance_cases c on c.lead_id = l.lead_id
+     where l.lead_id = $1`,
+    [leadId],
+  );
+  const opened = state.rows[0];
+  if (opened.case_status !== "pending" || opened.legacy_matches !== 0 || opened.shortlists !== 0
+      || opened.review_tasks !== 1 || !opened.target_geos.includes("KR") || !opened.requested_methods.includes("UPI")) {
+    throw new Error(`New lead did not enter the guarded normalized queue: ${JSON.stringify(opened)}`);
+  }
+  await expectQueryFailure(
+    "select public.rebuild_offerpsp_route_matches($1)",
+    [leadId],
+    "Pre-compliance clearance is required before matching",
+  );
+  await expectQueryFailure(
+    "insert into public.offerpsp_shortlists(lead_id, title, status) values ($1, 'Blocked shortlist', 'draft')",
+    [leadId],
+    "Pre-compliance clearance is required before creating or sharing a shortlist",
+  );
+
+  await setRole("service_role");
+  const claimed = await query("select public.claim_offerpsp_pre_compliance_jobs(10) as value");
+  if (!claimed.rows[0].value.some((item) => item.lead_id === leadId && item.target_geos.includes("KR"))) {
+    throw new Error(`Service worker did not claim the normalized lead: ${JSON.stringify(claimed.rows[0].value)}`);
+  }
+  const screening = await query(
+    "select public.record_offerpsp_pre_compliance_screening($1, $2::jsonb) as value",
+    [leadId, JSON.stringify({
+      classification: "merchant",
+      authenticity_score: 82,
+      compliance_readiness_score: 45,
+      commercial_value_score: 76,
+      completeness_score: 60,
+      risk_level: "medium",
+      confidence: 0.81,
+      summary: "Domain exists; licence evidence is missing.",
+      missing_information: ["Licence evidence"],
+      source_links: [{ url: "https://compliance.invalid", kind: "website" }],
+      checks: [{ check_key: "domain", status: "passed", title: "Domain resolves", score: 90 }],
+      screening_provider: "validation",
+    })],
+  );
+  if (screening.rows[0].value.status !== "screening") {
+    throw new Error(`Automated screening was allowed to clear the lead: ${JSON.stringify(screening.rows[0].value)}`);
+  }
+  await clearPreCompliance(leadId);
+  const cleared = await query(
+    "select l.status, c.case_status, c.classification, (select count(*) from private.offerpsp_compliance_decisions d where d.case_id = c.id) as decisions from public.offerpsp_leads l join private.offerpsp_compliance_cases c on c.lead_id = l.lead_id where l.lead_id = $1",
     [lead.rows[0].lead_id],
   );
-  if (!shortlist.rows.length) throw new Error("Legacy matching fixture did not create its draft shortlist");
-  await expectQueryFailure(
-    "select public.share_offerpsp_shortlist($1)",
-    [shortlist.rows[0].id],
-    "Shortlist contains legacy or incomplete options",
-  );
-  const status = await query("select status, shared_at from public.offerpsp_shortlists where id = $1", [shortlist.rows[0].id]);
-  if (status.rows[0].status !== "draft" || status.rows[0].shared_at !== null) {
-    throw new Error("Blocked legacy shortlist was mutated while sharing failed");
+  if (cleared.rows[0].status !== "qualifying" || cleared.rows[0].case_status !== "cleared"
+      || cleared.rows[0].classification !== "merchant" || Number(cleared.rows[0].decisions) !== 1) {
+    throw new Error(`Manual clearance did not open matching: ${JSON.stringify(cleared.rows[0])}`);
   }
-  process.stdout.write("PASS legacy/incomplete shortlist blocked without mutation\n");
+  process.stdout.write("PASS paid pre-compliance normalization, evidence screening and manual matching gate\n");
 }
 
 async function verifyPortalLeadClaims() {
@@ -888,6 +969,7 @@ async function runEndToEndFixture() {
     ) returning lead_id`,
   );
   const leadId = leadResult.rows[0].lead_id;
+  await clearPreCompliance(leadId);
   await query("update public.offerpsp_leads set client_user_id = $1 where lead_id = $2", [CLIENT_ID, leadId]);
 
   const unrelatedRoute = await query(`
@@ -1257,6 +1339,7 @@ async function verifyAgentWorkspaceAndPricing() {
     ) returning lead_id
   `, [merchantOrgId, agentOrgId]);
   const leadId = lead.rows[0].lead_id;
+  await clearPreCompliance(leadId, "subagent");
   await query("select public.rebuild_offerpsp_route_matches($1)", [leadId]);
   const matches = await query("select public.list_offerpsp_route_matches($1) as value", [leadId]);
   const matchId = matches.rows[0].value[0].match_id;
@@ -1592,7 +1675,7 @@ async function verify360Workspaces() {
   );
   if (merchantWorkspace.rows[0].value.contacts.length !== 1
       || merchantWorkspace.rows[0].value.documents.length !== 1
-      || merchantWorkspace.rows[0].value.tasks.length !== 1
+      || !merchantWorkspace.rows[0].value.tasks.some((item) => item.title === "Request KYB package")
       || !merchantWorkspace.rows[0].value.activities.some((item) => item.activity_type === "document_added")) {
     throw new Error("Merchant 360 workspace is missing contacts, documents or timeline events");
   }
@@ -2023,12 +2106,13 @@ try {
   await verifyClientPolicyBoundary();
   await verifySupplyOperationGrants();
   await verifyManagementOperationGrants();
+  await verifyPreComplianceGrants();
   await verifyCaptainsBridgeGrants();
   await verify360WorkspaceGrants();
   await verifyResearchCrudGrants();
   await seedUsers();
   await verifyPortalLeadClaims();
-  await verifyLegacyShortlistBlocked();
+  await verifyPreComplianceGate();
   await importPreparedDrafts();
   await verifyOfferIngestionQueue();
   await verifySupplyOperations();

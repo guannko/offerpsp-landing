@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router";
 import { HorizontaLDots } from "../icons";
 import { platformModules } from "../config/modules";
 import { useSidebar } from "../context/SidebarContext";
+import { useControlBridge } from "../context/ControlBridgeContext";
 
 const groupLabels = {
   operations: "Операции",
@@ -12,6 +13,7 @@ const groupLabels = {
 export default function AppSidebar() {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleMobileSidebar } = useSidebar();
   const location = useLocation();
+  const { moduleEntitlements } = useControlBridge();
   const showLabels = isExpanded || isHovered || isMobileOpen;
 
   return (
@@ -29,12 +31,14 @@ export default function AppSidebar() {
       <div className="flex flex-1 flex-col overflow-y-auto pb-24 no-scrollbar">
         <nav className="space-y-6">
           {(Object.keys(groupLabels) as Array<keyof typeof groupLabels>).map((group) => {
-            const items = platformModules.filter((item) => item.group === group && item.enabled);
+            const items = platformModules.filter((item) => item.group === group && item.enabled && (
+              !item.requiresEntitlement || moduleEntitlements.some((entitlement) => entitlement.module_key === item.requiresEntitlement && entitlement.enabled)
+            ));
             return <div key={group}>
               <h2 className={`mb-3 flex text-[10px] font-semibold uppercase leading-5 tracking-[0.18em] text-gray-400 ${showLabels ? "justify-start px-3" : "justify-center"}`}>{showLabels ? groupLabels[group] : <HorizontaLDots className="size-5"/>}</h2>
               <ul className="space-y-1">{items.map((item) => {
                 const active = item.path === "/" ? location.pathname === "/" : location.pathname.startsWith(item.path);
-                return <li key={item.id}><Link to={item.path} onClick={() => { if (isMobileOpen) toggleMobileSidebar(); }} title={!showLabels ? item.label : undefined} className={`menu-item group ${active ? "menu-item-active" : "menu-item-inactive"} ${showLabels ? "justify-start" : "justify-center"}`}><span className={`menu-item-icon-size ${active ? "menu-item-icon-active" : "menu-item-icon-inactive"}`}>{item.icon}</span>{showLabels && <span className="menu-item-text">{item.label}</span>}</Link></li>;
+                return <li key={item.id}><Link to={item.path} onClick={() => { if (isMobileOpen) toggleMobileSidebar(); }} title={!showLabels ? item.label : undefined} className={`menu-item group ${active ? "menu-item-active" : "menu-item-inactive"} ${showLabels ? "justify-start" : "justify-center"}`}><span className={`menu-item-icon-size ${active ? "menu-item-icon-active" : "menu-item-icon-inactive"}`}>{item.icon}</span>{showLabels && <><span className="menu-item-text">{item.label}</span>{item.badge && <span className="ml-auto rounded-full bg-brand-50 px-2 py-0.5 text-[9px] font-bold text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">{item.badge}</span>}</>}</Link></li>;
               })}</ul>
             </div>;
           })}

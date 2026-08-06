@@ -27,7 +27,7 @@ function PageFrame({ title, description, children }: { title: string; descriptio
 }
 
 export function CommandCenter() {
-  const { leads, providers, routes, organizations, ingestionJobs, freshnessReminders, lastUpdatedAt, refreshing, refresh } = useControlBridge();
+  const { leads, providers, routes, organizations, ingestionJobs, freshnessReminders, complianceCases, lastUpdatedAt, refreshing, refresh } = useControlBridge();
   const operationalLeads = leads.filter((lead) => lead.record_state !== "archived" && !["closed", "spam"].includes(lead.status || ""));
   const operationalProviders = providers.filter((provider) => provider.relationship_status !== "archived");
   const stats = useMemo(() => ({
@@ -41,10 +41,11 @@ export function CommandCenter() {
     agents: organizations.filter((organization) => organization.organization_type === "agent" && organization.status === "active").length,
     offerReviews: ingestionJobs.filter((job) => ["review", "failed", "duplicate"].includes(job.status) || Number(job.blocking_anomaly_count || 0) > 0).length,
     freshnessReminders: freshnessReminders.length,
-  }), [operationalLeads, routes, organizations, ingestionJobs, freshnessReminders]);
+    complianceReview: complianceCases.filter((item) => ["pending", "screening", "needs_info", "hold"].includes(item.case_status)).length,
+  }), [operationalLeads, routes, organizations, ingestionJobs, freshnessReminders, complianceCases]);
 
   const attention = [
-    { label: "Новые заявки", count: stats.newLeads, path: "/inbox", hint: "нужно проверить и назначить ответственного" },
+    { label: "Проверка входящих лидов", count: stats.complianceReview, path: "/compliance", hint: "подлинность, роль компании и готовность досье" },
     { label: "Запросы без владельца", count: stats.unassigned, path: "/pipeline", hint: "могут зависнуть без следующего действия" },
     { label: "Нужны данные", count: stats.needsData, path: "/merchants", hint: "ждём уточнения от мерча или PSP" },
     { label: "Маршруты с ошибками", count: stats.blockedRoutes, path: "/offers", hint: "нельзя публиковать до исправления" },
@@ -89,8 +90,9 @@ export function CommandCenter() {
 }
 
 export function InboxPage() {
-  const { leads } = useControlBridge();
-  const incoming = leads.filter((lead) => ["new", "qualifying", "needs_clarification"].includes(lead.status || ""));
+  const { leads, complianceCases } = useControlBridge();
+  const attentionLeadIds = new Set(complianceCases.filter((item) => ["pending", "screening", "needs_info", "hold"].includes(item.case_status)).map((item) => item.lead_id));
+  const incoming = leads.filter((lead) => ["new", "qualifying", "needs_clarification"].includes(lead.status || "") || attentionLeadIds.has(lead.lead_id));
   return <PageFrame title="Входящие" description="Единая очередь новых запросов."><PageHeading eyebrow="Operations" title="Входящие заявки" description="Форма сайта, рекомендации субагентов и найденные лиды должны попадать в одну управляемую очередь."/><LeadTable leads={incoming}/></PageFrame>;
 }
 
