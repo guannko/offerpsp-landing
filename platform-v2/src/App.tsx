@@ -25,7 +25,7 @@ import CompliancePage from "./pages/CompliancePage";
 
 export default function App() {
   const basename = import.meta.env.BASE_URL === "/" ? undefined : import.meta.env.BASE_URL.replace(/\/$/, "");
-  return <ControlBridgeProvider><BrowserRouter basename={basename}><ScrollToTop/><Routes>
+  return <BrowserRouter basename={basename}><ControlBridgeProvider><ScrollToTop/><Routes>
     <Route path="/signin" element={<ControlSignIn/>}/>
     <Route element={<StaffGate><AppLayout/></StaffGate>}>
       <Route index element={<CommandCenter/>}/>
@@ -48,5 +48,5 @@ export default function App() {
       <Route path="/integrations" element={<IntegrationsWorkspace/>}/>
     </Route>
     <Route path="*" element={<NotFound/>}/>
-  </Routes></BrowserRouter></ControlBridgeProvider>;
+  </Routes></ControlBridgeProvider></BrowserRouter>;
 }

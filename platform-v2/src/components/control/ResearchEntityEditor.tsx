@@ -44,11 +44,18 @@ export default function ResearchEntityEditor({ entityType, record, onClose, onSa
 
   async function save() {
     if (!String(draft.name || "").trim()) { setMessage({ error: true, text: "Название обязательно." }); return; }
+    if (entityType === "casino") {
+      const score = Number(draft.score ?? 0);
+      if (!Number.isFinite(score) || score < 0 || score > 10) { setMessage({ error: true, text: "Score должен быть числом от 0 до 10." }); return; }
+    }
     setBusy(true); setMessage(null);
     const payload = { ...draft };
     delete payload.id; delete payload.internal_id; delete payload.created_at; delete payload.updated_at;
     delete payload.archived_at; delete payload.record_state;
-    if (entityType === "casino") payload.tags = splitCsv(payload.tags);
+    if (entityType === "casino") {
+      payload.tags = splitCsv(payload.tags);
+      payload.score = Number(payload.score ?? 0);
+    }
     else {
       ["supported_countries", "supported_currencies", "payment_methods", "supported_verticals", "restricted_countries", "integration_types"].forEach((key) => { payload[key] = splitCsv(payload[key]); });
     }
@@ -57,7 +64,10 @@ export default function ResearchEntityEditor({ entityType, record, onClose, onSa
       p_record_id: record?.id || null,
       p_payload: payload,
     });
-    if (result.error) { setMessage({ error: true, text: result.error.message }); setBusy(false); return; }
+    if (result.error) {
+      const text = result.error.code === "23505" ? "Запись с таким внутренним ID уже существует. Обновите страницу и повторите." : result.error.message;
+      setMessage({ error: true, text }); setBusy(false); return;
+    }
     await onSaved(); setBusy(false); onClose();
   }
 
@@ -112,7 +122,7 @@ export default function ResearchEntityEditor({ entityType, record, onClose, onSa
           {entityType === "casino" ? <Field label="Следующий follow-up"><input type="date" className={inputClass} value={String(draft.next_follow_up || "")} onChange={(event) => set("next_follow_up", event.target.value)}/></Field> : <Field label="Другие контакты"><input className={inputClass} value={String(draft.other_contacts || "")} onChange={(event) => set("other_contacts", event.target.value)}/></Field>}
         </Section>
         {entityType === "casino" ? <Section title="Квалификация и работа">
-          <Field label="Score 0–100"><input type="number" min="0" max="100" className={inputClass} value={String(draft.score ?? 0)} onChange={(event) => set("score", event.target.value)}/></Field>
+          <Field label="Score 0–10"><input type="number" min="0" max="10" className={inputClass} value={String(draft.score ?? 0)} onChange={(event) => set("score", event.target.value)}/></Field>
           <Field label="Источник"><input className={inputClass} value={String(draft.source || "")} onChange={(event) => set("source", event.target.value)}/></Field>
           <Field label="Статус ответа"><input className={inputClass} value={String(draft.reply_status || "")} onChange={(event) => set("reply_status", event.target.value)}/></Field>
           <Field label="Теги через запятую"><input className={inputClass} value={String(draft.tags || "")} onChange={(event) => set("tags", event.target.value)}/></Field>

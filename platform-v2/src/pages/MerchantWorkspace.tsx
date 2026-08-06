@@ -171,6 +171,7 @@ export default function MerchantWorkspace() {
         .from("offerpsp_shortlists")
         .select("id, lead_id, version, title, status, shared_at, created_at, offerpsp_shortlist_items(id, offer_route_id, private_provider_id, client_snapshot)")
         .eq("lead_id", leadId)
+        .neq("status", "archived")
         .order("version", { ascending: false }),
       supabase.rpc("get_offerpsp_staff_request_workspace", { p_lead_id: leadId }),
       supabase.rpc("get_offerpsp_deal_history", { p_lead_id: leadId }),

@@ -5,6 +5,31 @@ Updated: 2026-08-06
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## Production black-box audit — 2026-08-06
+
+Status: `PARTIAL`. Full report: `docs/OFFERPSP-ADMIN-BLACKBOX-AUDIT-2026-08-06.md`.
+The items below supersede earlier historical `VERIFIED` statements where production has drifted.
+
+- [ ] `P0` Restore the Captain's Bridge outbound email environment. Production currently returns
+  `Email bridge is not configured` before n8n; the Integrations card incorrectly reports success.
+- [ ] `P0` Repair research-casino creation. UI/RPC accept score 0–100 while the table constraint is
+  0–10, and the internal-ID sequence currently collides with existing records.
+- [ ] `P0` Exclude archived shortlists from the merchant's current workspace and next action. MBA
+  currently surfaces an archived empty legacy `v1` shortlist despite compliance lock and 0 route matches.
+- [ ] `P0` Replace raw offer-component enums/free-text fields with typed controls and pre-RPC
+  validation for fee type, applies-on, flow, amounts and currencies.
+- [ ] `P0` Harden exposed AIBot tables reported by Supabase Security Advisor: `messages_log`,
+  `email_templates` and `casino_interactions`; repeat advisor and anonymous/authenticated access tests.
+- [ ] `P0` Rotate the secret found inside the active n8n Email Sender HTTP node and move it to a
+  credential or environment-backed store.
+- [ ] `P0` Replace the global all-module startup snapshot with route-level lazy loading and caching.
+- [ ] `P1` Implement the promised task manager/calendar instead of the current read-only task dump.
+- [ ] `P1` Add Inbox filters, assignment and bulk actions; reconcile lead/deal/work counters across
+  Command Center, Pipeline, Deals and Analytics.
+- [ ] `P1` Localize raw enums/errors, remove or label E2E fixtures in operational selectors, and add
+  missing contact lifecycle controls.
+- [ ] Repeat the complete black-box audit after P0 and only then mark the cockpit verified for daily use.
+
 ## Pre-Compliance PRO module — 2026-08-06
 
 Status: `VERIFIED` in production. The first real external request is screened and remains locked

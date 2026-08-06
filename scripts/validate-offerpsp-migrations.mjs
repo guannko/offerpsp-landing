@@ -142,6 +142,8 @@ async function bootstrap() {
       updated_at timestamptz default now()
     );
 
+    create sequence public.casino_leads_internal_seq start 1;
+
     create table public.casino_leads (
       id serial primary key, internal_id text, name text not null, website text,
       description text, geo text, license text, software text, affiliate_program text,
@@ -225,6 +227,7 @@ async function applyMigrations() {
     "20260806123857_offerpsp_pre_compliance_module.sql",
     "20260806132300_offerpsp_pre_compliance_indexes.sql",
     "20260806164710_offerpsp_manual_compliance_review.sql",
+    "20260806170000_offerpsp_admin_p0_hardening.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {

@@ -8,6 +8,7 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
+import { useLocation } from "react-router";
 import { hasSupabaseConfig, supabase } from "../lib/supabase";
 import type {
   ControlBridgeData,
@@ -60,6 +61,7 @@ const asArray = <T,>(value: unknown): T[] => (Array.isArray(value) ? (value as T
 
 export function ControlBridgeProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ControlBridgeData>(emptyData);
+  const { pathname } = useLocation();
 
   const load = useCallback(async (userOverride?: User | null) => {
     if (!hasSupabaseConfig) {
@@ -112,15 +114,19 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    const needsCaptains = ["/intelligence", "/communications", "/operations", "/integrations"].some((path) => pathname.startsWith(path));
+    const needsMail = pathname.startsWith("/communications");
+    const needsSupplyOperations = pathname === "/";
+    const skipped = Promise.resolve({ data: null, error: null });
     const [leadsResult, managementResult, supplyResult, coverageResult, captainsResult, mailResult, ingestionResult, freshnessResult, entitlementsResult, complianceResult] = await Promise.all([
       supabase.from("offerpsp_leads").select("*").order("submitted_at", { ascending: false }),
       supabase.rpc("get_offerpsp_management_registry"),
       supabase.rpc("list_offerpsp_supply"),
       supabase.rpc("get_offerpsp_supply_coverage"),
-      supabase.rpc("get_offerpsp_captains_bridge"),
-      supabase.rpc("get_offerpsp_mail_center", { p_limit: 250 }),
-      supabase.rpc("list_offerpsp_ingestion_jobs", { p_limit: 100 }),
-      supabase.rpc("list_offerpsp_freshness_reminders"),
+      needsCaptains ? supabase.rpc("get_offerpsp_captains_bridge") : skipped,
+      needsMail ? supabase.rpc("get_offerpsp_mail_center", { p_limit: 250 }) : skipped,
+      needsSupplyOperations ? supabase.rpc("list_offerpsp_ingestion_jobs", { p_limit: 100 }) : skipped,
+      needsSupplyOperations ? supabase.rpc("list_offerpsp_freshness_reminders") : skipped,
       supabase.rpc("get_offerpsp_module_entitlements"),
       supabase.rpc("get_offerpsp_pre_compliance_registry"),
     ]);
@@ -130,7 +136,7 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
     const supply = (supplyResult.data || {}) as Record<string, unknown>;
     const coverage = (coverageResult.data || {}) as Record<string, unknown>;
 
-    setState({
+    setState((current) => ({
       user,
       staff: staffResult.data as StaffMember,
       leads: asArray<Lead>(leadsResult.data),
@@ -139,21 +145,21 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
       organizations: asArray<Organization>(management.organizations),
       assignments: asArray<AgentAssignment>(management.assignments),
       agentMarginPolicies: asArray<AgentMarginPolicy>(management.agent_margin_policies),
-      ingestionJobs: asArray<OfferIngestionJob>(ingestionResult.data),
-      freshnessReminders: asArray<FreshnessReminder>(freshnessResult.data),
+      ingestionJobs: needsSupplyOperations ? asArray<OfferIngestionJob>(ingestionResult.data) : current.ingestionJobs,
+      freshnessReminders: needsSupplyOperations ? asArray<FreshnessReminder>(freshnessResult.data) : current.freshnessReminders,
       moduleEntitlements: asArray<ModuleEntitlement>(entitlementsResult.data),
       complianceCases: asArray<ComplianceCaseSummary>(complianceResult.data),
       commissionSummary: (management.commission_summary || {}) as Record<string, number>,
-      captainsBridge: (captainsResult.data || emptyData.captainsBridge) as CaptainsBridgeSnapshot,
-      mailCenter: (mailResult.data || emptyData.mailCenter) as MailCenterSnapshot,
+      captainsBridge: needsCaptains ? (captainsResult.data || emptyData.captainsBridge) as CaptainsBridgeSnapshot : current.captainsBridge,
+      mailCenter: needsMail ? (mailResult.data || emptyData.mailCenter) as MailCenterSnapshot : current.mailCenter,
       loading: false,
       refreshing: false,
       ready: true,
       accessDenied: false,
       error: firstError?.message || null,
       lastUpdatedAt: new Date(),
-    });
-  }, []);
+    }));
+  }, [pathname]);
 
   useEffect(() => {
     void load();

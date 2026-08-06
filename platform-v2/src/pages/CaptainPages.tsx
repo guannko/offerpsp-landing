@@ -192,11 +192,25 @@ export function TasksWorkspace() {
 
 export function IntegrationsWorkspace() {
   const { captainsBridge, lastUpdatedAt } = useControlBridge();
+  const [health, setHealth] = useState<{ supabase: boolean; n8n_email_webhook: boolean } | null>(null);
+  const [healthError, setHealthError] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const session = await supabase.auth.getSession();
+      const response = await fetch("/api/integration-health", { headers: { Authorization: `Bearer ${session.data.session?.access_token || ""}` } });
+      const result = await response.json().catch(() => ({}));
+      if (!active) return;
+      if (!response.ok || !result.success) setHealthError(result.error || "Не удалось проверить интеграции");
+      else setHealth(result.checks);
+    })();
+    return () => { active = false; };
+  }, []);
   const systems = [
-    ["Supabase", "Подключён", `данные обновлены ${lastUpdatedAt?.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})||"—"}`],
-    ["n8n / AIBot", "Работает", `${captainsBridge.telegram_log.length} сообщений · ${captainsBridge.bot_tasks.length} задач загружено`],
-    ["Email Sender", "Работает", `${captainsBridge.email_drafts.length} записей в журнале`],
-    ["Telegram", "Работает", "Lead Hunter и рабочие уведомления"],
+    ["Supabase", Boolean(health?.supabase && lastUpdatedAt), "Данные получены", `обновлены ${lastUpdatedAt?.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})||"—"}`],
+    ["n8n / AIBot", Boolean(captainsBridge.telegram_log.length || captainsBridge.bot_tasks.length), "Данные получены", `${captainsBridge.telegram_log.length} сообщений · ${captainsBridge.bot_tasks.length} задач`],
+    ["Email Sender", Boolean(health?.n8n_email_webhook), "Настроен", `${captainsBridge.email_drafts.length} записей в журнале`],
+    ["Telegram", Boolean(captainsBridge.telegram_log.length), "Данные получены", `${captainsBridge.telegram_log.length} сообщений Lead Hunter`],
   ];
-  return <Frame title="Интеграции" description="Состояние рабочих сервисов."><PageHeading eyebrow="System control" title="Интеграции" description="Показываем фактический поток данных, а не декоративный список логотипов."/><div className="grid grid-cols-1 gap-4 lg:grid-cols-2">{systems.map(([name,status,detail])=><Panel key={name}><div className="flex items-start justify-between gap-4"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">{name}</h2><p className="mt-2 text-sm text-gray-500">{detail}</p></div><span className="rounded-full bg-success-50 px-3 py-1 text-xs font-semibold text-success-700 dark:bg-success-500/10 dark:text-success-300">{status}</span></div></Panel>)}</div></Frame>;
+  return <Frame title="Интеграции" description="Состояние рабочих сервисов."><PageHeading eyebrow="System control" title="Интеграции" description="Показываем подтверждённую конфигурацию и фактически загруженные данные."/>{healthError&&<ErrorBanner message={healthError}/>}<div className="grid grid-cols-1 gap-4 lg:grid-cols-2">{systems.map(([name,ok,status,detail])=><Panel key={String(name)}><div className="flex items-start justify-between gap-4"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">{name}</h2><p className="mt-2 text-sm text-gray-500">{detail}</p></div><span className={`rounded-full px-3 py-1 text-xs font-semibold ${ok ? "bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-300" : "bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-300"}`}>{ok ? status : health ? "Требует внимания" : "Проверяю…"}</span></div></Panel>)}</div></Frame>;
 }
