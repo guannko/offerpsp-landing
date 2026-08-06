@@ -8,27 +8,34 @@ Code or a passing local test is not evidence that production has been updated.
 ## Production black-box audit — 2026-08-06
 
 Status: `PARTIAL`. Full report: `docs/OFFERPSP-ADMIN-BLACKBOX-AUDIT-2026-08-06.md`.
-The items below supersede earlier historical `VERIFIED` statements where production has drifted.
+The production P0 recheck below supersedes the initial findings recorded earlier on the same date.
 
-- [ ] `P0` Restore the Captain's Bridge outbound email environment. Production currently returns
-  `Email bridge is not configured` before n8n; the Integrations card incorrectly reports success.
-- [ ] `P0` Repair research-casino creation. UI/RPC accept score 0–100 while the table constraint is
-  0–10, and the internal-ID sequence currently collides with existing records.
-- [ ] `P0` Exclude archived shortlists from the merchant's current workspace and next action. MBA
-  currently surfaces an archived empty legacy `v1` shortlist despite compliance lock and 0 route matches.
-- [ ] `P0` Replace raw offer-component enums/free-text fields with typed controls and pre-RPC
-  validation for fee type, applies-on, flow, amounts and currencies.
-- [ ] `P0` Harden exposed AIBot tables reported by Supabase Security Advisor: `messages_log`,
-  `email_templates` and `casino_interactions`; repeat advisor and anonymous/authenticated access tests.
-- [ ] `P0` Rotate the secret found inside the active n8n Email Sender HTTP node and move it to a
-  credential or environment-backed store.
-- [ ] `P0` Replace the global all-module startup snapshot with route-level lazy loading and caching.
+- [x] `P0` Restore the Captain's Bridge outbound email environment and replace decorative
+  integration statuses with authenticated configuration health. A production message sent from the
+  communications UI completed through n8n execution `321084` and is stored as `sent`.
+- [x] `P0` Repair research-casino creation. The UI and RPC now use the canonical 0–10 score, the
+  sequence is synchronized and the generator retries collisions. Production UI created `CAS-0246`
+  with score 7, then archived it successfully; the exact synthetic row was removed after verification.
+- [x] `P0` Exclude archived shortlists from the merchant's current workspace and next action. MBA now
+  shows South Korea, 0 current offers and `v0`; the archived empty legacy `v1` is not selected.
+- [x] `P0` Replace raw offer-component enums/free-text fields with typed controls and pre-RPC
+  validation for fee type, applies-on, flow, amounts and currencies. Production Antarex editor was
+  checked without mutating a real offer.
+- [x] `P0` Harden `messages_log`, `email_templates` and `casino_interactions`: RLS is enabled,
+  `anon`/`authenticated` direct access is revoked and service-role access remains. The relevant
+  Security Advisor errors disappeared; unrelated shared-database findings remain open.
+- [ ] `P0/PARTIAL` The hardcoded external-secret node was removed from the active n8n Email Sender
+  graph and the workflow now validates with 0 errors/warnings. Revoke the historical third-party token
+  if it is still active; old n8n version history can still contain the previous value.
+- [ ] `P0/PARTIAL` Heavy Captain modules and mail snapshots now load only on relevant routes. Add a
+  bounded client cache if production timings continue to exceed the current roughly 3-second cold load.
 - [ ] `P1` Implement the promised task manager/calendar instead of the current read-only task dump.
 - [ ] `P1` Add Inbox filters, assignment and bulk actions; reconcile lead/deal/work counters across
   Command Center, Pipeline, Deals and Analytics.
 - [ ] `P1` Localize raw enums/errors, remove or label E2E fixtures in operational selectors, and add
   missing contact lifecycle controls.
-- [ ] Repeat the complete black-box audit after P0 and only then mark the cockpit verified for daily use.
+- [x] Repeat the P0 black-box scenarios in production: email, research create/archive, merchant state,
+  typed offer editor, integration health and database access boundaries all passed on 2026-08-06.
 
 ## Pre-Compliance PRO module — 2026-08-06
 
