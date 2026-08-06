@@ -31,10 +31,10 @@ until a staff decision.
   `offerpsp_pre_compliance_indexes` and `offerpsp_manual_compliance_review` are applied. Private
   compliance tables deny direct `anon`/`authenticated` access; matching and shortlist creation are
   database-gated by staff clearance.
-- [x] Cockpit production deployment `dpl_DJSBz96i3yeYNKnizTaWaSKso1Dm` is `READY` at
+- [x] Cockpit production deployment `dpl_BDjy8mpp7RciUs3L1XqnWbqvYYTP` is `READY` at
   `https://ops-7q4m2x9k8v3n.vercel.app`; authenticated queue and merchant-dossier smoke passed.
 - [x] The real MBA request is normalized to `KR`, classified as `subagent`, scored
-  `100 / 54 / 100 / 64`, and remains in `screening` with no staff decision. Its false legacy
+  `100 / 54 / 100 / 64`, and remains in `manual_review` with no staff decision. Its false legacy
   shortlist was archived and matching remains locked.
 - [ ] Staff decision for MBA: request represented merchant names/sites, licence per merchant,
   payment methods and PayIn/PayOut requirements before clearance.

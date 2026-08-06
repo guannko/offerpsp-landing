@@ -141,11 +141,11 @@ Every decision is immutable history. A later decision creates a new record rathe
 - The production matching RPC checks `private.offerpsp_compliance_ready(lead_id)` before rebuilding
   matches. A separate `offerpsp_shortlist_compliance_gate` trigger blocks both draft creation and
   sharing before clearance.
-- Cockpit deployment `dpl_DJSBz96i3yeYNKnizTaWaSKso1Dm` is `READY` at
+- Cockpit deployment `dpl_BDjy8mpp7RciUs3L1XqnWbqvYYTP` is `READY` at
   `https://ops-7q4m2x9k8v3n.vercel.app`.
 - The external MBA request is normalized from `South Korea` to `KR`, classified as `subagent`, and
   scored: authenticity `100`, compliance readiness `54`, commercial value `100`, completeness
   `64`, low risk, confidence `0.72`.
-- MBA remains in `screening` with no staff decision. Matching is locked until a staff member records
+- MBA remains in `manual_review` with no staff decision. Matching is locked until a staff member records
   `cleared`; the recommended current action is `needs_info` for represented merchant names and
   sites, licence per merchant, payment methods, and PayIn/PayOut requirements.
