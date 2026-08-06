@@ -70,6 +70,8 @@ assert.match(appSource, /rpc\("update_offerpsp_client_dossier"/);
 assert.doesNotMatch(appSource, /from\("offerpsp_leads"\)/);
 assert.match(appSource, /if \(status === "won"\) return \["nextWon", "nextWonCopy"\]/);
 assert.match(htmlSource, /id="requestList"/);
+assert.match(htmlSource, /id="portfolioSearch"/);
+assert.match(appSource, /state\.portfolioQuery/);
 assert.match(htmlSource, /data-i18n="newRequest"/);
 assert.match(htmlSource, /id="dealSection"/);
 assert.match(htmlSource, /id="clientDossierForm"/);

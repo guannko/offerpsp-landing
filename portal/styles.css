@@ -764,7 +764,22 @@ textarea::placeholder { color: #646a78; }
   background: rgba(255, 255, 255, .03);
 }
 
-.request-list { display: grid; gap: 7px; }
+.portfolio-search {
+  width: calc(100% - 12px);
+  margin: 0 6px 8px;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--paper);
+  background: rgba(7, 9, 16, .72);
+  font: inherit;
+  font-size: 11px;
+  outline: 0;
+}
+
+.portfolio-search:focus { border-color: rgba(255, 77, 122, .48); }
+.portfolio-result { min-height: 16px; margin: 0 7px 7px; color: var(--muted); font-size: 9px; }
+.request-list { display: grid; max-height: min(64vh, 760px); gap: 7px; overflow-y: auto; padding-right: 3px; }
 
 .request-item {
   width: 100%;

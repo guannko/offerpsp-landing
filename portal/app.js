@@ -27,7 +27,7 @@ const COPY = {
     newRequest: "Новая платёжная задача", activeRequests: "Активные задачи", availableOptions: "Варианты к выбору",
     liveConnections: "Подключения и знакомства", noRequestTitle: "Пока нет платёжных задач.",
     noRequestCopy: "Создайте первую задачу — мы сохраним её здесь и проведём до результата.", requests: "Задачи",
-    yourRequests: "Ваши запросы", selectedRequest: "Выбранная задача", nextStep: "Следующее действие",
+    yourRequests: "Ваши запросы", searchPortfolio: "Мерч, GEO, статус…", selectedRequest: "Выбранная задача", nextStep: "Следующее действие",
     connections: "Знакомства и подключения", dealProgress: "Ход сделки", comparison: "Сравнение",
     yourOptions: "Подобранные маршруты", directLine: "Прямая связь", conversation: "Рабочий чат с OfferPSP",
     messagePlaceholder: "Задайте вопрос или сообщите об изменении…", sendMessage: "Отправить",
@@ -95,7 +95,7 @@ const COPY = {
     newRequest: "New payment request", activeRequests: "Active requests", availableOptions: "Options to review",
     liveConnections: "Connections and introductions", noRequestTitle: "No payment requests yet.",
     noRequestCopy: "Create the first request and we will keep its progress and history here.", requests: "Requests",
-    yourRequests: "Your requests", selectedRequest: "Selected request", nextStep: "Next action",
+    yourRequests: "Your requests", searchPortfolio: "Merchant, GEO, status…", selectedRequest: "Selected request", nextStep: "Next action",
     connections: "Introductions and connections", dealProgress: "Deal progress", comparison: "Comparison",
     yourOptions: "Matched routes", directLine: "Direct line", conversation: "OfferPSP workspace chat",
     messagePlaceholder: "Ask a question or share an update…", sendMessage: "Send",
@@ -165,11 +165,11 @@ const STATUS_KEYS = {
 
 const state = {
   user: null, requests: [], lead: null, allOptions: [], options: [], allDeals: [], deals: [], organizations: [],
-  profile: null, conversationId: null, messages: [], language: "ru",
+  profile: null, conversationId: null, messages: [], language: "ru", portfolioQuery: "",
 };
 const ids = [
   "authView", "portalView", "loginForm", "emailInput", "passwordInput", "googleLoginButton", "magicLinkButton",
-  "authStatus", "signOutButton", "userEmail", "noRequestState", "workspaceView", "requestList", "requestView",
+  "authStatus", "signOutButton", "userEmail", "noRequestState", "workspaceView", "requestList", "requestView", "portfolioSearch", "portfolioResult",
   "activeRequestCount", "availableOptionCount", "liveConnectionCount", "agentBanner", "companyName", "requestMeta",
   "statusPill", "nextActionTitle", "nextActionText", "dealSection", "dealList", "shortlistPending", "pendingTitle",
   "pendingCopy", "shortlistGrid", "shortlistUpdated", "selectedSummary", "optionStatus", "messageList", "messageForm",
@@ -404,12 +404,22 @@ function renderWorkspace() {
   elements.workspaceView.classList.toggle("is-hidden", state.requests.length === 0);
   if (!state.requests.length) return;
 
-  elements.requestList.innerHTML = state.requests.map((request) => `
+  const portfolioNeedle = state.portfolioQuery.trim().toLowerCase();
+  const visibleRequests = state.requests.filter((request) => !portfolioNeedle || [
+    request.company, request.vertical, request.geos, request.status, request.volume_label,
+  ].filter(Boolean).join(" ").toLowerCase().includes(portfolioNeedle));
+  elements.portfolioResult.textContent = state.language === "ru"
+    ? `Показано ${visibleRequests.length} из ${state.requests.length}`
+    : `Showing ${visibleRequests.length} of ${state.requests.length}`;
+  elements.requestList.innerHTML = visibleRequests.map((request) => `
     <button type="button" class="request-item${request.lead_id === state.lead?.lead_id ? " active" : ""}" data-request-id="${escapeHtml(request.lead_id)}">
       <span class="request-dot status-${escapeHtml(request.status)}"></span>
       <span><strong>${escapeHtml(request.company)}</strong><small>${escapeHtml(requestSummary(request))}</small></span>
       <em>${escapeHtml(statusLabel(request.status))}</em>
     </button>`).join("");
+  if (!visibleRequests.length) {
+    elements.requestList.innerHTML = `<p class="portfolio-result">${state.language === "ru" ? "Ничего не найдено" : "No matching merchants"}</p>`;
+  }
   renderRequest();
 }
 
@@ -614,6 +624,11 @@ document.addEventListener("click", async (event) => {
 elements.openDossierButton.addEventListener("click", () => {
   elements.clientDossierEditor.open = true;
   elements.dossierSection.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+elements.portfolioSearch.addEventListener("input", () => {
+  state.portfolioQuery = elements.portfolioSearch.value;
+  renderWorkspace();
 });
 
 elements.clientDossierForm.addEventListener("submit", async (event) => {
