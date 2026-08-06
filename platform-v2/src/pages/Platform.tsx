@@ -41,7 +41,7 @@ export function CommandCenter() {
     agents: organizations.filter((organization) => organization.organization_type === "agent" && organization.status === "active").length,
     offerReviews: ingestionJobs.filter((job) => ["review", "failed", "duplicate"].includes(job.status) || Number(job.blocking_anomaly_count || 0) > 0).length,
     freshnessReminders: freshnessReminders.length,
-    complianceReview: complianceCases.filter((item) => ["pending", "screening", "needs_info", "hold"].includes(item.case_status)).length,
+    complianceReview: complianceCases.filter((item) => ["pending", "screening", "manual_review", "needs_info", "hold"].includes(item.case_status)).length,
   }), [operationalLeads, routes, organizations, ingestionJobs, freshnessReminders, complianceCases]);
 
   const attention = [
@@ -91,7 +91,7 @@ export function CommandCenter() {
 
 export function InboxPage() {
   const { leads, complianceCases } = useControlBridge();
-  const attentionLeadIds = new Set(complianceCases.filter((item) => ["pending", "screening", "needs_info", "hold"].includes(item.case_status)).map((item) => item.lead_id));
+  const attentionLeadIds = new Set(complianceCases.filter((item) => ["pending", "screening", "manual_review", "needs_info", "hold"].includes(item.case_status)).map((item) => item.lead_id));
   const incoming = leads.filter((lead) => ["new", "qualifying", "needs_clarification"].includes(lead.status || "") || attentionLeadIds.has(lead.lead_id));
   return <PageFrame title="Входящие" description="Единая очередь новых запросов."><PageHeading eyebrow="Operations" title="Входящие заявки" description="Форма сайта, рекомендации субагентов и найденные лиды должны попадать в одну управляемую очередь."/><LeadTable leads={incoming}/></PageFrame>;
 }

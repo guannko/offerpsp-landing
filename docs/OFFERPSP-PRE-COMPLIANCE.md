@@ -8,9 +8,12 @@ Pre-Compliance is a separately licensed Control Bridge module. It protects the o
 
 The module does not replace legal KYB/KYC or a PSP compliance decision. It is an evidence-based intake gate:
 
-`new request → automated evidence collection → staff decision → matching → shortlist`
+`new request → automated evidence collection → manual review queue → staff decision → matching → shortlist`
 
 Automation can enrich and score a case, but it can never mark a lead as `cleared`. Only an active OfferPSP staff account can unlock matching.
+
+When automated screening finishes, the case moves from `screening` to `manual_review`. It is not
+reclaimed by the worker and remains in the visible staff queue until a person records a decision.
 
 ## Paid entitlement
 
@@ -133,8 +136,8 @@ Every decision is immutable history. A later decision creates a new record rathe
 
 ## Production verification — 2026-08-06
 
-- Supabase migrations `offerpsp_pre_compliance_module` and
-  `offerpsp_pre_compliance_indexes` are applied.
+- Supabase migrations `offerpsp_pre_compliance_module`, `offerpsp_pre_compliance_indexes` and
+  `offerpsp_manual_compliance_review` are applied.
 - The production matching RPC checks `private.offerpsp_compliance_ready(lead_id)` before rebuilding
   matches. A separate `offerpsp_shortlist_compliance_gate` trigger blocks both draft creation and
   sharing before clearance.

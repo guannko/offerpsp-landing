@@ -33,7 +33,8 @@ export const statusLabels: Record<string, string> = {
   failed: "Ошибка разбора",
   dismissed: "Убран",
   pending: "Ожидает проверки",
-  screening: "Проверяется",
+  screening: "Автопроверка",
+  manual_review: "Ручная проверка",
   needs_info: "Нужны данные",
   cleared: "Допущен",
   hold: "На паузе",
@@ -80,7 +81,7 @@ export function StatusPill({ status }: { status?: string | null }) {
     ? "bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-300"
     : normalized === "lost" || normalized === "provider_declined" || normalized === "rejected" || normalized === "spam"
       ? "bg-error-50 text-error-700 dark:bg-error-500/10 dark:text-error-300"
-      : normalized.includes("needs") || normalized === "draft" || normalized === "queued"
+      : normalized.includes("needs") || normalized === "manual_review" || normalized === "draft" || normalized === "queued"
         ? "bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-300"
         : "bg-gray-100 text-gray-700 dark:bg-white/5 dark:text-gray-300";
   return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${tone}`}>{statusLabels[normalized] || normalized}</span>;

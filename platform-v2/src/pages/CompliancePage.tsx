@@ -7,6 +7,7 @@ import { useControlBridge } from "../context/ControlBridgeContext";
 const filters = [
   ["active", "Требуют решения"],
   ["pending", "Новые"],
+  ["manual_review", "Ручная проверка"],
   ["needs_info", "Нужны данные"],
   ["cleared", "Допущены"],
   ["blocked", "Отклонены / спам"],
@@ -24,7 +25,7 @@ export default function CompliancePage() {
     const query = search.trim().toLowerCase();
     return complianceCases.filter((item) => {
       const statusMatch = filter === "active"
-        ? ["pending", "screening", "needs_info", "hold"].includes(item.case_status)
+        ? ["pending", "screening", "manual_review", "needs_info", "hold"].includes(item.case_status)
         : filter === "blocked"
           ? ["rejected", "spam"].includes(item.case_status)
           : item.case_status === filter;
@@ -38,6 +39,7 @@ export default function CompliancePage() {
   if (!entitlement?.enabled) return <Panel><EmptyState title="Модуль не входит в тариф" description="Lead Intelligence / Pre-Compliance доступен как отдельный PRO-модуль."/></Panel>;
 
   const pending = complianceCases.filter((item) => ["pending", "screening"].includes(item.case_status)).length;
+  const manualReview = complianceCases.filter((item) => item.case_status === "manual_review").length;
   const needsInfo = complianceCases.filter((item) => item.case_status === "needs_info").length;
   const cleared = complianceCases.filter((item) => item.case_status === "cleared").length;
   const blocked = complianceCases.filter((item) => ["rejected", "spam"].includes(item.case_status)).length;
@@ -45,8 +47,9 @@ export default function CompliancePage() {
   return <>
     <PageMeta title="Проверка лидов | OfferPSP" description="Предварительная проверка входящих заявок до matching."/>
     <PageHeading eyebrow="PRO · Lead Intelligence" title="Проверка входящих лидов" description="Подлинность, роль компании, коммерческая ценность и готовность досье. Автоматизация собирает доказательства, финальный допуск всегда делает человек."/>
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <Metric label="Новые" value={pending} hint="ожидают проверки" tone={pending ? "warning" : "default"}/>
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <Metric label="Автопроверка" value={pending} hint="новые или обрабатываются" tone={pending ? "warning" : "default"}/>
+      <Metric label="Ручная проверка" value={manualReview} hint="автомат уже закончил" tone={manualReview ? "danger" : "default"}/>
       <Metric label="Нужны данные" value={needsInfo} hint="нужно запросить у заявителя" tone={needsInfo ? "danger" : "default"}/>
       <Metric label="Допущены" value={cleared} hint="matching разблокирован" tone="success"/>
       <Metric label="Заблокированы" value={blocked} hint="спам или отказ"/>

@@ -224,6 +224,7 @@ async function applyMigrations() {
     "20260806080000_offerpsp_agent_cobrand_settings.sql",
     "20260806123857_offerpsp_pre_compliance_module.sql",
     "20260806132300_offerpsp_pre_compliance_indexes.sql",
+    "20260806164710_offerpsp_manual_compliance_review.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -505,8 +506,12 @@ async function verifyPreComplianceGate() {
       screening_provider: "validation",
     })],
   );
-  if (screening.rows[0].value.status !== "screening") {
-    throw new Error(`Automated screening was allowed to clear the lead: ${JSON.stringify(screening.rows[0].value)}`);
+  if (screening.rows[0].value.status !== "manual_review") {
+    throw new Error(`Completed automated screening did not enter manual review: ${JSON.stringify(screening.rows[0].value)}`);
+  }
+  const reclaimed = await query("select public.claim_offerpsp_pre_compliance_jobs(10) as value");
+  if (reclaimed.rows[0].value.some((item) => item.lead_id === leadId)) {
+    throw new Error("Manual-review lead was incorrectly reclaimed by the automated worker");
   }
   await clearPreCompliance(leadId);
   const cleared = await query(
@@ -517,7 +522,7 @@ async function verifyPreComplianceGate() {
       || cleared.rows[0].classification !== "merchant" || Number(cleared.rows[0].decisions) !== 1) {
     throw new Error(`Manual clearance did not open matching: ${JSON.stringify(cleared.rows[0])}`);
   }
-  process.stdout.write("PASS paid pre-compliance normalization, evidence screening and manual matching gate\n");
+  process.stdout.write("PASS paid pre-compliance normalization, automatic-to-manual queue and matching gate\n");
 }
 
 async function verifyPortalLeadClaims() {

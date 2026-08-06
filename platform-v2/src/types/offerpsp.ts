@@ -284,7 +284,7 @@ export type ComplianceCaseSummary = {
   target_geos?: string[] | null;
   lead_status?: string | null;
   assigned_to?: string | null;
-  case_status: "pending" | "screening" | "needs_info" | "cleared" | "hold" | "rejected" | "spam";
+  case_status: "pending" | "screening" | "manual_review" | "needs_info" | "cleared" | "hold" | "rejected" | "spam";
   classification: "merchant" | "subagent" | "psp" | "consultant" | "other" | "unknown";
   authenticity_score?: number | null;
   compliance_readiness_score?: number | null;

@@ -14,6 +14,8 @@ until a staff decision.
   workspace rather than being embedded as an unlicensed feature flag.
 - [x] Every new request receives a private case, normalized GEO/methods and a high-priority review
   task. The old automatic legacy shortlist trigger is removed.
+- [x] Completed automated screening moves to the explicit `manual_review` queue. It cannot remain
+  in an ambiguous running state or be reclaimed by the worker before a staff decision.
 - [x] Four independent scores cover authenticity, compliance readiness, commercial value and form
   completeness; roles distinguish direct merchants, subagents, PSPs and consultants.
 - [x] Database gates block automatic matching, manual shortlist creation and sharing until an
@@ -23,12 +25,12 @@ until a staff decision.
 - [x] n8n workflow `wiEFFDaHd3uaJoJi` (`OfferPSP | Pre-Compliance PRO`) is active and validates
   with 8 nodes, 7 connections, 0 errors and 0 warnings. Controlled production executions
   `320586` and `320600` completed successfully using the dedicated service-role credential.
-- [x] All 44 migrations, security grants and the full offer → shortlist → PSP review → Telegram →
+- [x] All 45 migrations, security grants and the full offer → shortlist → PSP review → Telegram →
   Zoom → won regression pass in isolated PGlite. Cockpit build passes; lint has no errors.
-- [x] Production migrations `offerpsp_pre_compliance_module` and
-  `offerpsp_pre_compliance_indexes` are applied. Private compliance tables deny direct
-  `anon`/`authenticated` access; matching and shortlist creation are database-gated by staff
-  clearance.
+- [x] Production migrations `offerpsp_pre_compliance_module`,
+  `offerpsp_pre_compliance_indexes` and `offerpsp_manual_compliance_review` are applied. Private
+  compliance tables deny direct `anon`/`authenticated` access; matching and shortlist creation are
+  database-gated by staff clearance.
 - [x] Cockpit production deployment `dpl_DJSBz96i3yeYNKnizTaWaSKso1Dm` is `READY` at
   `https://ops-7q4m2x9k8v3n.vercel.app`; authenticated queue and merchant-dossier smoke passed.
 - [x] The real MBA request is normalized to `KR`, classified as `subagent`, scored
