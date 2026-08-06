@@ -1,9 +1,33 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-08-05
+Updated: 2026-08-06
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
+
+## Agent operations — 2026-08-06
+
+Status: `VERIFIED` in production; the first real invitation acceptance and visible co-brand smoke
+await an actual subagent organization instead of synthetic production data.
+
+- [x] Staff manages organization members and roles, sends protected email invitations and cannot
+  remove the last active owner.
+- [x] Agent portfolios support RU/EN merchant search and a bounded request switcher for larger
+  managed portfolios.
+- [x] Commission accounting supports the guarded lifecycle
+  `projected → approved → earned → paid`, voiding of non-terminal entries, audit history and CSV
+  statements.
+- [x] Agent organizations have staff-managed co-brand settings: enable/disable, display name,
+  RU/EN taglines, HTTPS logo, accent colour and support email. The authenticated agent portal uses
+  only the client-safe projection and always retains `Powered by OfferPSP`.
+- [x] Production migration `offerpsp_agent_cobrand_settings` is applied. The three co-brand RPCs
+  deny anonymous access; staff/member/foreign-client isolation and all 42 migrations passed in the
+  isolated regression suite.
+- [x] Cockpit deployment `dpl_6NYjxkerwNgTNDQgSxUjgJy4ccYe` and public portal deployment
+  `dpl_FGTaaGLRbyeK5e2VxboWnQSkGVDU` are `READY` in production.
+- [ ] Accept the first invitation using a real subagent email and visually confirm that
+  organization's branding in its authenticated portal. Custom white-label domains remain a later
+  product decision and are not part of the current co-branded model.
 
 ## AIBot security and OfferPSP mail center — 2026-08-05
 
@@ -179,17 +203,15 @@ mean every capability has a dedicated user interface.
   offerpsp_entity_lifecycle_grants` removes Supabase's automatic `anon` EXECUTE grants from all
   11 management RPCs. `authenticated` retains 11/11 RPC grants, `anon` retains 0/11.
 
-### 3. Remaining agent/commission product work
+### 3. Agent/commission product layer
 
-Status: `PARTIAL` — the data model, access boundaries and first staff management UI exist in
-production; the larger agent-facing workflows below are not implemented.
+Status: `VERIFIED` in production for member invitations and roles, scalable portfolio navigation,
+commission operations and co-branded workspace settings.
 
-- Organization invitations and member/role management.
-- Agent portfolio management optimized for larger portfolios, onboarding and co-branding.
-- Commission review, approval, earned/paid processing, statements and reconciliation.
-
-Agent organizations and agent margin are manageable by staff. Commission accounting remains an
-API/data foundation rather than a finished operations UI.
+The only remaining acceptance check requires a real subagent: accept an actual invitation and
+visually verify that organization's branding in the authenticated portal. No fake production
+organization or user is created for this check. Custom white-label domains remain a later product
+decision.
 
 ## Implemented in source and verified locally
 
@@ -568,7 +590,13 @@ The first operational UI is deployed. Daily-use refinement remains.
   rows remain RPC-only and every change is audited. Production migration
   `offerpsp_agent_commission_workflow` and cockpit deployment
   `dpl_Cy9HrK4NJ19MrVMPAfBVX2WZoLVC` are verified.
-- [ ] Co-branded agent workspace settings; white-label domains remain a later product decision.
+- [x] Co-branded agent workspace settings are in production: staff controls enablement, display
+  name, RU/EN taglines, HTTPS logo, accent colour and support email; the agent portal renders the
+  safe organization branding while retaining `Powered by OfferPSP`. Production migration
+  `offerpsp_agent_cobrand_settings`, cockpit deployment
+  `dpl_6NYjxkerwNgTNDQgSxUjgJy4ccYe` and public portal deployment
+  `dpl_FGTaaGLRbyeK5e2VxboWnQSkGVDU` are verified. The first real-agent visual acceptance remains;
+  white-label domains are intentionally deferred.
 
 ### P1 — Telegram ingestion
 
