@@ -85,7 +85,7 @@ export default function CompliancePage() {
         <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Компания, email, GEO, роль…" className="h-11 w-full shrink-0 rounded-lg border border-gray-200 bg-transparent px-4 text-sm outline-none focus:border-brand-400 dark:border-gray-700 2xl:w-80"/>
       </div>
       {visible.length ? <>
-        <div className="mt-5 grid gap-4 xl:hidden">
+        <div className="mt-5 grid gap-4 2xl:hidden">
           {visible.map((item) => <article key={item.case_id} className="rounded-xl border border-gray-100 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.02] sm:p-5">
             <div className="flex min-w-0 items-start justify-between gap-3">
               <div className="min-w-0">
@@ -112,7 +112,7 @@ export default function CompliancePage() {
             <Link to={`/merchants/${item.lead_id}?tab=compliance`} className="mt-4 flex h-11 w-full items-center justify-center whitespace-nowrap rounded-lg bg-gray-900 px-4 text-sm font-semibold text-white transition hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100">Открыть досье</Link>
           </article>)}
         </div>
-        <div className="mt-5 hidden overflow-x-auto xl:block">
+        <div className="mt-5 hidden overflow-x-auto 2xl:block">
           <table className="w-full min-w-[1120px] table-fixed text-left">
             <colgroup><col className="w-[22%]"/><col className="w-[15%]"/><col className="w-[9%]"/><col className="w-[9%]"/><col className="w-[9%]"/><col className="w-[9%]"/><col className="w-[15%]"/><col className="w-[140px]"/></colgroup>
             <thead><tr className="border-b border-gray-100 text-[11px] uppercase tracking-[0.14em] text-gray-400 dark:border-gray-800"><th className="px-3 py-3">Компания</th><th className="px-3 py-3">Роль / риск</th><th className="px-3 py-3">Подлинность</th><th className="px-3 py-3">Готовность</th><th className="px-3 py-3">Ценность</th><th className="px-3 py-3">Полнота</th><th className="px-3 py-3">Статус</th><th className="px-3 py-3"/></tr></thead>
