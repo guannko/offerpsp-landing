@@ -877,6 +877,43 @@ textarea::placeholder { color: #646a78; }
   background: rgba(255, 255, 255, .035);
 }
 
+.option-card--stale {
+  border-color: rgba(234, 179, 8, .45);
+  background: rgba(234, 179, 8, .04);
+  opacity: .88;
+}
+
+.staleness-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 99px;
+  border: 1px solid rgba(234, 179, 8, .5);
+  background: rgba(234, 179, 8, .12);
+  color: #b45309;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.staleness-notice {
+  margin: 10px 0 4px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border-left: 3px solid #f59e0b;
+  background: rgba(245, 158, 11, .09);
+  color: #92400e;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.option-card--stale .option-button[data-option-response="interested"] {
+  opacity: .38;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .option-top { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .option-top span { color: var(--coral-soft); font-size: 11px; font-weight: 850; text-transform: uppercase; }
 .option-top code { color: #777e8c; font-size: 10px; }
