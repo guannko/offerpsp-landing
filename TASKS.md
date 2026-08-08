@@ -764,6 +764,40 @@ The production queue, AIBot transport, automatic text parser and private admin-f
 connected. Incoming mailbox activation remains the next external-channel step; partner freshness
 automation is live in Supabase, the cockpit and n8n.
 
+### Impact Control — production delivery 2026-08-08
+
+Status: `VERIFIED` for database, frontend and manual processor execution. The first scheduled n8n
+execution at 02:00 Asia/Nicosia remains an expected operational observation rather than a completed
+check.
+
+- [x] Client actions and introduction requests fail closed when a previously shared route is
+  paused, archived, expired, replaced or otherwise stale.
+- [x] Every stale item from the same source shortlist is resolved as one atomic group. Staff cannot
+  create a partial vNext that silently leaves another unavailable offer in the client workspace.
+- [x] Replacement routes are selected from the live published catalog rather than entered as raw
+  UUIDs. Flow and currency must remain compatible; a GEO or method override requires an explicit
+  reason.
+- [x] Prepared vNext state is persisted in Supabase and survives refresh. Staff can review, share,
+  abandon and rebuild the draft without losing the workflow state.
+- [x] Sharing re-checks the current replacement route state to close the pause/archive/expiry race
+  between draft creation and client delivery.
+- [x] A shared replacement completes all related update-queue items atomically and archives the old
+  shortlist. Queue items with an existing client selection cannot be dismissed.
+- [x] Full clean-replay validation passes through migration
+  `20260808210000_offerpsp_impact_control_v4.sql`, including grouped replacement, idempotent retry,
+  stale-action denial, share-time race denial and atomic completion.
+- [x] Production migration `offerpsp_impact_control_v4` is applied. The production processor RPC
+  executed successfully with `items_updated = 0` and `tasks_created = 0` because no routes were due
+  at the verification time.
+- [x] n8n workflow `V4eM2iAHvhxO5J2J` uses the OfferPSP Supabase service credential, three retries,
+  BIX Global Error Alerts and a valid daily schedule at 02:00 Asia/Nicosia. Validation returns zero
+  errors and zero warnings; the workflow is active.
+- [x] Captain's Bridge production deployment `dpl_BhHpAk6E2y6RdH54idYcDZR1sY5A` is `READY`, built
+  from commit `4a71063694389b5b9d6f4c1bb88cfff2673c40a6` and aliased to
+  `https://ops-7q4m2x9k8v3n.vercel.app`.
+- [ ] Confirm the first scheduled n8n execution after 02:00 Asia/Nicosia and retain its execution ID
+  as operational evidence.
+
 ### P2 — Analytics
 
 - [ ] Acquisition and campaign attribution.
