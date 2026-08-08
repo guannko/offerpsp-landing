@@ -55,6 +55,9 @@ const COPY = {
     option: "Оффер", clientRate: "Итоговая ставка", methods: "Методы", limits: "Лимиты", settlement: "Расчёты",
     integration: "Интеграция", whyMatched: "Почему подходит", interested: "Интересно", needDetails: "Нужны детали",
     notSuitable: "Не подходит", selectedOptions: "Выбрано", requestIntroduction: "Запросить знакомство с PSP",
+    stalenessUpdated: "условия обновлены", stalenessPaused: "оффер приостановлен",
+    stalenessUnavailable: "оффер больше недоступен", stalenessExpired: "срок действия истёк",
+    stalenessNote: "Этот вариант изменился. Менеджер OfferPSP подготовит актуальную версию.",
     sharedAt: "Обновлено", noMessages: "Сообщений пока нет. Здесь сохраняется весь рабочий контекст.",
     sent: "Сообщение отправлено.", loginPassword: "Введите пароль или используйте безопасную ссылку.",
     loginEmail: "Сначала введите рабочий email.", linkSent: "Ссылка отправлена. Проверьте почту.",
@@ -123,6 +126,9 @@ const COPY = {
     option: "Offer", clientRate: "Final rate", methods: "Methods", limits: "Limits", settlement: "Settlement",
     integration: "Integration", whyMatched: "Why it fits", interested: "Interested", needDetails: "Need details",
     notSuitable: "Not suitable", selectedOptions: "Selected", requestIntroduction: "Request PSP introduction",
+    stalenessUpdated: "terms updated", stalenessPaused: "offer paused",
+    stalenessUnavailable: "offer no longer available", stalenessExpired: "offer expired",
+    stalenessNote: "This option has changed. Your OfferPSP manager will prepare an updated version.",
     sharedAt: "Updated", noMessages: "No messages yet. The full working context stays here.", sent: "Message sent.",
     loginPassword: "Enter a password or use a secure link.", loginEmail: "Enter your work email first.",
     linkSent: "Secure link sent. Check your inbox.", signingIn: "Signing in…", sending: "Sending…",
@@ -498,8 +504,12 @@ function renderOptions() {
     const hasReserve = rollingReserve !== t("notSpecified");
     const hasSettlementMinimum = settlement.minimum !== t("notSpecified");
     const hasIntegration = readableList(option.integrations) !== "";
-    return `<article class="option-card">
-      <div class="option-top"><span>${escapeHtml(t("option"))} ${escapeHtml(option.rank)}</span><code>${escapeHtml(option.option_code)}</code></div>
+    const stalenessKey = { updated: "stalenessUpdated", paused: "stalenessPaused", unavailable: "stalenessUnavailable", expired: "stalenessExpired" }[option.route_staleness_status];
+    const stalenessLabel = stalenessKey ? t(stalenessKey) : "";
+    const isStale = Boolean(option.route_staleness_status);
+    return `<article class="option-card${isStale ? " option-card--stale" : ""}">
+      <div class="option-top"><span>${escapeHtml(t("option"))} ${escapeHtml(option.rank)}</span><code>${escapeHtml(option.option_code)}</code>${stalenessLabel ? `<span class="staleness-badge">${escapeHtml(stalenessLabel)}</span>` : ""}</div>
+      ${isStale ? `<div class="staleness-notice">${escapeHtml(t("stalenessNote"))}</div>` : ""}
       <div class="telegram-offer">
         <h3>${escapeHtml(`GEO — ${geos}`)} <small>(${escapeHtml(methods)})</small></h3>
         <div class="offer-message-lines">
@@ -532,7 +542,7 @@ function renderOptions() {
       <p class="match-reason"><span>${escapeHtml(t("whyMatched"))}</span>${escapeHtml(localizedClientNote(option.client_note, state.language, t("selectedForReview")))}</p>
       ${option.valid_through ? `<small class="validity">${escapeHtml(t("validThrough"))}: ${escapeHtml(formatDate(option.valid_through))}</small>` : ""}
       <div class="option-actions">
-        <button type="button" data-option-response="interested" data-option-code="${escapeHtml(option.option_code)}" class="option-button${option.client_response === "interested" ? " active" : ""}">${escapeHtml(t("interested"))}</button>
+        <button type="button" data-option-response="interested" data-option-code="${escapeHtml(option.option_code)}" class="option-button${option.client_response === "interested" ? " active" : ""}"${isStale ? " disabled aria-disabled=\"true\"" : ""}>${escapeHtml(t("interested"))}</button>
         <button type="button" data-option-response="need_details" data-option-code="${escapeHtml(option.option_code)}" class="option-button${option.client_response === "need_details" ? " active" : ""}">${escapeHtml(t("needDetails"))}</button>
         <button type="button" data-option-response="not_suitable" data-option-code="${escapeHtml(option.option_code)}" class="option-button${option.client_response === "not_suitable" ? " active" : ""}">${escapeHtml(t("notSuitable"))}</button>
       </div>

@@ -64,6 +64,7 @@ type ShortlistItem = {
   private_provider_id?: string | null;
   offer_route_id?: string | null;
   client_snapshot?: ClientSnapshot | null;
+  route_staleness_status?: string | null;
 };
 
 type Shortlist = {
@@ -169,7 +170,7 @@ export default function MerchantWorkspace() {
       supabase.rpc("list_offerpsp_route_matches", { p_lead_id: leadId }),
       supabase
         .from("offerpsp_shortlists")
-        .select("id, lead_id, version, title, status, shared_at, created_at, offerpsp_shortlist_items(id, offer_route_id, private_provider_id, client_snapshot)")
+        .select("id, lead_id, version, title, status, shared_at, created_at, offerpsp_shortlist_items(id, offer_route_id, private_provider_id, client_snapshot, route_staleness_status)")
         .eq("lead_id", leadId)
         .neq("status", "archived")
         .order("version", { ascending: false }),
@@ -471,7 +472,7 @@ function Preview({ shortlist, busy, onShare }: { shortlist?: Shortlist; busy: st
   if (!shortlist) return <Panel><EmptyState title="Предпросмотра ещё нет" description="Сначала выберите matched или ручные офферы и создайте shortlist."/></Panel>;
   const shareable = isShareable(shortlist);
   return <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-    <Panel><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Client-safe preview</p><h2 className="mt-2 text-xl font-semibold text-gray-900 dark:text-white">{shortlist.title} · v{shortlist.version}</h2><p className="mt-1 text-sm text-gray-500">Telegram‑стандарт: PayIn и PayOut показаны раздельно, PSP и внутренняя маржа скрыты.</p></div><div className="flex items-center gap-2"><div className="flex rounded-lg bg-gray-100 p-1 dark:bg-white/5">{(["ru", "en"] as const).map((value) => <button key={value} onClick={() => setLocale(value)} className={`rounded-md px-2.5 py-1 text-xs font-semibold uppercase ${locale === value ? "bg-white text-gray-900 shadow-theme-xs dark:bg-gray-800 dark:text-white" : "text-gray-400"}`}>{value}</button>)}</div><StatusPill status={shortlist.status}/></div></div><div className="mt-6 grid grid-cols-1 gap-4 2xl:grid-cols-2">{(shortlist.offerpsp_shortlist_items || []).map((item, index) => <OfferPreview key={item.id} snapshot={item.client_snapshot || {}} index={index} locale={locale}/>)}</div></Panel>
+    <Panel><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Client-safe preview</p><h2 className="mt-2 text-xl font-semibold text-gray-900 dark:text-white">{shortlist.title} · v{shortlist.version}</h2><p className="mt-1 text-sm text-gray-500">Telegram‑стандарт: PayIn и PayOut показаны раздельно, PSP и внутренняя маржа скрыты.</p></div><div className="flex items-center gap-2"><div className="flex rounded-lg bg-gray-100 p-1 dark:bg-white/5">{(["ru", "en"] as const).map((value) => <button key={value} onClick={() => setLocale(value)} className={`rounded-md px-2.5 py-1 text-xs font-semibold uppercase ${locale === value ? "bg-white text-gray-900 shadow-theme-xs dark:bg-gray-800 dark:text-white" : "text-gray-400"}`}>{value}</button>)}</div><StatusPill status={shortlist.status}/></div></div><div className="mt-6 grid grid-cols-1 gap-4 2xl:grid-cols-2">{(shortlist.offerpsp_shortlist_items || []).map((item, index) => <OfferPreview key={item.id} snapshot={item.client_snapshot || {}} index={index} locale={locale} staleness={item.route_staleness_status}/>)}</div></Panel>
     <Panel><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Проверка перед отправкой</h2><div className="mt-5 space-y-3 text-sm">{[["Есть нормализованный маршрут", shareable],["Ставки и методы заполнены", shareable],["Настоящий PSP скрыт", true]].map(([label, ok]) => <div key={String(label)} className="flex items-center justify-between gap-3"><span className="text-gray-500">{label}</span><strong className={ok ? "text-success-600" : "text-error-600"}>{ok ? "Да" : "Нет"}</strong></div>)}</div>{shortlist.status === "shared" ? <div className="mt-5 rounded-lg bg-success-50 p-3 text-sm text-success-700 dark:bg-success-500/10 dark:text-success-300">Уже отправлено клиенту.</div> : <button onClick={onShare} disabled={!shareable || Boolean(busy)} className="mt-5 w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-40">{busy === "share" ? "Отправляю…" : "Отправить в ЛК клиента"}</button>}</Panel>
   </div>;
 }
@@ -510,7 +511,14 @@ function FlowBlock({ snapshot, flow, locale }: { snapshot: ClientSnapshot; flow:
   </section>;
 }
 
-function OfferPreview({ snapshot, index, locale }: { snapshot: ClientSnapshot; index: number; locale: "ru" | "en" }) {
+const STALENESS_BADGE: Record<string, { label: string; cls: string }> = {
+  updated: { label: "условия обновлены", cls: "bg-warning-50 text-warning-700 border-warning-200 dark:bg-warning-500/10 dark:text-warning-300 dark:border-warning-500/20" },
+  paused: { label: "оффер приостановлен", cls: "bg-warning-50 text-warning-700 border-warning-200 dark:bg-warning-500/10 dark:text-warning-300 dark:border-warning-500/20" },
+  unavailable: { label: "оффер больше недоступен", cls: "bg-error-50 text-error-700 border-error-200 dark:bg-error-500/10 dark:text-error-300 dark:border-error-500/20" },
+  expired: { label: "срок действия истёк", cls: "bg-gray-100 text-gray-600 border-gray-200 dark:bg-white/5 dark:text-gray-400 dark:border-gray-700" },
+};
+
+function OfferPreview({ snapshot, index, locale, staleness }: { snapshot: ClientSnapshot; index: number; locale: "ru" | "en"; staleness?: string | null }) {
   const geo = snapshot.geos?.[0];
   const settlement = snapshot.settlement || [];
   const riskTerms = Object.entries(snapshot.risk_terms || {}).filter(([, value]) => value != null && String(value).trim());
@@ -525,8 +533,12 @@ function OfferPreview({ snapshot, index, locale }: { snapshot: ClientSnapshot; i
     settlementCurrency: "Settlement currency", settlementFee: "Settlement fee", period: "Settlement period",
     integration: "Integration", notSpecified: "Not specified",
   };
-  return <article className="overflow-hidden rounded-2xl border border-gray-200 bg-[#f8f8f5] text-gray-950 shadow-theme-xs">
-    <div className="border-b border-gray-200 bg-white px-5 py-3"><span className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">{t.offer} {index + 1}</span></div>
+  const badge = staleness ? STALENESS_BADGE[staleness] : null;
+  return <article className={`overflow-hidden rounded-2xl border bg-[#f8f8f5] text-gray-950 shadow-theme-xs ${badge ? "border-warning-300 dark:border-warning-500/30" : "border-gray-200"}`}>
+    <div className="flex items-center justify-between gap-3 border-b border-gray-200 bg-white px-5 py-3">
+      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">{t.offer} {index + 1}</span>
+      {badge && <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${badge.cls}`}>{badge.label}</span>}
+    </div>
     <div className="space-y-5 p-5 text-sm leading-6">
       <div><h3 className="text-xl font-semibold">{countryFlag(geo)} GEO — {countryName(geo, locale)} ({textList(snapshot.methods)})</h3></div>
       <div className="space-y-1">
