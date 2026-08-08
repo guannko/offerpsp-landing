@@ -242,6 +242,7 @@ async function applyMigrations() {
     "20260808230021_offerpsp_v5_supply.sql",
     "20260808230121_offerpsp_v5_shortlist.sql",
     "20260808230221_offerpsp_v5_matching.sql",
+    "20260809120000_offerpsp_counterparty_organizer.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -2410,6 +2411,91 @@ async function verifyOperationsAndIntegrations() {
   process.stdout.write("PASS task CRUD, calendar data, safe integration settings, Telegram log and staff-only grants\n");
 }
 
+async function verifyCounterpartyOrganizer() {
+  const casino = await query(`insert into public.casino_leads
+    (name, website, geo, email, contact_status, score, source, record_state)
+    values ('Organizer Casino Fixture', 'https://organizer-casino.test', 'Cyprus, EU',
+      'casino@organizer.test', 'not_contacted', 75, 'regression', 'active') returning id`);
+  const psp = await query(`insert into public.psp_providers
+    (name, website, geo, email, contact_status, provider_status, supported_countries,
+      supported_currencies, payment_methods, record_state)
+    values ('Organizer PSP Fixture', 'https://organizer-psp.test', 'Europe',
+      'psp@organizer.test', 'not_contacted', 'research', array['CY','EU'], array['EUR'],
+      array['CARDS'], 'active') returning id`);
+  const casinoId = casino.rows[0].id;
+  const pspId = psp.rows[0].id;
+
+  await setUser(STAFF_ID);
+  await setRole('authenticated');
+  await query("select public.save_offerpsp_research_note('casino', $1, 'Call notes')", [casinoId]);
+  await query("select public.save_offerpsp_task(null, $1::jsonb)", [JSON.stringify({
+    title: 'Request fresh conditions', status: 'pending', priority: 'high',
+    entity_type: 'research_psp', entity_id: String(pspId),
+  })]);
+  await query("select public.create_offerpsp_research_email_draft('psp', $1, 'psp@organizer.test', 'Terms', 'Please send fresh terms')", [pspId]);
+  const workspace = await query("select public.get_offerpsp_research_workspace('psp', $1) as value", [pspId]);
+  if (workspace.rows[0].value.tasks.length !== 1 || workspace.rows[0].value.email_drafts.length !== 1) {
+    throw new Error('Counterparty organizer did not return linked task and email draft');
+  }
+
+  await setRole('service_role');
+  const companySearch = await query("select public.aibot_n8n_operating_desk($1::jsonb) as value", [JSON.stringify({
+    action: 'search_companies', entity_type: 'psp', query: 'Organizer PSP', geo: 'EU', status_scope: 'pipeline',
+  })]);
+  if (companySearch.rows[0].value.count !== 1 || companySearch.rows[0].value.items[0].id !== pspId) {
+    throw new Error('AIBot company search did not filter by company, GEO and pipeline state');
+  }
+  const confirmation = await query("select public.aibot_n8n_operating_desk($1::jsonb) as value", [JSON.stringify({
+    action: 'add_note', entity_type: 'psp', ids: [pspId, pspId + 100000], body: 'Bulk note',
+  })]);
+  if (!confirmation.rows[0].value.confirmation_required || confirmation.rows[0].value.count !== 2) {
+    throw new Error('AIBot bulk mutation did not require explicit confirmation');
+  }
+  await query("select public.aibot_n8n_operating_desk($1::jsonb)", [JSON.stringify({
+    action: 'create_task', entity_type: 'casino', id: casinoId, title: 'Call casino', priority: 'normal',
+  })]);
+  await query("select public.aibot_n8n_operating_desk($1::jsonb)", [JSON.stringify({
+    action: 'create_email_draft', entity_type: 'casino', id: casinoId, subject: 'Hello', body: 'Draft body',
+  })]);
+  const linked = await query(`select
+    (select count(*)::integer from private.offerpsp_research_notes where entity_type='research_casino' and entity_id=$1::text) as notes,
+    (select count(*)::integer from public.offerpsp_tasks where entity_type='research_casino' and entity_id=$1::text) as tasks,
+    (select count(*)::integer from public.email_drafts where lead_internal_id='casino:'||$1::text) as drafts`, [casinoId]);
+  if (linked.rows[0].notes !== 1 || linked.rows[0].tasks !== 1 || linked.rows[0].drafts !== 1) {
+    throw new Error('AIBot organizer mutations were not linked to the selected company');
+  }
+
+  const grants = await query(`select
+    has_function_privilege('service_role', 'public.aibot_n8n_operating_desk(jsonb)', 'EXECUTE') as service_tool,
+    has_function_privilege('authenticated', 'public.aibot_n8n_operating_desk(jsonb)', 'EXECUTE') as browser_tool,
+    has_function_privilege('anon', 'public.get_offerpsp_research_workspace(text,bigint)', 'EXECUTE') as anon_workspace,
+    has_table_privilege('authenticated', 'private.offerpsp_research_notes', 'SELECT') as direct_notes`);
+  if (!grants.rows[0].service_tool || grants.rows[0].browser_tool || grants.rows[0].anon_workspace || grants.rows[0].direct_notes) {
+    throw new Error('Counterparty organizer grants exceed the RPC-only boundary');
+  }
+  process.stdout.write('PASS counterparty organizer, AIBot company search, safe mutations, tasks and mail drafts\n');
+}
+
+async function verifyOperatingDeskOfferSearch() {
+  const fixture = await query(`select r.id, p.brand_name, r.geos[1] geo, r.methods[1] method,
+      r.currencies[1] currency, r.flow, r.status
+    from private.offerpsp_offer_routes r
+    join private.offerpsp_providers p on p.id = r.provider_id
+    where cardinality(r.geos) > 0 and cardinality(r.methods) > 0 and cardinality(r.currencies) > 0
+    order by r.created_at limit 1`);
+  if (!fixture.rows.length) throw new Error('No normalized route is available for AIBot offer search regression');
+  const route = fixture.rows[0];
+  await setRole('service_role');
+  const result = await query("select public.aibot_n8n_operating_desk($1::jsonb) as value", [JSON.stringify({
+    action: 'search_offers', provider: route.brand_name, geo: route.geo, method: route.method,
+    currency: route.currency, flow: route.flow, status: route.status,
+  })]);
+  if (!result.rows[0].value.items.some((item) => item.id === route.id)) {
+    throw new Error('AIBot offer search did not filter by PSP, GEO, method, currency and flow');
+  }
+  process.stdout.write('PASS AIBot offer search by PSP, GEO, method, currency, flow and status\n');
+}
+
 function verifyCanonicalGeoHeaderParsing() {
   const payload = parseOfferSource({
     providerName: "OCR Header Fixture",
@@ -2455,10 +2541,12 @@ try {
   await verify360WorkspaceGrants();
   await verifyResearchCrudGrants();
   await seedUsers();
+  await verifyCounterpartyOrganizer();
   await verifyOperationsAndIntegrations();
   await verifyPortalLeadClaims();
   await verifyPreComplianceGate();
   await importPreparedDrafts();
+  await verifyOperatingDeskOfferSearch();
   await verifyOfferIngestionQueue();
   await verifySupplyOperations();
   await verifyRouteLevelPublication();

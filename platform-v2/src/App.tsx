@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from "react-router";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import { ControlBridgeProvider } from "./context/ControlBridgeContext";
 import StaffGate from "./features/auth/StaffGate";
@@ -20,7 +20,7 @@ import {
   PipelinePage,
   ProvidersPage,
 } from "./pages/Platform";
-import { CommunicationsWorkspace, IntelligenceWorkspace, IntegrationsWorkspace, TasksWorkspace } from "./pages/CaptainPages";
+import { CasinosWorkspace, CommunicationsWorkspace, IntegrationsWorkspace, TasksWorkspace } from "./pages/CaptainPages";
 import CompliancePage from "./pages/CompliancePage";
 
 export default function App() {
@@ -33,13 +33,14 @@ export default function App() {
       <Route path="/pipeline" element={<PipelinePage/>}/>
       <Route path="/merchants" element={<MerchantsPage/>}/>
       <Route path="/merchants/:leadId" element={<MerchantWorkspace/>}/>
+      <Route path="/casinos" element={<CasinosWorkspace/>}/>
       <Route path="/psps" element={<ProvidersPage/>}/>
       <Route path="/psps/:providerId" element={<ProviderWorkspace/>}/>
       <Route path="/offers" element={<OffersPage/>}/>
       <Route path="/compliance" element={<CompliancePage/>}/>
       <Route path="/matching" element={<ModulePage module="matching"/>}/>
       <Route path="/deals" element={<DealDeskPage/>}/>
-      <Route path="/intelligence" element={<IntelligenceWorkspace/>}/>
+      <Route path="/intelligence" element={<Navigate to="/casinos" replace/>}/>
       <Route path="/communications" element={<CommunicationsWorkspace/>}/>
       <Route path="/operations" element={<TasksWorkspace/>}/>
       <Route path="/agents" element={<AgentsPage/>}/>
