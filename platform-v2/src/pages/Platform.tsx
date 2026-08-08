@@ -13,7 +13,7 @@ import {
 import { useControlBridge } from "../context/ControlBridgeContext";
 import { supabase } from "../lib/supabase";
 import { extractOfferSource, safeStorageName } from "../lib/offerSourceFiles";
-import type { Lead, OfferIngestionJob } from "../types/offerpsp";
+import type { Lead, OfferIngestionJob, RouteCoverage } from "../types/offerpsp";
 
 const activeStatuses = ["new", "qualifying", "needs_clarification", "matching", "matched", "shortlist_ready", "shared", "option_selected", "dossier_ready", "provider_reviewing", "provider_needs_info", "provider_accepted", "telegram_created", "zoom_scheduled", "negotiating"];
 
@@ -380,7 +380,7 @@ export function OffersPage() {
   return <PageFrame title="Офферы" description="Маршруты и rate cards.">
     <PageHeading eyebrow="Offer operations" title="Офферы и маршруты" description="Каталог, единый приём источников и очередь проверки — в одном рабочем модуле." action={<div className="flex flex-wrap gap-2"><button onClick={()=>setCreating(!creating)} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white">{creating?"Закрыть":"+ Новый оффер"}</button><div className="flex rounded-lg border border-gray-200 p-1 dark:border-gray-700">{[["catalog","Каталог"],["intake","Приём офферов"],["updates","Обновить мерчам"]].map(([value,label])=><button key={value} onClick={()=>setWorkspace(value as "catalog"|"intake"|"updates")} className={`rounded-md px-4 py-2 text-sm font-semibold ${workspace===value?"bg-brand-500 text-white":"text-gray-600 dark:text-gray-300"}`}>{label}</button>)}</div></div>}/>
     {creating && <Panel className="mb-5"><div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Нормализованный оффер</p><h2 className="mt-2 text-xl font-semibold text-gray-900 dark:text-white">Создать черновик для любого PSP</h2><p className="mt-1 text-sm text-gray-500">После создания откроется полный редактор ставок, лимитов, settlement и маржи.</p></div><Link to="/psps/new" className="text-sm font-semibold text-brand-500">Сначала добавить новый PSP →</Link></div>{creatingError&&<div className="mt-4"><ErrorBanner message={creatingError}/></div>}<div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4"><select value={offerDraft.provider_id} onChange={(event)=>setOfferDraft({...offerDraft,provider_id:event.target.value})} className={selectClass}><option value="">Выберите PSP</option>{registryProviders.filter((provider)=>provider.relationship_status!=="archived").sort((a,b)=>a.brand_name.localeCompare(b.brand_name)).map((provider)=><option key={provider.id} value={provider.id}>{provider.brand_name} · {provider.internal_code||"без кода"}</option>)}</select><input value={offerDraft.client_title} onChange={(event)=>setOfferDraft({...offerDraft,client_title:event.target.value})} className={selectClass} placeholder="Название оффера"/><select value={offerDraft.flow} onChange={(event)=>setOfferDraft({...offerDraft,flow:event.target.value})} className={selectClass}><option value="payin">PayIn</option><option value="payout">PayOut</option><option value="both">PayIn + PayOut</option></select><input value={offerDraft.geos} onChange={(event)=>setOfferDraft({...offerDraft,geos:event.target.value})} className={selectClass} placeholder="GEO: IN, BR, MX"/><input value={offerDraft.currencies} onChange={(event)=>setOfferDraft({...offerDraft,currencies:event.target.value})} className={selectClass} placeholder="Валюты: INR, BRL"/><input value={offerDraft.methods} onChange={(event)=>setOfferDraft({...offerDraft,methods:event.target.value})} className={selectClass} placeholder="Методы: UPI, PIX"/><input value={offerDraft.source_reference} onChange={(event)=>setOfferDraft({...offerDraft,source_reference:event.target.value})} className={selectClass} placeholder="Источник: Telegram / PDF / XLSX"/><button onClick={()=>void createOffer()} disabled={!offerDraft.provider_id||!offerDraft.client_title.trim()||creatingBusy} className="h-10 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white disabled:opacity-40">{creatingBusy?"Создаю…":"Создать и заполнить"}</button></div></Panel>}
-    {workspace === "intake" ? <OfferIntakePanel providerNames={registryProviders.map((provider)=>provider.brand_name).sort()} onImported={refresh}/> : workspace === "updates" ? <OfferUpdateQueuePanel/> : <>
+    {workspace === "intake" ? <OfferIntakePanel providerNames={registryProviders.map((provider)=>provider.brand_name).sort()} onImported={refresh}/> : workspace === "updates" ? <OfferUpdateQueuePanelV4/> : <>
     <Panel className="mb-5">
       <div className="flex flex-wrap gap-2">{[["all","Все"],["published","Опубликованы"],["draft","Черновики"],["review","На проверке"],["paused","Пауза"],["archived","Архив"]].map(([value,label]) => <button key={value} onClick={() => setStatus(value)} className={`rounded-lg px-3 py-2 text-sm ${status === value ? "bg-brand-500 text-white" : "bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300"}`}>{label}</button>)}</div>
       <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4"><input value={query} onChange={(event)=>setQuery(event.target.value)} className={selectClass} placeholder="PSP, маршрут, GEO, метод…"/><select value={providerId} onChange={(event)=>setProviderId(event.target.value)} className={selectClass}><option value="all">Все PSP</option>{providers.map((provider)=><option key={provider.id} value={provider.id}>{provider.name} · {routes.filter((route)=>route.provider_id===provider.id).length}</option>)}</select><select value={geo} onChange={(event)=>setGeo(event.target.value)} className={selectClass}><option value="all">Все GEO</option>{geos.map((value)=><option key={value}>{value}</option>)}</select><select value={currency} onChange={(event)=>setCurrency(event.target.value)} className={selectClass}><option value="all">Все валюты</option>{currencies.map((value)=><option key={value}>{value}</option>)}</select><select value={method} onChange={(event)=>setMethod(event.target.value)} className={selectClass}><option value="all">Все методы</option>{methods.map((value)=><option key={value}>{value}</option>)}</select><select value={flow} onChange={(event)=>setFlow(event.target.value)} className={selectClass}><option value="all">Все потоки</option><option value="payin">PayIn</option><option value="payout">PayOut</option><option value="both">PayIn + PayOut</option></select><select value={health} onChange={(event)=>setHealth(event.target.value)} className={selectClass}><option value="all">Любая готовность</option><option value="ready">Готовы к работе</option><option value="errors">С ошибками</option><option value="warnings">С предупреждениями</option><option value="stale">Устарели</option></select><button onClick={reset} className="h-10 rounded-lg border border-gray-200 px-3 text-sm font-semibold text-gray-600 hover:border-brand-300 hover:text-brand-500 dark:border-gray-700 dark:text-gray-300">Сбросить фильтры</button></div>
@@ -411,7 +411,7 @@ type ItemWorkflow = {
   step: "idle" | "validated" | "vnext_created" | "shared";
 };
 
-function OfferUpdateQueuePanel() {
+export function OfferUpdateQueuePanel() {
   const [items, setItems] = useState<UpdateQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -648,6 +648,181 @@ function OfferUpdateQueuePanel() {
             </Panel>;
           })}</div>
     }
+  </div>;
+}
+
+type UpdateQueueItemV4 = UpdateQueueItem & {
+  prepared_shortlist_status?: string | null;
+  old_route_flow?: string | null;
+  old_route_geos?: string[];
+  old_route_currencies?: string[];
+  old_route_methods?: string[];
+};
+
+const normalizedValues = (values?: string[] | null) => new Set((values ?? []).map((value) => value.trim().toUpperCase()).filter(Boolean));
+const overlaps = (left?: string[] | null, right?: string[] | null) => {
+  const a = normalizedValues(left);
+  return [...normalizedValues(right)].some((value) => a.has(value));
+};
+
+function OfferUpdateQueuePanelV4() {
+  const { routes } = useControlBridge();
+  const [items, setItems] = useState<UpdateQueueItemV4[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState("active");
+  const [message, setMessage] = useState<{tone:"success"|"error";text:string}|null>(null);
+  const [selections, setSelections] = useState<Record<string,string>>({});
+  const [notes, setNotes] = useState<Record<string,string>>({});
+  const [overrideReasons, setOverrideReasons] = useState<Record<string,string>>({});
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const filter = statusFilter === "active" ? ["pending", "in_progress"] : statusFilter === "all" ? null : [statusFilter];
+    const result = await supabase.rpc("get_offerpsp_offer_update_queue", { p_status_filter: filter });
+    if (result.error) setMessage({ tone: "error", text: result.error.message });
+    else {
+      const rows = (result.data as UpdateQueueItemV4[]) ?? [];
+      setItems(rows);
+      setSelections((current) => {
+        const restored = { ...current };
+        rows.forEach((item) => { if (item.new_route_id) restored[item.id] = item.new_route_id; });
+        return restored;
+      });
+    }
+    setLoading(false);
+  }, [statusFilter]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const groups = useMemo(() => {
+    const grouped = new Map<string, UpdateQueueItemV4[]>();
+    items.forEach((item) => grouped.set(item.shortlist_id, [...(grouped.get(item.shortlist_id) ?? []), item]));
+    return [...grouped.values()];
+  }, [items]);
+
+  const candidatesFor = (item: UpdateQueueItemV4) => routes
+    .filter((route) => {
+      const flowCompatible = Boolean(item.old_route_flow)
+        && (item.old_route_flow === route.flow || item.old_route_flow === "both" || route.flow === "both");
+      return route.route_id !== item.old_route_id
+        && route.status === "published"
+        && !route.is_stale
+        && Number(route.open_error_count || 0) === 0
+        && route.margin_ready
+        && flowCompatible
+        && overlaps(item.old_route_currencies, route.currencies);
+    })
+    .sort((a, b) => `${a.provider_name} ${a.client_title}`.localeCompare(`${b.provider_name} ${b.client_title}`));
+
+  const selectedRoute = (item: UpdateQueueItemV4) => routes.find((route) => route.route_id === selections[item.id]);
+  const requiresOverride = (item: UpdateQueueItemV4, route?: RouteCoverage) => Boolean(route)
+    && (!overlaps(item.old_route_geos, route?.geos) || !overlaps(item.old_route_methods, route?.methods));
+
+  const run = async (key: string, action: () => Promise<{data:unknown;error:{message:string}|null}>, success: string) => {
+    setBusy(key); setMessage(null);
+    const result = await action();
+    if (result.error) setMessage({ tone: "error", text: result.error.message });
+    else { setMessage({ tone: "success", text: success }); await load(); }
+    setBusy(null);
+  };
+
+  const prepareGroup = (group: UpdateQueueItemV4[]) => {
+    const shortlistId = group[0].shortlist_id;
+    const active = group.filter((item) => ["pending", "in_progress"].includes(item.status));
+    if (active.some((item) => !selections[item.id])) {
+      setMessage({ tone: "error", text: "Выберите замену для каждого устаревшего оффера этого shortlist." });
+      return;
+    }
+    const needsOverride = active.some((item) => requiresOverride(item, selectedRoute(item)));
+    if (needsOverride && !overrideReasons[shortlistId]?.trim()) {
+      setMessage({ tone: "error", text: "GEO или метод отличаются. Укажите причину осознанной замены." });
+      return;
+    }
+    const replacements = Object.fromEntries(active.map((item) => [item.id, selections[item.id]]));
+    void run(`prepare-${shortlistId}`, async () => {
+      const result = await supabase.rpc("create_offerpsp_shortlist_v_next_bulk", {
+        p_shortlist_id: shortlistId,
+        p_replacements: replacements,
+        p_title: null,
+        p_introduction: null,
+        p_override_reason: overrideReasons[shortlistId]?.trim() || null,
+      });
+      return { data: result.data, error: result.error };
+    }, "Единый черновик vNext создан для всех устаревших офферов.");
+  };
+
+  const shareGroup = (group: UpdateQueueItemV4[]) => {
+    const preparedId = group.find((item) => item.prepared_shortlist_id)?.prepared_shortlist_id;
+    if (!preparedId) return;
+    void run(`share-${group[0].shortlist_id}`, async () => {
+      const result = await supabase.rpc("share_offerpsp_shortlist", { p_shortlist_id: preparedId });
+      return { data: result.data, error: result.error };
+    }, "Обновлённый shortlist отправлен в кабинет клиента.");
+  };
+
+  const confirmGroup = (group: UpdateQueueItemV4[]) => {
+    const shortlistId = group[0].shortlist_id;
+    void run(`confirm-${shortlistId}`, async () => {
+      const result = await supabase.rpc("confirm_offerpsp_offer_updates_sent", {
+        p_shortlist_id: shortlistId,
+        p_notes: notes[shortlistId]?.trim() || null,
+      });
+      return { data: result.data, error: result.error };
+    }, "Все связанные задачи закрыты: клиент уведомлён.");
+  };
+
+  const abandonGroup = (group: UpdateQueueItemV4[]) => {
+    const shortlistId = group[0].shortlist_id;
+    if (!notes[shortlistId]?.trim()) {
+      setMessage({ tone: "error", text: "Для отмены черновика укажите причину." });
+      return;
+    }
+    void run(`abandon-${shortlistId}`, async () => {
+      const result = await supabase.rpc("abandon_offerpsp_prepared_update", {
+        p_shortlist_id: shortlistId,
+        p_reason: notes[shortlistId].trim(),
+      });
+      return { data: result.data, error: result.error };
+    }, "Черновик отменён. Можно выбрать другие замены.");
+  };
+
+  const dismissItem = (item: UpdateQueueItemV4) => {
+    if (!notes[item.shortlist_id]?.trim()) {
+      setMessage({ tone: "error", text: "Для закрытия задачи укажите причину." });
+      return;
+    }
+    void run(`dismiss-${item.id}`, async () => {
+      const result = await supabase.rpc("dismiss_offerpsp_offer_update", {
+        p_queue_item_id: item.id,
+        p_notes: notes[item.shortlist_id].trim(),
+      });
+      return { data: result.data, error: result.error };
+    }, "Задача убрана из очереди.");
+  };
+
+  return <div className="space-y-5">
+    {message && (message.tone === "error" ? <ErrorBanner message={message.text}/> : <div className="rounded-xl border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-700 dark:border-success-500/20 dark:bg-success-500/10 dark:text-success-300">{message.text}</div>)}
+    <Panel>
+      <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Impact control</p><h2 className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">Обновить предложения мерчам</h2><p className="mt-1 text-sm text-gray-500">Один shortlist обновляется целиком: ни один устаревший оффер не останется внутри.</p></div><button onClick={()=>void load()} disabled={loading} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 dark:border-gray-700 dark:text-gray-300">Обновить</button></div>
+      <div className="mt-4 flex flex-wrap gap-2">{[["active","Активные"],["sent","Отправлены"],["dismissed","Убраны"],["all","Все"]].map(([value,label])=><button key={value} onClick={()=>setStatusFilter(value)} className={`rounded-lg px-3 py-2 text-sm ${statusFilter===value?"bg-brand-500 text-white":"bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300"}`}>{label}</button>)}</div>
+    </Panel>
+    {loading ? <Panel><div className="py-8 text-center text-sm text-gray-400">Загружаю…</div></Panel> : groups.length === 0 ? <Panel><EmptyState title="Нет задач по обновлению мерчей" description="Здесь появятся задачи, когда отправленный оффер изменится или перестанет работать."/></Panel> : groups.map((group) => {
+      const shortlistId = group[0].shortlist_id;
+      const preparedId = group.find((item)=>item.prepared_shortlist_id)?.prepared_shortlist_id;
+      const preparedStatus = group.find((item)=>item.prepared_shortlist_status)?.prepared_shortlist_status;
+      const isActive = group.some((item)=>["pending","in_progress"].includes(item.status));
+      const groupNeedsOverride = group.some((item)=>requiresOverride(item, selectedRoute(item)));
+      return <Panel key={shortlistId}>
+        <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><strong className="text-base text-gray-900 dark:text-white">{group[0].shortlist_title || "Shortlist"} · v{group[0].shortlist_version || "—"}</strong><StatusPill status={preparedStatus || group[0].status}/>{group.some((item)=>item.has_client_selection)&&<span className="rounded-full bg-error-100 px-2.5 py-1 text-xs font-semibold text-error-700 dark:bg-error-500/20 dark:text-error-300">клиент уже выбирал оффер</span>}</div><p className="mt-1 text-xs text-gray-400">{group.length} офферов требуют решения · изменения отправляются одной новой версией</p></div><Link to={`/merchants/${group[0].lead_id}?tab=shortlists`} className="rounded-lg border border-brand-200 px-3 py-2 text-xs font-semibold text-brand-600">Открыть мерча →</Link></div>
+        <div className="mt-4 divide-y divide-gray-100 rounded-xl border border-gray-200 dark:divide-gray-800 dark:border-gray-800">{group.map((item)=>{
+          const candidates = candidatesFor(item);
+          const selected = selectedRoute(item);
+          const warning = requiresOverride(item, selected);
+          return <div key={item.id} className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,1.4fr)_auto] lg:items-center"><div><div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-warning-50 px-2 py-1 text-xs font-semibold text-warning-700 dark:bg-warning-500/10 dark:text-warning-300">{STALENESS_LABELS[item.current_staleness || ""] || item.trigger_event}</span><span className="text-xs text-gray-400">{item.public_code}</span></div><strong className="mt-2 block text-sm text-gray-900 dark:text-white">{item.old_route_title || "Оффер"}</strong><span className="mt-1 block text-xs text-gray-400">{list(item.old_route_geos)} · {list(item.old_route_currencies)} · {list(item.old_route_methods)} · {item.old_route_flow || "—"}</span></div>{isActive && !preparedId ? <div><select value={selections[item.id] || ""} onChange={(event)=>setSelections((current)=>({...current,[item.id]:event.target.value}))} className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-brand-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"><option value="">Выберите актуальный оффер-замену</option>{candidates.map((route)=><option key={route.route_id} value={route.route_id}>{route.provider_name} · {route.client_title} · {list(route.geos)} · {list(route.currencies)} · {list(route.methods)} · {route.flow}</option>)}</select>{candidates.length===0&&<p className="mt-1 text-xs text-error-500">Нет опубликованной замены с совместимым потоком и валютой.</p>}{warning&&<p className="mt-1 text-xs text-warning-600">GEO или метод отличаются — потребуется обоснование.</p>}</div> : <div className="text-sm text-gray-600 dark:text-gray-300">{item.new_route_title ? `Замена: ${item.new_route_title}` : preparedId ? "Замена сохранена в черновике" : "Решение закрыто"}</div>}{isActive&&!preparedId&&!item.has_client_selection?<button onClick={()=>dismissItem(item)} disabled={Boolean(busy)} className="rounded-lg border border-error-200 px-3 py-2 text-xs font-semibold text-error-600 disabled:opacity-40">Убрать</button>:<span/>}</div>})}</div>
+        {isActive && <div className="mt-4 space-y-3">{!preparedId && groupNeedsOverride&&<textarea value={overrideReasons[shortlistId]||""} onChange={(event)=>setOverrideReasons((current)=>({...current,[shortlistId]:event.target.value}))} rows={2} className="w-full rounded-lg border border-warning-200 px-3 py-2 text-sm outline-none focus:border-warning-400 dark:border-warning-500/30 dark:bg-gray-900" placeholder="Почему замена с другим GEO или методом допустима для этого мерча?"/>}<input value={notes[shortlistId]||""} onChange={(event)=>setNotes((current)=>({...current,[shortlistId]:event.target.value}))} className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm outline-none focus:border-brand-400 dark:border-gray-700 dark:bg-gray-900" placeholder="Рабочая заметка / причина отмены или закрытия"/><div className="flex flex-wrap gap-2">{!preparedId&&<button onClick={()=>prepareGroup(group)} disabled={Boolean(busy)} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40">{busy===`prepare-${shortlistId}`?"Создаю…":"Создать единый vNext"}</button>}{preparedId&&preparedStatus==="draft"&&<><Link to={`/merchants/${group[0].lead_id}?tab=shortlists&shortlist=${preparedId}`} className="rounded-lg border border-brand-200 px-4 py-2.5 text-sm font-semibold text-brand-600">Проверить черновик →</Link><button onClick={()=>shareGroup(group)} disabled={Boolean(busy)} className="rounded-lg bg-warning-500 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40">{busy===`share-${shortlistId}`?"Проверяю и отправляю…":"Отправить клиенту"}</button><button onClick={()=>abandonGroup(group)} disabled={Boolean(busy)} className="rounded-lg border border-error-200 px-4 py-2.5 text-sm font-semibold text-error-600 disabled:opacity-40">Отменить черновик</button></>}{preparedId&&preparedStatus==="shared"&&<button onClick={()=>confirmGroup(group)} disabled={Boolean(busy)} className="rounded-lg bg-success-500 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40">{busy===`confirm-${shortlistId}`?"Закрываю…":"Подтвердить уведомление"}</button>}</div></div>}
+      </Panel>;
+    })}
   </div>;
 }
 

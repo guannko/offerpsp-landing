@@ -231,6 +231,10 @@ async function applyMigrations() {
     "20260806194000_offerpsp_individual_offer_publication.sql",
     "20260806211500_offerpsp_operations_integrations.sql",
     "20260806222500_offerpsp_operations_indexes.sql",
+    "20260808000000_offerpsp_impact_control.sql",
+    "20260808120000_offerpsp_impact_control_v2.sql",
+    "20260808180000_offerpsp_impact_control_v3.sql",
+    "20260808210000_offerpsp_impact_control_v4.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -954,6 +958,162 @@ async function verifyIndividualOfferPublication() {
   );
   await setUser(STAFF_ID);
   process.stdout.write("PASS individual offer publication, revision isolation and staff-only boundary\n");
+}
+
+async function verifyImpactControlV4() {
+  await setUser(STAFF_ID);
+  await setRole("authenticated");
+
+  const createProviderRoutes = async (name) => {
+    const provider = await query(
+      "select public.upsert_offerpsp_provider($1, null, null, null, 'active', 1, true, 'Impact Control fixture') as value",
+      [name],
+    );
+    const providerId = (await query(
+      "select id from private.offerpsp_providers where internal_code = $1",
+      [provider.rows[0].value.internal_code],
+    )).rows[0].id;
+    await query("select public.confirm_offerpsp_provider_freshness($1)", [providerId]);
+    const routePayload = (title) => JSON.stringify({
+      client_title: title,
+      coverage_scope: "specific",
+      geos: ["IN"],
+      currencies: ["INR"],
+      flow: "payin",
+      methods: ["UPI"],
+      traffic_types: ["FTD"],
+      verticals: ["IGAMING"],
+      freshness_days: 30,
+      fees: [{ flow: "payin", fee_type: "percent", base_percent: 6, applies_on: "success" }],
+      limits: [{ flow: "payin", currency: "INR", minimum_amount: 100, maximum_amount: 10000 }],
+      settlements: [{ currency: "USDT", period: "T+1" }],
+    });
+    const oldRoute = await query(
+      "select public.create_offerpsp_manual_route($1, $2::jsonb) as value",
+      [providerId, routePayload(`${name} old`)],
+    );
+    const newRoute = await query(
+      "select public.create_offerpsp_manual_route($1, $2::jsonb) as value",
+      [providerId, routePayload(`${name} replacement`)],
+    );
+    await query("select public.publish_offerpsp_route($1)", [oldRoute.rows[0].value.route_id]);
+    await query("select public.publish_offerpsp_route($1)", [newRoute.rows[0].value.route_id]);
+    return {
+      providerId,
+      oldRouteId: oldRoute.rows[0].value.route_id,
+      newRouteId: newRoute.rows[0].value.route_id,
+    };
+  };
+
+  const providerA = await createProviderRoutes("Impact Fixture A");
+  const providerB = await createProviderRoutes("Impact Fixture B");
+  const lead = await query(
+    `insert into public.offerpsp_leads (
+      name, work_email, company, company_url, vertical, monthly_volume, geos, methods,
+      details, source, status, consent, target_geos, requested_currencies,
+      requested_flows, requested_methods, traffic_types, expected_monthly_volume,
+      volume_currency, min_transaction_amount, max_transaction_amount,
+      transaction_currency, registration_geo, business_model, license_status,
+      license_jurisdiction, launch_timeline, current_processing_setup, client_user_id
+    ) values (
+      'Impact Client', 'impact@example.com', 'Impact Merchant', 'https://impact.invalid',
+      'iGaming', '500000 EUR', 'India', 'UPI', 'Impact Control validation', 'validation',
+      'new', true, array['IN'], array['INR'], array['PAYIN'], array['UPI'], array['FTD'],
+      500000, 'EUR', 100, 10000, 'INR', 'CY', 'Online casino', 'licensed', 'CY',
+      'Immediate', 'Existing processing', $1
+    ) returning lead_id`,
+    [CLIENT_ID],
+  );
+  const leadId = lead.rows[0].lead_id;
+  await clearPreCompliance(leadId);
+  const shortlist = await query(
+    "select public.create_offerpsp_manual_shortlist($1, $2::uuid[], 'Impact shortlist', 'Two route fixture', 'Validation') as value",
+    [leadId, [providerA.oldRouteId, providerB.oldRouteId]],
+  );
+  const shortlistId = shortlist.rows[0].value.shortlist_id;
+  await query("select public.share_offerpsp_shortlist($1)", [shortlistId]);
+
+  await query("select public.set_offerpsp_route_status($1, 'paused')", [providerA.oldRouteId]);
+  await query("select public.set_offerpsp_route_status($1, 'paused')", [providerB.oldRouteId]);
+  const queue = await query(
+    "select id, old_route_id from private.offerpsp_offer_update_queue where shortlist_id = $1 and status in ('pending','in_progress') order by old_route_id",
+    [shortlistId],
+  );
+  if (queue.rows.length !== 2) {
+    throw new Error(`Impact Control did not create two grouped update tasks: ${JSON.stringify(queue.rows)}`);
+  }
+
+  await setUser(CLIENT_ID);
+  const staleOption = await query(
+    "select public_code from public.offerpsp_shortlist_items where shortlist_id = $1 order by rank limit 1",
+    [shortlistId],
+  );
+  await expectQueryFailure(
+    "select public.respond_offerpsp_option($1, 'interested')",
+    [staleOption.rows[0].public_code],
+    "no longer available",
+  );
+  await setUser(STAFF_ID);
+
+  const replacementByOldRoute = new Map([
+    [providerA.oldRouteId, providerA.newRouteId],
+    [providerB.oldRouteId, providerB.newRouteId],
+  ]);
+  const replacements = Object.fromEntries(queue.rows.map((item) => [item.id, replacementByOldRoute.get(item.old_route_id)]));
+  await expectQueryFailure(
+    "select public.create_offerpsp_shortlist_v_next_bulk($1, $2::jsonb, null, null, null)",
+    [shortlistId, JSON.stringify({ [queue.rows[0].id]: replacements[queue.rows[0].id] })],
+    "Every stale option must be replaced together",
+  );
+
+  const prepared = await query(
+    "select public.create_offerpsp_shortlist_v_next_bulk($1, $2::jsonb, null, null, null) as value",
+    [shortlistId, JSON.stringify(replacements)],
+  );
+  const preparedId = prepared.rows[0].value.new_shortlist_id;
+  const preparedItems = await query(
+    "select offer_route_id, route_staleness_status from public.offerpsp_shortlist_items where shortlist_id = $1 order by rank",
+    [preparedId],
+  );
+  if (preparedItems.rows.length !== 2
+      || preparedItems.rows.some((item) => item.route_staleness_status !== null)
+      || new Set(preparedItems.rows.map((item) => item.offer_route_id)).size !== 2) {
+    throw new Error(`Grouped vNext did not replace every stale option once: ${JSON.stringify(preparedItems.rows)}`);
+  }
+
+  const idempotent = await query(
+    "select public.create_offerpsp_shortlist_v_next_bulk($1, $2::jsonb, null, null, null) as value",
+    [shortlistId, JSON.stringify(replacements)],
+  );
+  if (!idempotent.rows[0].value.idempotent || idempotent.rows[0].value.new_shortlist_id !== preparedId) {
+    throw new Error("Grouped vNext retry was not idempotent");
+  }
+
+  await query("select public.set_offerpsp_route_status($1, 'paused')", [providerA.newRouteId]);
+  await expectQueryFailure(
+    "select public.share_offerpsp_shortlist($1)",
+    [preparedId],
+    "unavailable or expired route",
+  );
+  await query("select public.confirm_offerpsp_provider_freshness($1)", [providerA.providerId]);
+  await query("select public.set_offerpsp_route_status($1, 'published')", [providerA.newRouteId]);
+  await query("select public.share_offerpsp_shortlist($1)", [preparedId]);
+  await query("select public.confirm_offerpsp_offer_updates_sent($1, 'Impact Control validation')", [shortlistId]);
+
+  const finalQueue = await query(
+    "select status, client_notified_at from private.offerpsp_offer_update_queue where shortlist_id = $1 order by id",
+    [shortlistId],
+  );
+  const shortlistStates = await query(
+    "select id, status from public.offerpsp_shortlists where id = any($1::uuid[]) order by version",
+    [[shortlistId, preparedId]],
+  );
+  if (finalQueue.rows.some((item) => item.status !== "sent" || !item.client_notified_at)
+      || shortlistStates.rows[0].status !== "archived"
+      || shortlistStates.rows[1].status !== "shared") {
+    throw new Error(`Impact Control did not finish atomically: ${JSON.stringify({ finalQueue: finalQueue.rows, shortlistStates: shortlistStates.rows })}`);
+  }
+  process.stdout.write("PASS Impact Control grouped replacement, stale-action block, share-time race guard and atomic completion\n");
 }
 
 async function runEndToEndFixture() {
@@ -2293,6 +2453,7 @@ try {
   await verifySupplyOperations();
   await verifyRouteLevelPublication();
   await verifyIndividualOfferPublication();
+  await verifyImpactControlV4();
   await runEndToEndFixture();
   await verifyAgentWorkspaceAndPricing();
   await verifyEntityLifecycle();

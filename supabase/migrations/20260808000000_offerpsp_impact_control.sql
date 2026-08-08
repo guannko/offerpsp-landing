@@ -19,6 +19,9 @@ ALTER TABLE public.offerpsp_shortlist_items
   CONSTRAINT offerpsp_shortlist_items_staleness_values
   CHECK (route_staleness_status IN ('updated', 'paused', 'unavailable', 'expired'));
 
+ALTER TABLE public.offerpsp_shortlist_items
+  ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+
 -- 2. Admin work queue for merchant offer updates
 CREATE TABLE IF NOT EXISTS private.offerpsp_offer_update_queue (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -350,6 +353,9 @@ END;
 $$;
 
 -- 11. Update list_offerpsp_client_offers to expose staleness to portal
+-- PostgreSQL cannot change a RETURNS TABLE signature with CREATE OR REPLACE.
+-- Drop the previous projection explicitly so a clean migration replay works.
+DROP FUNCTION IF EXISTS public.list_offerpsp_client_offers(uuid);
 CREATE OR REPLACE FUNCTION public.list_offerpsp_client_offers(p_lead_id uuid DEFAULT NULL)
 RETURNS TABLE (
   shortlist_id uuid,
