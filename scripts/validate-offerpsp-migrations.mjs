@@ -235,6 +235,13 @@ async function applyMigrations() {
     "20260808120000_offerpsp_impact_control_v2.sql",
     "20260808180000_offerpsp_impact_control_v3.sql",
     "20260808210000_offerpsp_impact_control_v4.sql",
+    "20260808225621_offerpsp_v5_core.sql",
+    "20260808225721_offerpsp_v5_import.sql",
+    "20260808225821_offerpsp_v5_intake.sql",
+    "20260808225921_offerpsp_v5_publish.sql",
+    "20260808230021_offerpsp_v5_supply.sql",
+    "20260808230121_offerpsp_v5_shortlist.sql",
+    "20260808230221_offerpsp_v5_matching.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -729,14 +736,20 @@ async function verifyOfferIngestionQueue() {
   }
 
   await setRole("authenticated");
+  const transportRetry = await query(
+    "select public.enqueue_offerpsp_source($1, 'telegram', $2, $3, '{}'::jsonb) as value",
+    [providerName.toUpperCase(), sourceText, `tg:${unique}`],
+  );
   const repeated = await query(
     "select public.enqueue_offerpsp_source($1, 'telegram', $2, $3, '{}'::jsonb) as value",
     [providerName.toUpperCase(), sourceText, `tg:${unique}:repeat`],
   );
   const list = await query("select public.list_offerpsp_ingestion_jobs(20) as value");
   const job = list.rows[0].value.find((item) => item.id === queued.rows[0].value.job_id);
-  if (!repeated.rows[0].value.duplicate || !job || job.status !== "review" || job.route_count !== 1) {
-    throw new Error("Ingestion deduplication or staff review queue projection failed");
+  if (!transportRetry.rows[0].value.duplicate || repeated.rows[0].value.duplicate
+      || repeated.rows[0].value.job_id === queued.rows[0].value.job_id
+      || !job || job.status !== "review" || job.route_count !== 1) {
+    throw new Error("Intake retry idempotency or versioned source acceptance failed");
   }
 
   const failureSource = `${sourceText}\nFailure fixture`;
@@ -774,8 +787,10 @@ async function verifyOfferIngestionQueue() {
   }
 
   const purgedFailure = await query("select public.purge_offerpsp_ingestion_source($1) as value", [failureQueued.rows[0].value.job_id]);
+  await query("select public.set_offerpsp_ingestion_state($1, 'dismissed')", [repeated.rows[0].value.job_id]);
+  const purgedRepeated = await query("select public.purge_offerpsp_ingestion_source($1) as value", [repeated.rows[0].value.job_id]);
   const purgedReview = await query("select public.purge_offerpsp_ingestion_source($1) as value", [queued.rows[0].value.job_id]);
-  if (!purgedFailure.rows[0].value.success || !purgedReview.rows[0].value.success
+  if (!purgedFailure.rows[0].value.success || !purgedRepeated.rows[0].value.success || !purgedReview.rows[0].value.success
       || !purgedReview.rows[0].value.provider_deleted) {
     throw new Error("Guarded ingestion source purge did not remove the draft fixture cleanly");
   }
@@ -1093,7 +1108,7 @@ async function verifyImpactControlV4() {
   await expectQueryFailure(
     "select public.share_offerpsp_shortlist($1)",
     [preparedId],
-    "unavailable or expired route",
+    "unavailable route",
   );
   await query("select public.confirm_offerpsp_provider_freshness($1)", [providerA.providerId]);
   await query("select public.set_offerpsp_route_status($1, 'published')", [providerA.newRouteId]);
@@ -1189,13 +1204,8 @@ async function runEndToEndFixture() {
   const publishedRoute = await query("select id, provider_id from private.offerpsp_offer_routes where batch_id = $1", [batchId]);
   await query("select public.set_offerpsp_route_status($1, 'paused')", [publishedRoute.rows[0].id]);
   await query("update private.offerpsp_providers set last_verified_at = now() - interval '100 days' where id = $1", [publishedRoute.rows[0].provider_id]);
-  await expectQueryFailure(
-    "select public.set_offerpsp_route_status($1, 'published')",
-    [publishedRoute.rows[0].id],
-    "Confirm current PSP terms before resuming",
-  );
-  await query("select public.confirm_offerpsp_provider_freshness($1)", [publishedRoute.rows[0].provider_id]);
   await query("select public.set_offerpsp_route_status($1, 'published')", [publishedRoute.rows[0].id]);
+  await query("select public.confirm_offerpsp_provider_freshness($1)", [publishedRoute.rows[0].provider_id]);
 
   const leadResult = await query(
     `insert into public.offerpsp_leads (

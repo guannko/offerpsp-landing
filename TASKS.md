@@ -472,10 +472,11 @@ a normal authenticated user was denied. Mutation E2E remains locally verified on
   volume, fees, limits and settlement terms without changing the immutable source message.
 - [x] Parser error/warning queue with required resolution notes and audit history.
 - [x] Provider-wide or route-specific OfferPSP margin policies; PSP base rate remains private.
-- [x] Guarded pause, resume and archive controls. Resume revalidates current PSP confirmation,
-  blocking errors, pricing, dimensions, limits, expiry and margin.
+- [x] Guarded pause, resume and archive controls. Resume revalidates blocking errors, pricing,
+  dimensions, limits and margin. Dates and reminder cadence never deactivate an offer.
 - [x] Rate-card version register and operational change history.
-- [x] Last-confirmed action, configurable freshness period and stale-route indicators.
+- [x] Last-confirmed action and configurable partner follow-up cadence. These are advisory tools;
+  an ordinary published offer remains available until staff pauses, archives or replaces it.
 - [x] Staff-only RPC grants; clients, agents and anonymous users cannot load or mutate supply data.
 - [x] Desktop and 390px mobile visual verification without horizontal overflow.
 - [x] All 18 migration/E2E fixtures and frontend regression guards pass.
@@ -484,11 +485,9 @@ a normal authenticated user was denied. Mutation E2E remains locally verified on
 - [x] Archived routes from superseded parser versions remain in version history but are hidden from
   the active route list and anomaly counters.
 - [ ] Visual field-by-field diff between two rate-card versions.
-- [x] Automated stale-offer alerts and partner reminders through n8n. A private provider-level
-  queue uses the existing `last_verified_at`, source effective date, route expiry and
-  `freshness_days`; it creates one deduplicated operational task, prepares RU/EN partner text,
-  alerts Boris in Telegram at most once per seven days and resolves itself after confirmation or
-  publication of a fresh rate card.
+- [x] Advisory partner reminders use `last_verified_at` and `freshness_days`; they create one
+  deduplicated operational task and prepare RU/EN partner text. They never pause, archive or mark
+  an offer unavailable.
 - [x] GEO/currency/method/vertical coverage matrix with readiness, search and status filters.
 
 ### Production grant hotfix
@@ -761,17 +760,16 @@ The first operational UI is deployed. Daily-use refinement remains.
   drafts remain review-only and never falsely confirm partner terms.
 
 The production queue, AIBot transport, automatic text parser and private admin-file ingestion are
-connected. Incoming mailbox activation remains the next external-channel step; partner freshness
-automation is live in Supabase, the cockpit and n8n.
+connected. Incoming mailbox activation remains the next external-channel step; partner follow-up
+reminders are advisory and do not control offer availability.
 
 ### Impact Control — production delivery 2026-08-08
 
-Status: `VERIFIED` for database, frontend and manual processor execution. The first scheduled n8n
-execution at 02:00 Asia/Nicosia remains an expected operational observation rather than a completed
-check.
+Status: `VERIFIED` for database lifecycle and local frontend. The former daily expiry workflow was
+deactivated on 2026-08-08 because offer availability is version-driven, not date-driven.
 
 - [x] Client actions and introduction requests fail closed when a previously shared route is
-  paused, archived, expired, replaced or otherwise stale.
+  explicitly paused, archived, replaced or otherwise unavailable. Dates alone never block it.
 - [x] Every stale item from the same source shortlist is resolved as one atomic group. Staff cannot
   create a partial vNext that silently leaves another unavailable offer in the client workspace.
 - [x] Replacement routes are selected from the live published catalog rather than entered as raw
@@ -779,24 +777,24 @@ check.
   reason.
 - [x] Prepared vNext state is persisted in Supabase and survives refresh. Staff can review, share,
   abandon and rebuild the draft without losing the workflow state.
-- [x] Sharing re-checks the current replacement route state to close the pause/archive/expiry race
+- [x] Sharing re-checks the current replacement route state to close the pause/archive race
   between draft creation and client delivery.
 - [x] A shared replacement completes all related update-queue items atomically and archives the old
   shortlist. Queue items with an existing client selection cannot be dismissed.
 - [x] Full clean-replay validation passes through migration
   `20260808210000_offerpsp_impact_control_v4.sql`, including grouped replacement, idempotent retry,
   stale-action denial, share-time race denial and atomic completion.
-- [x] Production migration `offerpsp_impact_control_v4` is applied. The production processor RPC
-  executed successfully with `items_updated = 0` and `tasks_created = 0` because no routes were due
-  at the verification time.
-- [x] n8n workflow `V4eM2iAHvhxO5J2J` uses the OfferPSP Supabase service credential, three retries,
-  BIX Global Error Alerts and a valid daily schedule at 02:00 Asia/Nicosia. Validation returns zero
-  errors and zero warnings; the workflow is active.
+- [x] Production Impact Control migrations v4 and v5 are applied. The former expiry processor now
+  returns `disabled: true` and cannot change offers or create tasks.
+- [x] n8n workflow `V4eM2iAHvhxO5J2J` is deactivated. It is retained only as historical
+  configuration and must not be reactivated as an expiry processor.
 - [x] Captain's Bridge production deployment `dpl_BhHpAk6E2y6RdH54idYcDZR1sY5A` is `READY`, built
   from commit `4a71063694389b5b9d6f4c1bb88cfff2673c40a6` and aliased to
   `https://ops-7q4m2x9k8v3n.vercel.app`.
-- [ ] Confirm the first scheduled n8n execution after 02:00 Asia/Nicosia and retain its execution ID
-  as operational evidence.
+- [x] A later partner message creates a new batch/version even when its terms are identical. Only an
+  immediate retry with the same source reference is deduplicated.
+- [x] Publishing a successor replaces the previous route. Identical terms silently rebind existing
+  shortlist items; commercial changes enter Impact Control for merchant review.
 
 ### P2 — Analytics
 
