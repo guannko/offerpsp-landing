@@ -393,6 +393,7 @@ export function OffersPage() {
 type UpdateQueueItem = {
   id: string; lead_id: string; shortlist_id: string; shortlist_item_id: string;
   old_route_id?: string; new_route_id?: string; trigger_event: string; status: string;
+  has_client_selection: boolean; compatibility_check?: unknown; prepared_shortlist_id?: string;
   assigned_to?: string; due_at?: string; client_notified_at?: string; notes?: string;
   created_at: string; shortlist_title?: string; shortlist_version?: number;
   public_code?: string; current_staleness?: string; old_route_title?: string; new_route_title?: string;
@@ -403,6 +404,13 @@ const STALENESS_LABELS: Record<string, string> = {
   unavailable: "оффер недоступен", expired: "срок истёк",
 };
 
+// Per-item transient workflow state (not persisted, cleared on load)
+type ItemWorkflow = {
+  newRouteId: string;   // UUID typed by staff
+  vNextId?: string;     // returned by create_offerpsp_shortlist_v_next
+  step: "idle" | "validated" | "vnext_created" | "shared";
+};
+
 function OfferUpdateQueuePanel() {
   const [items, setItems] = useState<UpdateQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -410,6 +418,7 @@ function OfferUpdateQueuePanel() {
   const [statusFilter, setStatusFilter] = useState<string>("active");
   const [message, setMessage] = useState<{tone:"success"|"error";text:string}|null>(null);
   const [notesInput, setNotesInput] = useState<Record<string,string>>({});
+  const [workflow, setWorkflow] = useState<Record<string, ItemWorkflow>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -422,23 +431,74 @@ function OfferUpdateQueuePanel() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const act = async (name: string, fn: () => Promise<{data?:unknown;error:{message:string}|null}>, success: string) => {
-    setBusy(name); setMessage(null);
+  const wf = (id: string): ItemWorkflow => workflow[id] ?? { newRouteId: "", step: "idle" };
+  const setWf = (id: string, patch: Partial<ItemWorkflow>) =>
+    setWorkflow(prev => ({ ...prev, [id]: { ...wf(id), ...patch } }));
+
+  const act = async (
+    key: string,
+    fn: () => Promise<{data?:unknown;error:{message:string}|null}>,
+    success: string,
+    onOk?: (data: unknown) => void,
+  ) => {
+    setBusy(key); setMessage(null);
     const result = await fn();
     if (result.error) setMessage({ tone: "error", text: result.error.message });
-    else { setMessage({ tone: "success", text: success }); await load(); }
+    else { setMessage({ tone: "success", text: success }); onOk?.(result.data); await load(); }
     setBusy(null);
   };
 
+  const validate = (item: UpdateQueueItem) => {
+    const routeId = wf(item.id).newRouteId.trim();
+    if (!routeId) { setMessage({ tone: "error", text: "Укажите UUID маршрута-замены." }); return; }
+    void act(`validate-${item.id}`, async () => {
+      const r = await supabase.rpc("prepare_offerpsp_offer_update", {
+        p_queue_item_id: item.id, p_new_route_id: routeId,
+      });
+      return { data: r.data, error: r.error };
+    }, "Маршрут проверен, совместимость подтверждена.", () => setWf(item.id, { step: "validated" }));
+  };
+
+  const createVNext = (item: UpdateQueueItem) => {
+    const routeId = wf(item.id).newRouteId.trim();
+    void act(`vnext-${item.id}`, async () => {
+      const r = await supabase.rpc("create_offerpsp_shortlist_v_next", {
+        p_queue_item_id: item.id, p_new_route_id: routeId,
+      });
+      return { data: r.data, error: r.error };
+    }, "Новая версия шортлиста создана.", (data) => {
+      const d = data as { new_shortlist_id?: string } | null;
+      setWf(item.id, { step: "vnext_created", vNextId: d?.new_shortlist_id });
+    });
+  };
+
+  const shareVNext = (item: UpdateQueueItem) => {
+    const vNextId = item.prepared_shortlist_id ?? wf(item.id).vNextId;
+    if (!vNextId) { setMessage({ tone: "error", text: "Сначала создайте новый шортлист." }); return; }
+    void act(`share-${item.id}`, async () => {
+      const r = await supabase.rpc("share_offerpsp_shortlist", { p_shortlist_id: vNextId });
+      return { data: r.data, error: r.error };
+    }, "Шортлист опубликован клиенту.", () => setWf(item.id, { step: "shared" }));
+  };
+
   const markSent = (item: UpdateQueueItem) => void act(`sent-${item.id}`, async () => {
-    const result = await supabase.rpc("confirm_offerpsp_offer_update_sent", { p_queue_item_id: item.id, p_notes: notesInput[item.id] || null });
-    return { data: result.data, error: result.error };
+    const r = await supabase.rpc("confirm_offerpsp_offer_update_sent", {
+      p_queue_item_id: item.id, p_notes: notesInput[item.id] || null,
+    });
+    return { data: r.data, error: r.error };
   }, "Клиент отмечен как уведомлённый.");
 
-  const dismiss = (item: UpdateQueueItem) => void act(`dismiss-${item.id}`, async () => {
-    const result = await supabase.rpc("dismiss_offerpsp_offer_update", { p_queue_item_id: item.id, p_notes: notesInput[item.id] || null });
-    return { data: result.data, error: result.error };
-  }, "Задача убрана из очереди.");
+  const dismiss = (item: UpdateQueueItem) => {
+    if (!notesInput[item.id]?.trim()) {
+      setMessage({ tone: "error", text: "Для закрытия задачи обязательна заметка с причиной." }); return;
+    }
+    void act(`dismiss-${item.id}`, async () => {
+      const r = await supabase.rpc("dismiss_offerpsp_offer_update", {
+        p_queue_item_id: item.id, p_notes: notesInput[item.id],
+      });
+      return { data: r.data, error: r.error };
+    }, "Задача убрана из очереди.");
+  };
 
   const dateStr = (v?: string) => v ? new Date(v).toLocaleDateString("ru-RU") : "—";
   const overdue = (v?: string) => v && new Date(v) < new Date();
@@ -462,52 +522,132 @@ function OfferUpdateQueuePanel() {
         ))}
       </div>
     </Panel>
-    {loading ? <Panel><div className="py-8 text-center text-sm text-gray-400">Загружаю…</div></Panel> : items.length === 0 ? <Panel><EmptyState title="Нет задач по обновлению мерчей" description="Здесь появятся задачи, когда оффер из шортлиста изменит статус."/></Panel> : (
-      <div className="space-y-4">
-        {items.map(item => (
-          <Panel key={item.id}>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0 flex-1">
+
+    {loading
+      ? <Panel><div className="py-8 text-center text-sm text-gray-400">Загружаю…</div></Panel>
+      : items.length === 0
+        ? <Panel><EmptyState title="Нет задач по обновлению мерчей" description="Здесь появятся задачи, когда оффер из шортлиста изменит статус."/></Panel>
+        : <div className="space-y-4">{items.map(item => {
+            const w = wf(item.id);
+            const isActive = item.status !== "sent" && item.status !== "dismissed";
+            const isBusy = (k: string) => busy === `${k}-${item.id}`;
+            const vNextId = item.prepared_shortlist_id ?? w.vNextId;
+            // Effective step: if DB already has prepared_shortlist_id, treat as at least vnext_created
+            const effectiveStep = item.prepared_shortlist_id && w.step === "idle" ? "vnext_created" : w.step;
+
+            return <Panel key={item.id}>
+              {/* Header row */}
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      item.current_staleness === "unavailable" ? "bg-error-50 text-error-700 dark:bg-error-500/10 dark:text-error-300" :
+                      item.current_staleness === "expired" ? "bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400" :
+                      "bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-300"
+                    }`}>{STALENESS_LABELS[item.current_staleness ?? ""] ?? item.trigger_event}</span>
+                    <StatusPill status={item.status}/>
+                    {item.has_client_selection && (
+                      <span className="rounded-full bg-error-100 px-2.5 py-0.5 text-xs font-semibold text-error-700 dark:bg-error-500/20 dark:text-error-300">⚠ клиент выбрал этот оффер</span>
+                    )}
+                    {overdue(item.due_at) && isActive && (
+                      <span className="rounded-full bg-error-50 px-2 py-0.5 text-xs font-semibold text-error-600">просрочено</span>
+                    )}
+                  </div>
+                  <p className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
+                    {item.old_route_title ?? "Оффер"}
+                    {item.new_route_title && <> → <span className="text-success-600">{item.new_route_title}</span></>}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-400">
+                    Шортлист: {item.shortlist_title ?? "—"} v{item.shortlist_version ?? "—"} · Код: {item.public_code ?? "—"} · Срок: {dateStr(item.due_at)}
+                  </p>
+                  {item.client_notified_at && <p className="mt-1 text-xs text-success-600">Уведомлён: {dateStr(item.client_notified_at)}</p>}
+                </div>
+                <Link to={`/merchants/${item.lead_id}?tab=shortlists`} className="shrink-0 rounded-lg border border-brand-200 px-3 py-2 text-xs font-semibold text-brand-600">Открыть мерча →</Link>
+              </div>
+
+              {/* Workflow steps (only for active items) */}
+              {isActive && <div className="mt-4 space-y-3 border-t border-gray-100 pt-4 dark:border-gray-800">
+
+                {/* Step 1 — select replacement route + validate */}
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${
-                    item.current_staleness === "unavailable" ? "bg-error-50 text-error-700 dark:bg-error-500/10 dark:text-error-300" :
-                    item.current_staleness === "expired" ? "bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400" :
-                    "bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-300"
-                  }`}>{STALENESS_LABELS[item.current_staleness || ""] || item.trigger_event}</span>
-                  <StatusPill status={item.status}/>
-                  {overdue(item.due_at) && item.status !== "sent" && item.status !== "dismissed" && (
-                    <span className="rounded-full bg-error-50 px-2 py-0.5 text-xs font-semibold text-error-600">просрочено</span>
+                  <span className={`shrink-0 text-xs font-semibold ${effectiveStep !== "idle" ? "text-success-600" : "text-gray-400"}`}>1. Маршрут-замена</span>
+                  <input
+                    value={w.newRouteId}
+                    onChange={e => setWf(item.id, { newRouteId: e.target.value })}
+                    disabled={effectiveStep !== "idle" || Boolean(busy)}
+                    className="h-8 min-w-0 flex-1 rounded-lg border border-gray-200 px-3 font-mono text-xs text-gray-700 outline-none focus:border-brand-400 disabled:bg-gray-50 disabled:text-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:disabled:bg-gray-800"
+                    placeholder="UUID нового опубликованного маршрута"
+                  />
+                  {effectiveStep === "idle" && (
+                    <button onClick={() => validate(item)} disabled={Boolean(busy) || !w.newRouteId.trim()} className="h-8 rounded-lg bg-brand-500 px-3 text-xs font-semibold text-white disabled:opacity-40">
+                      {isBusy("validate") ? "Проверяю…" : "Проверить"}
+                    </button>
+                  )}
+                  {effectiveStep !== "idle" && <span className="text-xs text-success-600">✓ проверен</span>}
+                </div>
+
+                {/* Step 2 — create vNext */}
+                {(effectiveStep === "validated" || effectiveStep === "vnext_created" || effectiveStep === "shared") && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`shrink-0 text-xs font-semibold ${effectiveStep !== "validated" ? "text-success-600" : "text-gray-400"}`}>2. Создать vNext</span>
+                    {effectiveStep === "validated" && (
+                      <button onClick={() => createVNext(item)} disabled={Boolean(busy)} className="h-8 rounded-lg bg-brand-500 px-3 text-xs font-semibold text-white disabled:opacity-40">
+                        {isBusy("vnext") ? "Создаю…" : "Создать новую версию шортлиста"}
+                      </button>
+                    )}
+                    {effectiveStep !== "validated" && vNextId && (
+                      <><span className="font-mono text-xs text-gray-500">{vNextId}</span><span className="text-xs text-success-600">✓ создан</span></>
+                    )}
+                  </div>
+                )}
+
+                {/* Step 3 — open + share */}
+                {(effectiveStep === "vnext_created" || effectiveStep === "shared") && vNextId && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`shrink-0 text-xs font-semibold ${effectiveStep === "shared" ? "text-success-600" : "text-gray-400"}`}>3. Открыть и поделиться</span>
+                    <Link to={`/merchants/${item.lead_id}?tab=shortlists&shortlist=${vNextId}`} className="h-8 rounded-lg border border-brand-200 px-3 text-xs font-semibold leading-8 text-brand-600">Открыть черновик →</Link>
+                    {effectiveStep === "vnext_created" && (
+                      <button onClick={() => shareVNext(item)} disabled={Boolean(busy)} className="h-8 rounded-lg bg-warning-500 px-3 text-xs font-semibold text-white disabled:opacity-40">
+                        {isBusy("share") ? "Публикую…" : "Поделиться с клиентом"}
+                      </button>
+                    )}
+                    {effectiveStep === "shared" && <span className="text-xs text-success-600">✓ опубликован</span>}
+                  </div>
+                )}
+
+                {/* Step 4 — confirm sent / dismiss */}
+                <div className="flex flex-wrap items-center gap-2 border-t border-dashed border-gray-100 pt-3 dark:border-gray-800">
+                  <input
+                    value={notesInput[item.id] ?? ""}
+                    onChange={e => setNotesInput(prev => ({ ...prev, [item.id]: e.target.value }))}
+                    className="h-8 min-w-0 flex-1 rounded-lg border border-gray-200 px-3 text-xs text-gray-700 outline-none focus:border-brand-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+                    placeholder={item.has_client_selection ? "Заметка (обязательна для закрытия)" : "Заметка (обязательна для закрытия, опционально для уведомления)"}
+                  />
+                  <button
+                    onClick={() => markSent(item)}
+                    disabled={Boolean(busy) || effectiveStep !== "shared"}
+                    title={effectiveStep !== "shared" ? "Сначала поделитесь шортлистом с клиентом" : ""}
+                    className="h-8 rounded-lg bg-success-500 px-3 text-xs font-semibold text-white disabled:opacity-40"
+                  >
+                    {isBusy("sent") ? "Сохраняю…" : "✓ Уведомил клиента"}
+                  </button>
+                  {!item.has_client_selection && (
+                    <button
+                      onClick={() => dismiss(item)}
+                      disabled={Boolean(busy)}
+                      className="h-8 rounded-lg border border-error-200 px-3 text-xs font-semibold text-error-600 disabled:opacity-40"
+                    >
+                      {isBusy("dismiss") ? "Закрываю…" : "Закрыть"}
+                    </button>
+                  )}
+                  {item.has_client_selection && (
+                    <span className="rounded-lg border border-error-100 px-3 py-1 text-xs text-error-500 dark:border-error-500/20">закрытие заблокировано — клиент выбрал оффер</span>
                   )}
                 </div>
-                <p className="mt-2 text-sm text-gray-900 dark:text-white">
-                  <strong>{item.old_route_title || "Оффер"}</strong>
-                  {item.new_route_title && <> → <span className="text-success-600">{item.new_route_title}</span></>}
-                </p>
-                <p className="mt-1 text-xs text-gray-400">
-                  Шортлист: {item.shortlist_title || "—"} v{item.shortlist_version || "—"} · Код: {item.public_code || "—"} · Срок: {dateStr(item.due_at)}
-                </p>
-                {item.client_notified_at && <p className="mt-1 text-xs text-success-600">Уведомлён: {dateStr(item.client_notified_at)}</p>}
-              </div>
-              {item.status !== "sent" && item.status !== "dismissed" && (
-                <div className="flex shrink-0 flex-col gap-2">
-                  <input
-                    value={notesInput[item.id] || ""}
-                    onChange={e => setNotesInput(prev => ({ ...prev, [item.id]: e.target.value }))}
-                    className="h-9 rounded-lg border border-gray-200 px-3 text-xs text-gray-700 outline-none focus:border-brand-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
-                    placeholder="Заметка (опционально)"
-                  />
-                  <div className="flex gap-2">
-                    <Link to={`/merchants/${item.lead_id}?tab=shortlists`} className="rounded-lg border border-brand-200 px-3 py-2 text-xs font-semibold text-brand-600">Открыть мерча →</Link>
-                    <button onClick={() => markSent(item)} disabled={Boolean(busy)} className="rounded-lg bg-success-500 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">{busy===`sent-${item.id}`?"Сохраняю…":"Отмечен уведомлённым"}</button>
-                    <button onClick={() => dismiss(item)} disabled={Boolean(busy)} className="rounded-lg border border-error-200 px-3 py-2 text-xs font-semibold text-error-600 disabled:opacity-40">Убрать</button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </Panel>
-        ))}
-      </div>
-    )}
+              </div>}
+            </Panel>;
+          })}</div>
+    }
   </div>;
 }
 
