@@ -1,9 +1,26 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-08-06
+Updated: 2026-08-09
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
+
+## AIBot Operating Desk pagination — 2026-08-09
+
+Status: `VERIFIED` in production at the database and active-workflow levels. Final Telegram
+conversation smoke remains a user-facing check because the Telegram trigger cannot be invoked by
+the n8n test API.
+
+- [x] Added service-role-only RPC `aibot_n8n_operating_desk_v2` with `limit`, `page` and `offset`,
+  stable ordering, `total_count`, `has_more`, `next_offset` and `previous_offset`.
+- [x] The active AIBot workflow `IRB53X5NAS4wTuyU` uses the v2 RPC and explicitly treats
+  `следующая десятка` / `next page` as a fresh Operating Desk query with the next page.
+- [x] Production SQL checks returned three distinct EU PSP pages of 10 records from 46 total;
+  page 1 and page 2 have zero duplicate IDs. BR-Pay published India/UPI offers paginate correctly.
+- [x] The new security-definer RPC is not executable by `anon` or `authenticated`; only
+  `service_role` has execute permission. The active n8n graph validates with 0 errors.
+- [ ] Telegram smoke: request `Найди PSP по GEO Europe`, then `Покажи следующую десятку` and
+  confirm that the second message reports page 2 and starts with a different PSP set.
 
 ## Navigation and functional semantics — 2026-08-06
 
