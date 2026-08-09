@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { createHash } from "node:crypto";
+import { extractCountryCodes } from "./country-geos.mjs";
 
 const PROVIDERS = {
   brpay: {
@@ -20,12 +21,17 @@ const PROVIDERS = {
 };
 
 const GEO_RULES = [
+  ["ID", /indonesia|индонези|\bidr\b/i],
   ["UZ", /uzbekistan|узбекистан|\buzs\b/i],
   ["KG", /kyrgyzstan|kyrgyz|киргиз|\bkgs\b/i],
   ["IN", /india|индия|\binr\b/i],
   ["AZ", /azerbaijan|азербайджан|\bazn\b/i],
   ["RU", /russia|россия|(?:^|\s)рф(?:\s|$)|\bруб\b|\brub\b|₽/i],
   ["AR", /argentina|аргентина|\bars\b/i],
+  ["BR", /brazil|brasil|бразили|\bbrl\b/i],
+  ["VN", /vietnam|вьетнам|\bvnd\b/i],
+  ["CO", /colombia|колумби|\bcop\b/i],
+  ["TH", /thailand|thaliand|таиланд|\bthb\b/i],
   ["KR", /south korea|korea|коре|\bkrw\b/i],
   ["TR", /turkey|türkiye|турц|\btry\b/i],
   ["PL", /poland|польш|\bpln\b/i],
@@ -37,10 +43,18 @@ const GEO_RULES = [
 ];
 
 const CURRENCY_CODES = [
-  "UZS", "KGS", "INR", "AZN", "RUB", "ARS", "KRW", "EUR", "TRY", "PLN", "AUD", "USD", "GBP", "KZT",
+  "IDR", "UZS", "KGS", "INR", "AZN", "RUB", "ARS", "BRL", "VND", "COP", "THB", "KRW", "EUR", "TRY", "PLN", "AUD", "USD", "GBP", "KZT",
 ];
 
 const METHOD_RULES = [
+  ["BANK_VA", /\bbank\s+va\b|virtual account/i],
+  ["E_WALLET", /e[-\s]?wallet/i],
+  ["QRIS", /\bqris\b/i],
+  ["PIX", /\bpix\b/i],
+  ["PAPARA", /\bpapara\b/i],
+  ["PROMPTPAY", /prompt\s?pay/i],
+  ["PSE", /\bpse\b/i],
+  ["NEQUI", /\bnequi\b/i],
   ["UPI", /\bupi\b/i],
   ["IMPS", /\bimps\b/i],
   ["SBP", /\bsbp\b|сбп/i],
@@ -50,7 +64,8 @@ const METHOD_RULES = [
   ["QR", /\bqr\b/i],
   ["HUMO", /humo/i],
   ["UZCARD", /uzcard/i],
-  ["BANK_TRANSFER", /bank transfer|account transfer|банковск.*перевод/i],
+  ["BANK_TRANSFER", /bank transfer|account transfer|bank accounts?|банковск.*перевод/i],
+  ["CASH", /convenience store|cash payment/i],
   ["OPEN_BANKING", /open banking/i],
   ["DEEPLINK", /deep\s?link/i],
   ["OCT", /\boct\b/i],
@@ -193,8 +208,74 @@ function expandCompoundBlocks(blocks) {
   return expanded;
 }
 
-function extractGeos(block) {
-  if (/world\s?wide|worldwide|\bww\b|global/i.test(block)) return { scope: "global", geos: [] };
+function stripGeoListSections(block) {
+  const lines = block.split("\n");
+  const firstSection = lines.findIndex((line) => /(?:visa|master\s*card).*open\s+geo/i.test(line));
+  return firstSection >= 0 ? lines.slice(0, firstSection).join("\n").trim() : block;
+}
+
+function extractNamedGeoSection(block, scheme) {
+  const lines = block.split("\n");
+  const heading = scheme === "VISA"
+    ? /\bvisa\b.*open\s+geo/i
+    : /master\s*card.*open\s+geo/i;
+  const start = lines.findIndex((line) => heading.test(line));
+  if (start < 0) return [];
+  const end = lines.findIndex((line, index) => index > start && /(?:visa|master\s*card).*open\s+geo/i.test(line));
+  return extractCountryCodes(lines.slice(start + 1, end < 0 ? lines.length : end).join("\n"));
+}
+
+function hasSchemeSpecificLimits(block) {
+  const visa = block.split("\n").some((line) => /min\s*\/\s*max.*\bvisa\b|\bvisa\b.*min\s*\/\s*max/i.test(line));
+  const mastercard = block.split("\n").some((line) => /min\s*\/\s*max.*(?:master\s*card|\bmc\b)|(?:master\s*card|\bmc\b).*min\s*\/\s*max/i.test(line));
+  return visa && mastercard;
+}
+
+function expandSchemeSpecificBlocks(blocks) {
+  const expanded = [];
+  for (const block of blocks) {
+    const visaGeos = extractNamedGeoSection(block, "VISA");
+    const mastercardGeos = extractNamedGeoSection(block, "MASTERCARD");
+    const splitForGeoLists = visaGeos.length > 0 && mastercardGeos.length > 0;
+    const splitForLimits = hasSchemeSpecificLimits(block);
+    if (!splitForGeoLists && !splitForLimits) {
+      expanded.push(block);
+      continue;
+    }
+
+    const shared = stripGeoListSections(block);
+    for (const scheme of ["VISA", "MASTERCARD"]) {
+      const ownGeos = scheme === "VISA" ? visaGeos : mastercardGeos;
+      const otherPattern = scheme === "VISA" ? /master\s*card|\bmc\b/i : /\bvisa\b/i;
+      const routeLines = shared
+        .split("\n")
+        .filter((line) => !(/min\s*\/\s*max/i.test(line) && otherPattern.test(line)));
+      routeLines.push(`Card scheme: ${scheme}`);
+      if (ownGeos.length) routeLines.push(`Open GEO codes: ${ownGeos.join(", ")}`);
+      expanded.push(routeLines.join("\n").trim());
+    }
+  }
+  return expanded;
+}
+
+function extractGeoCoverage(block) {
+  const explicitCodeLine = block.match(/open\s+geo\s+codes?\s*:\s*([^\n]+)/i)?.[1] || "";
+  const openGeos = unique([
+    ...extractCountryCodes(explicitCodeLine),
+    ...extractNamedGeoSection(block, "VISA"),
+    ...extractNamedGeoSection(block, "MASTERCARD"),
+  ]);
+  const blockedHeading = block.search(/blocked\s+geo(?:'s|s)?/i);
+  const blockedGeos = blockedHeading >= 0
+    ? extractCountryCodes(block.slice(blockedHeading).split(/(?:visa|master\s*card).*open\s+geo/i)[0])
+    : [];
+  const worldwide = /world\s?wide|worldwide|\bww\b|global/i.test(block);
+  if (openGeos.length) {
+    return { scope: "regional", coverageMode: "allowlist", geos: openGeos, blockedGeos: [] };
+  }
+  if (worldwide) {
+    return { scope: "global", coverageMode: "global_except", geos: [], blockedGeos };
+  }
   const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
   const header = lines.slice(0, 4).join(" ");
   const explicit = lines.filter((line) => /^(?:[•-]?\s*)?(?:open\s+geo|geo|гео)\s*[-:—]/i.test(line)).join(" ");
@@ -204,7 +285,8 @@ function extractGeos(block) {
     ["🇦🇷", "AR"], ["🇰🇷", "KR"], ["🇹🇷", "TR"], ["🇵🇱", "PL"], ["🇦🇺", "AU"], ["🇪🇺", "EU"],
   ].filter(([flag]) => searchText.includes(flag)).map(([, code]) => code);
   const geos = [...flagGeos, ...GEO_RULES.filter(([, pattern]) => pattern.test(searchText)).map(([code]) => code)];
-  return { scope: geos.includes("EU") ? "regional" : "specific", geos: unique(geos) };
+  const scope = geos.includes("EU") ? "regional" : "specific";
+  return { scope, coverageMode: scope === "regional" ? "regional" : "specific", geos: unique(geos), blockedGeos: [] };
 }
 
 function extractCurrencies(block, geos) {
@@ -221,7 +303,7 @@ function extractCurrencies(block, geos) {
   if (/\$/u.test(block)) return ["USD"];
 
   const geoCurrency = {
-    UZ: "UZS", KG: "KGS", IN: "INR", AZ: "AZN", RU: "RUB", AR: "ARS", KR: "KRW", TR: "TRY", PL: "PLN", AU: "AUD", GB: "GBP", CH: "CHF", NL: "EUR", EU: "EUR",
+    ID: "IDR", UZ: "UZS", KG: "KGS", IN: "INR", AZ: "AZN", RU: "RUB", AR: "ARS", BR: "BRL", VN: "VND", CO: "COP", TH: "THB", KR: "KRW", TR: "TRY", PL: "PLN", AU: "AUD", GB: "GBP", CH: "CHF", NL: "EUR", EU: "EUR",
   };
   return unique(geos.map((geo) => geoCurrency[geo]));
 }
@@ -234,11 +316,21 @@ function extractMethods(block) {
   const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
   const methodText = lines.filter((line, index) => (
     index < 3
-    || /^(?:method|methods|метод|card brands?|карты|банки)\s*[-:]/i.test(line)
+    || /^(?:method(?:\s*\/\s*apm)?|methods|метод|card brands?|карты|банки)\s*[-:]/i.test(line)
     || /поддерживаются|карты/i.test(line)
     || (index < 8 && /(?:account\s+transfer|bank\s+transfer|mercado\s+pago|one\s+click|\bblik\b|\btrustly\b|\bideal\b|apple\s*pay|google\s*pay)/i.test(line))
   )).join("\n");
   return unique(extractByRules(methodText, METHOD_RULES));
+}
+
+function extractCardBrands(block) {
+  const explicit = block.match(/card\s+scheme\s*:\s*(VISA|MASTERCARD|MIR)/i)?.[1]?.toUpperCase();
+  if (explicit) return [explicit];
+  return unique([
+    /visa/i.test(block) ? "VISA" : null,
+    /master\s?card|\bmc\b/i.test(block) ? "MASTERCARD" : null,
+    /\bmir\b|мир/i.test(block) ? "MIR" : null,
+  ]);
 }
 
 function parseDecimal(value) {
@@ -351,6 +443,7 @@ function extractLimits(block, fallbackFlow, currencies) {
   let pendingMinimum = null;
   const rangePattern = /(A\$|€|\$|₽|[A-Z]{3})?\s*([\d][\d\s.,]*)\s*(?:[A-Z]{3}|A\$|€|\$|₽)?\s*-\s*(A\$|€|\$|₽|[A-Z]{3})?\s*([\d][\d\s.,]*)\s*(A\$|€|\$|₽|[A-Z]{3})?/i;
   const fromToPattern = /от\s*(A\$|€|\$|₽|[A-Z]{3})?\s*([\d][\d\s.,]*)\s*(?:[A-Z]{3}|A\$|€|\$|₽)?\s*до\s*(A\$|€|\$|₽|[A-Z]{3})?\s*([\d][\d\s.,]*)\s*(A\$|€|\$|₽|[A-Z]{3})?/i;
+  const englishFromToPattern = /from\s*(A\$|€|\$|₽|[A-Z]{3})?\s*([\d][\d\s.,]*)\s*(?:[A-Z]{3}|A\$|€|\$|₽)?\s*to\s*(A\$|€|\$|₽|[A-Z]{3})?\s*([\d][\d\s.,]*)\s*(A\$|€|\$|₽|[A-Z]{3})?/i;
 
   for (const rawLine of block.split("\n")) {
     const line = rawLine.trim();
@@ -360,7 +453,7 @@ function extractLimits(block, fallbackFlow, currencies) {
       limitContext = true;
       continue;
     }
-    const match = line.match(rangePattern) || line.match(fromToPattern);
+    const match = line.match(rangePattern) || line.match(fromToPattern) || line.match(englishFromToPattern);
     const bareRangeLine = Boolean(contextFlow) && Boolean(match) && line.replace(match?.[0] || "", "").replace(/[•:]/g, "").trim() === "";
     const isLimitLine = /limit|\blim\b|лим|min\s*\/\s*max|мин|макс|transaction|транзакц|чек|деп\b/i.test(line) || limitContext || bareRangeLine;
     const singleAmount = line.match(/(?:мин(?:\.\s*деп)?|макс(?:\.\s*деп)?)[^\d]*(\d[\d\s.,]*)\s*(A\$|€|\$|₽|[A-Z]{3}|руб)?/i);
@@ -394,7 +487,10 @@ function extractLimits(block, fallbackFlow, currencies) {
     limits.push({
       flow,
       scope: "transaction",
-      method_scope: [],
+      method_scope: unique([
+        /\bvisa\b/i.test(line) ? "VISA" : null,
+        /master\s*card|\bmc\b/i.test(line) ? "MASTERCARD" : null,
+      ]),
       traffic_tier: null,
       currency,
       minimum_amount: parseAmount(match[2]),
@@ -431,19 +527,36 @@ function extractSettlement(block) {
   }];
 }
 
-function buildTitle(geos, methods, flow, scope) {
+function buildTitle(geos, methods, flow, scope, cardBrands = []) {
   const geoLabel = scope === "global" ? "Worldwide" : geos.join(" / ") || "Regional";
-  const methodLabel = methods.slice(0, 3).join(" / ") || "Payment";
+  const methodLabel = [methods.slice(0, 3).join(" / ") || "Payment", cardBrands.length === 1 ? cardBrands[0] : null].filter(Boolean).join(" · ");
   const flowLabel = flow === "both" ? "PayIn & PayOut" : flow === "payin" ? "PayIn" : "PayOut";
   return `${geoLabel} · ${methodLabel} · ${flowLabel}`;
 }
 
+function buildRouteFamilyKey({ coverageMode, geos, currencies, flow, methods, cardBrands, trafficTypes, integrations }) {
+  const coverageAnchor = ["specific", "regional"].includes(coverageMode)
+    ? [...geos].sort().join("+") || "UNKNOWN"
+    : coverageMode.toUpperCase();
+  const part = (values, fallback = "ANY") => [...values].sort().join("+") || fallback;
+  return [
+    `GEO:${coverageAnchor}`,
+    `CURRENCY:${part(currencies, "UNKNOWN")}`,
+    `FLOW:${(flow || "both").toUpperCase()}`,
+    `METHOD:${part(methods, "UNKNOWN")}`,
+    `SCHEME:${part(cardBrands)}`,
+    `TRAFFIC:${part(trafficTypes)}`,
+    `INTEGRATION:${part(integrations)}`,
+  ].join("|");
+}
+
 function parseRoute(block, index) {
-  const { scope, geos } = extractGeos(block);
+  const { scope, coverageMode, geos, blockedGeos } = extractGeoCoverage(block);
   const currencies = extractCurrencies(block, geos);
   let methods = extractMethods(block);
   const trafficTypes = unique(extractByRules(block, TRAFFIC_RULES));
   const integrations = unique(extractByRules(block, INTEGRATION_RULES));
+  const cardBrands = extractCardBrands(block);
   const flowResult = inferFlow(block);
   const flow = flowResult.value;
   let methodInferred = false;
@@ -477,19 +590,21 @@ function parseRoute(block, index) {
 
   return {
     parser_index: index,
-    client_title: buildTitle(geos, methods, flow || "both", scope),
+    client_title: buildTitle(geos, methods, flow || "both", scope, cardBrands),
     coverage_scope: scope,
+    coverage_mode: coverageMode,
     geos,
-    blocked_geos: GEO_RULES.filter(([, pattern]) => /blocked geo/i.test(block) && pattern.test(block)).map(([code]) => code),
+    blocked_geos: blockedGeos,
     currencies,
     flow: flow || "both",
     methods,
-    card_brands: unique([/visa/i.test(block) ? "VISA" : null, /master\s?card/i.test(block) ? "MASTERCARD" : null, /mir|мир/i.test(block) ? "MIR" : null]),
+    card_brands: cardBrands,
     traffic_types: trafficTypes,
     verticals: [],
     prohibited_verticals: [],
     integrations,
-    niche_key: [geos[0] || scope.toUpperCase(), currencies[0] || "UNKNOWN", (flow || "both").toUpperCase(), methods[0] || "UNKNOWN", trafficTypes.join("+") || "ANY"].join("|"),
+    niche_key: buildRouteFamilyKey({ coverageMode, geos, currencies, flow, methods, cardBrands, trafficTypes, integrations }),
+    route_family_key: buildRouteFamilyKey({ coverageMode, geos, currencies, flow, methods, cardBrands, trafficTypes, integrations }),
     effective_from: null,
     expires_at: null,
     freshness_days: 30,
@@ -562,7 +677,7 @@ export function parseOfferSource({
   const provider = providerFromArgs(providerArgs);
   const sourceText = normalizeText(rawSourceText);
   const sourceBlocks = splitBlocks(sourceText);
-  const expandedBlocks = expandCompoundBlocks(sourceBlocks);
+  const expandedBlocks = expandSchemeSpecificBlocks(expandCompoundBlocks(sourceBlocks));
   const { routes, duplicateBlockCount } = validateAndDeduplicate(expandedBlocks.map(parseRoute));
   const batchAnomalies = routes.length ? [] : [{
     code: "source_unparsed",
@@ -585,7 +700,7 @@ export function parseOfferSource({
       source_type: sourceType,
       source_reference: sourceReference,
       source_effective_date: effectiveDate || provider.effectiveDate,
-      parser_version: "offerpsp-source-parser-v3",
+      parser_version: "offerpsp-source-parser-v4",
       parser_metadata: {
         ...sourceMetadata,
         ingestion_standard: "offerpsp-universal-source-v1",

@@ -245,6 +245,10 @@ async function applyMigrations() {
     "20260809104206_offerpsp_merchant_profile_documents.sql",
     "20260809120000_offerpsp_counterparty_organizer.sql",
     "20260809143000_aibot_operating_desk_pagination.sql",
+    "20260809170000_aibot_bulk_confirmations.sql",
+    "20260809173000_aibot_prepare_bulk.sql",
+    "20260809180000_aibot_bulk_by_search.sql",
+    "20260810120000_offerpsp_atomic_route_replacements.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -455,6 +459,133 @@ async function seedUsers() {
       array['IN'], array['INR'], array['UPI', 'P2P'], array['IGAMING'], 'verified'
     )
   `);
+}
+
+async function verifyAtomicRouteReplacement() {
+  await setUser(STAFF_ID);
+  await setRole("authenticated");
+  const providerResult = await query(`select public.upsert_offerpsp_provider(
+    'Atomic Route Fixture', null, null, 'https://atomic.invalid', 'active', 50, true,
+    'Atomic replacement validation'
+  ) as value`);
+  const providerCode = providerResult.rows[0].value.internal_code;
+  const route = (title, geos, methods, percent, nicheKey, minimumAmount = 100, maximumAmount = 1000) => ({
+    client_title: title,
+    coverage_scope: "specific",
+    coverage_mode: "specific",
+    geos,
+    blocked_geos: [],
+    currencies: ["INR"],
+    flow: "payin",
+    methods,
+    card_brands: [],
+    traffic_types: ["TRUSTED"],
+    verticals: ["IGAMING"],
+    prohibited_verticals: [],
+    integrations: ["H2H"],
+    niche_key: nicheKey,
+    fees: [{ flow: "payin", fee_type: "percent", base_percent: percent, applies_on: "success" }],
+    limits: [{
+      flow: "payin",
+      scope: "transaction",
+      currency: "INR",
+      minimum_amount: minimumAmount,
+      maximum_amount: maximumAmount,
+    }],
+    settlement: [],
+    anomalies: [],
+  });
+  const initial = await query(`select public.import_offerpsp_rate_card(
+    $1, 'manual', 'atomic-v1', 'atomic:v1', null, 'atomic-test-v1', '{}'::jsonb, $2::jsonb
+  ) as value`, [providerCode, JSON.stringify([
+    route("India UPI v1", ["IN"], ["UPI"], 7, "ATOMIC-INDIA-UPI"),
+    route("India P2P sibling", ["IN"], ["P2P"], 8, "ATOMIC-INDIA-P2P"),
+  ])]);
+  const initialRoutes = await query(`select r.id, r.client_title
+    from private.offerpsp_offer_routes r where r.batch_id = $1`, [initial.rows[0].value.batch_id]);
+  const oldUpi = initialRoutes.rows.find((item) => item.client_title === "India UPI v1");
+  const sibling = initialRoutes.rows.find((item) => item.client_title === "India P2P sibling");
+  await query("select public.publish_offerpsp_route($1)", [oldUpi.id]);
+  await query("select public.publish_offerpsp_route($1)", [sibling.id]);
+
+  const identical = await query(`select public.import_offerpsp_rate_card(
+    $1, 'manual', 'atomic-v1-confirmation', 'atomic:v1-confirmation', null,
+    'atomic-test-v1-confirmation', '{}'::jsonb, $2::jsonb
+  ) as value`, [providerCode, JSON.stringify([
+    route("India UPI v1", ["IN"], ["UPI"], 7, "ATOMIC-INDIA-UPI"),
+  ])]);
+  const identicalReview = await query(`select public.get_offerpsp_route_replacement_review(r.id) as value
+    from private.offerpsp_offer_routes r where r.batch_id = $1`, [identical.rows[0].value.batch_id]);
+  const identicalCandidate = identicalReview.rows[0].value.candidates.find((item) => item.id === oldUpi.id);
+  if (!identicalCandidate || identicalCandidate.commercial_changed !== false) {
+    throw new Error("Route metadata made identical commercial terms look changed");
+  }
+  await query("select public.set_offerpsp_route_status(r.id, 'archived') from private.offerpsp_offer_routes r where r.batch_id = $1", [identical.rows[0].value.batch_id]);
+
+  const changed = await query(`select public.import_offerpsp_rate_card(
+    $1, 'manual', 'atomic-v2', 'atomic:v2', null, 'atomic-test-v2', '{}'::jsonb, $2::jsonb
+  ) as value`, [providerCode, JSON.stringify([
+    route("India plus Singapore UPI v2", ["IN", "SG"], ["UPI"], 9.5, "ATOMIC-INDIA-UPI", 150, 12000),
+  ])]);
+  const replacementState = await query(`select r.id, r.revision_of_route_id, r.route_family_id,
+      review.status review_status, review.candidate_route_ids
+    from private.offerpsp_offer_routes r
+    join private.offerpsp_route_replacement_reviews review on review.new_route_id = r.id
+    where r.batch_id = $1`, [changed.rows[0].value.batch_id]);
+  const replacement = replacementState.rows[0];
+  if (replacement.revision_of_route_id !== null
+      || replacement.review_status !== "pending"
+      || !replacement.candidate_route_ids.includes(oldUpi.id)) {
+    throw new Error("Importer linked a replacement without staff confirmation or missed the UPI candidate");
+  }
+  await expectQueryFailure(
+    "select public.publish_offerpsp_route($1)",
+    [replacement.id],
+    "Choose whether this route replaces a candidate",
+  );
+  await query(
+    "select public.decide_offerpsp_route_replacement($1, 'replace', $2)",
+    [replacement.id, oldUpi.id],
+  );
+  const lineage = await query(`select newer.route_family_id = older.route_family_id same_family
+    from private.offerpsp_offer_routes newer
+    join private.offerpsp_offer_routes older on older.id = $2
+    where newer.id = $1`, [replacement.id, oldUpi.id]);
+  if (!lineage.rows[0].same_family) {
+    throw new Error("Confirmed replacement did not inherit the durable route family ID");
+  }
+  await query("select public.publish_offerpsp_route($1)", [replacement.id]);
+  const published = await query(`select
+    (select status from private.offerpsp_offer_routes where id = $1) old_status,
+    (select status from private.offerpsp_offer_routes where id = $2) new_status,
+    (select status from private.offerpsp_offer_routes where id = $3) sibling_status,
+    (select minimum_amount::text from private.offerpsp_offer_limits where route_id = $2 limit 1) new_minimum,
+    (select maximum_amount::text from private.offerpsp_offer_limits where route_id = $2 limit 1) new_maximum,
+    (select maximum_amount::text from private.offerpsp_offer_limits where route_id = $3 limit 1) sibling_maximum`,
+  [oldUpi.id, replacement.id, sibling.id]);
+  if (published.rows[0].old_status !== "archived"
+      || published.rows[0].new_status !== "published"
+      || published.rows[0].sibling_status !== "published"
+      || published.rows[0].new_minimum !== "150"
+      || published.rows[0].new_maximum !== "12000"
+      || published.rows[0].sibling_maximum !== "1000") {
+    throw new Error(`Atomic publication changed the wrong sibling: ${JSON.stringify(published.rows[0])}`);
+  }
+
+  const independent = await query(`select public.import_offerpsp_rate_card(
+    $1, 'manual', 'atomic-v3', 'atomic:v3', null, 'atomic-test-v3', '{}'::jsonb, $2::jsonb
+  ) as value`, [providerCode, JSON.stringify([
+    route("India PIX independent", ["IN"], ["PIX"], 6, "ATOMIC-INDIA-PIX"),
+  ])]);
+  const independentRoute = await query(`select r.id, review.status review_status
+    from private.offerpsp_offer_routes r
+    join private.offerpsp_route_replacement_reviews review on review.new_route_id = r.id
+    where r.batch_id = $1`, [independent.rows[0].value.batch_id]);
+  if (independentRoute.rows[0].review_status !== "independent") {
+    throw new Error("Unrelated payment method was incorrectly classified as a replacement");
+  }
+  await query("select public.publish_offerpsp_route($1)", [independentRoute.rows[0].id]);
+  process.stdout.write("PASS staff-confirmed atomic replacement preserves omitted sibling routes\n");
 }
 
 async function clearPreCompliance(leadId, classification = "merchant") {
@@ -2576,8 +2707,62 @@ Settlement period: T+1`,
   process.stdout.write("PASS canonical GEO header and OCR-style offer parsing\n");
 }
 
+function verifyWorldwideCoverageParsing() {
+  const excluded = parseOfferSource({
+    providerName: "WW Exclusion Fixture",
+    sourceText: `🌎 Trusted – World Wide (ecom)
+Type of traffic – Trusted
+Card brands: Visa/ MasterCard
+Min/Max per transaction MC 2–2 000$
+Min/Max per transaction Visa 2–850$
+MDR PayIn – 8,5%
+Blocked GEO's
+Democratic People’s Republic of Korea (DPRK)
+Iran
+Myanmar`,
+  }).batch.routes;
+  if (excluded.length !== 2
+      || excluded.some((route) => route.coverage_mode !== "global_except")
+      || excluded.some((route) => !["KP", "IR", "MM"].every((geo) => route.blocked_geos.includes(geo)))
+      || new Set(excluded.map((route) => route.route_family_key)).size !== 2
+      || excluded.some((route) => route.anomalies.some((item) => item.severity === "error"))) {
+    throw new Error("Worldwide exclusion offer did not split into safe Visa/Mastercard atomic routes");
+  }
+  const visaExcluded = excluded.find((route) => route.card_brands.includes("VISA"));
+  const mastercardExcluded = excluded.find((route) => route.card_brands.includes("MASTERCARD"));
+  if (visaExcluded?.limits[0]?.maximum_amount !== 850
+      || mastercardExcluded?.limits[0]?.maximum_amount !== 2000) {
+    throw new Error("Scheme-specific Worldwide limits were mixed together");
+  }
+
+  const allowlist = parseOfferSource({
+    providerName: "WW Allowlist Fixture",
+    sourceText: `🌎 World Wide – payouts
+Visa/MasterCard
+Rate 3.5%+1.5 EUR
+PayOut limit per trx – From 1 EUR to 1.700 EUR per transaction
+VISA – Open Geo's
+Albania, South Korea, Türkiye, Viet Nam
+MASTER CARD – Open Geo's
+Albania, United States of America, Uganda`,
+  }).batch.routes;
+  const visaAllowlist = allowlist.find((route) => route.card_brands.includes("VISA"));
+  const mastercardAllowlist = allowlist.find((route) => route.card_brands.includes("MASTERCARD"));
+  if (allowlist.length !== 2
+      || allowlist.some((route) => route.coverage_mode !== "allowlist")
+      || !["KR", "TR", "VN"].every((geo) => visaAllowlist?.geos.includes(geo))
+      || visaAllowlist?.geos.includes("US")
+      || !["US", "UG"].every((geo) => mastercardAllowlist?.geos.includes(geo))
+      || allowlist.some((route) => route.limits[0]?.minimum_amount !== 1 || route.limits[0]?.maximum_amount !== 1700)
+      || new Set(allowlist.map((route) => route.route_family_key)).size !== 2) {
+    throw new Error("Worldwide allowlists or English From/To limits were normalized incorrectly");
+  }
+  process.stdout.write("PASS Worldwide allowlist, exclusion list and scheme-specific route parsing\n");
+}
+
 try {
   verifyCanonicalGeoHeaderParsing();
+  verifyWorldwideCoverageParsing();
   await bootstrap();
   await applyMigrations();
   await verifyLeadGrants();
@@ -2590,6 +2775,7 @@ try {
   await verify360WorkspaceGrants();
   await verifyResearchCrudGrants();
   await seedUsers();
+  await verifyAtomicRouteReplacement();
   await verifyCounterpartyOrganizer();
   await verifyOperationsAndIntegrations();
   await verifyPortalLeadClaims();

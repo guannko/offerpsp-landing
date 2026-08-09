@@ -1,6 +1,6 @@
 # OfferPSP offer and route model
 
-Updated: 2026-07-30
+Updated: 2026-08-10
 
 ## Why this model exists
 
@@ -236,9 +236,30 @@ Fields may include:
 - frequency and attempt limits;
 - licence/KYC requirements.
 
+## Route lineage and mutable terms
+
+All partner conditions are versioned commercial data. GEO and blocked/open-country lists, currency,
+flow, card schemes, traffic, integration, rates, limits, settlement and risk terms may all change.
+Even a Worldwide rule can switch between an allowlist and an exclusion list.
+
+Therefore the system uses two different concepts:
+
+- `route_family_key` is a computed similarity hint for staff review. It may change when any
+  normalized dimension changes and must never replace a live route automatically;
+- `route_family_id` is the durable lineage UUID. A new draft inherits it only after staff confirms
+  the exact existing atomic route being replaced.
+
+The source document or Telegram message is a container, not a replacement unit. If a new rate card
+contains only India UPI, staff may replace only the corresponding India UPI route. India P2P,
+Worldwide Visa and every omitted sibling remain active. If no candidate is correct, staff marks the
+draft as an independent route.
+
+Payment method names such as P2P, C2C or UPI are the strongest stable similarity signal, but they
+are still not sufficient authority for automatic replacement.
+
 ## Canonical niche keys
 
-A canonical key helps search and compare routes.
+A canonical key helps search, compare and rank possible predecessors. It is not permanent identity.
 
 Example:
 
