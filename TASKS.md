@@ -748,9 +748,11 @@ The first operational UI is deployed. Daily-use refinement remains.
 - [x] Remove hard-coded Telegram API tokens from the active AIBot message, callback, keyboard and
   email-confirmation nodes. All Telegram operations now use the existing n8n Telegram credential;
   the active graph contains no Telegram token URLs and validates with zero errors.
-- [ ] Complete one real Telegram attachment E2E: receive a rate-card file, verify extraction and the
-  protected intake execution, confirm the queued/review result in Supabase and remove the exact test
-  artifacts if a synthetic provider or offer was used.
+- [x] Complete a real Telegram attachment E2E. A TXT rate card with the explicit provider caption
+  was received from Telegram, downloaded through the credential-backed node, extracted, accepted by
+  the protected intake and processed by the production worker into one review-only India/INR/UPI
+  draft route with zero blocking anomalies and no publication. The bot returned the acceptance
+  message; the exact test job, batch, route and queue-created provider were then purged.
 - [x] Define the universal ingestion contract: any source becomes a reviewed normalized draft and
   every merchant output uses the Telegram-offer presentation standard.
 - [x] Add local source adapters for TXT/Markdown, CSV/TSV, XLSX, text PDF and DOCX with immutable
@@ -789,9 +791,9 @@ The first operational UI is deployed. Daily-use refinement remains.
   drafts remain review-only and never falsely confirm partner terms.
 
 The production queue, AIBot text and attachment transport, automatic text parser and private
-admin-file ingestion are connected. Direct Telegram attachment acceptance still needs one real-file
-E2E; incoming mailbox activation remains the next external-channel step. Partner follow-up reminders
-are advisory and do not control offer availability.
+admin-file ingestion are connected and verified with a real Telegram file. Incoming mailbox
+activation remains the next external-channel step. Partner follow-up reminders are advisory and do
+not control offer availability.
 
 ### Impact Control — production delivery 2026-08-08
 
