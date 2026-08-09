@@ -5,6 +5,32 @@ Updated: 2026-08-09
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## Persistent merchant company workspace — 2026-08-09
+
+Status: `VERIFIED` in production at the database, authorization, build and deployment levels.
+Authenticated visual QA of the new working panels remains `PARTIAL` until Boris opens the
+production admin/client session.
+
+- [x] Company identity is now persistent across payment requests: brand and legal names,
+  registration, addresses, website, description, licence and staff-controlled verification.
+- [x] Request-specific GEO, methods, flows, limits and volume remain in the payment request and are
+  explicitly separated from the reusable company profile.
+- [x] Staff can create the company workspace before the client's first login; the later email claim
+  attaches the client to that same organization instead of creating a duplicate.
+- [x] The client portal and staff merchant workspace use the same organization and expose separate
+  `Компания` and `Платёжный запрос` sections.
+- [x] Added a private 10 MB document vault for licences, corporate/KYB/compliance documents,
+  ownership, financial files, processing statements and contracts. Staff can review documents;
+  clients see the status and rejection reason but not internal identities or PSP commercial data.
+- [x] Production permission checks confirm: `anon` cannot execute company RPCs, authenticated
+  clients can access only their organization, staff can manage linked profiles, and the private
+  helper is not callable by authenticated users.
+- [x] All migration regression scenarios, portal validation, lint and both production builds pass.
+  Production deployments: client portal `dpl_5gJo7Q6HJb6M1h42bGfBBkfg2XDc`; staff cockpit
+  `dpl_H9iamHu3B853isrSaCEarCn4K6zg`.
+- [ ] Open an authenticated merchant in the production cockpit and a claimed request in the client
+  portal; visually confirm desktop/mobile layout and perform one real document upload/review cycle.
+
 ## AIBot Operating Desk pagination — 2026-08-09
 
 Status: `VERIFIED` in production at the database and active-workflow levels. Final Telegram
