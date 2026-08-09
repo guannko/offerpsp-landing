@@ -242,7 +242,9 @@ async function applyMigrations() {
     "20260808230021_offerpsp_v5_supply.sql",
     "20260808230121_offerpsp_v5_shortlist.sql",
     "20260808230221_offerpsp_v5_matching.sql",
+    "20260809104206_offerpsp_merchant_profile_documents.sql",
     "20260809120000_offerpsp_counterparty_organizer.sql",
+    "20260809143000_aibot_operating_desk_pagination.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -558,6 +560,11 @@ async function verifyPortalLeadClaims() {
     .filter((row) => row.company !== "Active Merchant")
     .map((row) => row.lead_id);
 
+  await setUser(STAFF_ID);
+  const ensured = await query("select public.ensure_offerpsp_company_workspace($1) as organization_id", [activeLeadId]);
+  const organizationId = ensured.rows[0].organization_id;
+  if (!organizationId) throw new Error("Staff could not create a persistent company workspace before client login");
+
   await setUser(CLIENT_ID);
   const firstClaim = await query("select * from public.claim_offerpsp_leads()");
   if (firstClaim.rows.length !== 1 || firstClaim.rows[0].lead_id !== activeLeadId) {
@@ -574,6 +581,35 @@ async function verifyPortalLeadClaims() {
     throw new Error(`Closed or spam lead was linked by the portal claim function: ${JSON.stringify(linked.rows)}`);
   }
 
+  const organizationState = await query(`select
+    l.merchant_organization_id,
+    (select count(*)::integer from public.offerpsp_organizations o where o.name = 'Active Merchant') as organizations,
+    (select count(*)::integer from public.offerpsp_organization_members om where om.organization_id = l.merchant_organization_id and om.user_id = $2 and om.active) as memberships
+    from public.offerpsp_leads l where l.lead_id = $1`, [activeLeadId, CLIENT_ID]);
+  if (organizationState.rows[0].merchant_organization_id !== organizationId
+      || organizationState.rows[0].organizations !== 1 || organizationState.rows[0].memberships !== 1) {
+    throw new Error(`Client claim duplicated or failed to join the persistent company: ${JSON.stringify(organizationState.rows[0])}`);
+  }
+
+  const savedProfile = await query(
+    "select public.save_offerpsp_company_profile($1, $2::jsonb) as value",
+    [organizationId, JSON.stringify({ legal_name: "Active Merchant OÜ", registration_number: "REG-001", registration_jurisdiction: "EE", website_url: "https://active.invalid", registered_address: "Tallinn", verification_status: "verified" })],
+  );
+  if (savedProfile.rows[0].value.organization.verification_status !== "unverified"
+      || savedProfile.rows[0].value.profile_completion !== 100) {
+    throw new Error(`Client changed staff verification state or company completion is wrong: ${JSON.stringify(savedProfile.rows[0].value)}`);
+  }
+
+  const documentIdResult = await query("select gen_random_uuid() as id");
+  const documentId = documentIdResult.rows[0].id;
+  const documentPath = `${organizationId}/${documentId}/licence.pdf`;
+  await query("insert into storage.objects(bucket_id, name, owner_id) values ('offerpsp-merchant-documents', $1, $2)", [documentPath, CLIENT_ID]);
+  const registered = await query(
+    "select public.register_offerpsp_company_document($1, $2, $3::jsonb) as value",
+    [organizationId, documentId, JSON.stringify({ document_type: "license", title: "Test licence", file_name: "licence.pdf", storage_path: documentPath, mime_type: "application/pdf", size_bytes: 1200 })],
+  );
+  if (registered.rows[0].value.status !== "pending") throw new Error("Client company document was not registered as pending");
+
   const repeatClaim = await query("select * from public.claim_offerpsp_leads()");
   if (repeatClaim.rows.length !== 1 || repeatClaim.rows[0].lead_id !== activeLeadId) {
     throw new Error("Repeated login changed inactive lead claim isolation");
@@ -584,9 +620,22 @@ async function verifyPortalLeadClaims() {
   if (foreignClaim.rows.length !== 0) {
     throw new Error("A different authenticated email claimed another client's request");
   }
+  await expectQueryFailure("select public.get_offerpsp_company_workspace($1)", [activeLeadId], "Access denied");
 
   await setUser(STAFF_ID);
-  process.stdout.write("PASS active email claim with closed/spam fixtures remaining detached\n");
+  await query("select public.review_offerpsp_company_document($1, 'rejected', 'Fresh copy required')", [documentId]);
+  await setUser(CLIENT_ID);
+  const clientWorkspace = await query("select public.get_offerpsp_company_workspace($1) as value", [activeLeadId]);
+  if (clientWorkspace.rows[0].value.documents.length !== 1
+      || clientWorkspace.rows[0].value.documents[0].review_note !== "Fresh copy required") {
+    throw new Error(`Client did not receive the rejected document review reason: ${JSON.stringify(clientWorkspace.rows[0].value)}`);
+  }
+  await query("select public.archive_offerpsp_company_document($1)", [documentId]);
+  const archived = await query("select status from private.offerpsp_organization_documents where id = $1", [documentId]);
+  if (archived.rows[0].status !== "archived") throw new Error("Company document archive action failed");
+
+  await setUser(STAFF_ID);
+  process.stdout.write("PASS active email claim, persistent company profile, private document review and foreign isolation\n");
 }
 
 async function importPreparedDrafts() {

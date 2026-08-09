@@ -6,6 +6,7 @@ import { useControlBridge } from "../context/ControlBridgeContext";
 import { supabase } from "../lib/supabase";
 import DealDeskPanel, { type DealWorkspace } from "./DealDeskPanel";
 import MerchantProfileEditor from "../components/control/MerchantProfileEditor";
+import MerchantCompanyWorkspace from "../components/control/MerchantCompanyWorkspace";
 import {
   ActivityPanel,
   CommunicationsPanel,
@@ -100,12 +101,13 @@ type ComplianceWorkspace = {
   decisions?: Array<{ id: string; decision: string; classification: string; notes?: string | null; created_at: string }>;
 };
 
-type Tab = "overview" | "compliance" | "profile" | "contacts" | "matching" | "preview" | "deal" | "communications" | "documents" | "tasks" | "activity";
+type Tab = "overview" | "compliance" | "company" | "profile" | "contacts" | "matching" | "preview" | "deal" | "communications" | "documents" | "tasks" | "activity";
 
 const tabs: Array<{ id: Tab; label: string }> = [
   { id: "overview", label: "Обзор" },
   { id: "compliance", label: "Проверка" },
-  { id: "profile", label: "Профиль" },
+  { id: "company", label: "Компания" },
+  { id: "profile", label: "Платёжный запрос" },
   { id: "contacts", label: "Контакты" },
   { id: "matching", label: "Офферы" },
   { id: "preview", label: "Кабинет клиента" },
@@ -318,6 +320,8 @@ export default function MerchantWorkspace() {
       ? <Overview lead={lead} matches={matches} shortlist={latest}/>
       : tab === "compliance"
         ? <CompliancePanel workspace={complianceWorkspace} busy={busy} onSave={(input) => void saveComplianceDecision(input)}/>
+      : tab === "company"
+        ? <MerchantCompanyWorkspace leadId={lead.lead_id} onChanged={async () => { await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]); }}/>
       : tab === "profile"
         ? <MerchantProfileEditor lead={lead} onChanged={async () => { await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]); }}/>
       : tab === "contacts"

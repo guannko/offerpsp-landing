@@ -104,6 +104,46 @@
             <button id="openDossierButton" class="button primary is-hidden" type="button" data-i18n="completeProfile">Дополнить профиль</button>
           </section>
 
+          <section id="companyPersistentSection" class="section-block company-profile-section">
+            <div class="section-head">
+              <div><p class="eyebrow" data-i18n="companyCenter">Компания</p><h2 data-i18n="companyCenterTitle">Постоянный профиль компании</h2></div>
+              <div class="company-profile-meta"><span id="companyVerification" class="status-pill"></span><strong id="companyProfileProgress">0%</strong></div>
+            </div>
+            <p class="section-intro" data-i18n="companyCenterExplanation">Эти реквизиты и документы используются во всех платёжных задачах. Обновите их один раз — повторно заполнять анкету не придётся.</p>
+            <details id="companyProfileEditor" class="dossier-editor">
+              <summary data-i18n="openPersistentProfile">Открыть профиль и документы компании</summary>
+              <form id="companyProfileForm" class="client-dossier-form company-profile-form">
+                <label><span data-i18n="brandName">Название бренда</span><input id="companyProfileName" type="text" required></label>
+                <label><span data-i18n="legalName">Юридическое название</span><input id="companyProfileLegalName" type="text"></label>
+                <label><span data-i18n="registrationNumber">Регистрационный номер</span><input id="companyRegistrationNumber" type="text"></label>
+                <label><span data-i18n="registrationJurisdiction">Страна регистрации</span><input id="companyRegistrationJurisdiction" type="text" placeholder="CY"></label>
+                <label class="span-2"><span data-i18n="registeredAddress">Юридический адрес</span><input id="companyRegisteredAddress" type="text"></label>
+                <label class="span-2"><span data-i18n="operatingAddress">Рабочий адрес</span><input id="companyOperatingAddress" type="text"></label>
+                <label class="span-2"><span data-i18n="companyWebsite">Сайт компании</span><input id="companyWebsiteUrl" type="url" placeholder="https://"></label>
+                <label><span data-i18n="licenseStatus">Статус лицензии</span><select id="companyLicenseStatus"><option value="unknown" data-i18n="unknown">Не указано</option><option value="licensed" data-i18n="licensed">Есть лицензия</option><option value="unlicensed" data-i18n="unlicensed">Без лицензии</option><option value="pending" data-i18n="pending">В процессе</option><option value="not_required" data-i18n="notRequired">Не требуется</option></select></label>
+                <label><span data-i18n="licenseJurisdiction">Юрисдикция лицензии</span><input id="companyLicenseJurisdiction" type="text"></label>
+                <label><span data-i18n="licenseNumber">Номер лицензии</span><input id="companyLicenseNumber" type="text"></label>
+                <label class="span-2"><span data-i18n="companyDescription">Кратко о компании</span><textarea id="companyDescription" rows="3"></textarea></label>
+                <button class="button primary" type="submit" data-i18n="saveCompanyProfile">Сохранить профиль компании</button>
+              </form>
+              <p id="companyProfileStatus" class="status" role="status" aria-live="polite"></p>
+
+              <div class="document-vault">
+                <div class="document-vault-head"><div><p class="eyebrow" data-i18n="documentVault">Документы</p><h3 data-i18n="documentVaultTitle">Приватное хранилище</h3></div><small data-i18n="documentVaultLimit">PDF, изображения, Word или Excel · до 10 МБ</small></div>
+                <form id="companyDocumentForm" class="document-upload-form">
+                  <label><span data-i18n="documentType">Тип документа</span><select id="companyDocumentType"><option value="license" data-i18n="documentLicense">Лицензия</option><option value="corporate" data-i18n="documentCorporate">Корпоративный документ</option><option value="ownership" data-i18n="documentOwnership">Структура владения</option><option value="kyb">KYB</option><option value="compliance">Compliance</option><option value="financial" data-i18n="documentFinancial">Финансовый документ</option><option value="processing_statement" data-i18n="documentProcessing">Processing statement</option><option value="contract" data-i18n="documentContract">Договор</option><option value="other" data-i18n="documentOther">Другое</option></select></label>
+                  <label><span data-i18n="documentTitle">Название</span><input id="companyDocumentTitle" type="text" required></label>
+                  <label><span data-i18n="documentExpiry">Действует до</span><input id="companyDocumentExpiry" type="date"></label>
+                  <label class="document-file"><span data-i18n="chooseDocument">Выберите файл</span><input id="companyDocumentFile" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx" required></label>
+                  <label class="span-2"><span data-i18n="documentNote">Комментарий</span><input id="companyDocumentNote" type="text"></label>
+                  <button class="button secondary" type="submit" data-i18n="uploadDocument">Загрузить документ</button>
+                </form>
+                <p id="companyDocumentStatus" class="status" role="status" aria-live="polite"></p>
+                <div id="companyDocumentList" class="company-document-list"></div>
+              </div>
+            </details>
+          </section>
+
           <section id="dossierSection" class="section-block dossier-section">
             <div class="section-head">
               <div><p class="eyebrow" data-i18n="pspReviewProfile">Профиль для PSP review</p><h2 data-i18n="companyDossier">Досье компании</h2></div>

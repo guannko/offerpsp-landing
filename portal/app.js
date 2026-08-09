@@ -88,6 +88,20 @@ const COPY = {
     selectedForReview: "Выбрано специалистом OfferPSP для вашего рассмотрения.",
     firstRefundRule: "Первый возврат по плательщику проводится без дополнительных вопросов; последующие возвраты по этому плательщику проверяет служба поддержки.",
     offerExplanation: "Условия одного платёжного решения без скрытых догадок.",
+    companyCenter: "Компания", companyCenterTitle: "Постоянный профиль компании",
+    companyCenterExplanation: "Эти реквизиты и документы используются во всех платёжных задачах. Обновите их один раз — повторно заполнять анкету не придётся.",
+    openPersistentProfile: "Открыть профиль и документы компании", brandName: "Название бренда", legalName: "Юридическое название",
+    registrationNumber: "Регистрационный номер", registrationJurisdiction: "Страна регистрации", registeredAddress: "Юридический адрес",
+    operatingAddress: "Рабочий адрес", companyWebsite: "Сайт компании", companyDescription: "Кратко о компании",
+    saveCompanyProfile: "Сохранить профиль компании", companyProfileSaved: "Профиль компании сохранён.",
+    documentVault: "Документы", documentVaultTitle: "Приватное хранилище", documentVaultLimit: "PDF, изображения, Word или Excel · до 10 МБ",
+    documentType: "Тип документа", documentLicense: "Лицензия", documentCorporate: "Корпоративный документ",
+    documentOwnership: "Структура владения", documentFinancial: "Финансовый документ", documentProcessing: "Processing statement",
+    documentContract: "Договор", documentOther: "Другое", documentTitle: "Название", documentExpiry: "Действует до",
+    chooseDocument: "Выберите файл", documentNote: "Комментарий", uploadDocument: "Загрузить документ",
+    documentUploaded: "Документ загружен и отправлен на проверку.", downloadDocument: "Открыть", archiveDocument: "В архив",
+    noCompanyDocuments: "Документов пока нет.", verificationUnverified: "Не проверен", verificationInReview: "На проверке",
+    verificationVerified: "Проверен", verificationNeedsInformation: "Нужны данные", verificationRejected: "Отклонён",
   },
   en: {
     workspace: "Payment workspace", authTitle: "All your payment work, in one place.",
@@ -158,6 +172,20 @@ const COPY = {
     selectedForReview: "Selected by an OfferPSP specialist for your review.",
     firstRefundRule: "The first refund for a payer is processed without additional questions; subsequent refunds for the same payer are investigated by support.",
     offerExplanation: "One payment solution with explicit commercial terms.",
+    companyCenter: "Company", companyCenterTitle: "Persistent company profile",
+    companyCenterExplanation: "These details and documents are reused across all payment requests. Update them once instead of completing the same form again.",
+    openPersistentProfile: "Open company profile and documents", brandName: "Brand name", legalName: "Legal name",
+    registrationNumber: "Registration number", registrationJurisdiction: "Registration country", registeredAddress: "Registered address",
+    operatingAddress: "Operating address", companyWebsite: "Company website", companyDescription: "Company summary",
+    saveCompanyProfile: "Save company profile", companyProfileSaved: "Company profile saved.",
+    documentVault: "Documents", documentVaultTitle: "Private document vault", documentVaultLimit: "PDF, images, Word or Excel · up to 10 MB",
+    documentType: "Document type", documentLicense: "Licence", documentCorporate: "Corporate document",
+    documentOwnership: "Ownership structure", documentFinancial: "Financial document", documentProcessing: "Processing statement",
+    documentContract: "Contract", documentOther: "Other", documentTitle: "Title", documentExpiry: "Valid until",
+    chooseDocument: "Choose file", documentNote: "Note", uploadDocument: "Upload document",
+    documentUploaded: "Document uploaded and submitted for review.", downloadDocument: "Open", archiveDocument: "Archive",
+    noCompanyDocuments: "No documents yet.", verificationUnverified: "Unverified", verificationInReview: "In review",
+    verificationVerified: "Verified", verificationNeedsInformation: "Information needed", verificationRejected: "Rejected",
   },
 };
 
@@ -171,7 +199,7 @@ const STATUS_KEYS = {
 
 const state = {
   user: null, requests: [], lead: null, allOptions: [], options: [], allDeals: [], deals: [], organizations: [],
-  agentBrand: null, profile: null, conversationId: null, messages: [], language: "ru", portfolioQuery: "",
+  agentBrand: null, profile: null, companyWorkspace: null, conversationId: null, messages: [], language: "ru", portfolioQuery: "",
 };
 const ids = [
   "authView", "portalView", "loginForm", "emailInput", "passwordInput", "googleLoginButton", "magicLinkButton",
@@ -185,6 +213,12 @@ const ids = [
   "clientLicenseJurisdiction", "clientLicenseNumber", "clientLicenseEvidenceUrl", "clientMonthlyVolume", "clientVolumeCurrency",
   "clientCurrencies", "clientMethods", "clientFlows", "clientTrafficTypes", "clientMinTransaction", "clientMaxTransaction",
   "clientTransactionCurrency", "clientLaunchTimeline", "clientProcessingSetup", "clientDossierStatus",
+  "companyPersistentSection", "companyVerification", "companyProfileProgress", "companyProfileEditor", "companyProfileForm",
+  "companyProfileName", "companyProfileLegalName", "companyRegistrationNumber", "companyRegistrationJurisdiction",
+  "companyRegisteredAddress", "companyOperatingAddress", "companyWebsiteUrl", "companyLicenseStatus",
+  "companyLicenseJurisdiction", "companyLicenseNumber", "companyDescription", "companyProfileStatus",
+  "companyDocumentForm", "companyDocumentType", "companyDocumentTitle", "companyDocumentExpiry", "companyDocumentFile",
+  "companyDocumentNote", "companyDocumentStatus", "companyDocumentList",
 ];
 const elements = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
 
@@ -389,6 +423,64 @@ function renderDossier() {
   elements.clientProcessingSetup.value = profile.current_processing_setup || "";
 }
 
+const COMPANY_VERIFICATION_KEYS = {
+  unverified: "verificationUnverified", in_review: "verificationInReview", verified: "verificationVerified",
+  needs_information: "verificationNeedsInformation", rejected: "verificationRejected",
+};
+const DOCUMENT_TYPE_KEYS = {
+  license: "documentLicense", corporate: "documentCorporate", ownership: "documentOwnership",
+  financial: "documentFinancial", processing_statement: "documentProcessing", contract: "documentContract", other: "documentOther",
+};
+const DOCUMENT_STATUS_LABELS = {
+  pending: { ru: "Ожидает проверки", en: "Pending review" }, reviewing: { ru: "Проверяется", en: "In review" },
+  verified: { ru: "Проверен", en: "Verified" }, rejected: { ru: "Отклонён", en: "Rejected" },
+  expired: { ru: "Истёк", en: "Expired" }, archived: { ru: "В архиве", en: "Archived" },
+};
+
+function formatFileSize(value) {
+  const bytes = Number(value || 0);
+  if (!bytes) return "";
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function renderCompanyWorkspace() {
+  const workspace = state.companyWorkspace;
+  const profile = workspace?.organization;
+  elements.companyPersistentSection.classList.toggle("is-hidden", !profile);
+  if (!profile) return;
+  const verificationKey = COMPANY_VERIFICATION_KEYS[profile.verification_status] || "verificationUnverified";
+  elements.companyVerification.textContent = t(verificationKey);
+  elements.companyVerification.className = `status-pill company-verification status-${profile.verification_status || "unverified"}`;
+  elements.companyProfileProgress.textContent = `${workspace.profile_completion || 0}%`;
+  elements.companyProfileName.value = profile.name || "";
+  elements.companyProfileLegalName.value = profile.legal_name || "";
+  elements.companyRegistrationNumber.value = profile.registration_number || "";
+  elements.companyRegistrationJurisdiction.value = profile.registration_jurisdiction || "";
+  elements.companyRegisteredAddress.value = profile.registered_address || "";
+  elements.companyOperatingAddress.value = profile.operating_address || "";
+  elements.companyWebsiteUrl.value = profile.website_url || "";
+  elements.companyLicenseStatus.value = profile.license_status || "unknown";
+  elements.companyLicenseJurisdiction.value = profile.license_jurisdiction || "";
+  elements.companyLicenseNumber.value = profile.license_number || "";
+  elements.companyDescription.value = profile.description || "";
+  const documents = list(workspace.documents).filter((document) => document.status !== "archived");
+  elements.companyDocumentList.innerHTML = documents.length ? documents.map((document) => `
+    <article class="company-document-card">
+      <div class="company-document-main">
+        <span>${escapeHtml(t(DOCUMENT_TYPE_KEYS[document.document_type] || "documentOther"))}</span>
+        <strong>${escapeHtml(document.title)}</strong>
+        <small>${escapeHtml(document.file_name)}${document.size_bytes ? ` · ${escapeHtml(formatFileSize(document.size_bytes))}` : ""}${document.expires_at ? ` · ${escapeHtml(t("documentExpiry"))}: ${escapeHtml(formatDate(document.expires_at))}` : ""}</small>
+        ${document.review_note ? `<p>${escapeHtml(document.review_note)}</p>` : ""}
+      </div>
+      <div class="company-document-actions">
+        <em class="document-status status-${escapeHtml(document.status)}">${escapeHtml(DOCUMENT_STATUS_LABELS[document.status]?.[state.language] || document.status)}</em>
+        <button type="button" class="text-button" data-company-document-open="${escapeHtml(document.id)}">${escapeHtml(t("downloadDocument"))}</button>
+        <button type="button" class="text-button danger" data-company-document-archive="${escapeHtml(document.id)}">${escapeHtml(t("archiveDocument"))}</button>
+      </div>
+    </article>`).join("") : `<p class="status">${escapeHtml(t("noCompanyDocuments"))}</p>`;
+}
+
 function setLanguage(language) {
   state.language = COPY[language] ? language : "ru";
   localStorage.setItem(LANGUAGE_STORAGE_KEY, state.language);
@@ -463,6 +555,7 @@ function renderRequest() {
   const [titleKey, copyKey] = nextAction(lead.status);
   elements.nextActionTitle.textContent = t(titleKey);
   elements.nextActionText.textContent = t(copyKey);
+  renderCompanyWorkspace();
   renderDossier();
   renderDeals();
   renderOptions();
@@ -606,14 +699,17 @@ async function selectRequest(leadId) {
   state.options = state.allOptions.filter((option) => option.lead_id === leadId);
   state.deals = state.allDeals.filter((deal) => deal.lead_id === leadId);
   state.profile = null;
+  state.companyWorkspace = null;
   state.conversationId = null;
   state.messages = [];
   if (state.lead) {
-    const [profileResult] = await Promise.all([
+    const [profileResult, companyResult] = await Promise.all([
       supabase.rpc("get_offerpsp_client_request_profile", { p_lead_id: leadId }),
+      supabase.rpc("get_offerpsp_company_workspace", { p_lead_id: leadId }),
       loadConversation(leadId),
     ]);
     state.profile = profileResult.error ? null : profileResult.data;
+    state.companyWorkspace = companyResult.error ? null : companyResult.data;
   }
   renderWorkspace();
 }
@@ -633,6 +729,30 @@ document.addEventListener("click", async (event) => {
   if (languageButton) { setLanguage(languageButton.dataset.language); return; }
   const requestButton = event.target.closest("[data-request-id]");
   if (requestButton) { await selectRequest(requestButton.dataset.requestId); return; }
+  const openDocumentButton = event.target.closest("[data-company-document-open]");
+  if (openDocumentButton) {
+    const documentItem = list(state.companyWorkspace?.documents).find((item) => item.id === openDocumentButton.dataset.companyDocumentOpen);
+    if (!documentItem) return;
+    setLoading(openDocumentButton, true, t("saving"));
+    const { data, error } = await supabase.storage.from("offerpsp-merchant-documents").download(documentItem.storage_path);
+    setLoading(openDocumentButton, false);
+    if (error) { setStatus(elements.companyDocumentStatus, friendlyError(error, state.language === "ru" ? "Не удалось открыть документ." : "Could not open the document."), "error"); return; }
+    const url = URL.createObjectURL(data);
+    const link = document.createElement("a");
+    link.href = url; link.download = documentItem.file_name || "document"; link.target = "_blank";
+    document.body.appendChild(link); link.click(); link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+    return;
+  }
+  const archiveDocumentButton = event.target.closest("[data-company-document-archive]");
+  if (archiveDocumentButton) {
+    setLoading(archiveDocumentButton, true, t("saving"));
+    const { error } = await supabase.rpc("archive_offerpsp_company_document", { p_document_id: archiveDocumentButton.dataset.companyDocumentArchive });
+    setLoading(archiveDocumentButton, false);
+    if (error) { setStatus(elements.companyDocumentStatus, friendlyError(error, state.language === "ru" ? "Не удалось архивировать документ." : "Could not archive the document."), "error"); return; }
+    await selectRequest(state.lead?.lead_id);
+    return;
+  }
   const responseButton = event.target.closest("[data-option-response]");
   if (responseButton) {
     setLoading(responseButton, true, t("saving"));
@@ -668,6 +788,94 @@ elements.openDossierButton.addEventListener("click", () => {
 elements.portfolioSearch.addEventListener("input", () => {
   state.portfolioQuery = elements.portfolioSearch.value;
   renderWorkspace();
+});
+
+elements.companyDocumentFile.addEventListener("change", () => {
+  delete elements.companyDocumentForm.dataset.pendingDocumentId;
+  delete elements.companyDocumentForm.dataset.pendingStoragePath;
+  if (!elements.companyDocumentTitle.value.trim() && elements.companyDocumentFile.files?.[0]) {
+    elements.companyDocumentTitle.value = elements.companyDocumentFile.files[0].name.replace(/\.[^.]+$/, "");
+  }
+});
+
+elements.companyProfileForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const organizationId = state.companyWorkspace?.organization?.id;
+  if (!organizationId || !state.lead) return;
+  const button = elements.companyProfileForm.querySelector('button[type="submit"]');
+  setLoading(button, true, t("saving"));
+  setStatus(elements.companyProfileStatus);
+  const payload = {
+    name: elements.companyProfileName.value.trim(),
+    legal_name: elements.companyProfileLegalName.value.trim(),
+    registration_number: elements.companyRegistrationNumber.value.trim(),
+    registration_jurisdiction: elements.companyRegistrationJurisdiction.value.trim(),
+    registered_address: elements.companyRegisteredAddress.value.trim(),
+    operating_address: elements.companyOperatingAddress.value.trim(),
+    website_url: elements.companyWebsiteUrl.value.trim(),
+    license_status: elements.companyLicenseStatus.value,
+    license_jurisdiction: elements.companyLicenseJurisdiction.value.trim(),
+    license_number: elements.companyLicenseNumber.value.trim(),
+    description: elements.companyDescription.value.trim(),
+  };
+  const { error } = await supabase.rpc("save_offerpsp_company_profile", { p_organization_id: organizationId, p_payload: payload });
+  setLoading(button, false);
+  if (error) { setStatus(elements.companyProfileStatus, friendlyError(error, state.language === "ru" ? "Не удалось сохранить профиль компании." : "Could not save the company profile."), "error"); return; }
+  await selectRequest(state.lead.lead_id);
+  setStatus(elements.companyProfileStatus, t("companyProfileSaved"), "success");
+});
+
+elements.companyDocumentForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const organizationId = state.companyWorkspace?.organization?.id;
+  const file = elements.companyDocumentFile.files?.[0];
+  if (!organizationId || !file || !state.lead) return;
+  if (file.size > 10 * 1024 * 1024) {
+    setStatus(elements.companyDocumentStatus, state.language === "ru" ? "Файл превышает лимит 10 МБ." : "The file exceeds the 10 MB limit.", "error");
+    return;
+  }
+  const button = elements.companyDocumentForm.querySelector('button[type="submit"]');
+  setLoading(button, true, t("saving"));
+  setStatus(elements.companyDocumentStatus);
+  const documentId = elements.companyDocumentForm.dataset.pendingDocumentId || crypto.randomUUID();
+  const safeName = file.name.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "document";
+  const storagePath = elements.companyDocumentForm.dataset.pendingStoragePath || `${organizationId}/${documentId}/${safeName}`;
+  if (!elements.companyDocumentForm.dataset.pendingDocumentId) {
+    const uploaded = await supabase.storage.from("offerpsp-merchant-documents").upload(storagePath, file, {
+      cacheControl: "3600", contentType: file.type || undefined, upsert: false,
+    });
+    if (uploaded.error) {
+      setLoading(button, false);
+      setStatus(elements.companyDocumentStatus, friendlyError(uploaded.error, state.language === "ru" ? "Не удалось загрузить файл." : "Could not upload the file."), "error");
+      return;
+    }
+    elements.companyDocumentForm.dataset.pendingDocumentId = documentId;
+    elements.companyDocumentForm.dataset.pendingStoragePath = storagePath;
+  }
+  const payload = {
+    document_type: elements.companyDocumentType.value,
+    title: elements.companyDocumentTitle.value.trim(),
+    file_name: file.name,
+    storage_path: storagePath,
+    mime_type: file.type || null,
+    size_bytes: file.size,
+    expires_at: elements.companyDocumentExpiry.value || null,
+    client_note: elements.companyDocumentNote.value.trim() || null,
+  };
+  const registered = await supabase.rpc("register_offerpsp_company_document", {
+    p_organization_id: organizationId, p_document_id: documentId, p_payload: payload,
+  });
+  setLoading(button, false);
+  if (registered.error) {
+    setStatus(elements.companyDocumentStatus, friendlyError(registered.error, state.language === "ru" ? "Файл загружен, но карточка документа не создана. Нажмите «Загрузить» ещё раз." : "The file was uploaded but its record was not created. Click Upload again."), "error");
+    return;
+  }
+  delete elements.companyDocumentForm.dataset.pendingDocumentId;
+  delete elements.companyDocumentForm.dataset.pendingStoragePath;
+  elements.companyDocumentForm.reset();
+  await selectRequest(state.lead.lead_id);
+  elements.companyProfileEditor.open = true;
+  setStatus(elements.companyDocumentStatus, t("documentUploaded"), "success");
 });
 
 elements.clientDossierForm.addEventListener("submit", async (event) => {
