@@ -739,6 +739,18 @@ The first operational UI is deployed. Daily-use refinement remains.
 - [x] Receive a partner rate card from the existing AIBot when Boris forwards or pastes the source
   and explicitly asks the agent to save it. The agent preserves the original text and only enqueues
   it for review; it does not claim that the source is parsed or published.
+- [x] Route Telegram attachments from the active AIBot into the protected OfferPSP intake without
+  exposing the bot token. A document with an explicit `PSP: Provider name` caption is downloaded by
+  the credential-backed Telegram node, limited to 20 MB, extracted and sent to the existing
+  draft/review queue. Supported direct Telegram sources are PDF, DOCX, XLS/XLSX and text formats
+  including TXT, Markdown, CSV/TSV, JSON, HTML and XML. Unsupported images receive an explicit
+  instruction to use the cockpit upload while direct Telegram OCR remains pending.
+- [x] Remove hard-coded Telegram API tokens from the active AIBot message, callback, keyboard and
+  email-confirmation nodes. All Telegram operations now use the existing n8n Telegram credential;
+  the active graph contains no Telegram token URLs and validates with zero errors.
+- [ ] Complete one real Telegram attachment E2E: receive a rate-card file, verify extraction and the
+  protected intake execution, confirm the queued/review result in Supabase and remove the exact test
+  artifacts if a synthetic provider or offer was used.
 - [x] Define the universal ingestion contract: any source becomes a reviewed normalized draft and
   every merchant output uses the Telegram-offer presentation standard.
 - [x] Add local source adapters for TXT/Markdown, CSV/TSV, XLSX, text PDF and DOCX with immutable
@@ -776,9 +788,10 @@ The first operational UI is deployed. Daily-use refinement remains.
   the existing provider confirmation timestamp, close the reminder and complete its task; incoming
   drafts remain review-only and never falsely confirm partner terms.
 
-The production queue, AIBot transport, automatic text parser and private admin-file ingestion are
-connected. Incoming mailbox activation remains the next external-channel step; partner follow-up
-reminders are advisory and do not control offer availability.
+The production queue, AIBot text and attachment transport, automatic text parser and private
+admin-file ingestion are connected. Direct Telegram attachment acceptance still needs one real-file
+E2E; incoming mailbox activation remains the next external-channel step. Partner follow-up reminders
+are advisory and do not control offer availability.
 
 ### Impact Control — production delivery 2026-08-08
 
