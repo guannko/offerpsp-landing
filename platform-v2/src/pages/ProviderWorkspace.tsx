@@ -4,7 +4,7 @@ import PageMeta from "../components/common/PageMeta";
 import { EmptyState, ErrorBanner, Panel, SkeletonPage, StatusPill } from "../components/control/Ui";
 import { useControlBridge } from "../context/ControlBridgeContext";
 import { supabase } from "../lib/supabase";
-import { ActivityPanel, DocumentsPanel, useEntityWorkspace } from "../components/control/EntityWorkspace360";
+import { ActivityPanel, DocumentsPanel, useEntityWorkspace, type EntityWorkspaceSnapshot } from "../components/control/EntityWorkspace360";
 
 type JsonRow = Record<string, string | number | null | undefined>;
 type Provider = {
@@ -33,11 +33,11 @@ type ReplacementReview = {
 };
 type Workspace = { provider: Provider; contacts: Contact[]; margin_policies: Margin[]; routes: Route[]; batches: JsonRow[]; activity: JsonRow[] };
 type MarginDraft = { route_id:string; flow:string; mode:string; percent_value:string; fixed_value:string; fixed_currency:string; notes:string };
-type ProviderTab = "overview" | "profile" | "contacts" | "offers" | "pricing" | "documents" | "activity";
+type ProviderTab = "overview" | "edit" | "contacts" | "offers" | "pricing" | "documents" | "activity";
 
 const providerTabs: Array<{ id: ProviderTab; label: string }> = [
-  { id: "overview", label: "Обзор" },
-  { id: "profile", label: "Профиль" },
+  { id: "overview", label: "Карточка" },
+  { id: "edit", label: "Редактирование" },
   { id: "contacts", label: "Контакты" },
   { id: "offers", label: "Офферы" },
   { id: "pricing", label: "Маржа" },
@@ -45,6 +45,7 @@ const providerTabs: Array<{ id: ProviderTab; label: string }> = [
   { id: "activity", label: "История" },
 ];
 const providerTabIds = new Set<ProviderTab>(providerTabs.map((item) => item.id));
+const normalizeProviderTab = (value: string | null): ProviderTab => value === "profile" ? "overview" : providerTabIds.has(value as ProviderTab) ? value as ProviderTab : "overview";
 
 const fieldClass = "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:text-white";
 const areaClass = "min-h-24 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:text-white";
@@ -62,8 +63,7 @@ export default function ProviderWorkspace() {
   const [loading, setLoading] = useState(!isNew);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
-  const requestedTab = params.get("tab") as ProviderTab | null;
-  const [tab, setTab] = useState<ProviderTab>(requestedTab && providerTabIds.has(requestedTab) ? requestedTab : "overview");
+  const [tab, setTab] = useState<ProviderTab>(normalizeProviderTab(params.get("tab")));
   const [providerDraft, setProviderDraft] = useState<Partial<Provider>>({ relationship_status: "prospect", relationship_tier: "standard", strategic_priority: 50, margin_included_default: false });
   const [contactDraft, setContactDraft] = useState<Partial<Contact>>({ active: true, preferred_channel: "telegram" });
   const [marginDraft, setMarginDraft] = useState({ route_id: "", flow: "all", mode: "percentage_points", percent_value: "", fixed_value: "", fixed_currency: "", notes: "" });
@@ -89,9 +89,15 @@ export default function ProviderWorkspace() {
 
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {
-    const nextTab = params.get("tab") as ProviderTab | null;
-    if (nextTab && providerTabIds.has(nextTab) && nextTab !== tab) setTab(nextTab);
-  }, [params, tab]);
+    const requested = params.get("tab");
+    const nextTab = normalizeProviderTab(requested);
+    if (nextTab !== tab) setTab(nextTab);
+    if (requested === "profile") {
+      const nextParams = new URLSearchParams(params);
+      nextParams.set("tab", "overview");
+      setParams(nextParams, { replace: true });
+    }
+  }, [params, setParams, tab]);
   const selectedRoute = workspace?.routes.find((route) => route.id === params.get("route"));
 
   const selectTab = (nextTab: ProviderTab) => {
@@ -159,8 +165,8 @@ export default function ProviderWorkspace() {
               {providerTabs.map((item) => <button key={item.id} onClick={() => selectTab(item.id)} className={`whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium ${tab === item.id ? "bg-brand-500 text-white" : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"}`}>{item.label}</button>)}
             </div>
             {tab === "overview"
-              ? <ProviderOverview workspace={workspace} setTab={selectTab}/>
-              : tab === "profile"
+              ? <ProviderOverview workspace={workspace} entity={entityWorkspace.data} setTab={selectTab}/>
+              : tab === "edit"
                 ? <div className="max-w-2xl"><ProviderForm draft={providerDraft} setDraft={setProviderDraft} save={() => void saveProvider()} busy={busy}/></div>
               : tab === "contacts"
                 ? <div className="max-w-3xl"><ContactPanel contacts={workspace.contacts || []} draft={contactDraft} setDraft={setContactDraft} save={() => void saveContact()} busy={busy}/></div>
@@ -176,8 +182,13 @@ export default function ProviderWorkspace() {
   </>;
 }
 
-function ProviderOverview({ workspace, setTab }: { workspace: Workspace; setTab: (tab: ProviderTab) => void }) {
+function ProviderOverview({ workspace, entity, setTab }: { workspace: Workspace; entity: EntityWorkspaceSnapshot; setTab: (tab: ProviderTab) => void }) {
+  const [copied, setCopied] = useState<string | null>(null);
   const activeRoutes = workspace.routes.filter((route) => route.status !== "archived");
+  const publishedRoutes = activeRoutes.filter((route) => route.status === "published");
+  const activeContacts = workspace.contacts.filter((contact) => contact.active !== false);
+  const activeDocuments = entity.documents.filter((document) => document.status !== "archived");
+  const activeMargins = workspace.margin_policies.filter((policy) => policy.active);
   const nextAction = activeRoutes.some((route) => route.open_error_count)
     ? "Исправить ошибки в офферах"
     : activeRoutes.some((route) => route.status === "paused")
@@ -185,17 +196,80 @@ function ProviderOverview({ workspace, setTab }: { workspace: Workspace; setTab:
       : !activeRoutes.some((route) => route.status === "published")
         ? "Подготовить и опубликовать оффер"
         : "Проверить новые запросы мерчей";
-  return <div className="space-y-6"><SupplySummary workspace={workspace}/><div className="grid grid-cols-1 gap-6 lg:grid-cols-2"><Panel><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Следующее действие</p><h2 className="mt-3 text-xl font-semibold text-gray-900 dark:text-white">{nextAction}</h2><p className="mt-2 text-sm text-gray-500">Профиль PSP, его условия и история теперь собраны в одном workspace.</p><button onClick={() => setTab("offers")} className="mt-5 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white">Открыть офферы</button></Panel><Panel><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Relationship</p><div className="mt-4 grid grid-cols-2 gap-4 text-sm"><div><span className="text-gray-400">Tier</span><strong className="mt-1 block text-gray-900 dark:text-white">{workspace.provider.relationship_tier || "standard"}</strong></div><div><span className="text-gray-400">Приоритет</span><strong className="mt-1 block text-gray-900 dark:text-white">{workspace.provider.strategic_priority ?? 50}</strong></div><div><span className="text-gray-400">Контактов</span><strong className="mt-1 block text-gray-900 dark:text-white">{workspace.contacts.length}</strong></div><div><span className="text-gray-400">Маржа</span><strong className="mt-1 block text-gray-900 dark:text-white">{workspace.margin_policies.filter((policy) => policy.active).length} активных правил</strong></div></div><button onClick={() => setTab("profile")} className="mt-5 text-sm font-semibold text-brand-500">Редактировать профиль →</button></Panel></div></div>;
+  const copy = async (label: string, value: string) => {
+    await navigator.clipboard.writeText(value);
+    setCopied(label);
+    window.setTimeout(() => setCopied(null), 1600);
+  };
+
+  return <div className="space-y-6">
+    <SupplySummary workspace={workspace}/>
+    {copied && <div className="fixed right-5 top-24 z-50 rounded-lg bg-success-600 px-4 py-2 text-sm font-semibold text-white shadow-lg">{copied} скопировано</div>}
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
+      <Panel>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Карточка PSP</p><h2 className="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{workspace.provider.brand_name}</h2><p className="mt-1 text-sm text-gray-500">{workspace.provider.legal_name || "Юридическое имя не заполнено"}</p></div>
+          <button onClick={() => setTab("edit")} className="shrink-0 rounded-lg border border-brand-200 px-4 py-2.5 text-sm font-semibold text-brand-600 hover:bg-brand-50 dark:border-brand-500/30 dark:hover:bg-brand-500/10">Редактировать</button>
+        </div>
+        <div className="mt-6 grid grid-cols-1 gap-x-8 md:grid-cols-2">
+          <ProfileRow label="Внутренний код" value={workspace.provider.internal_code || "—"}/>
+          <ProfileRow label="Статус" value={workspace.provider.relationship_status || "—"}/>
+          <ProfileRow label="Tier" value={workspace.provider.relationship_tier || "standard"}/>
+          <ProfileRow label="Приоритет" value={String(workspace.provider.strategic_priority ?? 50)}/>
+          <ProfileRow label="Агентская маржа" value={workspace.provider.margin_included_default ? "Уже включена PSP" : "Добавляется OfferPSP"}/>
+          <ProfileRow label="Условия проверены" value={formatProviderDate(workspace.provider.last_verified_at)}/>
+        </div>
+        <div className="mt-2 border-t border-gray-100 pt-4 dark:border-gray-800">
+          {workspace.provider.website ? <ContactValue label="Сайт" value={workspace.provider.website} href={externalUrl(workspace.provider.website)} onCopy={copy}/> : <p className="mt-2 text-sm text-gray-400">Сайт не указан</p>}
+        </div>
+        <div className="mt-5 rounded-xl bg-gray-50 p-4 dark:bg-white/[0.03]"><span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Внутренние заметки</span><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-gray-700 dark:text-gray-300">{workspace.provider.relationship_notes || "Заметок пока нет."}</p></div>
+      </Panel>
+
+      <Panel>
+        <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Контакты PSP</h2><p className="mt-1 text-sm text-gray-500">Все рабочие каналы — открываются и копируются.</p></div><button onClick={() => setTab("contacts")} className="text-sm font-semibold text-brand-500">Управлять</button></div>
+        <div className="mt-5 max-h-[520px] space-y-3 overflow-y-auto">
+          {activeContacts.map((contact) => <div key={contact.id} className="rounded-xl border border-gray-200 p-4 dark:border-gray-800"><div><strong className="text-sm text-gray-900 dark:text-white">{contact.full_name}</strong><span className="mt-1 block text-xs text-gray-400">{[contact.role_title, contact.region].filter(Boolean).join(" · ") || "Роль не указана"}</span></div><div className="mt-3 divide-y divide-gray-100 dark:divide-gray-800">{contact.telegram && <ContactValue label="Telegram" value={contact.telegram} href={telegramUrl(contact.telegram)} onCopy={copy}/>} {contact.email && <ContactValue label="Email" value={contact.email} href={`mailto:${contact.email}`} onCopy={copy}/>} {contact.phone && <ContactValue label="Телефон" value={contact.phone} href={`tel:${contact.phone.replace(/[^+\d]/g, "")}`} onCopy={copy}/>}</div>{contact.notes && <p className="mt-3 text-xs leading-5 text-gray-500">{contact.notes}</p>}</div>)}
+          {!activeContacts.length && <EmptyState title="Контактов нет" description="Добавьте имя и хотя бы один рабочий канал связи."/>}
+        </div>
+      </Panel>
+    </div>
+
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-4">
+      <SummaryPanel title="Офферы" count={activeRoutes.length} action="Открыть офферы" onOpen={() => setTab("offers")}><p>{publishedRoutes.length} опубликовано · {activeRoutes.filter((route) => route.status === "paused").length} на паузе</p>{activeRoutes.slice(0, 3).map((route) => <p key={route.id} className="truncate">{route.client_title} · {route.status}</p>)}</SummaryPanel>
+      <SummaryPanel title="Маржа" count={activeMargins.length} action="Настроить маржу" onOpen={() => setTab("pricing")}><p>{activeMargins.length ? `${activeMargins.length} активных правил` : "Активных правил нет"}</p><p>{workspace.provider.margin_included_default ? "Маржа включена поставщиком" : "Маржа управляется OfferPSP"}</p></SummaryPanel>
+      <SummaryPanel title="Документы" count={activeDocuments.length} action="Открыть документы" onOpen={() => setTab("documents")}>{activeDocuments.slice(0, 3).map((document) => <p key={document.id} className="truncate">{document.title} · {document.status}</p>)}{!activeDocuments.length && <p>Документов пока нет</p>}</SummaryPanel>
+      <SummaryPanel title="История" count={entity.activities.length} action="Открыть историю" onOpen={() => setTab("activity")}>{entity.activities.slice(0, 3).map((activity) => <p key={activity.id} className="line-clamp-2">{activity.title || activity.summary || activity.action_type || "Событие"} · {formatProviderDate(activity.created_at)}</p>)}{!entity.activities.length && <p>История пока пуста</p>}</SummaryPanel>
+    </div>
+
+    <Panel><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Следующее действие</p><h2 className="mt-2 text-xl font-semibold text-gray-900 dark:text-white">{nextAction}</h2></div><button onClick={() => setTab("offers")} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white">Открыть офферы</button></div></Panel>
+  </div>;
 }
+
+function ProfileRow({ label, value }: { label: string; value: string }) {
+  return <div className="border-b border-gray-100 py-4 dark:border-gray-800"><span className="text-xs font-semibold uppercase tracking-wide text-gray-400">{label}</span><strong className="mt-1 block text-sm text-gray-900 dark:text-white">{value}</strong></div>;
+}
+
+function ContactValue({ label, value, href, onCopy }: { label: string; value: string; href: string; onCopy: (label: string, value: string) => void }) {
+  return <div className="flex items-center justify-between gap-3 py-2.5"><div className="min-w-0"><span className="block text-[10px] font-semibold uppercase tracking-wide text-gray-400">{label}</span><a href={href} target={href.startsWith("http") ? "_blank" : undefined} rel={href.startsWith("http") ? "noreferrer" : undefined} className="mt-0.5 block truncate text-sm font-medium text-brand-600 hover:underline dark:text-brand-400">{value}</a></div><button type="button" onClick={() => onCopy(label, value)} className="shrink-0 rounded-md border border-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-500 hover:border-brand-300 hover:text-brand-500 dark:border-gray-700">Копировать</button></div>;
+}
+
+function SummaryPanel({ title, count, action, onOpen, children }: { title: string; count: number; action: string; onOpen: () => void; children: React.ReactNode }) {
+  return <Panel><div className="flex items-start justify-between gap-3"><h2 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h2><strong className="rounded-full bg-brand-50 px-2.5 py-1 text-xs text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">{count}</strong></div><div className="mt-4 space-y-2 text-sm text-gray-500">{children}</div><button onClick={onOpen} className="mt-5 text-sm font-semibold text-brand-500">{action} →</button></Panel>;
+}
+
+const externalUrl = (value: string) => /^https?:\/\//i.test(value) ? value : `https://${value}`;
+const telegramUrl = (value: string) => /^https?:\/\//i.test(value) ? value : `https://t.me/${value.replace(/^@/, "")}`;
+const formatProviderDate = (value?: string | null) => value ? new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value)) : "—";
 
 function ProviderForm({ draft, setDraft, save, busy }: { draft: Partial<Provider>; setDraft: (value: Partial<Provider>) => void; save: () => void; busy: string | null }) {
   const set = (key: keyof Provider, value: unknown) => setDraft({ ...draft, [key]: value });
-  return <Panel><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Профиль PSP</p><div className="mt-5 space-y-4"><Field label="Бренд"><input className={fieldClass} value={draft.brand_name || ""} onChange={(e)=>set("brand_name",e.target.value)}/></Field><Field label="Юридическое имя"><input className={fieldClass} value={draft.legal_name || ""} onChange={(e)=>set("legal_name",e.target.value)}/></Field><Field label="Сайт"><input className={fieldClass} value={draft.website || ""} onChange={(e)=>set("website",e.target.value)}/></Field><div className="grid grid-cols-2 gap-3"><Field label="Статус"><select className={fieldClass} value={draft.relationship_status || "prospect"} onChange={(e)=>set("relationship_status",e.target.value)}>{["prospect","onboarding","active","paused","archived"].map(v=><option key={v}>{v}</option>)}</select></Field><Field label="Tier"><select className={fieldClass} value={draft.relationship_tier || "standard"} onChange={(e)=>set("relationship_tier",e.target.value)}>{["top","core","standard","watchlist"].map(v=><option key={v}>{v}</option>)}</select></Field></div><Field label="Приоритет 0–100"><input className={fieldClass} type="number" min="0" max="100" value={draft.strategic_priority ?? 50} onChange={(e)=>set("strategic_priority",Number(e.target.value))}/></Field><label className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" checked={Boolean(draft.margin_included_default)} onChange={(e)=>set("margin_included_default",e.target.checked)} className="h-4 w-4 accent-[#ff477d]"/>Агентская маржа уже включена PSP</label><Field label="Внутренние заметки"><textarea className={areaClass} value={draft.relationship_notes || ""} onChange={(e)=>set("relationship_notes",e.target.value)}/></Field><button onClick={save} disabled={!draft.brand_name?.trim() || Boolean(busy)} className="w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy === "provider" ? "Сохраняю…" : "Сохранить PSP"}</button></div></Panel>;
+  return <Panel><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Редактирование PSP</p><div className="mt-5 space-y-4"><Field label="Бренд"><input className={fieldClass} value={draft.brand_name || ""} onChange={(e)=>set("brand_name",e.target.value)}/></Field><Field label="Юридическое имя"><input className={fieldClass} value={draft.legal_name || ""} onChange={(e)=>set("legal_name",e.target.value)}/></Field><Field label="Сайт"><input className={fieldClass} value={draft.website || ""} onChange={(e)=>set("website",e.target.value)}/></Field><div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><Field label="Статус"><select className={fieldClass} value={draft.relationship_status || "prospect"} onChange={(e)=>set("relationship_status",e.target.value)}>{["prospect","onboarding","active","paused","archived"].map(v=><option key={v}>{v}</option>)}</select></Field><Field label="Tier"><select className={fieldClass} value={draft.relationship_tier || "standard"} onChange={(e)=>set("relationship_tier",e.target.value)}>{["top","core","standard","watchlist"].map(v=><option key={v}>{v}</option>)}</select></Field></div><Field label="Приоритет 0–100"><input className={fieldClass} type="number" min="0" max="100" value={draft.strategic_priority ?? 50} onChange={(e)=>set("strategic_priority",Number(e.target.value))}/></Field><label className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" checked={Boolean(draft.margin_included_default)} onChange={(e)=>set("margin_included_default",e.target.checked)} className="h-4 w-4 accent-[#ff477d]"/>Агентская маржа уже включена PSP</label><Field label="Внутренние заметки"><textarea className={areaClass} value={draft.relationship_notes || ""} onChange={(e)=>set("relationship_notes",e.target.value)}/></Field><button onClick={save} disabled={!draft.brand_name?.trim() || Boolean(busy)} className="w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy === "provider" ? "Сохраняю…" : "Сохранить изменения"}</button></div></Panel>;
 }
 
 function ContactPanel({ contacts, draft, setDraft, save, busy }: { contacts: Contact[]; draft: Partial<Contact>; setDraft: (v: Partial<Contact>)=>void; save: ()=>void; busy: string|null }) {
   const set=(key:keyof Contact,value:unknown)=>setDraft({...draft,[key]:value});
-  return <Panel><div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Контакты</h2><span className="text-xs text-gray-400">{contacts.length}</span></div><div className="mt-4 space-y-2">{contacts.map(c=><button key={c.id} onClick={()=>setDraft(c)} className="w-full rounded-lg border border-gray-200 p-3 text-left dark:border-gray-800"><strong className="block text-sm text-gray-900 dark:text-white">{c.full_name}</strong><span className="text-xs text-gray-400">{c.role_title || "Contact"} · {c.telegram || c.email || c.phone || "нет канала"}</span></button>)}</div><div className="mt-5 space-y-3"><Field label="Имя"><input className={fieldClass} value={draft.full_name || ""} onChange={e=>set("full_name",e.target.value)}/></Field><Field label="Роль"><input className={fieldClass} value={draft.role_title || ""} onChange={e=>set("role_title",e.target.value)}/></Field><Field label="Telegram"><input className={fieldClass} value={draft.telegram || ""} onChange={e=>set("telegram",e.target.value)}/></Field><Field label="Email"><input className={fieldClass} value={draft.email || ""} onChange={e=>set("email",e.target.value)}/></Field><button onClick={save} disabled={!draft.full_name?.trim() || Boolean(busy)} className="w-full rounded-lg border border-brand-200 px-4 py-2.5 text-sm font-semibold text-brand-600 disabled:opacity-40">{busy === "contact" ? "Сохраняю…" : draft.id ? "Обновить контакт" : "Добавить контакт"}</button></div></Panel>;
+  const hasChannel = Boolean(draft.telegram?.trim() || draft.email?.trim() || draft.phone?.trim());
+  return <Panel><div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Контакты</h2><span className="text-xs text-gray-400">{contacts.length}</span></div><div className="mt-4 space-y-2">{contacts.map(c=><button key={c.id} onClick={()=>setDraft(c)} className="w-full rounded-lg border border-gray-200 p-3 text-left dark:border-gray-800"><strong className="block text-sm text-gray-900 dark:text-white">{c.full_name}</strong><span className="text-xs text-gray-400">{c.role_title || "Contact"} · {c.telegram || c.email || c.phone || "нет канала"}</span></button>)}</div><div className="mt-5 space-y-3"><Field label="Имя"><input className={fieldClass} value={draft.full_name || ""} onChange={e=>set("full_name",e.target.value)}/></Field><div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><Field label="Роль"><input className={fieldClass} value={draft.role_title || ""} onChange={e=>set("role_title",e.target.value)}/></Field><Field label="Регион"><input className={fieldClass} value={draft.region || ""} onChange={e=>set("region",e.target.value)}/></Field></div><Field label="Telegram"><input className={fieldClass} value={draft.telegram || ""} onChange={e=>set("telegram",e.target.value)}/></Field><Field label="Email"><input className={fieldClass} type="email" value={draft.email || ""} onChange={e=>set("email",e.target.value)}/></Field><Field label="Телефон"><input className={fieldClass} value={draft.phone || ""} onChange={e=>set("phone",e.target.value)}/></Field><Field label="Предпочтительный канал"><select className={fieldClass} value={draft.preferred_channel || "telegram"} onChange={e=>set("preferred_channel",e.target.value)}>{["telegram","email","phone","other"].map(value=><option key={value} value={value}>{value}</option>)}</select></Field><Field label="Заметка о контакте"><textarea className={areaClass} value={draft.notes || ""} onChange={e=>set("notes",e.target.value)}/></Field><label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300"><input type="checkbox" checked={draft.active !== false} onChange={e=>set("active",e.target.checked)} className="accent-[#ff477d]"/>Активный контакт</label>{draft.full_name?.trim() && !hasChannel && <p className="text-xs text-error-600">Укажите Telegram, email или телефон.</p>}<div className="flex gap-2"><button onClick={save} disabled={!draft.full_name?.trim() || !hasChannel || Boolean(busy)} className="flex-1 rounded-lg border border-brand-200 px-4 py-2.5 text-sm font-semibold text-brand-600 disabled:opacity-40">{busy === "contact" ? "Сохраняю…" : draft.id ? "Обновить контакт" : "Добавить контакт"}</button>{draft.id && <button onClick={()=>setDraft({active:true,preferred_channel:"telegram"})} className="rounded-lg border border-gray-200 px-4 text-sm dark:border-gray-700">Отмена</button>}</div></div></Panel>;
 }
 
 function SupplySummary({ workspace }: { workspace: Workspace }) {
