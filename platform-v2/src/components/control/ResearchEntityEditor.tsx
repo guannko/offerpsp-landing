@@ -15,12 +15,40 @@ type ResearchWorkspace = {
   email_messages: EmailMessage[];
   audit: AuditEntry[];
 };
-type WorkspaceTab = "profile" | "notes" | "tasks" | "mail" | "history";
+type WorkspaceTab = "overview" | "edit" | "notes" | "tasks" | "mail" | "history";
 
 const inputClass = "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:text-white";
 const textareaClass = "min-h-24 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-3 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:text-white";
 const csv = (value: unknown) => Array.isArray(value) ? value.join(", ") : "";
 const splitCsv = (value: unknown) => String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
+const text = (value: unknown) => Array.isArray(value) ? value.filter(Boolean).join(", ") : String(value || "").trim();
+const dateTime = (value?: string | null) => value ? new Date(value).toLocaleString("ru-RU") : "—";
+const statusLabels: Record<string, string> = {
+  active: "Активна", archived: "В архиве", research: "Исследование", qualified: "Проверен",
+  partner: "Партнёр", paused: "На паузе", rejected: "Отклонён", not_contacted: "Не связывались",
+  researching: "Ищем контакт", ready: "Готов к контакту", contacted: "Связались", replied: "Ответил",
+  negotiating: "Переговоры", pending: "Ожидает", done: "Выполнено", cancelled: "Отменено",
+  draft: "Черновик", sent: "Отправлено", open: "Открыта", awaiting_reply: "Ждём ответ",
+  follow_up: "Нужен follow-up", closed: "Закрыта",
+};
+
+function withProtocol(value: string) {
+  if (!value) return "";
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+}
+
+function telegramLink(value: string) {
+  if (!value) return "";
+  if (/^https?:\/\//i.test(value)) return value;
+  const username = value.replace(/^@/, "").trim();
+  return username && !/\s/.test(username) ? `https://t.me/${username}` : "";
+}
+
+function linkedinLink(value: string) {
+  if (!value) return "";
+  if (/^https?:\/\//i.test(value)) return value;
+  return value.includes("linkedin.com") ? withProtocol(value) : "";
+}
 
 function Field({ label, children, wide = false }: { label: string; children: React.ReactNode; wide?: boolean }) {
   return <label className={wide ? "md:col-span-2" : ""}><span className="mb-1.5 block text-xs font-semibold text-gray-500">{label}</span>{children}</label>;
@@ -28,6 +56,30 @@ function Field({ label, children, wide = false }: { label: string; children: Rea
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return <section className="rounded-2xl border border-gray-200 p-4 dark:border-gray-800"><h3 className="mb-4 text-sm font-semibold text-gray-900 dark:text-white">{title}</h3><div className="grid grid-cols-1 gap-4 md:grid-cols-2">{children}</div></section>;
+}
+
+function Detail({ label, value, wide = false }: { label: string; value: unknown; wide?: boolean }) {
+  const rendered = text(value);
+  return <div className={wide ? "md:col-span-2" : ""}><span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">{label}</span><p className="mt-1.5 whitespace-pre-wrap text-sm leading-6 text-gray-800 dark:text-gray-200">{rendered || "—"}</p></div>;
+}
+
+function ContactRow({ label, value, href, onCopy }: { label: string; value: unknown; href?: string; onCopy: (value: string) => void }) {
+  const rendered = text(value);
+  if (!rendered) return null;
+  return <div className="flex flex-col gap-3 border-b border-gray-100 py-3 last:border-0 sm:flex-row sm:items-center dark:border-gray-800">
+    <span className="w-24 shrink-0 text-xs font-semibold text-gray-400">{label}</span>
+    <div className="min-w-0 flex-1">
+      {href ? <a href={href} target={href.startsWith("http") ? "_blank" : undefined} rel={href.startsWith("http") ? "noreferrer" : undefined} className="break-all text-sm font-semibold text-brand-500 hover:underline">{rendered}</a> : <span className="break-all text-sm text-gray-800 dark:text-gray-200">{rendered}</span>}
+    </div>
+    <button type="button" onClick={() => onCopy(rendered)} className="self-start rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-500 hover:border-brand-300 hover:text-brand-500 dark:border-gray-700 dark:text-gray-300">Копировать</button>
+  </div>;
+}
+
+function OverviewPanel({ title, count, action, onOpen, children }: { title: string; count: number; action: string; onOpen: () => void; children: React.ReactNode }) {
+  return <section className="rounded-2xl border border-gray-200 p-4 dark:border-gray-800">
+    <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><h3 className="text-sm font-semibold text-gray-900 dark:text-white">{title}</h3><span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-500 dark:bg-white/5">{count}</span></div><button type="button" onClick={onOpen} className="text-xs font-semibold text-brand-500 hover:underline">{action}</button></div>
+    <div className="mt-4">{children}</div>
+  </section>;
 }
 
 export default function ResearchEntityEditor({ entityType, record, onClose, onSaved }: {
@@ -51,7 +103,7 @@ export default function ResearchEntityEditor({ entityType, record, onClose, onSa
   }));
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ error?: boolean; text: string } | null>(null);
-  const [tab, setTab] = useState<WorkspaceTab>("profile");
+  const [tab, setTab] = useState<WorkspaceTab>(record ? "overview" : "edit");
   const [workspace, setWorkspace] = useState<ResearchWorkspace>({ notes: [], tasks: [], email_drafts: [], email_threads: [], email_messages: [], audit: [] });
   const [workspaceLoading, setWorkspaceLoading] = useState(false);
   const [noteBody, setNoteBody] = useState("");
@@ -64,6 +116,8 @@ export default function ResearchEntityEditor({ entityType, record, onClose, onSa
   const set = (key: string, value: unknown) => setDraft((current) => ({ ...current, [key]: value }));
   const isNew = !record;
   const archived = record?.record_state === "archived";
+  const openTasks = workspace.tasks.filter((item) => !["done", "cancelled"].includes(item.status || ""));
+  const mailCount = workspace.email_threads.length + workspace.email_drafts.length;
 
   const loadWorkspace = useCallback(async () => {
     if (!record) return;
@@ -78,6 +132,15 @@ export default function ResearchEntityEditor({ entityType, record, onClose, onSa
   }, [entityType, record]);
 
   useEffect(() => { void loadWorkspace(); }, [loadWorkspace]);
+
+  async function copyValue(value: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setMessage({ text: "Скопировано в буфер обмена." });
+    } catch {
+      setMessage({ error: true, text: "Не удалось скопировать. Выделите значение вручную." });
+    }
+  }
 
   async function addNote() {
     if (!record || !noteBody.trim()) return;
@@ -164,7 +227,9 @@ export default function ResearchEntityEditor({ entityType, record, onClose, onSa
       const text = result.error.code === "23505" ? "Запись с таким внутренним ID уже существует. Обновите страницу и повторите." : result.error.message;
       setMessage({ error: true, text }); setBusy(false); return;
     }
-    await onSaved(); setBusy(false); onClose();
+    await onSaved(); setBusy(false);
+    if (isNew) onClose();
+    else { setMessage({ text: "Изменения сохранены." }); setTab("overview"); }
   }
 
   async function changeState() {
@@ -183,18 +248,68 @@ export default function ResearchEntityEditor({ entityType, record, onClose, onSa
 
   return <div className="fixed inset-0 z-[100000] flex justify-end bg-gray-950/55 backdrop-blur-sm" role="dialog" aria-modal="true">
     <div className="flex h-full w-full max-w-4xl flex-col bg-white shadow-2xl dark:bg-gray-950">
-      <header className="flex items-start justify-between gap-4 border-b border-gray-200 px-5 py-4 dark:border-gray-800">
-        <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">{entityType === "casino" ? "Casino organizer" : "PSP organizer"}</p><h2 className="mt-1 text-xl font-semibold text-gray-900 dark:text-white">{isNew ? "Новая запись" : String(draft.name || "Без названия")}</h2><p className="mt-1 text-xs text-gray-400">Карточка, коммуникации, задачи и история в одном рабочем месте.</p></div>
-        <button onClick={onClose} className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-500 dark:border-gray-800">Закрыть</button>
+      <header className="flex flex-col gap-4 border-b border-gray-200 px-5 py-4 sm:flex-row sm:items-start sm:justify-between dark:border-gray-800">
+        <div className="min-w-0"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">{entityType === "casino" ? "Casino organizer" : "PSP organizer"}</p><h2 className="mt-1 break-words text-xl font-semibold text-gray-900 dark:text-white">{isNew ? "Новая запись" : String(draft.name || "Без названия")}</h2><p className="mt-1 max-w-2xl text-xs text-gray-400">Карточка показывает текущее состояние. Изменения выполняются в отдельных рабочих вкладках.</p></div>
+        <div className="flex w-full gap-2 sm:w-auto sm:shrink-0">{!isNew && tab !== "edit" && <button onClick={() => setTab("edit")} className="flex-1 rounded-lg bg-brand-500 px-3 py-2 text-sm font-semibold text-white sm:flex-none">Редактировать</button>}<button onClick={onClose} className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-500 sm:flex-none dark:border-gray-800">Закрыть</button></div>
       </header>
       {!isNew && <nav className="flex gap-1 overflow-x-auto border-b border-gray-200 px-4 py-2 dark:border-gray-800">{[
-        ["profile","Карточка"], ["notes",`Заметки · ${workspace.notes.length}`], ["tasks",`Задачи · ${workspace.tasks.filter((item)=>!["done","cancelled"].includes(item.status || "")).length}`],
-        ["mail",`Почта · ${workspace.email_threads.length + workspace.email_drafts.length}`], ["history","История"],
+        ["overview","Карточка"], ["edit","Редактирование"], ["notes",`Заметки · ${workspace.notes.length}`], ["tasks",`Задачи · ${openTasks.length}`],
+        ["mail",`Почта · ${mailCount}`], ["history","История"],
       ].map(([value,label])=><button key={value} onClick={()=>setTab(value as WorkspaceTab)} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold ${tab===value?"bg-brand-50 text-brand-600 dark:bg-brand-500/10":"text-gray-500 hover:bg-gray-50 dark:hover:bg-white/5"}`}>{label}</button>)}</nav>}
       <div className="flex-1 space-y-5 overflow-y-auto p-5">
         {message && <div className={`rounded-xl border px-4 py-3 text-sm ${message.error ? "border-error-200 bg-error-50 text-error-700" : "border-success-200 bg-success-50 text-success-700"}`}>{message.text}</div>}
-        {workspaceLoading && tab !== "profile" && <div className="rounded-xl bg-gray-50 px-4 py-6 text-center text-sm text-gray-400 dark:bg-white/[0.03]">Загружаю рабочую карточку…</div>}
-        {tab === "profile" && <>
+        {workspaceLoading && tab !== "edit" && <div className="rounded-xl bg-gray-50 px-4 py-6 text-center text-sm text-gray-400 dark:bg-white/[0.03]">Загружаю рабочую карточку…</div>}
+        {tab === "overview" && !workspaceLoading && <>
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-600 dark:bg-brand-500/10">{statusLabels[String(draft.contact_status || "not_contacted")] || text(draft.contact_status)}</span>
+            {entityType === "psp" && <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600 dark:bg-white/5 dark:text-gray-300">{statusLabels[String(draft.provider_status || "research")] || text(draft.provider_status)}</span>}
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${archived ? "bg-error-50 text-error-600" : "bg-success-50 text-success-700"}`}>{statusLabels[String(record?.record_state || "active")] || text(record?.record_state)}</span>
+          </div>
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.8fr)]">
+            <Section title="Основная информация">
+              <Detail label="Название" value={draft.name}/>
+              <Detail label="GEO" value={draft.geo}/>
+              {entityType === "casino" ? <>
+                <Detail label="Город" value={draft.city}/><Detail label="Вертикаль / сфера" value={draft.sphere}/>
+                <Detail label="Лицензия" value={draft.license}/><Detail label="Платформа / software" value={draft.software}/>
+                <Detail label="Affiliate program" value={draft.affiliate_program}/><Detail label="Score" value={draft.score}/>
+                <Detail label="Описание" value={draft.description} wide/>
+              </> : <>
+                <Detail label="Кластер" value={draft.cluster}/><Detail label="Специализация" value={draft.specialization}/>
+                <Detail label="Risk appetite" value={draft.risk_appetite}/><Detail label="Страны" value={draft.supported_countries}/>
+                <Detail label="Валюты" value={draft.supported_currencies}/><Detail label="Методы" value={draft.payment_methods || draft.methods}/>
+                <Detail label="Вертикали" value={draft.supported_verticals}/><Detail label="Интеграции" value={draft.integration_types}/>
+                <Detail label="Коммерческие условия" value={draft.commission_terms} wide/>
+              </>}
+            </Section>
+            <section className="rounded-2xl border border-gray-200 p-4 dark:border-gray-800">
+              <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-semibold text-gray-900 dark:text-white">Контакты</h3><button type="button" onClick={() => setTab("edit")} className="text-xs font-semibold text-brand-500 hover:underline">Изменить</button></div>
+              <div className="mt-3">
+                {(text(draft.contact_name) || text(draft.contact_title)) && <div className="border-b border-gray-100 py-3 dark:border-gray-800"><span className="text-xs font-semibold text-gray-400">Контакт</span><p className="mt-1 text-sm font-semibold text-gray-800 dark:text-gray-200">{text(draft.contact_name) || "—"}{text(draft.contact_title) ? ` · ${text(draft.contact_title)}` : ""}</p></div>}
+                <ContactRow label="Сайт" value={draft.website} href={withProtocol(text(draft.website))} onCopy={(value) => void copyValue(value)}/>
+                <ContactRow label="Email" value={draft.email} href={text(draft.email) ? `mailto:${text(draft.email)}` : ""} onCopy={(value) => void copyValue(value)}/>
+                <ContactRow label="Telegram" value={draft.telegram} href={telegramLink(text(draft.telegram))} onCopy={(value) => void copyValue(value)}/>
+                <ContactRow label="Телефон" value={draft.phone} href={text(draft.phone) ? `tel:${text(draft.phone).replace(/[^+\d]/g, "")}` : ""} onCopy={(value) => void copyValue(value)}/>
+                <ContactRow label="LinkedIn" value={draft.linkedin} href={linkedinLink(text(draft.linkedin))} onCopy={(value) => void copyValue(value)}/>
+                <ContactRow label="Другие" value={draft.other_contacts} onCopy={(value) => void copyValue(value)}/>
+                {!text(draft.website) && !text(draft.email) && !text(draft.telegram) && !text(draft.phone) && !text(draft.linkedin) && !text(draft.other_contacts) && <p className="py-8 text-center text-sm text-gray-400">Контакты пока не заполнены.</p>}
+              </div>
+            </section>
+          </div>
+          <div className="grid gap-5 xl:grid-cols-3">
+            <OverviewPanel title="Последние заметки" count={workspace.notes.length} action="Работать с заметками" onOpen={() => setTab("notes")}>
+              <div className="space-y-3">{workspace.notes.slice(0, 3).map((note) => <article key={note.id}><p className="line-clamp-3 text-sm leading-6 text-gray-700 dark:text-gray-300">{note.body}</p><time className="mt-1 block text-xs text-gray-400">{dateTime(note.created_at)}</time></article>)}{!workspace.notes.length && <p className="text-sm text-gray-400">Заметок пока нет.</p>}</div>
+            </OverviewPanel>
+            <OverviewPanel title="Открытые задачи" count={openTasks.length} action="Работать с задачами" onOpen={() => setTab("tasks")}>
+              <div className="space-y-3">{openTasks.slice(0, 3).map((task) => <article key={String(task.id)}><div className="flex items-start justify-between gap-3"><strong className="text-sm text-gray-800 dark:text-gray-200">{task.title}</strong><span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-500 dark:bg-white/5">{String(task.priority || "normal")}</span></div><p className="mt-1 text-xs text-gray-400">{task.due_at ? `Срок: ${dateTime(task.due_at)}` : "Без срока"}</p></article>)}{!openTasks.length && <p className="text-sm text-gray-400">Открытых задач нет.</p>}</div>
+            </OverviewPanel>
+            <OverviewPanel title="Почта" count={mailCount} action="Работать с почтой" onOpen={() => setTab("mail")}>
+              <div className="space-y-3">{workspace.email_threads.slice(0, 2).map((thread) => <article key={thread.id}><div className="flex items-start justify-between gap-3"><strong className="line-clamp-2 text-sm text-gray-800 dark:text-gray-200">{thread.subject || "Без темы"}</strong>{thread.unread_count > 0 && <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-600">{thread.unread_count} новых</span>}</div><p className="mt-1 truncate text-xs text-gray-400">{thread.participant_email} · {statusLabels[thread.status] || thread.status}</p></article>)}{!workspace.email_threads.length && workspace.email_drafts.slice(0, 2).map((item) => <article key={item.id}><strong className="line-clamp-2 text-sm text-gray-800 dark:text-gray-200">{item.subject || "Без темы"}</strong><p className="mt-1 truncate text-xs text-gray-400">{item.to_email} · {statusLabels[String(item.status || "draft")] || item.status}</p></article>)}{!mailCount && <p className="text-sm text-gray-400">Связанной переписки пока нет.</p>}</div>
+            </OverviewPanel>
+          </div>
+          {workspace.audit.length > 0 && <OverviewPanel title="Последнее действие" count={workspace.audit.length} action="Открыть историю" onOpen={() => setTab("history")}><div className="flex items-center justify-between gap-4"><strong className="text-sm text-gray-800 dark:text-gray-200">{workspace.audit[0].action_type}</strong><time className="text-xs text-gray-400">{dateTime(workspace.audit[0].created_at)}</time></div></OverviewPanel>}
+        </>}
+        {tab === "edit" && <>
         <Section title="Основная информация">
           <Field label="Название"><input className={inputClass} value={String(draft.name || "")} onChange={(event) => set("name", event.target.value)}/></Field>
           <Field label="Сайт"><input className={inputClass} value={String(draft.website || "")} onChange={(event) => set("website", event.target.value)} placeholder="https://…"/></Field>
@@ -251,7 +366,7 @@ export default function ResearchEntityEditor({ entityType, record, onClose, onSa
       </div>
       <footer className="flex flex-col-reverse gap-3 border-t border-gray-200 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800">
         <div>{record && <button disabled={busy} onClick={()=>void changeState()} className={`rounded-lg border px-4 py-2.5 text-sm font-semibold ${archived ? "border-success-300 text-success-700" : "border-error-300 text-error-600"}`}>{archived ? "Восстановить" : "В архив"}</button>}</div>
-        <div className="flex gap-3"><button onClick={onClose} className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-gray-600 dark:border-gray-800 dark:text-gray-300">Закрыть</button>{tab === "profile" && <button disabled={busy} onClick={()=>void save()} className="rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy ? "Сохраняю…" : "Сохранить карточку"}</button>}</div>
+        <div className="flex gap-3"><button onClick={onClose} className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-gray-600 dark:border-gray-800 dark:text-gray-300">Закрыть</button>{tab === "edit" && <button disabled={busy} onClick={()=>void save()} className="rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy ? "Сохраняю…" : isNew ? "Создать запись" : "Сохранить изменения"}</button>}</div>
       </footer>
     </div>
   </div>;
