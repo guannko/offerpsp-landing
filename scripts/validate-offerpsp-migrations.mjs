@@ -248,6 +248,8 @@ async function applyMigrations() {
     "20260809170000_aibot_bulk_confirmations.sql",
     "20260809173000_aibot_prepare_bulk.sql",
     "20260809180000_aibot_bulk_by_search.sql",
+    "20260810084954_offerpsp_geo_region_aliases.sql",
+    "20260810090000_offerpsp_geo_region_normalization_v2.sql",
     "20260810120000_offerpsp_atomic_route_replacements.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
@@ -2760,6 +2762,46 @@ Albania, United States of America, Uganda`,
   process.stdout.write("PASS Worldwide allowlist, exclusion list and scheme-specific route parsing\n");
 }
 
+async function verifyGeoRegionAliases() {
+  const expected = ["AM", "AZ", "BY", "KG", "KZ", "MD", "RU", "TJ", "TM", "UZ"];
+  const extracted = await query("select private.offerpsp_extract_geo_codes('CIS') as geos");
+  const expanded = await query("select private.offerpsp_expand_geo_regions(array['СНГ']) as geos");
+  if (JSON.stringify(extracted.rows[0].geos) !== JSON.stringify(expected)
+      || JSON.stringify(expanded.rows[0].geos) !== JSON.stringify(expected)) {
+    throw new Error(`CIS/СНГ aliases were not expanded consistently: ${JSON.stringify({ extracted: extracted.rows[0], expanded: expanded.rows[0] })}`);
+  }
+
+  await query("begin");
+  try {
+    const lead = await query(`
+      insert into public.offerpsp_leads (
+        name, work_email, company, vertical, geos, methods, consent
+      ) values (
+        'CIS Fixture', 'cis-fixture@example.invalid', 'CIS Fixture', 'iGaming', 'CIS', 'Cards', true
+      )
+      returning geos, target_geos
+    `);
+    if (lead.rows[0].geos !== "CIS"
+        || JSON.stringify(lead.rows[0].target_geos) !== JSON.stringify(expected)) {
+      throw new Error(`Lead GEO trigger did not preserve raw CIS and expand target_geos: ${JSON.stringify(lead.rows[0])}`);
+    }
+
+    const edited = await query(`
+      update public.offerpsp_leads
+      set geos = 'India'
+      where work_email = 'cis-fixture@example.invalid'
+      returning geos, target_geos
+    `);
+    if (edited.rows[0].geos !== "India"
+        || JSON.stringify(edited.rows[0].target_geos) !== JSON.stringify(["IN"])) {
+      throw new Error(`Edited raw GEO retained stale regional target_geos: ${JSON.stringify(edited.rows[0])}`);
+    }
+  } finally {
+    await query("rollback");
+  }
+  process.stdout.write("PASS CIS/СНГ lead normalization, GEO edit synchronization and matching expansion\n");
+}
+
 try {
   verifyCanonicalGeoHeaderParsing();
   verifyWorldwideCoverageParsing();
@@ -2796,6 +2838,7 @@ try {
   await verifyMailCenter();
   await verifyPrivateSourceStorage();
   await verifyFreshnessReminders();
+  await verifyGeoRegionAliases();
   process.stdout.write("PASS all OfferPSP migration checks\n");
 } catch (error) {
   process.stderr.write(`FAIL ${error.message}\n`);
