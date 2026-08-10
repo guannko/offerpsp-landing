@@ -250,6 +250,7 @@ async function applyMigrations() {
     "20260809180000_aibot_bulk_by_search.sql",
     "20260810084954_offerpsp_geo_region_aliases.sql",
     "20260810090000_offerpsp_geo_region_normalization_v2.sql",
+    "20260810093000_offerpsp_progressive_geo_matching.sql",
     "20260810120000_offerpsp_atomic_route_replacements.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
@@ -2766,9 +2767,11 @@ async function verifyGeoRegionAliases() {
   const expected = ["AM", "AZ", "BY", "KG", "KZ", "MD", "RU", "TJ", "TM", "UZ"];
   const extracted = await query("select private.offerpsp_extract_geo_codes('CIS') as geos");
   const expanded = await query("select private.offerpsp_expand_geo_regions(array['СНГ']) as geos");
+  const transferMethods = await query("select private.offerpsp_expand_requested_methods(array['BANK_TRANSFER']) as methods");
   if (JSON.stringify(extracted.rows[0].geos) !== JSON.stringify(expected)
-      || JSON.stringify(expanded.rows[0].geos) !== JSON.stringify(expected)) {
-    throw new Error(`CIS/СНГ aliases were not expanded consistently: ${JSON.stringify({ extracted: extracted.rows[0], expanded: expanded.rows[0] })}`);
+      || JSON.stringify(expanded.rows[0].geos) !== JSON.stringify(expected)
+      || JSON.stringify(transferMethods.rows[0].methods) !== JSON.stringify(["BANK_TRANSFER", "C2C", "P2P", "SBP"])) {
+    throw new Error(`Regional GEO or transfer method aliases were not expanded consistently: ${JSON.stringify({ extracted: extracted.rows[0], expanded: expanded.rows[0], transferMethods: transferMethods.rows[0] })}`);
   }
 
   await query("begin");
@@ -2817,6 +2820,7 @@ try {
   await verify360WorkspaceGrants();
   await verifyResearchCrudGrants();
   await seedUsers();
+  await verifyGeoRegionAliases();
   await verifyAtomicRouteReplacement();
   await verifyCounterpartyOrganizer();
   await verifyOperationsAndIntegrations();
@@ -2838,7 +2842,6 @@ try {
   await verifyMailCenter();
   await verifyPrivateSourceStorage();
   await verifyFreshnessReminders();
-  await verifyGeoRegionAliases();
   process.stdout.write("PASS all OfferPSP migration checks\n");
 } catch (error) {
   process.stderr.write(`FAIL ${error.message}\n`);
