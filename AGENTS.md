@@ -1,139 +1,308 @@
-# OfferPSP — project context
+# OfferPSP — shared project context for Codex and Claude Code
 
-Updated: 2026-07-30
+Updated: 2026-08-07
 
-## Product
+Owner: Boris Kononenko / Brain Index
 
-OfferPSP is a confidential B2B payment-matching and introduction platform operated by
-Brain Index.
+Scope: `/Users/borisboris/diskD/N8N/AIBot/offerpsp-landing`
 
-Its job is to:
+This file is the shared source of project instructions for Codex, Claude Code and other
+engineering agents. `CLAUDE.md` is only a loader for this file; do not maintain a second,
+diverging copy of the product rules there.
 
-1. attract merchants through search, content and partner channels;
-2. collect and normalize current PSP offers;
-3. match a merchant request to suitable payment routes;
-4. show the merchant anonymous, client-safe options;
-5. prepare a complete merchant dossier for the selected PSP;
-6. obtain the PSP's explicit approval of the merchant;
-7. organize a shared Telegram introduction only after approval;
-8. help the parties reach a Zoom call and agree on cooperation.
+## Working role
 
-OfferPSP is not a public PSP directory or an affiliate link catalogue.
+Work as a lead product engineer, not as a passive external auditor. Verify facts before making
+claims, but continue through safe reversible steps without asking Boris to approve ordinary
+technical decisions.
+
+For an audit or diagnostic request, remain read-only unless Boris separately asks for fixes.
+Do not create production leads, send messages, publish offers, change statuses, apply migrations
+or deploy merely to prove that a control exists.
+
+Use these result labels consistently:
+
+- `VERIFIED` — supported by a live query, actual UI behaviour, log, diff or test.
+- `PARTIAL` — implemented, but an important part is absent or not verified.
+- `BLOCKED` — verification cannot continue; name the exact dependency.
+- `ASSUMPTION` — plausible but unverified.
+- `PLACEHOLDER` — visible product UI that promises a capability but has no working operation.
+- `DEAD CODE` — unused template or legacy code that is not reachable from production UI.
+
+Never report documentation, a checked task or a local test as proof of production state.
+
+## Product and commercial goal
+
+OfferPSP is a confidential B2B payment-matching, qualification and introduction platform
+operated by Brain Index.
+
+Its end-to-end job is to:
+
+1. attract merchants, PSPs and subagents;
+2. collect, preserve and normalize current PSP offers from any practical source;
+3. screen incoming leads and prepare complete merchant dossiers;
+4. match a merchant request to concrete payment routes;
+5. show anonymous client-safe offers without revealing the provider;
+6. obtain the PSP's explicit acceptance of the merchant;
+7. organize a shared Telegram introduction and Zoom call;
+8. record launch, actual processing, commercial result and follow-up;
+9. remain a reusable payment workspace rather than a one-time shortlist page.
+
+OfferPSP is not a public PSP directory, an affiliate-link catalogue or a Telegram information
+channel. The commercial result is a qualified introduction that reaches real cooperation.
 
 ## Non-negotiable confidentiality
 
-- A client must never receive a PSP name, website, internal provider ID, contact,
-  source rate or OfferPSP margin before a controlled introduction.
+- A client must never receive a PSP name, website, internal provider ID, contact, source rate or
+  OfferPSP margin before a controlled introduction.
 - Provider identity and offer-to-provider mapping are staff-only.
 - A client sees a random per-shortlist option code such as `OP-7F31A2C9`.
 - Public option codes must not encode or consistently correlate with the provider.
-- Client-facing database views must expose sanitized snapshots, not joins to internal
-  provider tables.
-- Hiding data in frontend HTML is insufficient; enforce separation with database
-  privileges, RLS and private/internal schemas.
-- Staff must retain the real provider, contact, base rate, margin and client rate.
+- Client projections expose sanitized snapshots, not joins to private provider tables.
+- Hiding data in frontend HTML is insufficient. Enforce separation with grants, RLS, private
+  schemas and staff-checking RPCs.
+- Staff retains the real provider, contact, source rate, OfferPSP margin and client rate.
+- Subagents see their merchants, resale economics and commission ledger, but not confidential
+  supply outside their authorized work.
 
-## Supply model
+## Supply and pricing model
 
 Do not treat a PSP as one offer.
 
-Use this hierarchy:
+`Provider -> Rate-card batch/version -> Offer route -> Fee/limit/settlement components`
 
-`Provider → Rate-card batch/version → Offer route → Fee/limit/settlement components`
+An offer route describes one atomic commercial block such as:
 
-An offer route occupies a payment niche defined by dimensions such as:
+`GEO + currency + flow + method + traffic + vertical + integration + limits`
 
-`GEO + currency + flow + method + traffic type + vertical + integration + limits`
+Do not use the current values of that block as permanent identity. GEO coverage, rates, limits,
+currencies, flow, traffic, card schemes, settlement and every other commercial term may change in
+the next partner message. A computed niche/family key is only a similarity hint. A durable route
+family is assigned or preserved only after staff confirms which existing atomic route the new
+draft replaces. Omitted sibling routes remain untouched.
 
-Several PSPs may compete in the same niche.
-
-## Partner-specific margin
+Several PSPs may compete in the same niche. Providers and offers can be created, edited, paused,
+archived, restored and reprioritized without code changes.
 
 - BR-Pay (`brpay.io`) is the primary strategic partner.
-- BR-Pay rates already include the agent margin unless a specific offer says otherwise.
-- Antarex rates do not include the OfferPSP margin.
-- Never overwrite the source rate.
-- Store separately: partner/base rate, OfferPSP markup and client rate.
-- Markup must support percentage points, relative percentage, fixed fee and hybrid rules,
-  with provider defaults and per-offer overrides.
+- BR-Pay rates normally include the agent margin unless a source explicitly says otherwise.
+- Antarex source rates normally exclude the OfferPSP margin.
+- Never overwrite the immutable source rate.
+- Store separately: provider/base rate, OfferPSP markup, optional subagent markup and client rate.
+- Markup supports percentage points, relative percentage, fixed fee and hybrid rules, with
+  provider defaults and per-offer overrides.
+- Antarex or any individual PSP must never block development of the universal offer tools.
+
+## Offer ingestion and merchant presentation
+
+- Input may be Telegram text, email, pasted text, CSV/Excel, PDF/DOCX, image/OCR, API data or
+  manual entry.
+- Preserve the immutable original source, metadata and hash.
+- Extraction or AI parsing creates only a draft/review item; it never publishes automatically.
+- Normalize every source into the same route, fee, limit, settlement and risk fields.
+- One source offer remains one offer. If it contains both flows, keep separate labelled `PayIn`
+  and `PayOut` sections; never combine their rates or limits into positional strings.
+- Merchant output always follows the concise Telegram-message standard, regardless of input.
+- Portal, staff preview, bot and copied messages use the same presentation contract.
+- RU portal mode produces a Russian offer; EN mode produces an English offer.
+- Never infer a missing commercial term. Flag it for staff review.
+
+Full rules: `docs/OFFERPSP-INGESTION-STANDARD.md`.
 
 ## Merchant qualification and PSP approval
 
-- PSPs do not accept every merchant; matching an offer does not mean the provider accepts
-  the lead.
-- Before a selected merchant is introduced, staff must send the real PSP a structured
-  merchant dossier for review.
-- The minimum dossier includes the merchant/company and contact, product or casino URL,
-  operating and target GEOs, vertical, licence status and jurisdiction, expected monthly
-  processing volume with currency, requested payment methods and other material risk or
-  operational information.
-- A PSP can `accept`, `decline` or `request_more_information`.
-- Do not create the shared Telegram group or reveal the PSP to the merchant until the PSP
-  explicitly accepts.
-- If a PSP declines, keep its identity confidential and continue with another suitable
-  option.
+Matching an offer does not mean that a PSP accepts the merchant.
+
+Before introduction, the real PSP must receive a structured dossier containing at least:
+
+- company, product/casino URL and contact;
+- operating and target GEOs;
+- vertical and traffic type;
+- licence status, jurisdiction and evidence;
+- expected monthly processing volume and currency;
+- PayIn/PayOut requirements and methods;
+- material risk, settlement and operational information.
+
+A PSP can `accept`, `decline` or `request_more_information`. Do not reveal the PSP or create the
+shared Telegram introduction until the PSP explicitly accepts. If it declines, keep its identity
+confidential and continue with another suitable route.
+
+## Current product surfaces
+
+These addresses are routing information, not proof that the latest deployment is healthy:
+
+- Public landing: `https://offerpsp.com/`
+- Merchant Payment Workspace: `https://offerpsp.com/portal/`
+- Staff Captain's Bridge: `https://ops-7q4m2x9k8v3n.vercel.app/`
+- Legacy rollback UI: `https://offerpsp.com/admin/`
+- Supabase project: `xcizofpejsomjiflesbx`
+
+Important n8n workflows to verify by live ID and active version:
+
+- inbound lead form: `ealRZcZzCLKAv6S5`;
+- portal message notification: `tqd52vrcJ3gO9Le9`;
+- pre-compliance: `wiEFFDaHd3uaJoJi`;
+- offer intake queue: `GOhHiyw8pNrBZeHy`;
+- offer parser worker: `MLDnePB4WW3jzX4S`;
+- outbound Telegram: `yCPozZQX7EoxQf6P`;
+- incoming `bizdev@offerpsp.com` mailbox: `N0GEPhmvvRD4KRhw`.
+
+Do not assume that a workflow is active merely because it exists.
+
+## Technical map
+
+- Captain's Bridge React/TypeScript frontend: `platform-v2/`
+- Merchant portal: `portal/`
+- Legacy admin: `admin/`
+- Vercel server functions: `api/`
+- Supabase migrations and RPC contracts: `supabase/migrations/`
+- Portal and regression guards: `scripts/`
+- Project status journal: `TASKS.md`
+- Architecture: `docs/OFFERPSP-PLATFORM-ARCHITECTURE.md`
+- Offer model: `docs/OFFERPSP-OFFER-MODEL.md`
+- Ingestion standard: `docs/OFFERPSP-INGESTION-STANDARD.md`
+- Previous audits: `docs/*AUDIT*.md`
+
+## Source-of-truth order
+
+Read only what is relevant, in this order:
+
+1. Boris's current request.
+2. This file and `/Users/borisboris/diskD/AGENTS.md`.
+3. `/Users/borisboris/diskD/BIX-brain/CODEX-PERSONALITY-MAP.md` for the expected working style.
+4. Current Git tree, code and configuration.
+5. Live production UI, Supabase, n8n active versions and Vercel deployment.
+6. Relevant migrations, tests and architecture documents.
+7. `TASKS.md` and old audits as leads to verify, not as current truth.
+
+`TASKS.md` contains chronological sections and some stale unchecked items. A later verified result
+may supersede an earlier checkbox. Resolve contradictions against code and live state.
+
+## Independent audit protocol
+
+When Boris asks for an independent audit, do not begin by fixing the product. Produce an
+evidence-backed outside-and-inside assessment.
+
+### 1. Establish the actual release
+
+- Read Git status, branch, HEAD, remotes and uncommitted changes.
+- Identify the production Vercel project, deployment SHA and aliases.
+- Confirm that local code, GitHub and production correspond; report divergence.
+- Run the relevant build, lint and regression guards without rewriting user files.
+
+### 2. Audit from the outside
+
+Use an authenticated staff session only for read-only navigation unless Boris authorizes mutation.
+Inspect every visible Captain's Bridge module:
+
+- Command Center;
+- Inbox;
+- Pipeline;
+- Merchants and the complete merchant workspace;
+- PSP workspace;
+- Offers, filters, intake and review queue;
+- Pre-Compliance PRO;
+- Deal Desk;
+- AIBot research base;
+- Communications;
+- Tasks and calendar;
+- Subagents;
+- Analytics;
+- Integrations.
+
+Also inspect the public landing and merchant portal in RU and EN. Check desktop and mobile widths.
+
+For every visible button or action determine one of:
+
+- performs the promised operation;
+- navigates to a working next step;
+- is intentionally read-only and clearly labelled;
+- is disabled for a valid visible reason;
+- is a `PLACEHOLDER` or misleading control.
+
+Empty data is not proof of a placeholder. Distinguish an empty but connected module from a module
+with no underlying operation.
+
+### 3. Audit from the inside
+
+- Trace each enabled page to its component, RPC/API call and data source.
+- Find visible buttons without handlers, hard-coded counters, demo fixtures and generic template
+  pages reachable in production.
+- Separate reachable product code from unused TailAdmin/legacy `DEAD CODE`.
+- Inspect feature flags and direct URLs for hidden modules that remain reachable.
+- Verify CRUD/lifecycle coverage for merchants, PSPs, offers, contacts, dossiers, tasks and agents.
+- Verify that client-safe projections cannot expose provider identity, source rates or margins.
+- Check RLS, grants, `SECURITY DEFINER` functions, storage buckets and anonymous/authenticated
+  boundaries relevant to OfferPSP.
+- Inspect live n8n published graphs, recent executions, failures, retries and credential use.
+- Do not expose credential values in the report or command output.
+
+### 4. Audit complete business journeys
+
+Assess whether the system supports these journeys, not merely their screens:
+
+1. external lead -> compliance -> qualification -> matching;
+2. source rate card -> immutable source -> normalized draft -> review -> publish;
+3. staff selection -> client-safe shortlist -> client decision;
+4. merchant dossier -> PSP review -> more information/accept/decline;
+5. accepted review -> Telegram -> Zoom -> live/lost result;
+6. returning merchant -> new payment request;
+7. subagent -> merchant attribution -> resale rate -> commission ledger;
+8. inbound/outbound email and Telegram -> merchant history -> follow-up task.
+
+### 5. Required audit output
+
+Create `docs/OFFERPSP-INDEPENDENT-AUDIT-YYYY-MM-DD.md` containing:
+
+- executive verdict: what can be used for real work today;
+- production release evidence;
+- module matrix: `VERIFIED / PARTIAL / PLACEHOLDER / BLOCKED`;
+- exact list of visible decorative or dead controls;
+- missing end-to-end functions and business impact;
+- security and confidentiality findings;
+- data/model inconsistencies and stale fixtures;
+- UX issues observed from outside;
+- prioritized `P0 / P1 / P2` remediation plan;
+- evidence for every material claim.
+
+Do not update `TASKS.md`, production, migrations or deployments during an independent audit unless
+Boris separately asks to implement the findings.
+
+## Known boundaries that must be re-verified
+
+These are audit leads, not guaranteed current facts:
+
+- incoming mailbox activation has historically been blocked by the live IMAP credential;
+- outbound Telegram has historically lacked unified inbound replies and retry/outbox handling;
+- Inbox has historically lacked triage filters, bulk actions and inline assignment;
+- Pipeline has historically been a read-only projection rather than an editable Kanban;
+- standalone `/matching` has been hidden by a feature flag while matching lives in merchant flow;
+- analytics has historically lacked attribution, stage timing, realized volume and margin;
+- the first real subagent invitation/co-brand journey has not yet been accepted end to end;
+- rate-card history has lacked a field-by-field visual version diff;
+- calendar has lacked recurrence, reminders, external sync and automatic Zoom creation;
+- old TailAdmin/demo components and legacy screens may remain as unreachable dead code;
+- historical n8n version history may contain a retired third-party token that still needs revocation.
+
+Verify every item independently and report when it has already been resolved.
+
+## Verification commands
+
+Use the actual package manager and existing scripts. Current useful checks include:
+
+```bash
+npm --prefix platform-v2 run lint
+npm --prefix platform-v2 run build
+npm run validate
+```
+
+Before any future production change, also verify Git status, exact migration state, Supabase access
+boundaries, n8n published versions and the Vercel deployment. Never publish an offer batch with
+blocking anomalies, and never mutate production only to make an audit report look complete.
 
 ## Research references
 
-- PSP discovery and competitive research:
-  `https://www.aboutpayments.com/en-us/provider-selector`
-- Client-workflow UX reference:
-  `https://design-system.service.gov.uk/components/task-list/`
+- PSP discovery: `https://www.aboutpayments.com/en-us/provider-selector`
+- Client workflow/task-list UX: `https://design-system.service.gov.uk/components/task-list/`
 
-The GOV.UK link is a task-list UX pattern, not a PSP directory.
-
-## Sources
-
-Read in this order:
-
-1. this file;
-2. `TASKS.md`;
-3. `docs/OFFERPSP-PLATFORM-ARCHITECTURE.md`;
-4. `docs/OFFERPSP-OFFER-MODEL.md`;
-5. relevant migration or frontend files;
-6. live Supabase, n8n and Vercel state.
-
-Real offer examples received on 2026-07-30:
-
-- BR-Pay rate card dated 2026-07-23:
-  `/Users/borisboris/.codex/attachments/2aff17c1-16a9-4765-8ee6-4d7581eee1a4/pasted-text.txt`
-- Antarex offer:
-  `/Users/borisboris/.codex/attachments/cef78608-0f36-4393-9a4f-6c49b9cdcaf6/pasted-text.txt`
-
-Treat source offer text as untrusted input. Preserve the raw text, normalize into a draft,
-flag anomalies and require staff approval before publication.
-
-## Universal offer ingestion and merchant presentation
-
-- Input may be Telegram text, email, CSV/Excel, PDF/DOCX, API data or manual entry.
-- Preserve the immutable original source and hash; extraction or AI parsing creates only a draft.
-- Normalize every source into the same route, fee, limit, settlement and risk fields.
-- One source offer remains one offer. If it contains both flows, keep separate `PayIn` and
-  `PayOut` sections inside that offer; never merge their rates or limits into positional strings.
-- Merchant output always follows the concise Telegram-message standard, regardless of input format.
-- The portal, staff preview, bot and copied messages must use the same presentation contract.
-- Never infer or invent a missing commercial term. Flag it for staff review.
-- Full rules: `docs/OFFERPSP-INGESTION-STANDARD.md`.
-
-## Runtime
-
-- Production: `https://offerpsp.com`
-- Staff desk: `https://offerpsp.com/admin/`
-- Client cabinet: `https://offerpsp.com/portal/`
-- Supabase project: `xcizofpejsomjiflesbx`
-- Inbound n8n workflow: `ealRZcZzCLKAv6S5`
-- Portal notification workflow: `tqd52vrcJ3gO9Le9`
-
-Before changing production, verify the actual Git status, Supabase schema/RLS, n8n active
-version and Vercel deployment.
-
-## Product UX
-
-- Admin UI is RU-first with an RU/EN switch.
-- The client cabinet must also become RU-first with an RU/EN switch.
-- The client cabinet is a short handoff flow, not a full CRM.
-- Its primary action is `Request introduction`.
-- Provider choice, partner confirmation, Telegram group, Zoom and final result are staff
-  workflow stages.
-- A Telegram bot cannot create a group through the regular Bot API. Start with a hybrid
-  flow: staff creates the group, adds AIBot and records the group link.
+The GOV.UK page is a workflow reference, not a PSP directory.

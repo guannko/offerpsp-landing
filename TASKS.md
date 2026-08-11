@@ -1,9 +1,30 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-08-09
+Updated: 2026-08-12
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
+
+## Atomic offer replacement and Worldwide coverage — 2026-08-10
+
+Status: `VERIFIED` in production. Migration `20260810001217
+offerpsp_atomic_route_replacements` is applied; the matching frontend commit `24278e5` is an
+ancestor of production SHA `868fddf41348e326fc05640a635af1b6d47088ba`.
+
+- [x] Worldwide exclusion offers preserve blocked GEOs and split Visa/Mastercard when their limits
+  or country rules differ.
+- [x] Worldwide allowlist offers preserve separate Visa/Mastercard country lists; English
+  `From 1 EUR to 1.700 EUR` normalizes to `1–1700 EUR`.
+- [x] All commercial values remain versioned and mutable. The computed family key is only a
+  similarity hint; permanent route lineage uses a staff-confirmed UUID.
+- [x] New imports cannot silently link or replace a live route. Staff chooses an exact predecessor
+  or marks the draft as independent before publication.
+- [x] Publishing a confirmed India UPI revision archives only that UPI predecessor. Omitted sibling
+  routes such as India P2P remain published.
+- [x] A commercially identical partner reconfirmation is not reported as changed merely because its
+  review metadata or family UUID differs.
+- [x] Atomic replacement migration and matching Captain's Bridge frontend are deployed together;
+  production preserves exact route lineage and does not replace omitted sibling routes.
 
 ## Persistent merchant company workspace — 2026-08-09
 
@@ -33,9 +54,7 @@ production admin/client session.
 
 ## AIBot Operating Desk pagination — 2026-08-09
 
-Status: `VERIFIED` in production at the database and active-workflow levels. Final Telegram
-conversation smoke remains a user-facing check because the Telegram trigger cannot be invoked by
-the n8n test API.
+Status: `VERIFIED` in production, including real Telegram conversations and card mutations.
 
 - [x] Added service-role-only RPC `aibot_n8n_operating_desk_v2` with `limit`, `page` and `offset`,
   stable ordering, `total_count`, `has_more`, `next_offset` and `previous_offset`.
@@ -45,8 +64,27 @@ the n8n test API.
   page 1 and page 2 have zero duplicate IDs. BR-Pay published India/UPI offers paginate correctly.
 - [x] The new security-definer RPC is not executable by `anon` or `authenticated`; only
   `service_role` has execute permission. The active n8n graph validates with 0 errors.
-- [ ] Telegram smoke: request `Найди PSP по GEO Europe`, then `Покажи следующую десятку` and
-  confirm that the second message reports page 2 and starts with a different PSP set.
+- [x] Real Telegram pagination smoke returned the first 10 matching EU PSP records and offered the
+  next page instead of dumping the complete catalogue.
+- [x] Real Telegram card-management E2E found a temporary PSP, moved `contact_status` and
+  `provider_status` to `partner`, set `record_state = active`, added a linked note and created a
+  linked task for the requested Nicosia time. The authenticated Captain's Bridge read model returned
+  the updated entity, note, task and three audit events; no global `bot_tasks` reminder was created.
+- [x] The active agent instructions now route linked notes, statuses and tasks through Operating
+  Desk, require a post-mutation read and map “переведи PSP в партнёры” to all three status fields.
+  The temporary provider, note, task and audit rows were deleted after verification; zero test
+  artifacts remain.
+- [x] Bulk PSP/casino mutations now use a chat-bound two-phase protocol: a service-role-only RPC
+  resolves an explicit filter, stores an immutable preview and issues a single-use UUID valid for
+  ten minutes. Confirmation is restricted to the originating Telegram chat, is idempotent and
+  cannot silently change the target set; cancellation is supported.
+- [x] The active Telegram agent uses the one-call `Bulk Operations` tool instead of relying on a
+  smaller model to perform separate search and prepare calls. A hard output guard blocks any
+  confirmation request that lacks a server-issued UUID and the workflow validates with 0 errors.
+- [x] Real Telegram bulk E2E found exactly two temporary PSP cards, showed their unchanged status
+  in the server preview, executed only after Boris confirmed, updated both cards and wrote exactly
+  one audit event per card. The confirmation, audit rows and both temporary providers were then
+  deleted; production contains zero artifacts from this test.
 
 ## Navigation and functional semantics — 2026-08-06
 
@@ -124,7 +162,8 @@ The production P0 recheck below supersedes the initial findings recorded earlier
   if it is still active; old n8n version history can still contain the previous value.
 - [ ] `P0/PARTIAL` Heavy Captain modules and mail snapshots now load only on relevant routes. Add a
   bounded client cache if production timings continue to exceed the current roughly 3-second cold load.
-- [ ] `P1` Implement the promised task manager/calendar instead of the current read-only task dump.
+- [x] `P1` Replace the old read-only task dump with the production task manager/calendar. The later
+  `Navigation and functional semantics` verification above supersedes this original audit item.
 - [ ] `P1` Add Inbox filters, assignment and bulk actions; reconcile lead/deal/work counters across
   Command Center, Pipeline, Deals and Analytics.
 - [ ] `P1` Localize raw enums/errors, remove or label E2E fixtures in operational selectors, and add
@@ -502,7 +541,8 @@ assets are verified; a separate real staff/client mutation E2E remains open.
 - [x] Production migration grants `EXECUTE` only to `authenticated`; all four RPCs are denied to `anon`.
 - [x] Deploy the operational frontend to `offerpsp.com`.
 - [ ] Run separate real staff/client production mutation E2E.
-- [ ] Revoke direct `authenticated` access to the legacy shortlist view after the new portal is verified.
+- [x] Revoke direct `authenticated` access to the legacy shortlist view. Production migration
+  `20260805181820 remove_legacy_client_shortlist_view` removed the view entirely.
 
 ### PSP supply workspace — local delivery 2026-08-01
 
