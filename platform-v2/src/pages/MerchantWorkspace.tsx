@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from "react-router";
 import PageMeta from "../components/common/PageMeta";
 import { EmptyState, ErrorBanner, Panel, SkeletonPage, StatusPill } from "../components/control/Ui";
 import { QuickStatusSelect, type QuickStatusOption } from "../components/control/QuickStatusSelect";
+import { VisibilityToggleButton } from "../components/control/VisibilityToggleButton";
 import { useControlBridge } from "../context/ControlBridgeContext";
 import { supabase } from "../lib/supabase";
 import DealDeskPanel, { type DealWorkspace } from "./DealDeskPanel";
@@ -311,6 +312,28 @@ export default function MerchantWorkspace() {
     }, "Статус мерча обновлён.");
   }
 
+  async function changeMerchantVisibility() {
+    if (!leadId || !lead) return;
+    const hidden = lead.record_state === "archived";
+    let reason: string | null = null;
+    if (!hidden) {
+      reason = window.prompt("Почему скрываем мерча? Причина сохранится в истории.", "Больше не в работе");
+      if (reason === null) return;
+      if (!reason.trim()) {
+        setMessage({ tone: "error", text: "Укажите причину скрытия — она нужна для истории." });
+        return;
+      }
+    }
+    await runAction("merchant-visibility", async () => {
+      const result = await supabase.rpc("set_offerpsp_merchant_record_state", {
+        p_lead_id: leadId,
+        p_record_state: hidden ? "active" : "archived",
+        p_reason: reason,
+      });
+      return { error: result.error };
+    }, hidden ? "Мерч возвращён в рабочий список." : "Мерч скрыт из рабочего списка и сохранён в истории.");
+  }
+
   async function createMatchedShortlist() {
     if (!leadId || !selectedMatches.length) return;
     const created = await runAction("matched-shortlist", async () => {
@@ -435,6 +458,7 @@ export default function MerchantWorkspace() {
       </div>
       <div className="flex flex-wrap gap-2">
         <button onClick={() => void Promise.all([loadWorkspace(), entityWorkspace.refresh()])} disabled={loading || entityWorkspace.loading || Boolean(busy)} className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-brand-300 hover:text-brand-500 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300">Обновить</button>
+        <VisibilityToggleButton hidden={lead.record_state === "archived"} busy={busy === "merchant-visibility"} onToggle={changeMerchantVisibility}/>
         <button onClick={() => setTab(complianceWorkspace?.case.case_status === "cleared" ? "matching" : "compliance")} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600">{complianceWorkspace?.case.case_status === "cleared" ? "Подобрать и отправить офферы" : "Проверить заявку"}</button>
       </div>
     </div>

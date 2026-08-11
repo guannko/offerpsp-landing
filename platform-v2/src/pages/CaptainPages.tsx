@@ -23,27 +23,29 @@ function Frame({ title, description, children }: { title: string; description: s
 export function CasinosWorkspace() {
   const { captainsBridge, refresh } = useControlBridge();
   const [query, setQuery] = useState("");
-  const [scope, setScope] = useState<"active" | "pipeline" | "inactive" | "all">("active");
+  const [scope, setScope] = useState<"active" | "pipeline" | "inactive" | "hidden" | "all">("active");
   const [contactFilter, setContactFilter] = useState("all");
   const [editor, setEditor] = useState<{ record?: CasinoLead } | null>(null);
   const needle = query.trim().toLowerCase();
   const leads = useMemo(() => captainsBridge.casino_leads.filter((lead) => {
-    const inactive = lead.record_state === "archived" || inactiveCasinoStatuses.includes(lead.contact_status || "");
+    const hidden = lead.record_state === "archived";
+    const inactive = !hidden && inactiveCasinoStatuses.includes(lead.contact_status || "");
     const active = !inactive && activeCasinoStatuses.includes(lead.contact_status || "");
-    const scopeMatch = scope === "all" || (scope === "inactive" ? inactive : scope === "active" ? active : !active && !inactive);
+    const scopeMatch = scope === "all" || (scope === "hidden" ? hidden : !hidden && (scope === "inactive" ? inactive : scope === "active" ? active : !active && !inactive));
     const contactMatch = contactFilter === "all" || lead.contact_status === contactFilter;
     return scopeMatch && contactMatch && [lead.name, lead.website, lead.geo, lead.email, lead.telegram, lead.sphere, lead.contact_name, lead.license, ...(lead.tags || [])].filter(Boolean).join(" ").toLowerCase().includes(needle);
   }), [captainsBridge.casino_leads, needle, scope, contactFilter]);
-  const count = (kind: "active" | "pipeline" | "inactive") => captainsBridge.casino_leads.filter((lead) => {
-    const inactive = lead.record_state === "archived" || inactiveCasinoStatuses.includes(lead.contact_status || "");
+  const count = (kind: "active" | "pipeline" | "inactive" | "hidden") => captainsBridge.casino_leads.filter((lead) => {
+    const hidden = lead.record_state === "archived";
+    const inactive = !hidden && inactiveCasinoStatuses.includes(lead.contact_status || "");
     const active = !inactive && activeCasinoStatuses.includes(lead.contact_status || "");
-    return kind === "inactive" ? inactive : kind === "active" ? active : !active && !inactive;
+    return kind === "hidden" ? hidden : !hidden && (kind === "inactive" ? inactive : kind === "active" ? active : !active && !inactive);
   }).length;
   return <Frame title="Казино" description="Рабочий реестр онлайн-казино."><PageHeading eyebrow="Counterparty organizer" title="Казино" description="Единый реестр найденных и активных компаний. AIBot наполняет его из Telegram, а команда ведёт контакт, почту, заметки и задачи в рабочей карточке." action={<button onClick={()=>setEditor({})} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white">+ Добавить казино</button>}/>
-    <div className="grid grid-cols-2 gap-3 xl:grid-cols-4"><Metric label="Всего" value={captainsBridge.casino_leads.length} hint="в едином реестре"/><Metric label="Активные" value={count("active")} hint="контакт и работа начаты" tone="success"/><Metric label="В обработке" value={count("pipeline")} hint="исследование и переговоры"/><Metric label="Неактивные" value={count("inactive")} hint="пауза, отказ или архив"/></div>
+    <div className="grid grid-cols-2 gap-3 xl:grid-cols-5"><Metric label="Всего" value={captainsBridge.casino_leads.length} hint="в едином реестре"/><Metric label="Активные" value={count("active")} hint="контакт и работа начаты" tone="success"/><Metric label="В обработке" value={count("pipeline")} hint="исследование и переговоры"/><Metric label="Неактивные" value={count("inactive")} hint="пауза или отказ"/><Metric label="Скрытые" value={count("hidden")} hint="сохранены вне работы"/></div>
     <Panel className="mt-6">
       <div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Рабочий список</h2><p className="mt-1 text-sm text-gray-500">Нажмите на компанию, чтобы открыть её органайзер.</p></div>
-      <div className="mt-4 flex flex-wrap gap-2">{[["active","Активные"],["pipeline","В обработке"],["inactive","Неактивные"],["all","Все"]].map(([value,label])=><button key={value} onClick={()=>setScope(value as typeof scope)} className={`rounded-lg px-3 py-2 text-sm ${scope===value?"bg-brand-500 text-white":"bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300"}`}>{label}</button>)}</div>
+      <div className="mt-4 flex flex-wrap gap-2">{[["active","Активные"],["pipeline","В обработке"],["inactive","Неактивные"],["hidden","Скрытые"],["all","Все"]].map(([value,label])=><button key={value} onClick={()=>setScope(value as typeof scope)} className={`rounded-lg px-3 py-2 text-sm ${scope===value?"bg-brand-500 text-white":"bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300"}`}>{label}</button>)}</div>
       <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_220px]"><input className={field} value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Компания, GEO, контакт, лицензия…"/><select className={field} value={contactFilter} onChange={(e)=>setContactFilter(e.target.value)}><option value="all">Все статусы контакта</option>{["not_contacted","researching","ready","contacted","replied","negotiating","partner","rejected","paused"].map((value)=><option key={value}>{value}</option>)}</select></div>
       <p className="mt-3 text-xs text-gray-400">Показано {leads.length} из {captainsBridge.casino_leads.length}.</p>
       <div className="mt-3 divide-y divide-gray-100 dark:divide-gray-800">{leads.map((lead)=><div key={lead.id} role="button" tabIndex={0} onClick={()=>setEditor({record:lead})} onKeyDown={(event)=>{if(event.key==="Enter")setEditor({record:lead});}} className="grid cursor-pointer gap-3 py-4 hover:bg-gray-50/70 lg:grid-cols-[1.3fr_1fr_1fr_140px] dark:hover:bg-white/[0.02]"><div><strong className="text-sm text-gray-900 dark:text-white">{lead.name || lead.website || "Без названия"}</strong>{lead.website ? <a onClick={(event)=>event.stopPropagation()} className="mt-1 block truncate text-xs text-brand-500 hover:underline" href={lead.website.startsWith("http")?lead.website:`https://${lead.website}`} target="_blank" rel="noreferrer">{lead.website}</a>:<span className="mt-1 block text-xs text-gray-400">сайт не найден</span>}</div><div className="text-sm text-gray-600 dark:text-gray-300">{lead.contact_name || "Контакт не указан"}<span className="block text-xs text-gray-400">{lead.email || lead.telegram || "нет канала"}</span></div><div className="text-sm text-gray-600 dark:text-gray-300">{lead.geo || "GEO —"}<span className="block text-xs text-gray-400">{lead.license || "лицензия не указана"}</span></div><div className="lg:text-right"><strong className="text-sm text-gray-900 dark:text-white">Score {lead.score ?? "—"}</strong><span className="block text-xs text-gray-400">{lead.record_state === "archived" ? "archived" : lead.contact_status || "new"}</span><span className="mt-1 block text-xs font-semibold text-brand-500">Открыть карточку →</span></div></div>)}{!leads.length&&<EmptyState title="Казино не найдены" description="Измените фильтры или добавьте запись вручную."/>}</div>
