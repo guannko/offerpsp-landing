@@ -56,7 +56,9 @@ export default function MerchantProfileEditor({ lead, onChanged }: { lead: Lead;
 
   async function save() {
     setBusy("save"); setMessage(null);
-    const { risk_segment: _riskSegment, ...draftWithoutRisk } = draft;
+    const draftWithoutRisk = Object.fromEntries(
+      Object.entries(draft).filter(([key]) => key !== "risk_segment"),
+    );
     const payload = {
       ...draftWithoutRisk,
       assigned_to: draft.assigned_to || null,
