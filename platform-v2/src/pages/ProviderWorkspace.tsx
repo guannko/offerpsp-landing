@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import PageMeta from "../components/common/PageMeta";
 import { EmptyState, ErrorBanner, Panel, SkeletonPage, StatusPill } from "../components/control/Ui";
+import { QuickStatusSelect, type QuickStatusOption } from "../components/control/QuickStatusSelect";
 import { useControlBridge } from "../context/ControlBridgeContext";
 import { supabase } from "../lib/supabase";
 import { ActivityPanel, DocumentsPanel, useEntityWorkspace, type EntityWorkspaceSnapshot } from "../components/control/EntityWorkspace360";
@@ -45,6 +46,13 @@ const providerTabs: Array<{ id: ProviderTab; label: string }> = [
   { id: "activity", label: "История" },
 ];
 const providerTabIds = new Set<ProviderTab>(providerTabs.map((item) => item.id));
+const providerStatusOptions: QuickStatusOption[] = [
+  { value: "prospect", label: "Новый / исследование" },
+  { value: "onboarding", label: "Подключение" },
+  { value: "active", label: "Активный партнёр" },
+  { value: "paused", label: "Пауза" },
+  { value: "archived", label: "Архив" },
+];
 const normalizeProviderTab = (value: string | null): ProviderTab => value === "profile" ? "overview" : providerTabIds.has(value as ProviderTab) ? value as ProviderTab : "overview";
 
 const fieldClass = "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:text-white";
@@ -124,6 +132,18 @@ export default function ProviderWorkspace() {
     if (isNew && data && typeof data === "object" && "id" in data) navigate(`/psps/${String((data as Provider).id)}`, { replace: true });
   }
 
+  async function changeProviderStatus(nextStatus: string) {
+    if (!providerId || isNew || !workspace || nextStatus === workspace.provider.relationship_status) return;
+    if (nextStatus === "archived" && !window.confirm("Переместить PSP в архив? Изменение будет записано в историю.")) return;
+    await execute("provider-status", async () => {
+      const result = await supabase.rpc("save_offerpsp_managed_provider", {
+        p_provider_id: providerId,
+        p_payload: { relationship_status: nextStatus },
+      });
+      return { data: result.data, error: result.error };
+    }, "Статус PSP обновлён.");
+  }
+
   async function saveContact() {
     if (!providerId || isNew) return;
     const saved = await execute("contact", async () => {
@@ -154,7 +174,7 @@ export default function ProviderWorkspace() {
   if (loading) return <SkeletonPage/>;
   return <>
     <PageMeta title={`${isNew ? "Новый PSP" : workspace?.provider.brand_name || "PSP"} | OfferPSP`} description="Private PSP workspace"/>
-    <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"><div><Link to="/psps" className="text-sm font-medium text-gray-500 hover:text-brand-500">← Реестр PSP</Link><div className="mt-3 flex flex-wrap items-center gap-3"><h1 className="text-2xl font-semibold text-gray-900 dark:text-white sm:text-3xl">{isNew ? "Новый PSP" : workspace?.provider.brand_name}</h1>{workspace && <StatusPill status={workspace.provider.relationship_status}/>}</div><p className="mt-2 text-sm text-gray-500">{workspace?.provider.internal_code || "Код будет назначен автоматически"}</p></div>{!isNew && <button onClick={() => void confirmFreshness()} disabled={Boolean(busy)} className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-brand-300 hover:text-brand-500 dark:border-gray-700 dark:text-gray-300">{busy === "freshness" ? "Подтверждаю…" : "Подтвердить актуальность"}</button>}</div>
+    <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"><div><Link to="/psps" className="text-sm font-medium text-gray-500 hover:text-brand-500">← Реестр PSP</Link><div className="mt-3 flex flex-wrap items-center gap-3"><h1 className="text-2xl font-semibold text-gray-900 dark:text-white sm:text-3xl">{isNew ? "Новый PSP" : workspace?.provider.brand_name}</h1>{workspace && <><StatusPill status={workspace.provider.relationship_status}/><QuickStatusSelect value={workspace.provider.relationship_status} options={providerStatusOptions} busy={busy === "provider-status"} onChange={changeProviderStatus}/></>}</div><p className="mt-2 text-sm text-gray-500">{workspace?.provider.internal_code || "Код будет назначен автоматически"}</p></div>{!isNew && <button onClick={() => void confirmFreshness()} disabled={Boolean(busy)} className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-brand-300 hover:text-brand-500 dark:border-gray-700 dark:text-gray-300">{busy === "freshness" ? "Подтверждаю…" : "Подтвердить актуальность"}</button>}</div>
     {message && (message.tone === "error" ? <ErrorBanner message={message.text}/> : <div className="mb-6 rounded-xl border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-700 dark:border-success-500/20 dark:bg-success-500/10 dark:text-success-300">{message.text}</div>)}
     {entityWorkspace.error && <ErrorBanner message={entityWorkspace.error}/>}
     {isNew

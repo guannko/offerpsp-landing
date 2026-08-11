@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import type { AgentPspProvider, CasinoLead, EmailDraft, EmailMessage, EmailThread, WorkTask } from "../../types/offerpsp";
 import { supabase } from "../../lib/supabase";
+import { QuickStatusSelect, type QuickStatusOption } from "./QuickStatusSelect";
 
 type EntityType = "casino" | "psp";
 type ResearchRecord = CasinoLead | AgentPspProvider;
@@ -31,6 +32,17 @@ const statusLabels: Record<string, string> = {
   draft: "Черновик", sent: "Отправлено", open: "Открыта", awaiting_reply: "Ждём ответ",
   follow_up: "Нужен follow-up", closed: "Закрыта",
 };
+const casinoStatusOptions: QuickStatusOption[] = [
+  { value: "not_contacted", label: "Новый" },
+  { value: "researching", label: "Исследование" },
+  { value: "ready", label: "Готов к контакту" },
+  { value: "contacted", label: "Связались" },
+  { value: "replied", label: "Ответил" },
+  { value: "negotiating", label: "Переговоры" },
+  { value: "partner", label: "Работаем" },
+  { value: "rejected", label: "Отказ / не подходит" },
+  { value: "paused", label: "Пауза" },
+];
 
 function withProtocol(value: string) {
   if (!value) return "";
@@ -246,10 +258,35 @@ export default function ResearchEntityEditor({ entityType, record, onClose, onSa
     await onSaved(); setBusy(false); onClose();
   }
 
+  async function changeCasinoStatus(nextStatus: string) {
+    if (!record || entityType !== "casino" || nextStatus === String(draft.contact_status || "not_contacted")) return;
+    if (nextStatus === "rejected" && !window.confirm("Перевести казино в статус «Отказ / не подходит»? Изменение будет записано в историю.")) return;
+    const nextDraft: Record<string, unknown> = { ...draft, contact_status: nextStatus };
+    const payload: Record<string, unknown> = { ...nextDraft };
+    delete payload.id; delete payload.internal_id; delete payload.created_at; delete payload.updated_at;
+    delete payload.archived_at; delete payload.record_state;
+    payload.tags = splitCsv(payload.tags);
+    payload.score = Number(payload.score ?? 0);
+    setBusy(true); setMessage(null);
+    const result = await supabase.rpc("save_offerpsp_research_entity", {
+      p_entity_type: "casino",
+      p_record_id: record.id,
+      p_payload: payload,
+    });
+    if (result.error) setMessage({ error: true, text: result.error.message });
+    else {
+      setDraft(nextDraft);
+      setMessage({ text: "Статус казино обновлён." });
+      await onSaved();
+      await loadWorkspace();
+    }
+    setBusy(false);
+  }
+
   return <div className="fixed inset-0 z-[100000] flex justify-end bg-gray-950/55 backdrop-blur-sm" role="dialog" aria-modal="true">
     <div className="flex h-full w-full max-w-4xl flex-col bg-white shadow-2xl dark:bg-gray-950">
       <header className="flex flex-col gap-4 border-b border-gray-200 px-5 py-4 sm:flex-row sm:items-start sm:justify-between dark:border-gray-800">
-        <div className="min-w-0"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">{entityType === "casino" ? "Casino organizer" : "PSP organizer"}</p><h2 className="mt-1 break-words text-xl font-semibold text-gray-900 dark:text-white">{isNew ? "Новая запись" : String(draft.name || "Без названия")}</h2><p className="mt-1 max-w-2xl text-xs text-gray-400">Карточка показывает текущее состояние. Изменения выполняются в отдельных рабочих вкладках.</p></div>
+        <div className="min-w-0"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">{entityType === "casino" ? "Casino organizer" : "PSP organizer"}</p><div className="mt-1 flex flex-wrap items-center gap-3"><h2 className="break-words text-xl font-semibold text-gray-900 dark:text-white">{isNew ? "Новая запись" : String(draft.name || "Без названия")}</h2>{!isNew && entityType === "casino" && <QuickStatusSelect value={String(draft.contact_status || "not_contacted")} options={casinoStatusOptions} busy={busy} onChange={changeCasinoStatus}/>}</div><p className="mt-1 max-w-2xl text-xs text-gray-400">Карточка показывает текущее состояние. Изменения выполняются в отдельных рабочих вкладках.</p></div>
         <div className="flex w-full gap-2 sm:w-auto sm:shrink-0">{!isNew && tab !== "edit" && <button onClick={() => setTab("edit")} className="flex-1 rounded-lg bg-brand-500 px-3 py-2 text-sm font-semibold text-white sm:flex-none">Редактировать</button>}<button onClick={onClose} className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-500 sm:flex-none dark:border-gray-800">Закрыть</button></div>
       </header>
       {!isNew && <nav className="flex gap-1 overflow-x-auto border-b border-gray-200 px-4 py-2 dark:border-gray-800">{[

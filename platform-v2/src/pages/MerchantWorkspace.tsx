@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import PageMeta from "../components/common/PageMeta";
 import { EmptyState, ErrorBanner, Panel, SkeletonPage, StatusPill } from "../components/control/Ui";
+import { QuickStatusSelect, type QuickStatusOption } from "../components/control/QuickStatusSelect";
 import { useControlBridge } from "../context/ControlBridgeContext";
 import { supabase } from "../lib/supabase";
 import DealDeskPanel, { type DealWorkspace } from "./DealDeskPanel";
@@ -116,6 +117,29 @@ const tabs: Array<{ id: Tab; label: string }> = [
   { id: "documents", label: "Документы" },
   { id: "tasks", label: "Задачи" },
   { id: "activity", label: "История" },
+];
+
+const merchantStatusOptions: QuickStatusOption[] = [
+  { value: "new", label: "Новый" },
+  { value: "qualifying", label: "Квалификация" },
+  { value: "needs_clarification", label: "Ожидаем данные" },
+  { value: "matching", label: "Подбор офферов" },
+  { value: "matched", label: "Офферы подобраны" },
+  { value: "shortlist_ready", label: "Shortlist готов" },
+  { value: "shared", label: "Отправлено клиенту" },
+  { value: "option_selected", label: "Клиент выбрал оффер" },
+  { value: "dossier_ready", label: "Досье готово" },
+  { value: "provider_reviewing", label: "Передан PSP" },
+  { value: "provider_needs_info", label: "PSP запросил данные" },
+  { value: "provider_accepted", label: "PSP принял" },
+  { value: "provider_declined", label: "PSP отказал" },
+  { value: "telegram_created", label: "Общий Telegram создан" },
+  { value: "zoom_scheduled", label: "Zoom назначен" },
+  { value: "negotiating", label: "Переговоры" },
+  { value: "won", label: "Запущен / работает" },
+  { value: "lost", label: "Сделка потеряна" },
+  { value: "closed", label: "Закрыт" },
+  { value: "spam", label: "Спам" },
 ];
 
 const textList = (value: unknown) => Array.isArray(value) && value.length ? value.join(", ") : typeof value === "string" && value.trim() ? value : "—";
@@ -272,6 +296,21 @@ export default function MerchantWorkspace() {
     }, "Подбор обновлён. Теперь выберите маршруты для клиента.");
   }
 
+  async function changeMerchantStatus(nextStatus: string) {
+    if (!leadId || !lead || nextStatus === lead.status) return;
+    if (["won", "lost", "closed", "spam"].includes(nextStatus)) {
+      const label = merchantStatusOptions.find((item) => item.value === nextStatus)?.label || nextStatus;
+      if (!window.confirm(`Перевести мерча в статус «${label}»? Изменение будет записано в историю.`)) return;
+    }
+    await runAction("merchant-status", async () => {
+      const result = await supabase.rpc("save_offerpsp_managed_merchant", {
+        p_lead_id: leadId,
+        p_payload: { status: nextStatus },
+      });
+      return { error: result.error };
+    }, "Статус мерча обновлён.");
+  }
+
   async function createMatchedShortlist() {
     if (!leadId || !selectedMatches.length) return;
     const created = await runAction("matched-shortlist", async () => {
@@ -391,7 +430,7 @@ export default function MerchantWorkspace() {
     <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div>
         <Link to="/merchants" className="text-sm font-medium text-gray-500 hover:text-brand-500">← Все мерчи</Link>
-        <div className="mt-3 flex flex-wrap items-center gap-3"><h1 className="text-2xl font-semibold text-gray-900 dark:text-white sm:text-3xl">{lead.company || "Без названия"}</h1><StatusPill status={lead.status}/></div>
+        <div className="mt-3 flex flex-wrap items-center gap-3"><h1 className="text-2xl font-semibold text-gray-900 dark:text-white sm:text-3xl">{lead.company || "Без названия"}</h1><StatusPill status={lead.status}/><QuickStatusSelect value={lead.status} options={merchantStatusOptions} busy={busy === "merchant-status"} onChange={changeMerchantStatus}/></div>
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{lead.name || "Контакт не указан"} · {lead.work_email || lead.telegram || "нет контакта"}</p>
       </div>
       <div className="flex flex-wrap gap-2">

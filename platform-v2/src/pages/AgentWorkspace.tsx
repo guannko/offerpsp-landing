@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import PageMeta from "../components/common/PageMeta";
 import { EmptyState, ErrorBanner, Panel, SkeletonPage, StatusPill } from "../components/control/Ui";
+import { QuickStatusSelect, type QuickStatusOption } from "../components/control/QuickStatusSelect";
 import { useControlBridge } from "../context/ControlBridgeContext";
 import { supabase } from "../lib/supabase";
 import type { Organization } from "../types/offerpsp";
@@ -29,6 +30,12 @@ const emptyMember: MemberDraft = { email: "", role: "manager", active: true };
 const emptyCommission: CommissionDraft = { merchantId: "", basis: "revenue_share", basisAmount: "", percent: "", fixed: "", amount: "", currency: "EUR", periodStart: "", periodEnd: "", notes: "" };
 const emptyBrand: AgentBrandDraft = { co_brand_enabled: false, brand_display_name: "", brand_tagline_ru: "", brand_tagline_en: "", brand_logo_url: "", brand_accent_color: "#FF477D", brand_support_email: "" };
 const nextCommissionStatus = (status: AgentCommission["status"]): AgentCommission["status"] | null => ({ projected: "approved", approved: "earned", earned: "paid", paid: null, void: null }[status] as AgentCommission["status"] | null);
+const agentStatusOptions: QuickStatusOption[] = [
+  { value: "pending", label: "Новый / переговоры" },
+  { value: "active", label: "Активный" },
+  { value: "paused", label: "Пауза" },
+  { value: "archived", label: "Архив" },
+];
 
 export default function AgentWorkspace() {
   const { agentId } = useParams();
@@ -104,6 +111,21 @@ export default function AgentWorkspace() {
   async function saveAgent() {
     const data = await execute("agent", async () => { const result = await supabase.rpc("save_offerpsp_organization", { p_organization_id: isNew ? null : agentId, p_organization_type: "agent", p_payload: draft }); return { data: result.data, error: result.error }; }, "Карточка субагента сохранена.");
     if (isNew && data && typeof data === "object" && "id" in data) navigate(`/agents/${String((data as { id: unknown }).id)}`, { replace: true });
+  }
+
+  async function changeAgentStatus(nextStatus: string) {
+    if (!agentId || isNew || !agent || nextStatus === agent.status) return;
+    if (nextStatus === "archived" && !window.confirm("Переместить субагента в архив? Изменение будет записано в историю.")) return;
+    const nextDraft = { ...draft, status: nextStatus };
+    const saved = await execute("agent-status", async () => {
+      const result = await supabase.rpc("save_offerpsp_organization", {
+        p_organization_id: agentId,
+        p_organization_type: "agent",
+        p_payload: nextDraft,
+      });
+      return { data: result.data, error: result.error };
+    }, "Статус субагента обновлён.");
+    if (saved) setDraft(nextDraft);
   }
 
   async function saveAssignment() {
@@ -219,7 +241,7 @@ export default function AgentWorkspace() {
 
   return <>
     <PageMeta title={`${isNew ? "Новый субагент" : agent?.name} | OfferPSP`} description="Agent workspace"/>
-    <div className="mb-6"><Link to="/agents" className="text-sm font-medium text-gray-500 hover:text-brand-500">← Реестр субагентов</Link><div className="mt-3 flex flex-wrap items-center gap-3"><h1 className="text-3xl font-semibold text-gray-900 dark:text-white">{isNew ? "Новый субагент" : agent?.name}</h1>{agent && <StatusPill status={agent.status}/>}</div><p className="mt-2 text-sm text-gray-500">Портфель мерчей, персональная наценка и история условий.</p></div>
+    <div className="mb-6"><Link to="/agents" className="text-sm font-medium text-gray-500 hover:text-brand-500">← Реестр субагентов</Link><div className="mt-3 flex flex-wrap items-center gap-3"><h1 className="text-3xl font-semibold text-gray-900 dark:text-white">{isNew ? "Новый субагент" : agent?.name}</h1>{agent && <><StatusPill status={agent.status}/><QuickStatusSelect value={agent.status} options={agentStatusOptions} busy={busy === "agent-status"} onChange={changeAgentStatus}/></>}</div><p className="mt-2 text-sm text-gray-500">Портфель мерчей, персональная наценка и история условий.</p></div>
     {message && (message.tone === "error" ? <ErrorBanner message={message.text}/> : <div className="mb-5 rounded-xl border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-700 dark:border-success-500/20 dark:bg-success-500/10 dark:text-success-300">{message.text}</div>)}
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
       <Panel><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Профиль</h2><div className="mt-5 space-y-4"><Field label="Название"><input className={fieldClass} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })}/></Field><Field label="Юридическое имя"><input className={fieldClass} value={draft.legal_name || ""} onChange={(event) => setDraft({ ...draft, legal_name: event.target.value })}/></Field><div className="grid grid-cols-2 gap-3"><Field label="Статус"><select className={fieldClass} value={draft.status || "active"} onChange={(event) => setDraft({ ...draft, status: event.target.value })}>{["pending", "active", "paused", "archived"].map((value) => <option key={value}>{value}</option>)}</select></Field><Field label="Tier"><select className={fieldClass} value={draft.relationship_tier || "standard"} onChange={(event) => setDraft({ ...draft, relationship_tier: event.target.value })}>{["top", "core", "standard", "watchlist"].map((value) => <option key={value}>{value}</option>)}</select></Field></div><Field label="Заметки"><textarea className={fieldClass} value={draft.relationship_notes || ""} onChange={(event) => setDraft({ ...draft, relationship_notes: event.target.value })}/></Field><button disabled={!draft.name.trim() || Boolean(busy)} onClick={() => void saveAgent()} className="w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy === "agent" ? "Сохраняю…" : "Сохранить субагента"}</button></div></Panel>
