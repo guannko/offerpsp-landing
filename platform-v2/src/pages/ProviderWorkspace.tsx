@@ -35,6 +35,7 @@ type ReplacementReview = {
 };
 type Workspace = { provider: Provider; contacts: Contact[]; margin_policies: Margin[]; routes: Route[]; batches: JsonRow[]; activity: JsonRow[] };
 type MarginDraft = { route_id:string; flow:string; mode:string; percent_value:string; fixed_value:string; fixed_currency:string; notes:string };
+type DefaultMarkupDraft = { payin: string; payout: string; notes: string };
 type ProviderTab = "overview" | "edit" | "contacts" | "offers" | "pricing" | "documents" | "activity";
 
 const providerTabs: Array<{ id: ProviderTab; label: string }> = [
@@ -61,6 +62,12 @@ const areaClass = "min-h-24 w-full rounded-lg border border-gray-300 bg-transpar
 const split = (value: string) => value.split(",").map((item) => item.trim()).filter(Boolean);
 const csv = (value: unknown) => Array.isArray(value) ? value.join(", ") : "";
 const optionalNumber = (value: string) => value.trim() === "" ? null : Number(value);
+const providerDefaultMarkup = (policies: Margin[], flow: "payin" | "payout") => {
+  const active = policies.filter((policy) => policy.active && !policy.route_id);
+  const policy = active.find((item) => item.flow === flow) || active.find((item) => item.flow === "all");
+  return policy?.mode === "percentage_points" ? Number(policy.percent_value || 0) : 0;
+};
+const formatMarkup = (value: number) => `${value.toLocaleString("ru-RU", { maximumFractionDigits: 4 })} п.п.`;
 
 export default function ProviderWorkspace() {
   const { providerId } = useParams();
@@ -76,6 +83,7 @@ export default function ProviderWorkspace() {
   const [providerDraft, setProviderDraft] = useState<Partial<Provider>>({ relationship_status: "prospect", relationship_tier: "standard", strategic_priority: 50, margin_included_default: false });
   const [contactDraft, setContactDraft] = useState<Partial<Contact>>({ active: true, preferred_channel: "telegram" });
   const [marginDraft, setMarginDraft] = useState({ route_id: "", flow: "all", mode: "percentage_points", percent_value: "", fixed_value: "", fixed_currency: "", notes: "" });
+  const [defaultMarkupDraft, setDefaultMarkupDraft] = useState<DefaultMarkupDraft>({ payin: "0", payout: "0", notes: "" });
   const entityWorkspace = useEntityWorkspace("provider", isNew ? undefined : providerId);
 
   const load = useCallback(async () => {
@@ -87,6 +95,11 @@ export default function ProviderWorkspace() {
       const next = data as Workspace;
       setWorkspace(next);
       setProviderDraft(next.provider);
+      setDefaultMarkupDraft({
+        payin: String(providerDefaultMarkup(next.margin_policies || [], "payin")),
+        payout: String(providerDefaultMarkup(next.margin_policies || [], "payout")),
+        notes: "",
+      });
       if (!params.get("route") && next.routes?.length) {
         const nextParams = new URLSearchParams(params);
         nextParams.set("route", next.routes.find((route) => route.status !== "archived")?.id || next.routes[0].id);
@@ -167,6 +180,25 @@ export default function ProviderWorkspace() {
     if (saved) setMarginDraft({ route_id: "", flow: "all", mode: "percentage_points", percent_value: "", fixed_value: "", fixed_currency: "", notes: "" });
   }
 
+  async function saveDefaultMarkups() {
+    if (!providerId || isNew) return;
+    const payin = Number(defaultMarkupDraft.payin);
+    const payout = Number(defaultMarkupDraft.payout);
+    if (!Number.isFinite(payin) || !Number.isFinite(payout) || payin < 0 || payout < 0 || payin > 100 || payout > 100) {
+      setMessage({ tone: "error", text: "Наценка PayIn и PayOut должна быть числом от 0 до 100." });
+      return;
+    }
+    await execute("default-markups", async () => {
+      const result = await supabase.rpc("set_offerpsp_provider_default_markups", {
+        p_provider_id: providerId,
+        p_payin_markup_pp: payin,
+        p_payout_markup_pp: payout,
+        p_notes: defaultMarkupDraft.notes || null,
+      });
+      return { data: result.data, error: result.error };
+    }, "Наценки PSP сохранены. Новые расчёты покажут мерчу итоговую ставку.");
+  }
+
   async function confirmFreshness() {
     if (!providerId || isNew || !window.confirm("Подтвердить, что условия PSP актуальны на сегодня?")) return;
     await execute("freshness", async () => { const result = await supabase.rpc("confirm_offerpsp_provider_freshness", { p_provider_id: providerId }); return { data: result.data, error: result.error }; }, "Актуальность условий подтверждена.");
@@ -188,7 +220,7 @@ export default function ProviderWorkspace() {
             {tab === "overview"
               ? <ProviderOverview workspace={workspace} entity={entityWorkspace.data} setTab={selectTab}/>
               : tab === "edit"
-                ? <div className="max-w-2xl"><ProviderForm draft={providerDraft} setDraft={setProviderDraft} save={() => void saveProvider()} busy={busy}/></div>
+                ? <div className="max-w-2xl space-y-6"><ProviderForm draft={providerDraft} setDraft={setProviderDraft} save={() => void saveProvider()} busy={busy}/><DefaultMarkupPanel draft={defaultMarkupDraft} setDraft={setDefaultMarkupDraft} save={() => void saveDefaultMarkups()} busy={busy}/></div>
               : tab === "contacts"
                 ? <div className="max-w-3xl"><ContactPanel contacts={workspace.contacts || []} draft={contactDraft} setDraft={setContactDraft} save={() => void saveContact()} busy={busy}/></div>
               : tab === "offers"
@@ -210,6 +242,8 @@ function ProviderOverview({ workspace, entity, setTab }: { workspace: Workspace;
   const activeContacts = workspace.contacts.filter((contact) => contact.active !== false);
   const activeDocuments = entity.documents.filter((document) => document.status !== "archived");
   const activeMargins = workspace.margin_policies.filter((policy) => policy.active);
+  const payinMarkup = providerDefaultMarkup(activeMargins, "payin");
+  const payoutMarkup = providerDefaultMarkup(activeMargins, "payout");
   const nextAction = activeRoutes.some((route) => route.open_error_count)
     ? "Исправить ошибки в офферах"
     : activeRoutes.some((route) => route.status === "paused")
@@ -238,6 +272,8 @@ function ProviderOverview({ workspace, entity, setTab }: { workspace: Workspace;
           <ProfileRow label="Tier" value={workspace.provider.relationship_tier || "standard"}/>
           <ProfileRow label="Приоритет" value={String(workspace.provider.strategic_priority ?? 50)}/>
           <ProfileRow label="Агентская маржа" value={workspace.provider.margin_included_default ? "Уже включена PSP" : "Добавляется OfferPSP"}/>
+          <ProfileRow label="Наша наценка PayIn" value={formatMarkup(payinMarkup)}/>
+          <ProfileRow label="Наша наценка PayOut" value={formatMarkup(payoutMarkup)}/>
           <ProfileRow label="Условия проверены" value={formatProviderDate(workspace.provider.last_verified_at)}/>
         </div>
         <div className="mt-2 border-t border-gray-100 pt-4 dark:border-gray-800">
@@ -285,6 +321,21 @@ const formatProviderDate = (value?: string | null) => value ? new Intl.DateTimeF
 function ProviderForm({ draft, setDraft, save, busy }: { draft: Partial<Provider>; setDraft: (value: Partial<Provider>) => void; save: () => void; busy: string | null }) {
   const set = (key: keyof Provider, value: unknown) => setDraft({ ...draft, [key]: value });
   return <Panel><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Редактирование PSP</p><div className="mt-5 space-y-4"><Field label="Бренд"><input className={fieldClass} value={draft.brand_name || ""} onChange={(e)=>set("brand_name",e.target.value)}/></Field><Field label="Юридическое имя"><input className={fieldClass} value={draft.legal_name || ""} onChange={(e)=>set("legal_name",e.target.value)}/></Field><Field label="Сайт"><input className={fieldClass} value={draft.website || ""} onChange={(e)=>set("website",e.target.value)}/></Field><div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><Field label="Статус"><select className={fieldClass} value={draft.relationship_status || "prospect"} onChange={(e)=>set("relationship_status",e.target.value)}>{["prospect","onboarding","active","paused","archived"].map(v=><option key={v}>{v}</option>)}</select></Field><Field label="Tier"><select className={fieldClass} value={draft.relationship_tier || "standard"} onChange={(e)=>set("relationship_tier",e.target.value)}>{["top","core","standard","watchlist"].map(v=><option key={v}>{v}</option>)}</select></Field></div><Field label="Приоритет 0–100"><input className={fieldClass} type="number" min="0" max="100" value={draft.strategic_priority ?? 50} onChange={(e)=>set("strategic_priority",Number(e.target.value))}/></Field><label className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" checked={Boolean(draft.margin_included_default)} onChange={(e)=>set("margin_included_default",e.target.checked)} className="h-4 w-4 accent-[#ff477d]"/>Агентская маржа уже включена PSP</label><Field label="Внутренние заметки"><textarea className={areaClass} value={draft.relationship_notes || ""} onChange={(e)=>set("relationship_notes",e.target.value)}/></Field><button onClick={save} disabled={!draft.brand_name?.trim() || Boolean(busy)} className="w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy === "provider" ? "Сохраняю…" : "Сохранить изменения"}</button></div></Panel>;
+}
+
+function DefaultMarkupPanel({ draft, setDraft, save, busy }: { draft: DefaultMarkupDraft; setDraft: (value: DefaultMarkupDraft) => void; save: () => void; busy: string | null }) {
+  return <Panel>
+    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Наценка по умолчанию</p>
+    <h2 className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">Наш интерес для всех офферов PSP</h2>
+    <p className="mt-2 text-sm leading-6 text-gray-500">Указывается в процентных пунктах и автоматически прибавляется к исходной ставке PSP. Например: 6% + 0,7 = 6,7% для мерча.</p>
+    <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <Field label="Наценка PayIn, п.п."><input className={fieldClass} type="number" min="0" max="100" step="0.01" inputMode="decimal" value={draft.payin} onChange={(event) => setDraft({ ...draft, payin: event.target.value })}/></Field>
+      <Field label="Наценка PayOut, п.п."><input className={fieldClass} type="number" min="0" max="100" step="0.01" inputMode="decimal" value={draft.payout} onChange={(event) => setDraft({ ...draft, payout: event.target.value })}/></Field>
+    </div>
+    <div className="mt-4"><Field label="Причина изменения — необязательно"><input className={fieldClass} value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} placeholder="Например: новые коммерческие условия с 11 августа"/></Field></div>
+    <div className="mt-4 rounded-xl bg-gray-50 p-4 text-xs leading-5 text-gray-500 dark:bg-white/[0.03]">Исходные ставки не меняются. Индивидуальная наценка конкретного оффера или мерча имеет приоритет. Уже отправленные клиенту условия остаются историческим снимком и не переписываются молча.</div>
+    <button onClick={save} disabled={Boolean(busy) || draft.payin.trim() === "" || draft.payout.trim() === ""} className="mt-5 w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy === "default-markups" ? "Сохраняю…" : "Сохранить PayIn и PayOut"}</button>
+  </Panel>;
 }
 
 function ContactPanel({ contacts, draft, setDraft, save, busy }: { contacts: Contact[]; draft: Partial<Contact>; setDraft: (v: Partial<Contact>)=>void; save: ()=>void; busy: string|null }) {
