@@ -101,16 +101,9 @@ export default function MerchantProfileEditor({ lead, onChanged }: { lead: Lead;
 
   return <div className="space-y-6">
     {message && <div className={`rounded-xl border px-4 py-3 text-sm ${message.error ? "border-error-200 bg-error-50 text-error-700 dark:border-error-500/20 dark:bg-error-500/10 dark:text-error-300" : "border-success-200 bg-success-50 text-success-700 dark:border-success-500/20 dark:bg-success-500/10 dark:text-success-300"}`}>{message.text}</div>}
-    <Panel><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Компания и контакт</h2><div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-      <Field label="Компания"><input className={field} value={draft.company} onChange={(e)=>set("company",e.target.value)}/></Field>
-      <Field label="Контакт"><input className={field} value={draft.name} onChange={(e)=>set("name",e.target.value)}/></Field>
-      <Field label="Email"><input type="email" className={field} value={draft.work_email} onChange={(e)=>set("work_email",e.target.value)}/></Field>
-      <Field label="Telegram"><input className={field} value={draft.telegram} onChange={(e)=>set("telegram",e.target.value)}/></Field>
-      <Field label="Сайт"><input className={field} value={draft.company_url} onChange={(e)=>set("company_url",e.target.value)}/></Field>
+    <Panel><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Платёжный запрос</h2><p className="mt-1 text-sm text-gray-500">Только параметры, по которым система подбирает платёжные решения. Реквизиты компании и людей редактируются в отдельных вкладках.</p><div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       <Field label="Вертикаль"><input className={field} value={draft.vertical} onChange={(e)=>set("vertical",e.target.value)}/></Field>
       <Field label="Категория бизнеса"><select className={field} value={draft.risk_segment} onChange={(e)=>set("risk_segment",e.target.value)}><option value="auto">Определять автоматически</option><option value="low">Low-risk</option><option value="high">High-risk</option></select></Field>
-    </div></Panel>
-    <Panel><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Платёжный запрос</h2><div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       <Field label="GEO регистрации"><input className={field} value={draft.registration_geo} onChange={(e)=>set("registration_geo",e.target.value)}/></Field>
       <Field label="Целевые GEO"><input className={field} value={draft.target_geos} onChange={(e)=>set("target_geos",e.target.value)}/></Field>
       <Field label="Валюты"><input className={field} value={draft.requested_currencies} onChange={(e)=>set("requested_currencies",e.target.value)}/></Field>
