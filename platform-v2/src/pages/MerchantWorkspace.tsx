@@ -146,6 +146,44 @@ function isShareable(shortlist?: Shortlist) {
   });
 }
 
+function shortlistEmailBody(shortlist: Shortlist, locale: "ru" | "en") {
+  const items = shortlist.offerpsp_shortlist_items || [];
+  const lines = items.flatMap((item, index) => {
+    const snapshot = item.client_snapshot || {};
+    const fees = (snapshot.client_fees || []).map((fee) => `${String(fee.flow || "fee").toUpperCase()}: ${feeText(fee)}`);
+    const limits = (snapshot.limits || []).map((limit) => {
+      const flow = String(limit.flow || "limit").toUpperCase();
+      const scope = limit.method_scope?.length ? ` (${limit.method_scope.join(", ")})` : "";
+      return `${flow}${scope}: ${amount(limit.minimum_amount)}–${amount(limit.maximum_amount)} ${limit.currency || snapshot.currencies?.[0] || ""}`.trim();
+    });
+    const settlement = (snapshot.settlement || []).map((term) => [
+      term.currency,
+      term.fee_percent != null ? `${term.fee_percent}%` : term.fee_fixed != null ? `${term.fee_fixed}` : "",
+      term.period,
+    ].filter(Boolean).join(" · "));
+    return [
+      `${index + 1}. ${snapshot.title || (locale === "ru" ? "Платёжное решение" : "Payment option")}`,
+      `${locale === "ru" ? "GEO" : "GEO"}: ${textList(snapshot.geos)}`,
+      `${locale === "ru" ? "Валюта" : "Currency"}: ${textList(snapshot.currencies)}`,
+      `${locale === "ru" ? "Метод" : "Method"}: ${textList(snapshot.methods)}`,
+      ...fees,
+      ...limits,
+      ...(settlement.length ? [`${locale === "ru" ? "Расчёты" : "Settlement"}: ${settlement.join("; ")}`] : []),
+      "",
+    ];
+  });
+  const intro = locale === "ru"
+    ? `Мы подготовили ${items.length} ${items.length === 1 ? "вариант оплаты" : "варианта оплаты"} по вашему запросу.`
+    : `We prepared ${items.length} payment ${items.length === 1 ? "option" : "options"} for your request.`;
+  const portal = locale === "ru"
+    ? "Открыть рабочее пространство и выбрать решение: https://offerpsp.com/portal/"
+    : "Open your workspace and choose an option: https://offerpsp.com/portal/";
+  const footer = locale === "ru"
+    ? "Ответьте на это письмо или напишите нам в кабинете, если нужны уточнения."
+    : "Reply to this email or message us in the workspace if you need any clarification.";
+  return [intro, "", ...lines, portal, "", footer].join("\n");
+}
+
 export default function MerchantWorkspace() {
   const { leadId } = useParams();
   const [searchParams] = useSearchParams();
@@ -277,6 +315,59 @@ export default function MerchantWorkspace() {
     }, "Shortlist отправлен в кабинет клиента.");
   }
 
+  async function emailLatest(locale: "ru" | "en") {
+    if (!lead || !latest || !lead.work_email || !isShareable(latest)) return;
+    setBusy("email-shortlist");
+    setMessage(null);
+    let shared = latest.status === "shared";
+    if (!shared) {
+      const shareResult = await supabase.rpc("share_offerpsp_shortlist", { p_shortlist_id: latest.id });
+      if (shareResult.error) {
+        setMessage({ tone: "error", text: shareResult.error.message });
+        setBusy(null);
+        return;
+      }
+      shared = true;
+    }
+
+    const subject = locale === "ru" ? "Ваши варианты оплаты готовы — OfferPSP" : "Your payment options are ready — OfferPSP";
+    const body = shortlistEmailBody(latest, locale);
+    const draftResult = await supabase.rpc("create_offerpsp_email_draft", {
+      p_lead_id: lead.lead_id,
+      p_to_email: lead.work_email,
+      p_subject: subject,
+      p_body: body,
+    });
+    if (draftResult.error) {
+      await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]);
+      setMessage({ tone: "error", text: `${shared ? "Shortlist опубликован в ЛК, но " : ""}не удалось создать email: ${draftResult.error.message}` });
+      setBusy(null);
+      return;
+    }
+
+    const draftId = Number((draftResult.data as { id?: number } | null)?.id);
+    if (Number.isFinite(draftId)) await supabase.rpc("set_offerpsp_email_draft_status", { p_draft_id: draftId, p_status: "sending" });
+    const session = await supabase.auth.getSession();
+    try {
+      const response = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.data.session?.access_token || ""}` },
+        body: JSON.stringify({ to: lead.work_email, subject, body, lead_id: lead.lead_id }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.success !== true) throw new Error(result.error || result.message || "Email sender returned an error");
+      if (Number.isFinite(draftId)) await supabase.rpc("set_offerpsp_email_draft_status", { p_draft_id: draftId, p_status: "sent" });
+      await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]);
+      setMessage({ tone: "success", text: `Shortlist отправлен в ЛК и на ${lead.work_email}.` });
+      setTab("communications");
+    } catch (error) {
+      if (Number.isFinite(draftId)) await supabase.rpc("set_offerpsp_email_draft_status", { p_draft_id: draftId, p_status: "failed" });
+      await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]);
+      setMessage({ tone: "error", text: `Shortlist опубликован в ЛК, но email не отправлен: ${error instanceof Error ? error.message : "неизвестная ошибка"}` });
+    }
+    setBusy(null);
+  }
+
   async function saveComplianceDecision(input: { decision: string; classification: string; notes: string; summary: string; missing: string[] }) {
     if (!leadId) return;
     await runAction("compliance", async () => {
@@ -343,7 +434,7 @@ export default function MerchantWorkspace() {
             complianceReady={complianceWorkspace?.case.case_status === "cleared"}
           />
       : tab === "preview"
-          ? <Preview shortlist={latest} busy={busy} onShare={() => void shareLatest()}/>
+          ? <Preview shortlist={latest} recipient={lead.work_email} busy={busy} onShare={() => void shareLatest()} onEmail={(locale) => void emailLatest(locale)}/>
       : tab === "deal"
           ? <DealDeskPanel workspace={dealWorkspace} reload={async () => { await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]); }}/>
       : tab === "communications"
@@ -471,13 +562,13 @@ function Overview({ lead, matches, shortlist }: { lead: ReturnType<typeof useCon
   </div>;
 }
 
-function Preview({ shortlist, busy, onShare }: { shortlist?: Shortlist; busy: string | null; onShare: () => void }) {
+function Preview({ shortlist, recipient, busy, onShare, onEmail }: { shortlist?: Shortlist; recipient?: string | null; busy: string | null; onShare: () => void; onEmail: (locale: "ru" | "en") => void }) {
   const [locale, setLocale] = useState<"ru" | "en">("ru");
   if (!shortlist) return <Panel><EmptyState title="Предпросмотра ещё нет" description="Сначала выберите matched или ручные офферы и создайте shortlist."/></Panel>;
   const shareable = isShareable(shortlist);
   return <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
     <Panel><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Client-safe preview</p><h2 className="mt-2 text-xl font-semibold text-gray-900 dark:text-white">{shortlist.title} · v{shortlist.version}</h2><p className="mt-1 text-sm text-gray-500">Telegram‑стандарт: PayIn и PayOut показаны раздельно, PSP и внутренняя маржа скрыты.</p></div><div className="flex items-center gap-2"><div className="flex rounded-lg bg-gray-100 p-1 dark:bg-white/5">{(["ru", "en"] as const).map((value) => <button key={value} onClick={() => setLocale(value)} className={`rounded-md px-2.5 py-1 text-xs font-semibold uppercase ${locale === value ? "bg-white text-gray-900 shadow-theme-xs dark:bg-gray-800 dark:text-white" : "text-gray-400"}`}>{value}</button>)}</div><StatusPill status={shortlist.status}/></div></div><div className="mt-6 grid grid-cols-1 gap-4 2xl:grid-cols-2">{(shortlist.offerpsp_shortlist_items || []).map((item, index) => <OfferPreview key={item.id} snapshot={item.client_snapshot || {}} index={index} locale={locale} staleness={item.route_staleness_status}/>)}</div></Panel>
-    <Panel><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Проверка перед отправкой</h2><div className="mt-5 space-y-3 text-sm">{[["Есть нормализованный маршрут", shareable],["Ставки и методы заполнены", shareable],["Настоящий PSP скрыт", true]].map(([label, ok]) => <div key={String(label)} className="flex items-center justify-between gap-3"><span className="text-gray-500">{label}</span><strong className={ok ? "text-success-600" : "text-error-600"}>{ok ? "Да" : "Нет"}</strong></div>)}</div>{shortlist.status === "shared" ? <div className="mt-5 rounded-lg bg-success-50 p-3 text-sm text-success-700 dark:bg-success-500/10 dark:text-success-300">Уже отправлено клиенту.</div> : <button onClick={onShare} disabled={!shareable || Boolean(busy)} className="mt-5 w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-40">{busy === "share" ? "Отправляю…" : "Отправить в ЛК клиента"}</button>}</Panel>
+    <Panel><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Проверка перед отправкой</h2><div className="mt-5 space-y-3 text-sm">{[["Есть нормализованный маршрут", shareable],["Ставки и методы заполнены", shareable],["Настоящий PSP скрыт", true],["Email клиента указан", Boolean(recipient)]].map(([label, ok]) => <div key={String(label)} className="flex items-center justify-between gap-3"><span className="text-gray-500">{label}</span><strong className={ok ? "text-success-600" : "text-error-600"}>{ok ? "Да" : "Нет"}</strong></div>)}</div>{shortlist.status === "shared" && <div className="mt-5 rounded-lg bg-success-50 p-3 text-sm text-success-700 dark:bg-success-500/10 dark:text-success-300">Shortlist уже доступен клиенту в ЛК.</div>}<div className="mt-5 space-y-2">{shortlist.status !== "shared" && <button onClick={onShare} disabled={!shareable || Boolean(busy)} className="w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-40">{busy === "share" ? "Отправляю…" : "Отправить в ЛК клиента"}</button>}<button onClick={() => onEmail(locale)} disabled={!shareable || !recipient || Boolean(busy)} className="w-full rounded-lg border border-brand-300 px-4 py-3 text-sm font-semibold text-brand-600 hover:bg-brand-50 disabled:opacity-40 dark:border-brand-700 dark:text-brand-300 dark:hover:bg-brand-500/10">{busy === "email-shortlist" ? "Отправляю email…" : "Отправить на почту"}</button></div>{recipient ? <p className="mt-3 break-all text-xs text-gray-400">Получатель: {recipient}</p> : <p className="mt-3 text-xs text-error-500">Добавьте рабочий email во вкладке «Платёжный запрос».</p>}</Panel>
   </div>;
 }
 
