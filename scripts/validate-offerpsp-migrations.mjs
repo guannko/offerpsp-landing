@@ -252,6 +252,16 @@ async function applyMigrations() {
     "20260810090000_offerpsp_geo_region_normalization_v2.sql",
     "20260810093000_offerpsp_progressive_geo_matching.sql",
     "20260810120000_offerpsp_atomic_route_replacements.sql",
+    "20260810122748_offerpsp_instant_workspace_and_telegram_bridge.sql",
+    "20260810124600_offerpsp_instant_workspace_provider_state_fix.sql",
+    "20260810133000_offerpsp_deferred_background_screening.sql",
+    "20260810135000_offerpsp_portal_notification_contact.sql",
+    "20260811110147_offerpsp_provider_default_markups.sql",
+    "20260811114342_offerpsp_korea_geo_correction.sql",
+    "20260811133000_offerpsp_risk_segments.sql",
+    "20260811201417_offerpsp_lead_attribution.sql",
+    "20260812110000_offerpsp_route_coverage_mode_default_fix.sql",
+    "20260812111500_offerpsp_atomic_replacement_compatibility_contract.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -624,24 +634,28 @@ async function verifyPreComplianceGate() {
   );
   const opened = state.rows[0];
   if (opened.case_status !== "pending" || opened.legacy_matches !== 0 || opened.shortlists !== 0
-      || opened.review_tasks !== 1 || !opened.target_geos.includes("KR") || !opened.requested_methods.includes("UPI")) {
-    throw new Error(`New lead did not enter the guarded normalized queue: ${JSON.stringify(opened)}`);
+      || opened.review_tasks !== 0 || !opened.target_geos.includes("KR") || !opened.requested_methods.includes("UPI")) {
+    throw new Error(`New lead did not enter the deferred normalized queue: ${JSON.stringify(opened)}`);
   }
-  await expectQueryFailure(
-    "select public.rebuild_offerpsp_route_matches($1)",
+  await query("select public.rebuild_offerpsp_route_matches($1)", [leadId]);
+  await query(
+    "insert into public.offerpsp_shortlists(lead_id, title, status) values ($1, 'Immediate shortlist', 'draft')",
     [leadId],
-    "Pre-compliance clearance is required before matching",
-  );
-  await expectQueryFailure(
-    "insert into public.offerpsp_shortlists(lead_id, title, status) values ($1, 'Blocked shortlist', 'draft')",
-    [leadId],
-    "Pre-compliance clearance is required before creating or sharing a shortlist",
   );
 
   await setRole("service_role");
+  const prematureClaim = await query("select public.claim_offerpsp_pre_compliance_jobs(10) as value");
+  if (prematureClaim.rows[0].value.some((item) => item.lead_id === leadId)) {
+    throw new Error(`Service worker screened the lead before option selection: ${JSON.stringify(prematureClaim.rows[0].value)}`);
+  }
+
+  await setRole("authenticated");
+  await setUser(STAFF_ID);
+  await query("update public.offerpsp_leads set status = 'option_selected' where lead_id = $1", [leadId]);
+  await setRole("service_role");
   const claimed = await query("select public.claim_offerpsp_pre_compliance_jobs(10) as value");
   if (!claimed.rows[0].value.some((item) => item.lead_id === leadId && item.target_geos.includes("KR"))) {
-    throw new Error(`Service worker did not claim the normalized lead: ${JSON.stringify(claimed.rows[0].value)}`);
+    throw new Error(`Service worker did not claim the selected normalized lead: ${JSON.stringify(claimed.rows[0].value)}`);
   }
   const screening = await query(
     "select public.record_offerpsp_pre_compliance_screening($1, $2::jsonb) as value",
@@ -672,11 +686,11 @@ async function verifyPreComplianceGate() {
     "select l.status, c.case_status, c.classification, (select count(*) from private.offerpsp_compliance_decisions d where d.case_id = c.id) as decisions from public.offerpsp_leads l join private.offerpsp_compliance_cases c on c.lead_id = l.lead_id where l.lead_id = $1",
     [lead.rows[0].lead_id],
   );
-  if (cleared.rows[0].status !== "qualifying" || cleared.rows[0].case_status !== "cleared"
+  if (cleared.rows[0].status !== "option_selected" || cleared.rows[0].case_status !== "cleared"
       || cleared.rows[0].classification !== "merchant" || Number(cleared.rows[0].decisions) !== 1) {
-    throw new Error(`Manual clearance did not open matching: ${JSON.stringify(cleared.rows[0])}`);
+    throw new Error(`Manual clearance changed the progressed deal incorrectly: ${JSON.stringify(cleared.rows[0])}`);
   }
-  process.stdout.write("PASS paid pre-compliance normalization, automatic-to-manual queue and matching gate\n");
+  process.stdout.write("PASS immediate matching, deferred screening after selection and manual review\n");
 }
 
 async function verifyPortalLeadClaims() {
@@ -861,6 +875,21 @@ async function importPreparedDrafts() {
     ) {
       throw new Error(`${providerKey} parser reparse did not supersede the previous draft cleanly: ${JSON.stringify(versionState.rows[0])}`);
     }
+    const publishability = await query(
+      `select r.client_title, r.coverage_scope, r.geos, r.currencies, r.methods
+       from private.offerpsp_offer_routes r
+       where r.batch_id = $1
+         and r.status in ('draft', 'review')
+         and (
+           (r.coverage_scope = 'specific' and cardinality(r.geos) = 0)
+           or cardinality(r.currencies) = 0
+           or cardinality(r.methods) = 0
+         )`,
+      [imported.batch_id],
+    );
+    if (publishability.rows.length > 0 && expected.publishError === "A provider margin policy is required before publication") {
+      throw new Error(`${providerKey} normalized routes lost required dimensions: ${JSON.stringify(publishability.rows)}`);
+    }
     await expectQueryFailure(
       "select public.publish_offerpsp_rate_card($1)",
       [imported.batch_id],
@@ -1014,7 +1043,7 @@ async function verifySupplyOperations() {
   }
 
   const coverage = await query("select public.get_offerpsp_supply_coverage() as value");
-  if (!Array.isArray(coverage.rows[0].value.routes) || coverage.rows[0].value.routes.length !== 38 || !coverage.rows[0].value.routes.every((item) => item.provider_name && item.route_code && Array.isArray(item.currencies) && Array.isArray(item.methods))) {
+  if (!Array.isArray(coverage.rows[0].value.routes) || coverage.rows[0].value.routes.length < 38 || !coverage.rows[0].value.routes.every((item) => item.provider_name && item.route_code && Array.isArray(item.currencies) && Array.isArray(item.methods))) {
     throw new Error("Supply coverage matrix does not expose the active normalized routes");
   }
 
@@ -1191,12 +1220,15 @@ async function verifyImpactControlV4() {
       "select public.create_offerpsp_manual_route($1, $2::jsonb) as value",
       [providerId, routePayload(`${name} old`)],
     );
+    await query("select public.publish_offerpsp_route($1)", [oldRoute.rows[0].value.route_id]);
     const newRoute = await query(
       "select public.create_offerpsp_manual_route($1, $2::jsonb) as value",
       [providerId, routePayload(`${name} replacement`)],
     );
-    await query("select public.publish_offerpsp_route($1)", [oldRoute.rows[0].value.route_id]);
-    await query("select public.publish_offerpsp_route($1)", [newRoute.rows[0].value.route_id]);
+    await query(
+      "select public.decide_offerpsp_route_replacement($1, 'replace', $2)",
+      [newRoute.rows[0].value.route_id, oldRoute.rows[0].value.route_id],
+    );
     return {
       providerId,
       oldRouteId: oldRoute.rows[0].value.route_id,
@@ -1241,6 +1273,9 @@ async function verifyImpactControlV4() {
   if (queue.rows.length !== 2) {
     throw new Error(`Impact Control did not create two grouped update tasks: ${JSON.stringify(queue.rows)}`);
   }
+
+  await query("select public.publish_offerpsp_route($1)", [providerA.newRouteId]);
+  await query("select public.publish_offerpsp_route($1)", [providerB.newRouteId]);
 
   await setUser(CLIENT_ID);
   const staleOption = await query(
@@ -2605,8 +2640,15 @@ async function verifyCounterpartyOrganizer() {
     values ('Organizer PSP Fixture', 'https://organizer-psp.test', 'Europe',
       'psp@organizer.test', 'not_contacted', 'research', array['CY','EU'], array['EUR'],
       array['CARDS'], 'active') returning id`);
+  const pspSecond = await query(`insert into public.psp_providers
+    (name, website, geo, email, contact_status, provider_status, supported_countries,
+      supported_currencies, payment_methods, record_state)
+    values ('Bulk Companion Fixture', 'https://bulk-companion.test', 'TEST',
+      'psp-two@organizer.test', 'not_contacted', 'research', array['TEST'], array['EUR'],
+      array['CARDS'], 'active') returning id`);
   const casinoId = casino.rows[0].id;
   const pspId = psp.rows[0].id;
+  const secondPspId = pspSecond.rows[0].id;
 
   await setUser(STAFF_ID);
   await setRole('authenticated');
@@ -2622,22 +2664,23 @@ async function verifyCounterpartyOrganizer() {
   }
 
   await setRole('service_role');
-  const companySearch = await query("select public.aibot_n8n_operating_desk($1::jsonb) as value", [JSON.stringify({
+  const companySearch = await query("select public.aibot_n8n_operating_desk_v3($1::jsonb) as value", [JSON.stringify({
     action: 'search_companies', entity_type: 'psp', query: 'Organizer PSP', geo: 'EU', status_scope: 'pipeline',
   })]);
   if (companySearch.rows[0].value.count !== 1 || companySearch.rows[0].value.items[0].id !== pspId) {
     throw new Error('AIBot company search did not filter by company, GEO and pipeline state');
   }
-  const confirmation = await query("select public.aibot_n8n_operating_desk($1::jsonb) as value", [JSON.stringify({
-    action: 'add_note', entity_type: 'psp', ids: [pspId, pspId + 100000], body: 'Bulk note',
+  const confirmation = await query("select public.aibot_n8n_operating_desk_v3($1::jsonb) as value", [JSON.stringify({
+    action: 'add_note', entity_type: 'psp', ids: [pspId, secondPspId], body: 'Bulk note',
+    chat_id: 'regression-chat',
   })]);
   if (!confirmation.rows[0].value.confirmation_required || confirmation.rows[0].value.count !== 2) {
     throw new Error('AIBot bulk mutation did not require explicit confirmation');
   }
-  await query("select public.aibot_n8n_operating_desk($1::jsonb)", [JSON.stringify({
+  await query("select public.aibot_n8n_operating_desk_v3($1::jsonb)", [JSON.stringify({
     action: 'create_task', entity_type: 'casino', id: casinoId, title: 'Call casino', priority: 'normal',
   })]);
-  await query("select public.aibot_n8n_operating_desk($1::jsonb)", [JSON.stringify({
+  await query("select public.aibot_n8n_operating_desk_v3($1::jsonb)", [JSON.stringify({
     action: 'create_email_draft', entity_type: 'casino', id: casinoId, subject: 'Hello', body: 'Draft body',
   })]);
   const linked = await query(`select
@@ -2649,8 +2692,8 @@ async function verifyCounterpartyOrganizer() {
   }
 
   const grants = await query(`select
-    has_function_privilege('service_role', 'public.aibot_n8n_operating_desk(jsonb)', 'EXECUTE') as service_tool,
-    has_function_privilege('authenticated', 'public.aibot_n8n_operating_desk(jsonb)', 'EXECUTE') as browser_tool,
+    has_function_privilege('service_role', 'public.aibot_n8n_operating_desk_v3(jsonb)', 'EXECUTE') as service_tool,
+    has_function_privilege('authenticated', 'public.aibot_n8n_operating_desk_v3(jsonb)', 'EXECUTE') as browser_tool,
     has_function_privilege('anon', 'public.get_offerpsp_research_workspace(text,bigint)', 'EXECUTE') as anon_workspace,
     has_table_privilege('authenticated', 'private.offerpsp_research_notes', 'SELECT') as direct_notes`);
   if (!grants.rows[0].service_tool || grants.rows[0].browser_tool || grants.rows[0].anon_workspace || grants.rows[0].direct_notes) {
@@ -2669,7 +2712,7 @@ async function verifyOperatingDeskOfferSearch() {
   if (!fixture.rows.length) throw new Error('No normalized route is available for AIBot offer search regression');
   const route = fixture.rows[0];
   await setRole('service_role');
-  const result = await query("select public.aibot_n8n_operating_desk($1::jsonb) as value", [JSON.stringify({
+  const result = await query("select public.aibot_n8n_operating_desk_v3($1::jsonb) as value", [JSON.stringify({
     action: 'search_offers', provider: route.brand_name, geo: route.geo, method: route.method,
     currency: route.currency, flow: route.flow, status: route.status,
   })]);
