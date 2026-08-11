@@ -430,7 +430,7 @@ export default function MerchantWorkspace() {
     <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div>
         <Link to="/merchants" className="text-sm font-medium text-gray-500 hover:text-brand-500">← Все мерчи</Link>
-        <div className="mt-3 flex flex-wrap items-center gap-3"><h1 className="text-2xl font-semibold text-gray-900 dark:text-white sm:text-3xl">{lead.company || "Без названия"}</h1><StatusPill status={lead.status}/><QuickStatusSelect value={lead.status} options={merchantStatusOptions} busy={busy === "merchant-status"} onChange={changeMerchantStatus}/></div>
+        <div className="mt-3 flex flex-wrap items-center gap-3"><h1 className="text-2xl font-semibold text-gray-900 dark:text-white sm:text-3xl">{lead.company || "Без названия"}</h1><QuickStatusSelect value={lead.status} options={merchantStatusOptions} busy={busy === "merchant-status"} onChange={changeMerchantStatus}/></div>
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{lead.name || "Контакт не указан"} · {lead.work_email || lead.telegram || "нет контакта"}</p>
       </div>
       <div className="flex flex-wrap gap-2">
