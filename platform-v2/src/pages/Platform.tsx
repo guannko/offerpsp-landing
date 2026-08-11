@@ -131,34 +131,109 @@ export function DealDeskPage() {
 
 export function MerchantsPage() {
   const { leads } = useControlBridge();
-  const [scope, setScope] = useState<"active" | "history" | "all">("active");
+  const [scope, setScope] = useState<MerchantScope>("active");
   const [query, setQuery] = useState("");
-  const historicalStatuses = ["closed", "spam", "lost"];
+  const counts = useMemo(() => {
+    const result = Object.fromEntries(merchantStages.map((item) => [item.key, 0])) as Record<MerchantStageKey, number>;
+    leads.forEach((lead) => { result[merchantStage(lead)] += 1; });
+    return result;
+  }, [leads]);
+  const stageOrder: Record<MerchantStageKey, number> = { new: 0, psp: 1, launch: 2, matching: 3, client: 4, live: 5, history: 6 };
   const visible = leads.filter((lead) => {
-    const historical = lead.record_state === "archived" || historicalStatuses.includes(lead.status || "");
-    if (scope === "active" && historical) return false;
-    if (scope === "history" && !historical) return false;
+    const stage = merchantStage(lead);
+    if (scope === "active" && stage === "history") return false;
+    if (scope !== "active" && scope !== "all" && stage !== scope) return false;
     if (!query.trim()) return true;
     return [lead.company, lead.name, lead.work_email, lead.telegram, lead.vertical, lead.company_url]
       .filter(Boolean).join(" ").toLowerCase().includes(query.trim().toLowerCase());
+  }).sort((left, right) => {
+    const stageDelta = stageOrder[merchantStage(left)] - stageOrder[merchantStage(right)];
+    if (scope === "active" && stageDelta) return stageDelta;
+    return new Date(right.updated_at || right.submitted_at || 0).getTime() - new Date(left.updated_at || left.submitted_at || 0).getTime();
   });
-  return <PageFrame title="Мерчи" description="Реестр мерчей и заявок."><PageHeading eyebrow="CRM" title="Мерчи" description="Компании, контакты, платёжные запросы и состояние сделки — без тестового и закрытого мусора в рабочей очереди."/><Panel className="mb-5"><div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"><div className="flex flex-wrap gap-2">{[["active","В работе"],["history","История"],["all","Все"]].map(([value,label]) => <button key={value} onClick={() => setScope(value as typeof scope)} className={`rounded-lg px-3 py-2 text-sm ${scope === value ? "bg-brand-500 text-white" : "bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300"}`}>{label}</button>)}</div><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Найти компанию, контакт или email…" className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm outline-none focus:border-brand-400 dark:border-gray-700 dark:bg-gray-900 dark:text-white lg:max-w-sm"/></div><p className="mt-3 text-xs text-gray-400">Показано {visible.length} из {leads.length}. Закрытые, spam и lost находятся в «Истории».</p></Panel><LeadTable leads={visible}/></PageFrame>;
+  const activeCount = leads.length - counts.history;
+  return <PageFrame title="Мерчи" description="Реестр мерчей и заявок."><PageHeading eyebrow="CRM" title="Мерчи" description="Сразу видно, кто новый, кому отправлены офферы, кто уже у PSP и кто начал работать."/>
+    <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      {merchantStages.filter((item) => item.key !== "history").map((item) => <button key={item.key} onClick={() => setScope(item.key)} className={`rounded-2xl border p-4 text-left transition ${scope === item.key ? "border-brand-400 bg-brand-50 dark:bg-brand-500/10" : "border-gray-200 bg-white hover:border-brand-200 dark:border-gray-800 dark:bg-gray-900"}`}><span className="text-xs font-semibold text-gray-500 dark:text-gray-400">{item.label}</span><strong className="mt-2 block text-2xl text-gray-900 dark:text-white">{counts[item.key]}</strong><span className="mt-1 block text-xs text-gray-400">{item.hint}</span></button>)}
+    </div>
+    <Panel className="mb-5"><div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"><div className="flex flex-wrap gap-2">{[...[{ key: "active", label: `Все активные · ${activeCount}` }, ...merchantStages.map((item) => ({ key: item.key, label: `${item.label} · ${counts[item.key]}` }))], { key: "all", label: `Все · ${leads.length}` }].map((item) => <button key={item.key} onClick={() => setScope(item.key as MerchantScope)} className={`rounded-lg px-3 py-2 text-sm ${scope === item.key ? "bg-brand-500 text-white" : "bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300"}`}>{item.label}</button>)}</div><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Найти компанию, контакт или email…" className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm outline-none focus:border-brand-400 dark:border-gray-700 dark:bg-gray-900 dark:text-white lg:max-w-sm"/></div><p className="mt-3 text-xs text-gray-400">Показано {visible.length} из {leads.length}. Этап рассчитывается из фактического состояния shortlist, PSP review, знакомства и запуска.</p></Panel><LeadTable leads={visible}/></PageFrame>;
+}
+
+type MerchantStageKey = "new" | "matching" | "client" | "psp" | "launch" | "live" | "history";
+type MerchantScope = "active" | "all" | MerchantStageKey;
+
+const merchantStages: Array<{ key: MerchantStageKey; label: string; hint: string }> = [
+  { key: "new", label: "Новые", hint: "ещё не разобраны" },
+  { key: "matching", label: "В подборе", hint: "готовим решения" },
+  { key: "client", label: "У клиента", hint: "офферы отправлены" },
+  { key: "psp", label: "У PSP", hint: "переданы на review" },
+  { key: "launch", label: "Подключение", hint: "Telegram, Zoom, запуск" },
+  { key: "live", label: "Работают", hint: "live processing" },
+  { key: "history", label: "История", hint: "закрыты или архив" },
+];
+
+function merchantStage(lead: Lead): MerchantStageKey {
+  const status = lead.status || "new";
+  if (lead.record_state === "archived" || ["closed", "spam", "lost"].includes(status)) return "history";
+  if (status === "won") return "live";
+  if (["provider_accepted", "telegram_created", "zoom_scheduled", "negotiating"].includes(status)) return "launch";
+  if (["provider_reviewing", "provider_needs_info"].includes(status)) return "psp";
+  if (["shared", "option_selected", "dossier_ready"].includes(status)) return "client";
+  if (["matching", "matched", "shortlist_ready", "provider_declined"].includes(status)) return "matching";
+  return "new";
+}
+
+function merchantStageMeta(lead: Lead) {
+  const stage = merchantStage(lead);
+  const status = lead.status || "new";
+  const details: Record<string, string> = {
+    new: "Новая заявка",
+    qualifying: "Разбираем запрос",
+    needs_clarification: "Нужны данные",
+    matching: "Идёт автоподбор",
+    matched: "Есть кандидаты",
+    shortlist_ready: "Shortlist готов",
+    shared: "Офферы отправлены клиенту",
+    option_selected: "Клиент выбрал оффер",
+    dossier_ready: "Досье готово к PSP",
+    provider_reviewing: "Передан PSP · на рассмотрении",
+    provider_needs_info: "PSP запросил данные",
+    provider_declined: "PSP отказал · нужен новый подбор",
+    provider_accepted: "PSP принял мерча",
+    telegram_created: "Создан общий Telegram",
+    zoom_scheduled: "Назначен Zoom",
+    negotiating: "Согласование условий",
+    won: "Обработка платежей запущена",
+    lost: "Сделка потеряна",
+    closed: "Закрыт",
+    spam: "Spam",
+  };
+  const styles: Record<MerchantStageKey, string> = {
+    new: "bg-warning-50 text-warning-700 dark:bg-warning-500/15 dark:text-warning-300",
+    matching: "bg-blue-light-50 text-blue-light-700 dark:bg-blue-light-500/15 dark:text-blue-light-300",
+    client: "bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300",
+    psp: "bg-orange-50 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300",
+    launch: "bg-blue-light-100 text-blue-light-800 dark:bg-blue-light-500/25 dark:text-blue-light-200",
+    live: "bg-success-50 text-success-700 dark:bg-success-500/15 dark:text-success-300",
+    history: "bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400",
+  };
+  return { stage, label: merchantStages.find((item) => item.key === stage)?.label || stage, detail: details[status] || status, className: styles[stage] };
 }
 
 function LeadTable({ leads }: { leads: Lead[] }) {
   if (!leads.length) return <Panel><EmptyState title="Заявок пока нет" description="Новые мерчи появятся здесь из формы, агента или ручного добавления."/></Panel>;
   return <>
-    <div className="space-y-3 md:hidden">{leads.map((lead)=><Link key={lead.lead_id} to={`/merchants/${lead.lead_id}`} className="block rounded-2xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><strong className="block truncate text-sm text-gray-900 dark:text-white">{lead.company || "Без названия"}</strong><span className="mt-1 block truncate text-xs text-gray-400">{lead.name || lead.work_email || lead.telegram || "Контакт не указан"}</span></div><StatusPill status={lead.status}/></div><div className="mt-4 grid grid-cols-2 gap-3 border-t border-gray-100 pt-3 text-xs dark:border-gray-800"><div><span className="block text-gray-400">Запрос</span><strong className="mt-1 block text-gray-700 dark:text-gray-300">{lead.vertical || "—"} · {list(lead.geos)}</strong></div><div><span className="block text-gray-400">Обновлено</span><strong className="mt-1 block text-gray-700 dark:text-gray-300">{date(lead.updated_at || lead.submitted_at)}</strong></div></div></Link>)}</div>
+    <div className="space-y-3 md:hidden">{leads.map((lead)=>{ const stage = merchantStageMeta(lead); return <Link key={lead.lead_id} to={`/merchants/${lead.lead_id}`} className="block rounded-2xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><strong className="block truncate text-sm text-gray-900 dark:text-white">{lead.company || "Без названия"}</strong><span className="mt-1 block truncate text-xs text-gray-400">{lead.name || lead.work_email || lead.telegram || "Контакт не указан"}</span></div><span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${stage.className}`}>{stage.label}</span></div><p className="mt-3 text-xs font-medium text-gray-600 dark:text-gray-300">{stage.detail}</p><div className="mt-4 grid grid-cols-2 gap-3 border-t border-gray-100 pt-3 text-xs dark:border-gray-800"><div><span className="block text-gray-400">Запрос</span><strong className="mt-1 block text-gray-700 dark:text-gray-300">{lead.vertical || "—"} · {list(lead.geos)}</strong></div><div><span className="block text-gray-400">Обновлено</span><strong className="mt-1 block text-gray-700 dark:text-gray-300">{date(lead.updated_at || lead.submitted_at)}</strong></div></div></Link>;})}</div>
     <Panel className="hidden overflow-hidden !p-0 md:block">
     <div className="overflow-x-auto"><table className="min-w-full">
-      <thead className="bg-gray-50 dark:bg-white/[0.03]"><tr>{["Компания", "Контакт", "Запрос", "Статус", "Обновлено", "Действие"].map((head) => <th key={head} className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">{head}</th>)}</tr></thead>
-      <tbody className="divide-y divide-gray-100 dark:divide-gray-800">{leads.map((lead) => <tr key={lead.lead_id} className="hover:bg-gray-50/70 dark:hover:bg-white/[0.02]">
+      <thead className="bg-gray-50 dark:bg-white/[0.03]"><tr>{["Компания", "Контакт", "Запрос", "Этап работы", "Обновлено", "Действие"].map((head) => <th key={head} className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">{head}</th>)}</tr></thead>
+      <tbody className="divide-y divide-gray-100 dark:divide-gray-800">{leads.map((lead) => { const stage = merchantStageMeta(lead); return <tr key={lead.lead_id} className="hover:bg-gray-50/70 dark:hover:bg-white/[0.02]">
         <td className="px-5 py-4"><strong className="block text-sm text-gray-900 dark:text-white">{lead.company || "Без названия"}</strong><span className="mt-1 block text-xs text-gray-400">{lead.company_url || lead.lead_id.slice(0, 8)}</span></td>
         <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">{lead.name || "—"}<span className="block text-xs text-gray-400">{lead.work_email || lead.telegram || "—"}</span></td>
         <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">{lead.vertical || "—"}<span className="block text-xs text-gray-400">{list(lead.geos)} · {list(lead.methods)}</span></td>
-        <td className="px-5 py-4"><StatusPill status={lead.status}/></td><td className="px-5 py-4 text-sm text-gray-500">{date(lead.updated_at || lead.submitted_at)}</td>
+        <td className="px-5 py-4"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${stage.className}`}>{stage.label}</span><span className="mt-1.5 block max-w-[220px] text-xs text-gray-500">{stage.detail}</span></td><td className="px-5 py-4 text-sm text-gray-500">{date(lead.updated_at || lead.submitted_at)}</td>
         <td className="px-5 py-4"><Link to={`/merchants/${lead.lead_id}`} className="text-sm font-medium text-brand-500 hover:text-brand-600">Открыть →</Link></td>
-      </tr>)}</tbody>
+      </tr>;})}</tbody>
     </table></div>
   </Panel></>;
 }
