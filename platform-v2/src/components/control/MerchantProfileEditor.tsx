@@ -17,6 +17,7 @@ function initial(lead: Lead): Draft {
   return {
     company: lead.company || "", name: lead.name || "", work_email: lead.work_email || "",
     telegram: lead.telegram || "", company_url: lead.company_url || "", vertical: lead.vertical || "",
+    risk_segment: lead.risk_segment_source === "staff" ? (lead.risk_segment || "unknown") : "auto",
     status: lead.status || "new", assigned_to: lead.assigned_to || "", quality_score: lead.quality_score?.toString() || "",
     quality_grade: lead.quality_grade || "", registration_geo: lead.registration_geo || "",
     target_geos: csv(lead.target_geos), requested_currencies: csv(lead.requested_currencies),
@@ -55,8 +56,9 @@ export default function MerchantProfileEditor({ lead, onChanged }: { lead: Lead;
 
   async function save() {
     setBusy("save"); setMessage(null);
+    const { risk_segment: _riskSegment, ...draftWithoutRisk } = draft;
     const payload = {
-      ...draft,
+      ...draftWithoutRisk,
       assigned_to: draft.assigned_to || null,
       quality_score: numberOrNull(draft.quality_score),
       target_geos: split(draft.target_geos), requested_currencies: split(draft.requested_currencies),
@@ -66,7 +68,15 @@ export default function MerchantProfileEditor({ lead, onChanged }: { lead: Lead;
     };
     const result = await supabase.rpc("save_offerpsp_managed_merchant", { p_lead_id: lead.lead_id, p_payload: payload });
     if (result.error) setMessage({ error: true, text: result.error.message });
-    else { await onChanged(); setMessage({ text: "Профиль мерча сохранён." }); }
+    else {
+      const riskResult = await supabase.rpc("set_offerpsp_merchant_risk_segment", {
+        p_lead_id: lead.lead_id,
+        p_risk_segment: draft.risk_segment === "auto" ? "unknown" : draft.risk_segment,
+        p_source: draft.risk_segment === "auto" ? "auto" : "staff",
+      });
+      if (riskResult.error) setMessage({ error: true, text: `Профиль сохранён, но категория бизнеса не обновлена: ${riskResult.error.message}` });
+      else { await onChanged(); setMessage({ text: "Профиль мерча сохранён, подбор пересчитан по категории бизнеса." }); }
+    }
     setBusy(null);
   }
 
@@ -98,6 +108,7 @@ export default function MerchantProfileEditor({ lead, onChanged }: { lead: Lead;
       <Field label="Telegram"><input className={field} value={draft.telegram} onChange={(e)=>set("telegram",e.target.value)}/></Field>
       <Field label="Сайт"><input className={field} value={draft.company_url} onChange={(e)=>set("company_url",e.target.value)}/></Field>
       <Field label="Вертикаль"><input className={field} value={draft.vertical} onChange={(e)=>set("vertical",e.target.value)}/></Field>
+      <Field label="Категория бизнеса"><select className={field} value={draft.risk_segment} onChange={(e)=>set("risk_segment",e.target.value)}><option value="auto">Определять автоматически</option><option value="low">Low-risk</option><option value="high">High-risk</option></select></Field>
     </div></Panel>
     <Panel><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Платёжный запрос</h2><div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       <Field label="GEO регистрации"><input className={field} value={draft.registration_geo} onChange={(e)=>set("registration_geo",e.target.value)}/></Field>

@@ -16,6 +16,8 @@ export type Lead = {
   telegram?: string | null;
   company_url?: string | null;
   vertical?: string | null;
+  risk_segment?: "low" | "high" | "unknown" | null;
+  risk_segment_source?: "auto" | "staff" | null;
   status?: string | null;
   record_state?: string | null;
   geos?: string | string[] | null;
@@ -217,6 +219,7 @@ export type RouteCoverage = {
   currencies?: string[] | null;
   methods?: string[] | null;
   verticals?: string[] | null;
+  risk_segments?: Array<"low" | "high"> | null;
   traffic_types?: string[] | null;
   flow?: string | null;
   is_stale?: boolean | null;
