@@ -1,0 +1,35 @@
+# OfferPSP
+
+> OfferPSP is a private B2B payment infrastructure advisory, provider-matching and introduction service operated by Brain Index (BRAININDEX OÜ).
+
+Official website: https://offerpsp.com/
+Contact: bizdev@offerpsp.com
+
+## What OfferPSP does
+
+- Collects a company's operating and payment requirements privately.
+- Evaluates relevant payment service providers and payment routes.
+- Prepares a focused shortlist for the requesting company.
+- Coordinates qualified introductions and merchant onboarding conversations.
+- Supports cross-border payment infrastructure research across Europe, CIS, the Middle East, Latin America and Asia-Pacific.
+
+## Businesses served
+
+- E-commerce businesses
+- Online marketplaces
+- SaaS and subscription businesses
+- Video game platforms and publishers
+- Digital entertainment and esports businesses
+- Other cross-border businesses
+
+## Important boundaries
+
+OfferPSP is not a bank, payment institution, acquirer or financial adviser. It does not process or hold client funds. Provider availability, onboarding, due diligence and commercial terms are determined by independent providers.
+
+OfferPSP does not publish its provider network, private routes, rates or customer records. Requests are submitted through the private intake at https://offerpsp.com/#request.
+
+## Official pages
+
+- Home and service overview: https://offerpsp.com/
+- Privacy notice: https://offerpsp.com/privacy.html
+- Terms: https://offerpsp.com/terms.html

@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>OfferPSP — Private PSP Matching for iGaming &amp; eCommerce</title>
-  <meta name="description" content="A private PSP matching desk for iGaming and high-risk eCommerce. Share your operating profile and receive a focused shortlist of relevant payment partners.">
+  <title>OfferPSP — Payment Infrastructure Matching &amp; Introductions</title>
+  <meta name="description" content="Private payment infrastructure advisory, provider matching and introductions for e-commerce, marketplaces, SaaS, video game platforms and cross-border businesses.">
   <meta name="robots" content="index, follow">
   <meta name="theme-color" content="#080a13">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -12,8 +12,8 @@
 
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://offerpsp.com/">
-  <meta property="og:title" content="OfferPSP — Private PSP Matching">
-  <meta property="og:description" content="The right PSP. Without the wrong introductions.">
+  <meta property="og:title" content="OfferPSP — Payment Infrastructure Matching">
+  <meta property="og:description" content="Relevant payment partners, evaluated against how your business actually operates.">
   <meta property="og:site_name" content="OfferPSP">
   <meta property="og:locale" content="en_US">
   <meta property="og:image" content="https://offerpsp.com/og-offerpsp.png">
@@ -22,25 +22,67 @@
   <meta property="og:image:alt" content="OfferPSP — The right PSP. Without the wrong introductions.">
 
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="OfferPSP — Private PSP Matching">
-  <meta name="twitter:description" content="The right PSP. Without the wrong introductions.">
+  <meta name="twitter:title" content="OfferPSP — Payment Infrastructure Matching">
+  <meta name="twitter:description" content="Relevant payment partners, evaluated against how your business actually operates.">
   <meta name="twitter:image" content="https://offerpsp.com/og-offerpsp.png">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "ProfessionalService",
-    "name": "OfferPSP",
-    "url": "https://offerpsp.com",
-    "description": "A private B2B matching and introduction service connecting merchants with independent payment service providers.",
-    "areaServed": ["Europe", "CIS", "MENA", "LATAM", "APAC"],
-    "serviceType": "Payment service provider matching and introductions",
-    "parentOrganization": {
-      "@type": "Organization",
-      "name": "Brain Index"
-    }
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://offerpsp.com/#organization",
+        "name": "Brain Index",
+        "legalName": "BRAININDEX OÜ",
+        "url": "https://offerpsp.com/",
+        "email": "bizdev@offerpsp.com",
+        "brand": {
+          "@type": "Brand",
+          "name": "OfferPSP"
+        }
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://offerpsp.com/#website",
+        "url": "https://offerpsp.com/",
+        "name": "OfferPSP",
+        "publisher": { "@id": "https://offerpsp.com/#organization" },
+        "inLanguage": "en"
+      },
+      {
+        "@type": "Service",
+        "@id": "https://offerpsp.com/#service",
+        "name": "OfferPSP payment infrastructure matching",
+        "url": "https://offerpsp.com/",
+        "description": "Private B2B payment infrastructure advisory, provider matching and introductions for companies operating across multiple markets.",
+        "serviceType": [
+          "Payment infrastructure advisory",
+          "Payment service provider discovery and evaluation",
+          "Cross-border payment solution matching",
+          "Payment provider introductions",
+          "Merchant onboarding coordination"
+        ],
+        "provider": { "@id": "https://offerpsp.com/#organization" },
+        "areaServed": ["Europe", "CIS", "Middle East", "Latin America", "Asia-Pacific"],
+        "audience": [
+          { "@type": "BusinessAudience", "audienceType": "E-commerce businesses" },
+          { "@type": "BusinessAudience", "audienceType": "Online marketplaces" },
+          { "@type": "BusinessAudience", "audienceType": "SaaS and subscription businesses" },
+          { "@type": "BusinessAudience", "audienceType": "Video game platforms and publishers" },
+          { "@type": "BusinessAudience", "audienceType": "Digital entertainment and esports businesses" },
+          { "@type": "BusinessAudience", "audienceType": "Cross-border businesses" }
+        ],
+        "termsOfService": "https://offerpsp.com/terms.html"
+      }
+    ]
   }
   </script>
+
+  <script>
+    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+  </script>
+  <script defer src="/_vercel/insights/script.js"></script>
 
   <style>
     :root {
@@ -1514,7 +1556,7 @@
           <div class="signal-body">
             <div class="profile-label">Merchant profile</div>
             <div class="profile-tags">
-              <span class="tag">iGaming</span>
+              <span class="tag">Digital platform</span>
               <span class="tag">EU + CIS</span>
               <span class="tag">Cards + APMs</span>
               <span class="tag">Scaling volume</span>
@@ -1541,9 +1583,9 @@
     <div class="trust-strip" aria-label="Service coverage">
       <div class="container trust-inner">
         <div class="trust-label">Built for complex payment profiles</div>
-        <div class="trust-item">iGaming</div>
+        <div class="trust-item">Video games</div>
         <div class="trust-item">eCommerce</div>
-        <div class="trust-item">High-risk</div>
+        <div class="trust-item">Marketplaces</div>
         <div class="trust-item">Cross-border</div>
         <div class="trust-item">Multi-GEO</div>
       </div>
@@ -1725,8 +1767,8 @@
             <p>Entity and licensing status, website, target GEOs, vertical, payment methods, expected volume, average ticket, chargeback profile and any current processing constraints.</p>
           </details>
           <details>
-            <summary>Do you work only with iGaming?</summary>
-            <p>iGaming is a core focus. We also review high-risk and cross-border eCommerce profiles where our provider network has relevant coverage.</p>
+            <summary>Which businesses do you work with?</summary>
+            <p>We review e-commerce, online marketplaces, SaaS and subscription services, video game platforms and publishers, digital entertainment, esports and other cross-border businesses where relevant provider coverage exists.</p>
           </details>
         </div>
       </div>
@@ -1778,10 +1820,12 @@
                 <label for="vertical">Vertical *</label>
                 <select id="vertical" name="vertical" required>
                   <option value="">Select vertical</option>
-                  <option value="iGaming">iGaming</option>
-                  <option value="High-risk eCommerce">High-risk eCommerce</option>
+                  <option value="E-commerce">E-commerce</option>
                   <option value="Marketplace">Marketplace</option>
+                  <option value="SaaS / subscription">SaaS / subscription</option>
+                  <option value="Video games & interactive entertainment">Video games &amp; interactive entertainment</option>
                   <option value="Digital services">Digital services</option>
+                  <option value="Other regulated business">Other regulated business</option>
                   <option value="Other">Other</option>
                 </select>
               </div>
@@ -1923,6 +1967,118 @@
     }
 
     const params = new URLSearchParams(window.location.search);
+    const ATTRIBUTION_STORAGE_KEY = "offerpsp:first-touch:v1";
+    const SESSION_STORAGE_KEY = "offerpsp:session:v1";
+    const knownMarketingParams = [
+      "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
+      "gclid", "msclkid", "fbclid", "li_fat_id", "ttclid"
+    ];
+
+    const normalizeSource = (value) => String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\//, "")
+      .replace(/^www\./, "")
+      .split(/[/?#]/)[0]
+      .replace(/[^a-z0-9._-]/g, "-")
+      .slice(0, 80);
+
+    const hostMatches = (host, domain) => host === domain || host.endsWith(`.${domain}`);
+
+    const sourceDirectory = [
+      { platform: "chatgpt", category: "ai", domains: ["chatgpt.com", "chat.openai.com", "openai.com"], aliases: ["chatgpt", "openai"] },
+      { platform: "gemini", category: "ai", domains: ["gemini.google.com", "bard.google.com"], aliases: ["gemini", "google-gemini", "bard"] },
+      { platform: "claude", category: "ai", domains: ["claude.ai"], aliases: ["claude", "anthropic"] },
+      { platform: "perplexity", category: "ai", domains: ["perplexity.ai"], aliases: ["perplexity"] },
+      { platform: "copilot", category: "ai", domains: ["copilot.microsoft.com"], aliases: ["copilot", "microsoft-copilot"] },
+      { platform: "grok", category: "ai", domains: ["grok.com"], aliases: ["grok", "xai"] },
+      { platform: "deepseek", category: "ai", domains: ["chat.deepseek.com", "deepseek.com"], aliases: ["deepseek"] },
+      { platform: "mistral", category: "ai", domains: ["chat.mistral.ai", "mistral.ai"], aliases: ["mistral", "le-chat", "lechat"] },
+      { platform: "meta-ai", category: "ai", domains: ["meta.ai"], aliases: ["meta-ai", "metaai"] },
+      { platform: "you-com", category: "ai", domains: ["you.com"], aliases: ["you", "you-com"] },
+      { platform: "poe", category: "ai", domains: ["poe.com"], aliases: ["poe"] },
+      { platform: "phind", category: "ai", domains: ["phind.com"], aliases: ["phind"] },
+      { platform: "qwen", category: "ai", domains: ["qwen.ai", "chat.qwen.ai"], aliases: ["qwen", "tongyi"] },
+      { platform: "kimi", category: "ai", domains: ["kimi.com", "kimi.moonshot.cn"], aliases: ["kimi", "moonshot"] },
+      { platform: "doubao", category: "ai", domains: ["doubao.com"], aliases: ["doubao"] },
+      { platform: "huggingchat", category: "ai", domains: ["huggingface.co"], aliases: ["huggingchat"] },
+      { platform: "google", category: "search", domains: ["google.com", "google.co.uk", "google.de", "google.fr", "google.it"], aliases: ["google"] },
+      { platform: "bing", category: "search", domains: ["bing.com"], aliases: ["bing"] },
+      { platform: "duckduckgo", category: "search", domains: ["duckduckgo.com"], aliases: ["duckduckgo", "ddg"] },
+      { platform: "brave-search", category: "search", domains: ["search.brave.com"], aliases: ["brave", "brave-search"] },
+      { platform: "ecosia", category: "search", domains: ["ecosia.org"], aliases: ["ecosia"] },
+      { platform: "baidu", category: "search", domains: ["baidu.com"], aliases: ["baidu"] },
+      { platform: "yahoo", category: "search", domains: ["search.yahoo.com", "yahoo.com"], aliases: ["yahoo"] },
+      { platform: "yandex", category: "search", domains: ["yandex.com", "yandex.ru"], aliases: ["yandex"] },
+      { platform: "linkedin", category: "social", domains: ["linkedin.com"], aliases: ["linkedin"] },
+      { platform: "telegram", category: "social", domains: ["t.me", "telegram.org"], aliases: ["telegram", "tg"] },
+      { platform: "x", category: "social", domains: ["x.com", "twitter.com"], aliases: ["x", "twitter"] },
+      { platform: "facebook", category: "social", domains: ["facebook.com", "m.facebook.com"], aliases: ["facebook", "fb"] },
+      { platform: "instagram", category: "social", domains: ["instagram.com"], aliases: ["instagram"] },
+      { platform: "youtube", category: "social", domains: ["youtube.com", "youtu.be"], aliases: ["youtube"] },
+      { platform: "reddit", category: "social", domains: ["reddit.com"], aliases: ["reddit"] },
+      { platform: "tiktok", category: "social", domains: ["tiktok.com"], aliases: ["tiktok"] }
+    ];
+
+    const resolveDirectoryEntry = ({ host = "", alias = "" } = {}) => sourceDirectory.find((entry) =>
+      entry.domains.some((domain) => hostMatches(host, domain)) || entry.aliases.includes(alias)
+    );
+
+    const sanitizedReferrer = (() => {
+      if (!document.referrer) return "";
+      try {
+        const url = new URL(document.referrer);
+        return `${url.origin}${url.pathname}`.slice(0, 500);
+      } catch {
+        return "";
+      }
+    })();
+
+    const buildTouch = () => {
+      const explicitSource = normalizeSource(params.get("utm_source"));
+      let referrerHost = "";
+      if (sanitizedReferrer) {
+        try { referrerHost = new URL(sanitizedReferrer).hostname.toLowerCase(); } catch { referrerHost = ""; }
+      }
+
+      const entry = resolveDirectoryEntry({ host: referrerHost, alias: explicitSource });
+      const hasCampaign = knownMarketingParams.some((key) => params.has(key));
+      const isInternal = referrerHost && hostMatches(referrerHost, window.location.hostname.toLowerCase());
+      const platform = entry?.platform || explicitSource || (referrerHost && !isInternal ? referrerHost.replace(/^www\./, "") : "direct");
+      const category = entry?.category || (hasCampaign ? "campaign" : (referrerHost && !isInternal ? "referral" : "direct"));
+
+      const touch = {
+        source_category: category,
+        source_platform: platform,
+        referrer: isInternal ? "" : sanitizedReferrer,
+        landing_path: window.location.pathname.slice(0, 300),
+        captured_at: new Date().toISOString()
+      };
+
+      knownMarketingParams.forEach((key) => {
+        const value = String(params.get(key) || "").trim();
+        if (value) touch[key] = value.slice(0, 300);
+      });
+      return touch;
+    };
+
+    const lastTouch = buildTouch();
+    let firstTouch = lastTouch;
+    try {
+      const stored = JSON.parse(localStorage.getItem(ATTRIBUTION_STORAGE_KEY) || "null");
+      if (stored && typeof stored === "object") firstTouch = stored;
+      else localStorage.setItem(ATTRIBUTION_STORAGE_KEY, JSON.stringify(lastTouch));
+    } catch {
+      firstTouch = lastTouch;
+    }
+
+    let sessionId = "";
+    try {
+      sessionId = sessionStorage.getItem(SESSION_STORAGE_KEY) || crypto.randomUUID();
+      sessionStorage.setItem(SESSION_STORAGE_KEY, sessionId);
+    } catch {
+      sessionId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
 
     leadForm.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -1939,8 +2095,21 @@
       const formData = new FormData(leadForm);
       const payload = Object.fromEntries(formData.entries());
       payload.consent = formData.get("consent") === "on";
-      payload.utm_source = params.get("utm_source") || "";
-      payload.utm_campaign = params.get("utm_campaign") || "";
+      payload.source_category = lastTouch.source_category;
+      payload.source_platform = lastTouch.source_platform;
+      payload.source_referrer = lastTouch.referrer || "";
+      payload.landing_path = lastTouch.landing_path;
+      payload.utm_source = lastTouch.utm_source || "";
+      payload.utm_medium = lastTouch.utm_medium || "";
+      payload.utm_campaign = lastTouch.utm_campaign || "";
+      payload.utm_term = lastTouch.utm_term || "";
+      payload.utm_content = lastTouch.utm_content || "";
+      payload.attribution = {
+        version: 1,
+        first_touch: firstTouch,
+        last_touch: lastTouch,
+        session_id: sessionId
+      };
 
       submitButton.disabled = true;
       submitButton.textContent = "Sending…";

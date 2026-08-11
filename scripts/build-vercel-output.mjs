@@ -13,6 +13,7 @@ const publicFiles = [
   "og-offerpsp.png",
   "robots.txt",
   "sitemap.xml",
+  "llms.txt",
 ];
 
 await rm(output, { recursive: true, force: true });
