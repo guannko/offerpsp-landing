@@ -953,13 +953,21 @@ elements.messageForm.addEventListener("submit", async (event) => {
   if (!body || !state.conversationId) return;
   const button = elements.messageForm.querySelector("button");
   setLoading(button, true, t("sending"));
-  const { error } = await supabase.from("offerpsp_messages").insert({
+  const { data: savedMessage, error } = await supabase.from("offerpsp_messages").insert({
     conversation_id: state.conversationId, sender_type: "client", sender_user_id: state.user.id, direction: "inbound", body,
-  });
+  }).select("id").single();
   setLoading(button, false);
   if (error) { setStatus(elements.messageStatus, state.language === "ru" ? "Не удалось отправить сообщение. Текст сохранён в поле — попробуйте ещё раз." : "Could not send the message. Your text is still here; try again.", "error"); return; }
   try {
-    await fetch(MESSAGE_NOTIFICATION_ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ company: state.lead.company, sender_email: state.user.email, message: body }) });
+    await fetch(MESSAGE_NOTIFICATION_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        portal_message_id: savedMessage.id,
+        conversation_id: state.conversationId,
+        lead_id: state.lead.lead_id,
+      }),
+    });
   } catch { /* The database message is already saved. */ }
   elements.messageInput.value = "";
   setStatus(elements.messageStatus, t("sent"), "success");
@@ -970,6 +978,15 @@ elements.messageForm.addEventListener("submit", async (event) => {
 elements.signOutButton.addEventListener("click", async () => { await supabase.auth.signOut(); await enterPortal(null); });
 
 setLanguage(localStorage.getItem(LANGUAGE_STORAGE_KEY) || "ru");
+const loginUrl = new URL(window.location.href);
+const emailTokenHash = loginUrl.searchParams.get("token_hash");
+if (emailTokenHash) {
+  const { error } = await supabase.auth.verifyOtp({ token_hash: emailTokenHash, type: "email" });
+  loginUrl.searchParams.delete("token_hash");
+  loginUrl.searchParams.delete("type");
+  window.history.replaceState({}, document.title, `${loginUrl.pathname}${loginUrl.search}${loginUrl.hash}`);
+  if (error) setStatus(elements.authStatus, friendlyAuthError(error), "error");
+}
 const { data: { session } } = await supabase.auth.getSession();
 await enterPortal(session);
 supabase.auth.onAuthStateChange((event, nextSession) => {
