@@ -164,10 +164,16 @@ The production P0 recheck below supersedes the initial findings recorded earlier
   bounded client cache if production timings continue to exceed the current roughly 3-second cold load.
 - [x] `P1` Replace the old read-only task dump with the production task manager/calendar. The later
   `Navigation and functional semantics` verification above supersedes this original audit item.
-- [ ] `P1` Add Inbox filters, assignment and bulk actions; reconcile lead/deal/work counters across
-  Command Center, Pipeline, Deals and Analytics.
-- [ ] `P1` Localize raw enums/errors, remove or label E2E fixtures in operational selectors, and add
-  missing contact lifecycle controls.
+- [x] `P1` Inbox now has operational filters, assignment, selection and guarded bulk actions.
+  Command Center, Pipeline, Deals and Analytics use the same explicit lifecycle stages instead of
+  counting `lost` leads as if they had passed through every successful stage.
+- [x] `P1` Raw operational enums and lifecycle values are localized without changing their stored
+  machine values. Ten obvious E2E fixtures were archived and removed from active selectors; contact
+  lifecycle controls are present in the entity workspaces.
+- [x] `P1` Production cockpit deployment `dpl_GtjYM2fxE6kMoaVx9xL6t4heWEQt` is `READY` at
+  `https://ops-7q4m2x9k8v3n.vercel.app` on commit `0afdb303e000cb2fbdcb05521be81c47a8e3ec30`.
+  The canonical route and all main SPA entry points return HTTP 200 with the new asset; Vercel reports
+  no runtime errors after rollout.
 - [x] Repeat the P0 black-box scenarios in production: email, research create/archive, merchant state,
   typed offer editor, integration health and database access boundaries all passed on 2026-08-06.
 
@@ -575,7 +581,9 @@ a normal authenticated user was denied. Mutation E2E remains locally verified on
 - [x] Internal `TASKS.md` and `supabase/migrations/` are excluded from Vercel and return 404.
 - [x] Archived routes from superseded parser versions remain in version history but are hidden from
   the active route list and anomaly counters.
-- [ ] Visual field-by-field diff between two rate-card versions.
+- [x] The PSP rate-card editor shows a responsive field-by-field `Было / Стало` comparison against
+  the confirmed predecessor revision, including coverage, commercial rates, limits, settlement,
+  risk, traffic, integrations and operational notes. Unchanged fields are omitted.
 - [x] Advisory partner reminders use `last_verified_at` and `freshness_days`; they create one
   deduplicated operational task and prepare RU/EN partner text. They never pause, archive or mark
   an offer unavailable.
