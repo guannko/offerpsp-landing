@@ -5,6 +5,31 @@ Updated: 2026-08-12
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## Legacy automation cleanup — 2026-08-12
+
+Status: `VERIFIED` against the published n8n graphs. Cleanup is reversible: obsolete workflows and
+nodes were disabled rather than deleted.
+
+- [x] Deactivated 11 superseded workflows: the duplicate IMAP mailbox ingest, two Notion flows,
+  Follow-up Scheduler, Weekly Report, Email Open Tracker, Deduplication Check, the old
+  Google-Sheets Website Scraper, Mention Monitor and the direct Casino/PSP DB tools.
+- [x] Kept `tiEQBHg4iNHCHbQI` as the single active Titan mailbox poller. The duplicate IMAP flow
+  `N0GEPhmvvRD4KRhw` is inactive.
+- [x] Disabled six legacy tools inside the shared AIBot: `Casino DB`, `PSP DB Tool`,
+  `Search Casino Leads`, `Save Email Draft`, `Notion Draft Tool` and `Pipeline Tool`.
+- [x] Kept the canonical tools: web search/fetch, Operating Desk, two-phase Bulk Operations,
+  offer intake, PSP email research, task management, Contact Hunter and explicit email sending.
+- [x] Removed the Notion tracking branch from the active Email Sender. Its published graph is now
+  webhook → request parser → Titan SMTP → result, and validates with 0 errors and 0 warnings.
+- [x] Disabled the direct Telegram trigger in `PSP | Email Finder`; webhook tool invocation remains
+  active, so the finder cannot compete with the main AIBot for Telegram updates.
+- [x] Updated the live AIBot canvas instructions so a future operator does not reconnect obsolete
+  Notion/direct-database tools. The published AIBot graph validates with 0 errors; its only warning
+  is the intentionally dynamic URL accepted by `Fetch URL`.
+- [ ] Rotate the Telegram credential that was embedded in the retired Mention Monitor during the
+  next planned credential-maintenance window. The workflow is inactive, so this does not block
+  current operations.
+
 ## Shared AIBot core in Captain's Bridge — 2026-08-12
 
 Status: `VERIFIED` in production through the authenticated staff interface and a live read-only

@@ -146,7 +146,8 @@ Important n8n workflows to verify by live ID and active version:
 - offer parser worker: `MLDnePB4WW3jzX4S`;
 - outbound Telegram: `yCPozZQX7EoxQf6P`;
 - active Titan mailbox poller: `tiEQBHg4iNHCHbQI`;
-- legacy IMAP-trigger experiment: `N0GEPhmvvRD4KRhw` (do not treat it as the active ingest path).
+- legacy IMAP-trigger experiment: `N0GEPhmvvRD4KRhw` — deactivated 2026-08-12; the Titan poller
+  above is the only active mailbox-ingest path.
 - shared AIBot operating core: `IRB53X5NAS4wTuyU`. It serves both Telegram as the mobile
   management surface and the protected floating assistant in Captain's Bridge. Do not fork its
   business rules into separate Telegram and web prompts; both entries must use the same tools,
@@ -157,6 +158,32 @@ Captain's Bridge reaches the shared AIBot only through the staff-protected serve
 The function verifies the Supabase user and active OfferPSP staff role before forwarding a command
 with the current page/entity context. Mass mutations remain two-phase and require a server-issued
 single-use confirmation token in both interfaces.
+
+### Canonical AIBot tool surface
+
+Verified against the live published n8n graph on 2026-08-12.
+
+Keep these tools in the shared AIBot core: `Search Web`, `Fetch URL`, `Operating Desk`,
+`Bulk Operations`, `Save PSP Offer`, `PSP Email Tool`, `Manage Tasks`, `Run Contact Hunter` and
+`Send Email Tool`. `Operating Desk` is the canonical interface for cards, statuses, notes, tasks
+and email drafts. Mass changes must continue to use `Bulk Operations` preview plus confirmation.
+
+The following legacy tool nodes remain on the AIBot canvas only for rollback and are disabled:
+`Casino DB`, `PSP DB Tool`, `Search Casino Leads`, `Save Email Draft`, `Notion Draft Tool` and
+`Pipeline Tool`. Do not reconnect or enable them without a verified migration reason. The active
+Email Sender has no Notion dependency.
+
+The following obsolete workflows were deactivated on 2026-08-12 and retained only for rollback:
+the old IMAP inbox, Notion Draft Creator, Notion Status Updater, Follow-up Scheduler, Weekly
+Report, Email Open Tracker, Deduplication Check, the Google-Sheets Website Scraper, Mention
+Monitor and the old direct Casino/PSP DB tools. Do not count their existence as an active product
+capability. The old Mention Monitor also contains a legacy credential embedded in node
+configuration; keep it disabled and rotate that credential during the next Telegram credential
+maintenance.
+
+`PSP | Email Finder` is invoked through its webhook tool path. Its direct Telegram trigger is
+disabled so it cannot compete with the shared AIBot for the same Telegram updates. Its Telegram
+result nodes remain enabled because webhook-initiated searches still report results to Boris.
 
 Do not assume that a workflow is active merely because it exists.
 
