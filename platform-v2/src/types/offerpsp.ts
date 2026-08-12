@@ -137,8 +137,13 @@ export type EmailAttachment = {
   has_extracted_text: boolean;
   provider_id?: string | null;
   provider_name?: string | null;
+  document_type?: "offer" | "contract" | null;
+  document_id?: string | null;
+  target_entity_type?: "provider" | "merchant" | null;
+  target_entity_id?: string | null;
+  target_entity_name?: string | null;
   ingestion_job_id?: string | null;
-  status: "stored" | "extracted" | "needs_ocr" | "needs_review" | "queued" | "failed";
+  status: "stored" | "extracted" | "needs_ocr" | "needs_review" | "queued" | "saved_document" | "failed";
   created_at: string;
 };
 

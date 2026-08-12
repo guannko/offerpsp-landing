@@ -6,7 +6,7 @@ import ResearchEntityEditor from "../components/control/ResearchEntityEditor";
 import TelegramWorkspace from "../components/control/TelegramWorkspace";
 import { useControlBridge } from "../context/ControlBridgeContext";
 import { supabase } from "../lib/supabase";
-import type { CasinoLead } from "../types/offerpsp";
+import type { CasinoLead, EmailAttachment } from "../types/offerpsp";
 
 const field = "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:text-white";
 const area = "min-h-40 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-3 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:text-white";
@@ -17,6 +17,7 @@ const counterpartyLabels: Record<string, string> = {
   casino: "Казино",
   general: "Без привязки",
   merchant: "Мерч",
+  provider: "PSP",
   research_psp: "PSP из базы AIBot",
 };
 
@@ -71,9 +72,11 @@ export function CommunicationsWorkspace() {
   const [threadId, setThreadId] = useState("");
   const [query, setQuery] = useState("");
   const [mailScope, setMailScope] = useState<"active" | "follow_up" | "archived" | "all">("active");
-  const [linkType, setLinkType] = useState<"merchant" | "casino" | "research_psp" | "general">("general");
+  const [linkType, setLinkType] = useState<"merchant" | "provider" | "casino" | "research_psp" | "general">("general");
   const [linkId, setLinkId] = useState("");
-  const [attachmentProviders, setAttachmentProviders] = useState<Record<string, string>>({});
+  const [attachmentTypes, setAttachmentTypes] = useState<Record<string, "offer" | "contract" | "">>({});
+  const [attachmentTargetTypes, setAttachmentTargetTypes] = useState<Record<string, "provider" | "merchant">>({});
+  const [attachmentTargets, setAttachmentTargets] = useState<Record<string, string>>({});
 
   const visibleThreads = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -94,7 +97,7 @@ export function CommunicationsWorkspace() {
 
   useEffect(() => {
     if (!selectedThread) return;
-    setLinkType(selectedThread.counterparty_type === "casino" || selectedThread.counterparty_type === "research_psp" || selectedThread.counterparty_type === "merchant" ? selectedThread.counterparty_type : "general");
+    setLinkType(selectedThread.counterparty_type === "casino" || selectedThread.counterparty_type === "research_psp" || selectedThread.counterparty_type === "provider" || selectedThread.counterparty_type === "merchant" ? selectedThread.counterparty_type : "general");
     setLinkId(selectedThread.lead_id || selectedThread.counterparty_id || "");
   }, [selectedThread]);
 
@@ -171,13 +174,32 @@ export function CommunicationsWorkspace() {
     setBusy(false);
   }
 
-  async function queueAttachment(attachmentId: string) {
+  async function classifyAttachment(attachmentId: string) {
     const attachment = mailCenter.attachments.find((entry) => entry.id === attachmentId);
-    const providerId = attachmentProviders[attachmentId] || attachment?.provider_id || "";
-    if (!providerId) { setMessage({ error: true, text: "Выберите PSP для этого вложения." }); return; }
+    if (!attachment) return;
+    const documentType = attachmentTypes[attachmentId] || "";
+    if (!documentType) { setMessage({ error: true, text: "Сначала укажите: это оффер или договор." }); return; }
+    const inheritedMerchantId = selectedThread?.lead_id || (selectedThread?.counterparty_type === "merchant" ? selectedThread.counterparty_id : null);
+    const inheritedProviderId = attachment.provider_id || (selectedThread?.counterparty_type === "provider" ? selectedThread.counterparty_id : null);
+    const targetType = documentType === "offer"
+      ? "provider"
+      : (attachmentTargetTypes[attachmentId] || (inheritedMerchantId ? "merchant" : "provider"));
+    const targetId = attachmentTargets[attachmentId]
+      || (targetType === "merchant" ? inheritedMerchantId : inheritedProviderId)
+      || "";
+    if (!targetId) { setMessage({ error: true, text: `Выберите компанию, к которой сохранить ${documentType === "offer" ? "оффер" : "договор"}.` }); return; }
     setBusy(true); setMessage(null);
-    const result = await supabase.rpc("queue_offerpsp_email_attachment", { p_attachment_id: attachmentId, p_provider_id: providerId });
-    setMessage(result.error ? { error: true, text: result.error.message } : { text: "Вложение сохранено в очереди офферов для ручной проверки." });
+    const result = await supabase.rpc("classify_offerpsp_email_attachment", {
+      p_attachment_id: attachmentId,
+      p_document_type: documentType,
+      p_provider_id: targetType === "provider" ? targetId : null,
+      p_lead_id: targetType === "merchant" ? targetId : null,
+    });
+    setMessage(result.error
+      ? { error: true, text: result.error.message }
+      : { text: documentType === "offer"
+        ? "Оффер сохранён и отправлен в очередь разбора. Публикация отключена до ручной проверки."
+        : "Договор сохранён в документах выбранной компании." });
     await refresh(); setBusy(false);
   }
 
@@ -196,7 +218,66 @@ export function CommunicationsWorkspace() {
       ? captainsBridge.casino_leads.filter((item) => item.record_state !== "archived").map((item) => ({ id: String(item.id), label: item.name || item.website || `Casino ${item.id}` }))
       : linkType === "research_psp"
         ? captainsBridge.psp_providers.filter((item) => item.record_state !== "archived").map((item) => ({ id: String(item.id), label: item.name || item.website || `PSP ${item.id}` }))
-        : [];
+        : linkType === "provider"
+          ? providers.filter((provider) => provider.relationship_status !== "archived").map((provider) => ({ id: provider.id, label: provider.brand_name }))
+          : [];
+
+  function renderAttachment(attachment: EmailAttachment) {
+    const documentType = attachmentTypes[attachment.id] || attachment.document_type || "";
+    const inheritedMerchantId = selectedThread?.lead_id || (selectedThread?.counterparty_type === "merchant" ? selectedThread.counterparty_id : null);
+    const inheritedProviderId = attachment.provider_id || (selectedThread?.counterparty_type === "provider" ? selectedThread.counterparty_id : null);
+    const targetType = documentType === "offer"
+      ? "provider"
+      : (attachmentTargetTypes[attachment.id] || (inheritedMerchantId ? "merchant" : "provider"));
+    const targetId = attachmentTargets[attachment.id]
+      || (targetType === "merchant" ? inheritedMerchantId : inheritedProviderId)
+      || "";
+    const inherited = Boolean(targetId && !attachmentTargets[attachment.id]);
+    const targetOptions = targetType === "provider"
+      ? providers.filter((provider) => provider.relationship_status !== "archived").map((provider) => ({ id: provider.id, label: provider.brand_name }))
+      : leads.filter((lead) => lead.record_state !== "archived").map((lead) => ({ id: lead.lead_id, label: `${lead.company || lead.name || "Мерч"} · ${lead.work_email || "нет email"}` }));
+    const classified = Boolean(attachment.document_type);
+
+    return <div key={attachment.id} className="rounded-xl bg-gray-50 p-3 dark:bg-white/[0.04]">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <strong className="text-sm text-gray-900 dark:text-white">{attachment.filename}</strong>
+          <span className="mt-1 block text-xs text-gray-400">{Math.ceil(attachment.size_bytes / 1024)} KB · {humanizeCode(attachment.status)}{attachment.provider_name ? ` · ${attachment.provider_name}` : ""}</span>
+          {attachment.extraction_error && <span className="mt-1 block text-xs text-error-500">{attachment.extraction_error}</span>}
+        </div>
+        <button disabled={busy} onClick={() => void downloadAttachment(attachment.id)} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold dark:border-gray-700">Скачать оригинал</button>
+      </div>
+      {classified ? <div className="mt-3 rounded-lg border border-success-200 bg-success-50 px-3 py-2 text-xs text-success-700 dark:bg-success-500/10">
+        {attachment.document_type === "offer" ? "Оффер" : "Договор"} сохранён: {attachment.target_entity_name || attachment.provider_name || "компания привязана"}
+      </div> : <div className="mt-3 space-y-2">
+        <div className="grid gap-2 md:grid-cols-2">
+          <select className={field} value={documentType} onChange={(event) => setAttachmentTypes((current) => ({ ...current, [attachment.id]: event.target.value as "offer" | "contract" | "" }))}>
+            <option value="">Что это за файл?</option>
+            <option value="offer">Оффер</option>
+            <option value="contract">Договор</option>
+          </select>
+          {documentType === "contract" && <select className={field} value={targetType} onChange={(event) => { const value = event.target.value as "provider" | "merchant"; setAttachmentTargetTypes((current) => ({ ...current, [attachment.id]: value })); setAttachmentTargets((current) => ({ ...current, [attachment.id]: "" })); }}>
+            <option value="provider">Договор с PSP</option>
+            <option value="merchant">Договор с мерчем</option>
+          </select>}
+        </div>
+        {documentType && <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+          <div>
+            <select className={field} value={targetId} onChange={(event) => setAttachmentTargets((current) => ({ ...current, [attachment.id]: event.target.value }))}>
+              <option value="">Выберите компанию</option>
+              {targetOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+            </select>
+            {inherited && <span className="mt-1 block text-xs text-success-600">Компания определена по переписке. При необходимости можно изменить.</span>}
+          </div>
+          <button disabled={busy || !targetId || (documentType === "offer" && !attachment.has_extracted_text)} onClick={() => void classifyAttachment(attachment.id)} className="rounded-lg bg-brand-500 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40">
+            {documentType === "offer" ? "Сохранить оффер" : "Сохранить договор"}
+          </button>
+        </div>}
+        {documentType === "offer" && !attachment.has_extracted_text && <p className="text-xs text-warning-600">Текст не извлечён: нужен OCR или ручной разбор оригинала.</p>}
+        {!documentType && <p className="text-xs text-gray-500">Сначала выберите тип файла. Ничего не публикуется автоматически.</p>}
+      </div>}
+    </div>;
+  }
 
   return <Frame title="Коммуникации" description="Почтовый центр и журнал Telegram AIBot."><PageHeading eyebrow="Omnichannel desk" title="Коммуникации" description="Работа с почтой bizdev@offerpsp.com и просмотр фактического Telegram‑журнала AIBot в одной панели."/>
     {message&&<div className={`mb-5 rounded-xl border px-4 py-3 text-sm ${message.error?"border-error-200 bg-error-50 text-error-700":"border-success-200 bg-success-50 text-success-700"}`}>{message.text}</div>}
@@ -209,7 +290,7 @@ export function CommunicationsWorkspace() {
       ].map(([id,label,hint])=><button key={id} onClick={()=>setSection(id as typeof section)} className={`w-full rounded-xl px-4 py-3 text-left ${section===id?"bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300":"hover:bg-gray-50 dark:hover:bg-white/5"}`}><strong className="block text-sm">{label}</strong><span className="mt-1 block text-xs text-gray-400">{hint}</span></button>)}</div></Panel>
       {section === "mail" ? <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
         <Panel className="min-w-0"><div className="space-y-3"><input className={field} value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Тема, email, статус…"/><select className={field} value={mailScope} onChange={(event)=>setMailScope(event.target.value as typeof mailScope)}><option value="active">Активные</option><option value="follow_up">Только follow-up</option><option value="archived">Архив</option><option value="all">Все</option></select></div><div className="mt-4 max-h-[720px] divide-y divide-gray-100 overflow-y-auto dark:divide-gray-800">{visibleThreads.map((thread)=><button key={thread.id} onClick={()=>void openThread(thread.id)} className={`w-full px-2 py-4 text-left ${selectedThread?.id===thread.id?"bg-brand-50 dark:bg-brand-500/10":"hover:bg-gray-50 dark:hover:bg-white/[0.03]"}`}><div className="flex items-start justify-between gap-3"><strong className="line-clamp-1 text-sm text-gray-900 dark:text-white">{thread.subject}</strong>{thread.unread_count>0&&<span className="rounded-full bg-brand-500 px-2 py-0.5 text-xs font-semibold text-white">{thread.unread_count}</span>}</div><span className="mt-1 block truncate text-xs text-gray-500">{thread.participant_email}</span><div className="mt-2 flex items-center justify-between gap-2"><StatusPill status={thread.status}/><span className="text-xs text-gray-400">{formatDate(thread.last_message_at)}</span></div></button>)}{!visibleThreads.length&&<EmptyState title="Писем не найдено" description="Входящие и исходящие цепочки появятся здесь."/>}</div></Panel>
-        <Panel className="min-w-0">{selectedThread ? <><div className="flex flex-col gap-4 border-b border-gray-100 pb-5 dark:border-gray-800 md:flex-row md:items-start md:justify-between"><div><h2 className="text-xl font-semibold text-gray-900 dark:text-white">{selectedThread.subject}</h2><p className="mt-1 text-sm text-gray-500">{selectedThread.participant_email} · {counterpartyLabels[selectedThread.counterparty_type] || humanizeCode(selectedThread.counterparty_type)}</p></div><button onClick={startReply} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white">Ответить</button></div><div className="mt-4 flex flex-wrap gap-2"><button disabled={busy} onClick={()=>void changeThreadState("open")} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold dark:border-gray-700">Открыто</button><button disabled={busy} onClick={()=>void changeThreadState("follow_up")} className="rounded-lg border border-warning-200 bg-warning-50 px-3 py-2 text-xs font-semibold text-warning-700">Follow-up</button><button disabled={busy} onClick={()=>void changeThreadState("closed")} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold dark:border-gray-700">Закрыть</button><button disabled={busy} onClick={()=>void changeThreadState("archived")} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-500 dark:border-gray-700">В архив</button></div><div className="mt-4 grid gap-3 rounded-xl bg-gray-50 p-4 dark:bg-white/[0.03] md:grid-cols-[160px_minmax(0,1fr)_auto]"><select className={field} value={linkType} onChange={(event)=>{setLinkType(event.target.value as typeof linkType);setLinkId("");}}><option value="general">Без привязки</option><option value="merchant">Мерч</option><option value="casino">Казино</option><option value="research_psp">PSP из базы AIBot</option></select><select className={field} value={linkId} disabled={linkType==="general"} onChange={(event)=>setLinkId(event.target.value)}><option value="">Выберите карточку</option>{linkOptions.map((option)=><option key={option.id} value={option.id}>{option.label}</option>)}</select><button disabled={busy} onClick={()=>void saveThreadLink()} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold dark:border-gray-700">Привязать</button></div><div className="mt-5 max-h-[560px] space-y-4 overflow-y-auto pr-1">{selectedMessages.map((entry)=>{const attachments=selectedAttachments.filter((attachment)=>attachment.message_id===entry.id);return <div key={entry.id} className={`max-w-[92%] rounded-2xl border p-4 ${entry.direction==="outbound"?"ml-auto border-brand-100 bg-brand-50 dark:border-brand-500/20 dark:bg-brand-500/10":"border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"}`}><div className="flex items-center justify-between gap-4"><strong className="text-xs uppercase tracking-wide text-brand-500">{entry.direction==="outbound"?"OfferPSP →":"← Входящее"}</strong><span className="text-xs text-gray-400">{formatDate(entry.sent_at || entry.received_at || entry.created_at)}</span></div><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-gray-700 dark:text-gray-200">{entry.text_body || (entry.html_body ? "HTML-письмо без текстовой версии" : "Пустое письмо")}</p>{attachments.length>0&&<div className="mt-4 space-y-3 border-t border-gray-100 pt-4 dark:border-gray-800">{attachments.map((attachment)=><div key={attachment.id} className="rounded-xl bg-gray-50 p-3 dark:bg-white/[0.04]"><div className="flex flex-wrap items-start justify-between gap-3"><div><strong className="text-sm text-gray-900 dark:text-white">{attachment.filename}</strong><span className="mt-1 block text-xs text-gray-400">{Math.ceil(attachment.size_bytes/1024)} KB · {humanizeCode(attachment.status)}{attachment.provider_name?` · ${attachment.provider_name}`:""}</span>{attachment.extraction_error&&<span className="mt-1 block text-xs text-error-500">{attachment.extraction_error}</span>}</div><button disabled={busy} onClick={()=>void downloadAttachment(attachment.id)} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold dark:border-gray-700">Скачать оригинал</button></div>{attachment.status!=="queued"&&<div className="mt-3 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]"><select className={field} value={attachmentProviders[attachment.id]||attachment.provider_id||""} onChange={(event)=>setAttachmentProviders((current)=>({...current,[attachment.id]:event.target.value}))}><option value="">Выберите PSP</option>{providers.filter((provider)=>provider.relationship_status!=="archived").map((provider)=><option key={provider.id} value={provider.id}>{provider.brand_name}</option>)}</select><button disabled={busy||!attachment.has_extracted_text} onClick={()=>void queueAttachment(attachment.id)} className="rounded-lg bg-brand-500 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40">В очередь офферов</button></div>}{!attachment.has_extracted_text&&attachment.status!=="queued"&&<p className="mt-2 text-xs text-warning-600">Текст не извлечён: нужен OCR или ручной разбор оригинала.</p>}</div>)}</div>}<span className="mt-3 block text-xs text-gray-400">{humanizeCode(entry.delivery_status)} · {entry.provider}</span></div>})}</div></> : <EmptyState title="Выберите переписку" description="Откройте цепочку слева или создайте новое письмо."/>}</Panel>
+        <Panel className="min-w-0">{selectedThread ? <><div className="flex flex-col gap-4 border-b border-gray-100 pb-5 dark:border-gray-800 md:flex-row md:items-start md:justify-between"><div><h2 className="text-xl font-semibold text-gray-900 dark:text-white">{selectedThread.subject}</h2><p className="mt-1 text-sm text-gray-500">{selectedThread.participant_email} · {counterpartyLabels[selectedThread.counterparty_type] || humanizeCode(selectedThread.counterparty_type)}</p></div><button onClick={startReply} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white">Ответить</button></div><div className="mt-4 flex flex-wrap gap-2"><button disabled={busy} onClick={()=>void changeThreadState("open")} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold dark:border-gray-700">Открыто</button><button disabled={busy} onClick={()=>void changeThreadState("follow_up")} className="rounded-lg border border-warning-200 bg-warning-50 px-3 py-2 text-xs font-semibold text-warning-700">Follow-up</button><button disabled={busy} onClick={()=>void changeThreadState("closed")} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold dark:border-gray-700">Закрыть</button><button disabled={busy} onClick={()=>void changeThreadState("archived")} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-500 dark:border-gray-700">В архив</button></div><div className="mt-4 grid gap-3 rounded-xl bg-gray-50 p-4 dark:bg-white/[0.03] md:grid-cols-[160px_minmax(0,1fr)_auto]"><select className={field} value={linkType} onChange={(event)=>{setLinkType(event.target.value as typeof linkType);setLinkId("");}}><option value="general">Без привязки</option><option value="merchant">Мерч</option><option value="casino">Казино</option><option value="provider">PSP</option><option value="research_psp">PSP из базы AIBot</option></select><select className={field} value={linkId} disabled={linkType==="general"} onChange={(event)=>setLinkId(event.target.value)}><option value="">Выберите карточку</option>{linkOptions.map((option)=><option key={option.id} value={option.id}>{option.label}</option>)}</select><button disabled={busy} onClick={()=>void saveThreadLink()} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold dark:border-gray-700">Привязать</button></div><div className="mt-5 max-h-[560px] space-y-4 overflow-y-auto pr-1">{selectedMessages.map((entry)=>{const attachments=selectedAttachments.filter((attachment)=>attachment.message_id===entry.id);return <div key={entry.id} className={`max-w-[92%] rounded-2xl border p-4 ${entry.direction==="outbound"?"ml-auto border-brand-100 bg-brand-50 dark:border-brand-500/20 dark:bg-brand-500/10":"border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"}`}><div className="flex items-center justify-between gap-4"><strong className="text-xs uppercase tracking-wide text-brand-500">{entry.direction==="outbound"?"OfferPSP →":"← Входящее"}</strong><span className="text-xs text-gray-400">{formatDate(entry.sent_at || entry.received_at || entry.created_at)}</span></div><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-gray-700 dark:text-gray-200">{entry.text_body || (entry.html_body ? "HTML-письмо без текстовой версии" : "Пустое письмо")}</p>{attachments.length>0&&<div className="mt-4 space-y-3 border-t border-gray-100 pt-4 dark:border-gray-800">{attachments.map((attachment)=>renderAttachment(attachment))}</div>}<span className="mt-3 block text-xs text-gray-400">{humanizeCode(entry.delivery_status)} · {entry.provider}</span></div>})}</div></> : <EmptyState title="Выберите переписку" description="Откройте цепочку слева или создайте новое письмо."/>}</Panel>
       </div> : section === "compose"
         ? <Panel><div className="flex items-start justify-between gap-4"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">{selectedThread && to===selectedThread.participant_email ? "Ответ на письмо" : "Новое письмо"}</h2><p className="mt-1 text-sm text-gray-500">Отправитель: <strong className="text-gray-700 dark:text-gray-200">bizdev@offerpsp.com</strong> · доставка через n8n.</p></div><button onClick={()=>setSection("mail")} className="text-sm text-gray-500">К перепискам</button></div><div className="mt-5 space-y-4"><select className={field} value={leadId} onChange={(e)=>{setLeadId(e.target.value);const selected=leads.find((lead)=>lead.lead_id===e.target.value);if(selected?.work_email)setTo(selected.work_email);}}><option value="">Без привязки к мерчу</option>{leads.filter((lead)=>lead.record_state!=="archived").map((lead)=><option key={lead.lead_id} value={lead.lead_id}>{lead.company || "Без названия"} · {lead.work_email || "нет email"}</option>)}</select><input className={field} type="email" value={to} onChange={(e)=>setTo(e.target.value)} placeholder="Получатель"/><input className={field} value={subject} onChange={(e)=>setSubject(e.target.value)} placeholder="Тема"/><textarea className={area} value={body} onChange={(e)=>setBody(e.target.value)} placeholder="Текст письма"/><button onClick={()=>void sendEmail(Boolean(selectedThread && to===selectedThread.participant_email))} disabled={busy} className="w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy?"Отправляю…":"Отправить письмо"}</button></div></Panel>
         : <TelegramWorkspace/>}
