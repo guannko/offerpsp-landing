@@ -5,6 +5,34 @@ Updated: 2026-08-12
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## Shared AIBot core in Captain's Bridge — 2026-08-12
+
+Status: `VERIFIED` in production through the authenticated staff interface and a live read-only
+agent command.
+
+- [x] Captain's Bridge now has a floating AIBot window on every route. Telegram remains the mobile
+  management interface; both surfaces call the same active AIBot workflow and the same tool set.
+- [x] The web bridge is server-side and staff-protected. It validates the Supabase session and
+  `is_offerpsp_staff()` before forwarding the command; the internal webhook secret is not shipped to
+  the browser.
+- [x] The active workflow `IRB53X5NAS4wTuyU` accepts Telegram and protected web input, passes the
+  current page/entity context to the same agent and returns web responses without routing them into
+  Telegram.
+- [x] Duplicated legacy prompts and transliterated instruction fragments were removed. The workflow
+  now has one maintained system prompt; the excessive agent iteration cap was reduced from 200 to
+  60 without removing tools or database/history access.
+- [x] Mass changes still use the existing server-issued, chat/session-bound two-phase confirmation
+  protocol. The floating UI exposes confirmation only when the workflow returns a valid token.
+- [x] Frontend lint has 0 errors (7 pre-existing fast-refresh warnings); production TypeScript/Vite
+  build passes. Git commit `b08ee28` is pushed to `agent/offerpsp-platform`.
+- [x] Production deployment `dpl_3ecHvNuiR2rXsBeYsKb2ctgTVNaa` is `READY` and aliased to
+  `https://ops-7q4m2x9k8v3n.vercel.app`. Authenticated UI smoke opened the assistant and the command
+  `Покажи первые 3 неархивированных PSP. Ничего не изменяй.` returned BR-Pay, Acquired.com and
+  AntrPay from the working database without a mutation.
+- [ ] Clean up the ambiguous Operating Desk `status_scope=active` filter. The live agent correctly
+  fell back to `record_state=active`, so current work is not blocked, but the old filter name and
+  semantics should be aligned before multi-tenant packaging.
+
 ## Atomic offer replacement and Worldwide coverage — 2026-08-10
 
 Status: `VERIFIED` in production. Migration `20260810001217

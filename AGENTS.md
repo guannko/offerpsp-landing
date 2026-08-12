@@ -1,6 +1,6 @@
 # OfferPSP — shared project context for Codex and Claude Code
 
-Updated: 2026-08-07
+Updated: 2026-08-12
 
 Owner: Boris Kononenko / Brain Index
 
@@ -147,6 +147,16 @@ Important n8n workflows to verify by live ID and active version:
 - outbound Telegram: `yCPozZQX7EoxQf6P`;
 - active Titan mailbox poller: `tiEQBHg4iNHCHbQI`;
 - legacy IMAP-trigger experiment: `N0GEPhmvvRD4KRhw` (do not treat it as the active ingest path).
+- shared AIBot operating core: `IRB53X5NAS4wTuyU`. It serves both Telegram as the mobile
+  management surface and the protected floating assistant in Captain's Bridge. Do not fork its
+  business rules into separate Telegram and web prompts; both entries must use the same tools,
+  confirmation-token protocol and system instructions.
+
+Captain's Bridge reaches the shared AIBot only through the staff-protected server function
+`platform-v2/api/aibot-command.mjs`. The browser must never receive the internal webhook secret.
+The function verifies the Supabase user and active OfferPSP staff role before forwarding a command
+with the current page/entity context. Mass mutations remain two-phase and require a server-issued
+single-use confirmation token in both interfaces.
 
 Do not assume that a workflow is active merely because it exists.
 
