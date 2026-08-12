@@ -992,6 +992,24 @@ ingestion is active and idempotent; files remain private and cannot publish rout
 existing staff review/publish flow. Partner follow-up reminders are advisory and do not control offer
 availability.
 
+### File classification and cockpit upload — production delivery 2026-08-12
+
+- [x] Incoming Mail Center attachments require an explicit `Оффер` or `Договор` classification
+  before saving. A known reply thread inherits its linked PSP or merchant; an unknown sender requires
+  a manual company choice.
+- [x] An offer keeps its original file in private Storage and enters the existing parser/manual-review
+  queue with `publication_allowed=false`. It cannot publish a route automatically.
+- [x] A contract is saved as a document of the selected company and does not enter offer parsing.
+- [x] The floating Captain's Bridge AIBot has a visible `+` action for PDF, DOCX, XLSX, image and text
+  offer sources. Staff selects the PSP and may add an intake note before the private upload.
+- [x] Production migration `offerpsp_file_classification` is applied; staff/service-role grants and
+  anonymous denial were verified. Transactional database E2E passed for both offer and contract paths.
+- [x] Production UI at `https://ops-7q4m2x9k8v3n.vercel.app` was verified with an authenticated staff
+  session: AIBot upload controls are present, and a controlled incoming attachment displayed the
+  inherited BR-Pay link plus the required file-type selector. All synthetic rows were removed.
+- [x] Exact frontend commit `217610908a113da3e5124930fe2bb4fae0af6fbf` is deployed as Vercel
+  production deployment `dpl_EQrwbCGVXsi4AfXCRkwcxk4bqt74` (`READY`).
+
 ### Impact Control — production delivery 2026-08-08
 
 Status: `VERIFIED` for database lifecycle and local frontend. The former daily expiry workflow was
