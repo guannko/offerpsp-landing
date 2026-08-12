@@ -59,11 +59,52 @@ const emptyData: ControlBridgeData = {
 const ControlBridgeContext = createContext<ControlBridgeContextValue | null>(null);
 const asArray = <T,>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
 
+type CoreSnapshot = Pick<
+  ControlBridgeData,
+  | "leads"
+  | "providers"
+  | "routes"
+  | "organizations"
+  | "assignments"
+  | "agentMarginPolicies"
+  | "moduleEntitlements"
+  | "complianceCases"
+  | "commissionSummary"
+> & {
+  cachedAt: number;
+  error: string | null;
+};
+
+const CORE_CACHE_TTL_MS = 30_000;
+const CORE_CACHE_MAX_USERS = 3;
+const coreCache = new Map<string, CoreSnapshot>();
+
+function readCoreCache(userId: string) {
+  const cached = coreCache.get(userId);
+  if (!cached || Date.now() - cached.cachedAt > CORE_CACHE_TTL_MS) {
+    coreCache.delete(userId);
+    return null;
+  }
+  coreCache.delete(userId);
+  coreCache.set(userId, cached);
+  return cached;
+}
+
+function writeCoreCache(userId: string, snapshot: CoreSnapshot) {
+  coreCache.delete(userId);
+  coreCache.set(userId, snapshot);
+  while (coreCache.size > CORE_CACHE_MAX_USERS) {
+    const oldest = coreCache.keys().next().value;
+    if (!oldest) break;
+    coreCache.delete(oldest);
+  }
+}
+
 export function ControlBridgeProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ControlBridgeData>(emptyData);
   const { pathname } = useLocation();
 
-  const load = useCallback(async (userOverride?: User | null) => {
+  const load = useCallback(async (userOverride?: User | null, force = false) => {
     if (!hasSupabaseConfig) {
       setState((current) => ({
         ...current,
@@ -104,6 +145,7 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
       .maybeSingle();
 
     if (staffResult.error || !staffResult.data) {
+      coreCache.delete(user.id);
       setState({
         ...emptyData,
         user,
@@ -118,45 +160,68 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
     const needsMail = pathname.startsWith("/communications");
     const needsSupplyOperations = pathname === "/";
     const skipped = Promise.resolve({ data: null, error: null });
-    const [leadsResult, managementResult, supplyResult, coverageResult, captainsResult, mailResult, ingestionResult, freshnessResult, entitlementsResult, complianceResult] = await Promise.all([
-      supabase.from("offerpsp_leads").select("*").order("submitted_at", { ascending: false }),
-      supabase.rpc("get_offerpsp_management_registry"),
-      supabase.rpc("list_offerpsp_supply"),
-      supabase.rpc("get_offerpsp_supply_coverage"),
+    const cachedCore = force ? null : readCoreCache(user.id);
+    const coreRequest = cachedCore
+      ? Promise.resolve(cachedCore)
+      : Promise.all([
+          supabase.from("offerpsp_leads").select("*").order("submitted_at", { ascending: false }),
+          supabase.rpc("get_offerpsp_management_registry"),
+          supabase.rpc("list_offerpsp_supply"),
+          supabase.rpc("get_offerpsp_supply_coverage"),
+          supabase.rpc("get_offerpsp_module_entitlements"),
+          supabase.rpc("get_offerpsp_pre_compliance_registry"),
+        ]).then(([leadsResult, managementResult, supplyResult, coverageResult, entitlementsResult, complianceResult]) => {
+          const management = (managementResult.data || {}) as Record<string, unknown>;
+          const supply = (supplyResult.data || {}) as Record<string, unknown>;
+          const coverage = (coverageResult.data || {}) as Record<string, unknown>;
+          const firstError = [leadsResult.error, managementResult.error, supplyResult.error, coverageResult.error, entitlementsResult.error, complianceResult.error].find(Boolean);
+          const snapshot: CoreSnapshot = {
+            leads: asArray<Lead>(leadsResult.data),
+            providers: asArray<Provider>(management.providers || supply.providers),
+            routes: asArray<RouteCoverage>(coverage.routes),
+            organizations: asArray<Organization>(management.organizations),
+            assignments: asArray<AgentAssignment>(management.assignments),
+            agentMarginPolicies: asArray<AgentMarginPolicy>(management.agent_margin_policies),
+            moduleEntitlements: asArray<ModuleEntitlement>(entitlementsResult.data),
+            complianceCases: asArray<ComplianceCaseSummary>(complianceResult.data),
+            commissionSummary: (management.commission_summary || {}) as Record<string, number>,
+            cachedAt: Date.now(),
+            error: firstError?.message || null,
+          };
+          writeCoreCache(user.id, snapshot);
+          return snapshot;
+        });
+    const [core, captainsResult, mailResult, ingestionResult, freshnessResult] = await Promise.all([
+      coreRequest,
       needsCaptains ? supabase.rpc("get_offerpsp_captains_bridge") : skipped,
       needsMail ? supabase.rpc("get_offerpsp_mail_center", { p_limit: 250 }) : skipped,
       needsSupplyOperations ? supabase.rpc("list_offerpsp_ingestion_jobs", { p_limit: 100 }) : skipped,
       needsSupplyOperations ? supabase.rpc("list_offerpsp_freshness_reminders") : skipped,
-      supabase.rpc("get_offerpsp_module_entitlements"),
-      supabase.rpc("get_offerpsp_pre_compliance_registry"),
     ]);
 
-    const firstError = [leadsResult.error, managementResult.error, supplyResult.error, coverageResult.error, captainsResult.error, mailResult.error, ingestionResult.error, freshnessResult.error, entitlementsResult.error, complianceResult.error].find(Boolean);
-    const management = (managementResult.data || {}) as Record<string, unknown>;
-    const supply = (supplyResult.data || {}) as Record<string, unknown>;
-    const coverage = (coverageResult.data || {}) as Record<string, unknown>;
+    const scopedError = [captainsResult.error, mailResult.error, ingestionResult.error, freshnessResult.error].find(Boolean);
 
     setState((current) => ({
       user,
       staff: staffResult.data as StaffMember,
-      leads: asArray<Lead>(leadsResult.data),
-      providers: asArray<Provider>(management.providers || supply.providers),
-      routes: asArray<RouteCoverage>(coverage.routes),
-      organizations: asArray<Organization>(management.organizations),
-      assignments: asArray<AgentAssignment>(management.assignments),
-      agentMarginPolicies: asArray<AgentMarginPolicy>(management.agent_margin_policies),
+      leads: core.leads,
+      providers: core.providers,
+      routes: core.routes,
+      organizations: core.organizations,
+      assignments: core.assignments,
+      agentMarginPolicies: core.agentMarginPolicies,
       ingestionJobs: needsSupplyOperations ? asArray<OfferIngestionJob>(ingestionResult.data) : current.ingestionJobs,
       freshnessReminders: needsSupplyOperations ? asArray<FreshnessReminder>(freshnessResult.data) : current.freshnessReminders,
-      moduleEntitlements: asArray<ModuleEntitlement>(entitlementsResult.data),
-      complianceCases: asArray<ComplianceCaseSummary>(complianceResult.data),
-      commissionSummary: (management.commission_summary || {}) as Record<string, number>,
+      moduleEntitlements: core.moduleEntitlements,
+      complianceCases: core.complianceCases,
+      commissionSummary: core.commissionSummary,
       captainsBridge: needsCaptains ? (captainsResult.data || emptyData.captainsBridge) as CaptainsBridgeSnapshot : current.captainsBridge,
       mailCenter: needsMail ? (mailResult.data || emptyData.mailCenter) as MailCenterSnapshot : current.mailCenter,
       loading: false,
       refreshing: false,
       ready: true,
       accessDenied: false,
-      error: firstError?.message || null,
+      error: core.error || scopedError?.message || null,
       lastUpdatedAt: new Date(),
     }));
   }, [pathname]);
@@ -169,11 +234,12 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
     return () => data.subscription.unsubscribe();
   }, [load]);
 
-  const refresh = useCallback(async () => load(state.user), [load, state.user]);
+  const refresh = useCallback(async () => load(state.user, true), [load, state.user]);
   const signOut = useCallback(async () => {
+    if (state.user) coreCache.delete(state.user.id);
     await supabase.auth.signOut();
     setState({ ...emptyData, loading: false });
-  }, []);
+  }, [state.user]);
 
   const value = useMemo(() => ({ ...state, refresh, signOut }), [state, refresh, signOut]);
   return <ControlBridgeContext.Provider value={value}>{children}</ControlBridgeContext.Provider>;

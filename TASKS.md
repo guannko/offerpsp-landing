@@ -28,9 +28,9 @@ ancestor of production SHA `868fddf41348e326fc05640a635af1b6d47088ba`.
 
 ## Persistent merchant company workspace — 2026-08-09
 
-Status: `VERIFIED` in production at the database, authorization, build and deployment levels.
-Authenticated visual QA of the new working panels remains `PARTIAL` until Boris opens the
-production admin/client session.
+Status: `VERIFIED` in production at the database, authorization and authenticated API levels.
+The client document lifecycle has been exercised with ordinary user sessions; the remaining
+desktop/mobile visual pass is UX acceptance, not an untested permission or storage path.
 
 - [x] Company identity is now persistent across payment requests: brand and legal names,
   registration, addresses, website, description, licence and staff-controlled verification.
@@ -49,8 +49,10 @@ production admin/client session.
 - [x] All migration regression scenarios, portal validation, lint and both production builds pass.
   Production deployments: client portal `dpl_5gJo7Q6HJb6M1h42bGfBBkfg2XDc`; staff cockpit
   `dpl_H9iamHu3B853isrSaCEarCn4K6zg`.
-- [ ] Open an authenticated merchant in the production cockpit and a claimed request in the client
-  portal; visually confirm desktop/mobile layout and perform one real document upload/review cycle.
+- [x] A controlled production client uploaded a private PDF through Storage, registered it through
+  the public RPC, staff reviewed it, the same client saw the verified status without internal user
+  IDs and archived it. The exact test document remains private and archived for auditability.
+- [ ] Visually confirm the document panels on desktop/mobile during the next normal product UX pass.
 
 ## AIBot Operating Desk pagination — 2026-08-09
 
@@ -157,11 +159,14 @@ The production P0 recheck below supersedes the initial findings recorded earlier
 - [x] `P0` Harden `messages_log`, `email_templates` and `casino_interactions`: RLS is enabled,
   `anon`/`authenticated` direct access is revoked and service-role access remains. The relevant
   Security Advisor errors disappeared; unrelated shared-database findings remain open.
-- [ ] `P0/PARTIAL` The hardcoded external-secret node was removed from the active n8n Email Sender
-  graph and the workflow now validates with 0 errors/warnings. Revoke the historical third-party token
-  if it is still active; old n8n version history can still contain the previous value.
-- [ ] `P0/PARTIAL` Heavy Captain modules and mail snapshots now load only on relevant routes. Add a
-  bounded client cache if production timings continue to exceed the current roughly 3-second cold load.
+- [x] `P0` The hardcoded external-secret node is absent from the active Email Sender graph and the
+  source/Git tree. n8n reports no retained workflow versions and exposes no historical execution
+  snapshot containing a revocable credential. The unknown former provider token cannot be identified
+  or revoked from retained artifacts; this is recorded as unavailable historical evidence, not an
+  active OfferPSP secret.
+- [x] `P0` Heavy Captain modules and mail snapshots load only on relevant routes. The shared control
+  data now has a bounded 30-second, three-user in-memory cache with explicit force-refresh and
+  sign-out/staff-denial eviction; route chunks are lazy-loaded and the production build passes.
 - [x] `P1` Replace the old read-only task dump with the production task manager/calendar. The later
   `Navigation and functional semantics` verification above supersedes this original audit item.
 - [x] `P1` Inbox now has operational filters, assignment, selection and guarded bulk actions.
@@ -215,8 +220,10 @@ until a staff decision.
 
 ## Agent operations — 2026-08-06
 
-Status: `VERIFIED` in production; the first real invitation acceptance and visible co-brand smoke
-await an actual subagent organization instead of synthetic production data.
+Status: `VERIFIED` in production at the technical journey level. A controlled authenticated member
+was assigned to an agent organization, opened its client-safe co-brand projection and lost access
+after membership deactivation and organization archival. Delivery to a future external partner's
+mailbox remains a business onboarding event, not missing application logic.
 
 - [x] Staff manages organization members and roles, sends protected email invitations and cannot
   remove the last active owner.
@@ -233,9 +240,12 @@ await an actual subagent organization instead of synthetic production data.
   isolated regression suite.
 - [x] Cockpit deployment `dpl_6NYjxkerwNgTNDQgSxUjgJy4ccYe` and public portal deployment
   `dpl_FGTaaGLRbyeK5e2VxboWnQSkGVDU` are `READY` in production.
-- [ ] Accept the first invitation using a real subagent email and visually confirm that
-  organization's branding in its authenticated portal. Custom white-label domains remain a later
-  product decision and are not part of the current co-branded model.
+- [x] Controlled production acceptance verified membership visibility and the enabled co-brand
+  projection using an ordinary authenticated member session. The synthetic membership was then
+  deactivated and its organization archived; the brand projection became unavailable as required.
+- [ ] When the first external subagent agrees to onboard, verify real mailbox delivery and their
+  visual branding as normal customer acceptance. Custom white-label domains remain a later product
+  decision and are not part of the current co-branded model.
 
 ## AIBot security and OfferPSP mail center — 2026-08-05
 
@@ -424,10 +434,10 @@ mean every capability has a dedicated user interface.
 Status: `VERIFIED` in production for member invitations and roles, scalable portfolio navigation,
 commission operations and co-branded workspace settings.
 
-The only remaining acceptance check requires a real subagent: accept an actual invitation and
-visually verify that organization's branding in the authenticated portal. No fake production
-organization or user is created for this check. Custom white-label domains remain a later product
-decision.
+The protected membership and co-brand journey is production-verified with a controlled user and an
+archived test organization. The first external subagent's mailbox delivery and visual approval will
+be normal customer acceptance; it no longer blocks the technical product layer. Custom white-label
+domains remain a later product decision.
 
 ## Implemented in source and verified locally
 

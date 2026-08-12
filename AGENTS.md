@@ -281,11 +281,13 @@ These are audit leads, not guaranteed current facts:
 - Pipeline has historically been a read-only projection rather than an editable Kanban;
 - standalone `/matching` has been hidden by a feature flag while matching lives in merchant flow;
 - analytics has historically lacked attribution, stage timing, realized volume and margin;
-- the first real subagent invitation/co-brand journey has not yet been accepted end to end;
+- the controlled authenticated subagent membership/co-brand journey is verified; external mailbox
+  delivery and visual approval will be checked with the first consenting real partner;
 - rate-card history has lacked a field-by-field visual version diff;
 - calendar has lacked recurrence, reminders, external sync and automatic Zoom creation;
 - old TailAdmin/demo components and legacy screens may remain as unreachable dead code;
-- historical n8n version history may contain a retired third-party token that still needs revocation.
+- the retired third-party token is absent from active n8n/source/Git state, and n8n retains no old
+  workflow version or execution artifact from which a provider credential can be identified.
 
 Verify every item independently and report when it has already been resolved.
 

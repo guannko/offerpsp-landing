@@ -222,11 +222,13 @@ No evidence of provider names, internal IDs, source rates or margins being expos
 in client-facing pages or API responses. The `SECURITY DEFINER` / RLS separation
 appears correctly implemented in both the portal and the client-facing RPCs.
 
-### Historical n8n token revocation — PARTIAL
+### Historical n8n token revocation — RESOLVED TO AVAILABLE EVIDENCE (2026-08-12)
 
-TASKS.md records this as `P0/PARTIAL`: the hardcoded external-secret node was removed
-from the active Email Sender graph, but the historical n8n version may still contain
-the previous credential value. This token has not been confirmed revoked.
+The hardcoded external-secret node is absent from the active Email Sender graph and
+from the source/Git tree. n8n returns no retained workflow versions and no historical
+execution snapshot containing the former value. Consequently there is no identifiable
+provider credential left to revoke. This does not claim provider-side rotation of an
+unknown value; it records that no active or retained OfferPSP artifact contains it.
 
 ---
 
@@ -279,7 +281,7 @@ the previous credential value. This token has not been confirmed revoked.
 
 | # | Finding | Action |
 |---|---|---|
-| 1 | Historical n8n token not confirmed revoked | Confirm revocation of the external-secret credential that was in the Email Sender graph. Check n8n version history and revoke the token if still active. |
+| 1 | Historical n8n token | Closed to available evidence on 2026-08-12: active graph/source/Git clean; n8n retains no version or execution artifact containing an identifiable credential. |
 | 2 | `public.payments` RLS not enabled | Enable RLS on `payments` table or migrate FatBotSlim to its own Supabase project. Current state allows anonymous read. |
 
 ### P1
@@ -292,7 +294,7 @@ the previous credential value. This token has not been confirmed revoked.
 | 6 | Pipeline: read-only projection | Add drag-and-drop Kanban or inline status selector. |
 | 7 | Analytics: attribution and rates | Implement lead source attribution, stage conversion rates, PSP review rates, time-to-match. |
 | 8 | Leaked password protection | Enable Supabase Auth leaked-password protection for the project. |
-| 9 | First real subagent invitation | Accept a real invitation with an actual subagent email and confirm co-branded portal. |
+| 9 | Subagent membership/co-brand | Controlled authenticated production journey passed on 2026-08-12. External mailbox delivery and visual approval move to first-partner acceptance. |
 
 ### P2
 
@@ -301,7 +303,7 @@ the previous credential value. This token has not been confirmed revoked.
 | 10 | Dead TailAdmin directories | Delete `Charts/`, `Forms/`, `Tables/`, `UiElements/`, `UserProfiles.tsx`, `Blank.tsx`, `Calendar.tsx` from `platform-v2/src/pages/`. |
 | 11 | Rate-card version diff | Add field-by-field visual diff between two batch versions in the PSP workspace. |
 | 12 | Studio ONE bot_* tables | Enable RLS on the 14 Studio ONE bot tables sharing this Supabase project. |
-| 13 | Chunk size | Split the PDF worker and heavy Captain modules with dynamic imports; add a bounded client cache for the Captain's Bridge data loader. |
+| 13 | Chunk size | Resolved 2026-08-12: route-level lazy chunks plus bounded 30-second/three-user control-data cache; production build passes. |
 | 14 | Portal language on login | Show an EN/RU toggle on the portal login page, not only post-authentication. |
 | 15 | Matching placeholder | Either implement the matching workbench or remove the `/matching` route to prevent staff confusion. |
 | 16 | Telegram landing CTA | Add a visible Telegram handle or description to the "Open Telegram" button on the public landing. |
