@@ -1,4 +1,4 @@
-const EXPECTED_TOKEN_SHA256 = "93617c50544c2e57a8815335c1034dc6c3410918e4f47602f7d31fae4752915f";
+const EXPECTED_TOKEN_SHA256 = "2e0d085aa01f62912871963f3d9ac54f1f2ec084a998676d8382454785905b8a";
 
 const json = (status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), {

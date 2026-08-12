@@ -851,9 +851,12 @@ The first operational UI is deployed. Daily-use refinement remains.
 - [x] Add guarded staff purge for rejected/test sources. It refuses queued/processing/published
   data and removes the job, non-published draft batch, queue-created provider and private Storage
   object. Production E2E cleanup left the 12 published routes unchanged.
-- [ ] `PARTIAL`: incoming mailbox message bodies are connected and verified in production. Persist
-  binary email attachments and send supported rate-card files into the existing private source
-  adapters and review-only queue before the parser worker.
+- [x] Persist incoming mailbox attachments and connect them to the private review-only offer intake.
+  TXT/MD/CSV/TSV/JSON/HTML/XML, PDF, DOCX and XLSX files are parsed server-side, stored in the private
+  `offerpsp-private-sources` bucket and shown in Mail Center with extraction status, signed download,
+  PSP assignment and a guarded `В очередь офферов` action. Production E2E on 2026-08-12 verified
+  private storage, staff UI, a `review` ingestion job and zero published routes; synthetic database
+  rows were removed after the test.
 - [x] Add browser-side English/Russian OCR for scanned PDF pages and PNG/JPEG/WebP sources.
   Domain labels are normalized before parsing, and the canonical `GEO - Country` header is accepted.
   Production E2E converted a generated PNG rate card into one complete India/INR/UPI draft route
@@ -865,10 +868,11 @@ The first operational UI is deployed. Daily-use refinement remains.
   the existing provider confirmation timestamp, close the reminder and complete its task; incoming
   drafts remain review-only and never falsely confirm partner terms.
 
-The production queue, AIBot text and attachment transport, automatic text parser and private
-admin-file ingestion are connected and verified with a real Telegram file. Incoming mailbox message
-ingestion is active and idempotent; binary email attachments still need the private-source adapter.
-Partner follow-up reminders are advisory and do not control offer availability.
+The production queue, AIBot text and attachment transport, automatic text parser, private admin-file
+ingestion and incoming mailbox attachments are connected to the same review-only intake. Mail
+ingestion is active and idempotent; files remain private and cannot publish routes without the
+existing staff review/publish flow. Partner follow-up reminders are advisory and do not control offer
+availability.
 
 ### Impact Control — production delivery 2026-08-08
 

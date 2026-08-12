@@ -273,9 +273,9 @@ Boris separately asks to implement the findings.
 
 These are audit leads, not guaranteed current facts:
 
-- incoming mailbox messages are currently polled every minute through n8n → protected Vercel API
-  → Titan IMAP → protected Supabase Edge Function → service-only RPC. Binary email attachments are
-  not yet connected to the offer source parser and remain a separate verification target;
+- incoming mailbox messages are polled every minute through n8n → protected Vercel API → Titan IMAP
+  → protected Supabase Edge Function → service-only RPC. Supported binary attachments are stored in
+  private Storage and require explicit staff assignment before entering the review-only offer parser;
 - outbound Telegram has historically lacked unified inbound replies and retry/outbox handling;
 - Inbox has historically lacked triage filters, bulk actions and inline assignment;
 - Pipeline has historically been a read-only projection rather than an editable Kanban;
