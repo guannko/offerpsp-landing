@@ -4,6 +4,7 @@ import { simpleParser } from "mailparser";
 
 const DEFAULT_BATCH_LIMIT = 25;
 const MAX_BATCH_LIMIT = 50;
+const PROCESSED_FLAG = "$OfferPSPIngested";
 
 const addressList = (addressObject) =>
   (addressObject?.value || [])
@@ -109,16 +110,17 @@ export async function pollOfferPspMailbox(config, dependencies = {}) {
     const lock = await client.getMailboxLock("INBOX");
     try {
       const uidValidity = String(client.mailbox?.uidValidity || "0");
-      const unseenUids = (await client.search({ seen: false }, { uid: true })).slice(0, limit);
-      summary.scanned = unseenUids.length;
+      const pendingUids = (await client.search({ not: { keyword: PROCESSED_FLAG } }, { uid: true }))
+        .slice(-limit);
+      summary.scanned = pendingUids.length;
 
-      for (const uid of unseenUids) {
+      for (const uid of pendingUids) {
         try {
           const message = await client.fetchOne(uid, { source: true }, { uid: true });
           if (!message?.source) throw new Error("IMAP message source is empty");
           const payload = await parseMessage({ source: message.source, uid, uidValidity });
           const result = await ingestPayload(payload, config);
-          await client.messageFlagsAdd(uid, ["\\Seen"], { uid: true });
+          await client.messageFlagsAdd(uid, [PROCESSED_FLAG], { uid: true });
           if (result?.duplicate) summary.duplicates += 1;
           else summary.ingested += 1;
         } catch (error) {

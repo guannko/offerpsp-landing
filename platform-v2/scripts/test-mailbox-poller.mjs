@@ -18,16 +18,17 @@ assert.deepEqual(parsed.to, ["bizdev@offerpsp.com"]);
 assert.equal(parsed.message_id, "<offerpsp-test@example.com>");
 assert.match(parsed.text, /External inbound mailbox verification/);
 
-const seen = [];
+const marked = [];
+const searches = [];
 class FakeImapClient {
   constructor() {
     this.mailbox = { uidValidity: 42n };
   }
   async connect() {}
   async getMailboxLock() { return { release() {} }; }
-  async search() { return [7]; }
+  async search(query) { searches.push(query); return [7]; }
   async fetchOne() { return { source }; }
-  async messageFlagsAdd(uid, flags) { seen.push([uid, flags]); }
+  async messageFlagsAdd(uid, flags) { marked.push([uid, flags]); }
   async logout() {}
 }
 
@@ -47,5 +48,6 @@ const summary = await pollOfferPspMailbox(
 );
 
 assert.deepEqual(summary, { scanned: 1, ingested: 1, duplicates: 0, failed: 0 });
-assert.deepEqual(seen, [[7, ["\\Seen"]]]);
+assert.deepEqual(searches, [{ not: { keyword: "$OfferPSPIngested" } }]);
+assert.deepEqual(marked, [[7, ["$OfferPSPIngested"]]]);
 console.log("OfferPSP mailbox poller tests passed");
