@@ -9,12 +9,13 @@ import {
   Panel,
   SkeletonPage,
   StatusPill,
+  statusLabels,
 } from "../components/control/Ui";
 import { useControlBridge } from "../context/ControlBridgeContext";
 import { supabase } from "../lib/supabase";
 import { extractOfferSource, safeStorageName } from "../lib/offerSourceFiles";
 import ResearchEntityEditor from "../components/control/ResearchEntityEditor";
-import type { AgentPspProvider, Lead, OfferIngestionJob, RouteCoverage } from "../types/offerpsp";
+import type { AgentPspProvider, Lead, OfferIngestionJob, RouteCoverage, StaffMember } from "../types/offerpsp";
 
 const activeStatuses = ["new", "qualifying", "needs_clarification", "matching", "matched", "shortlist_ready", "shared", "option_selected", "dossier_ready", "provider_reviewing", "provider_needs_info", "provider_accepted", "telegram_created", "zoom_scheduled", "negotiating"];
 
@@ -91,10 +92,88 @@ export function CommandCenter() {
 }
 
 export function InboxPage() {
-  const { leads, complianceCases } = useControlBridge();
+  const { leads, complianceCases, refresh } = useControlBridge();
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("all");
+  const [owner, setOwner] = useState("all");
+  const [risk, setRisk] = useState("all");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [action, setAction] = useState("assign");
+  const [actionValue, setActionValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ error?: boolean; text: string } | null>(null);
   const attentionLeadIds = new Set(complianceCases.filter((item) => ["pending", "screening", "manual_review", "needs_info", "hold"].includes(item.case_status)).map((item) => item.lead_id));
-  const incoming = leads.filter((lead) => ["new", "qualifying", "needs_clarification"].includes(lead.status || "") || attentionLeadIds.has(lead.lead_id));
-  return <PageFrame title="Входящие" description="Очередь новых и требующих решения заявок OfferPSP."><PageHeading eyebrow="Operations" title="Входящие заявки" description="Новые, квалифицируемые и требующие уточнения записи из операционной базы OfferPSP."/><LeadTable leads={incoming}/></PageFrame>;
+  const incoming = leads.filter((lead) => lead.record_state !== "archived" && (["new", "qualifying", "needs_clarification"].includes(lead.status || "") || attentionLeadIds.has(lead.lead_id)));
+
+  useEffect(() => {
+    void supabase.from("offerpsp_staff_members").select("user_id,display_name,role,active").eq("active", true).order("display_name")
+      .then(({ data }) => setStaff((data || []) as StaffMember[]));
+  }, []);
+
+  const filtered = incoming.filter((lead) => {
+    if (status === "attention" && !attentionLeadIds.has(lead.lead_id)) return false;
+    if (status !== "all" && status !== "attention" && lead.status !== status) return false;
+    if (owner === "unassigned" && lead.assigned_to) return false;
+    if (owner !== "all" && owner !== "unassigned" && lead.assigned_to !== owner) return false;
+    if (risk !== "all" && (lead.risk_segment || "unknown") !== risk) return false;
+    if (!query.trim()) return true;
+    return [lead.company, lead.name, lead.work_email, lead.telegram, lead.company_url, lead.vertical, list(lead.geos), list(lead.methods)]
+      .filter(Boolean).join(" ").toLowerCase().includes(query.trim().toLowerCase());
+  });
+
+  const selectedLeads = filtered.filter((lead) => selected.has(lead.lead_id));
+  const allVisibleSelected = filtered.length > 0 && filtered.every((lead) => selected.has(lead.lead_id));
+  const staffName = (userId?: string | null) => staff.find((member) => member.user_id === userId)?.display_name || (userId ? "Назначен" : "Не назначен");
+
+  const toggle = (leadId: string) => setSelected((current) => {
+    const next = new Set(current);
+    if (next.has(leadId)) next.delete(leadId); else next.add(leadId);
+    return next;
+  });
+  const toggleVisible = () => setSelected((current) => {
+    const next = new Set(current);
+    if (allVisibleSelected) filtered.forEach((lead) => next.delete(lead.lead_id));
+    else filtered.forEach((lead) => next.add(lead.lead_id));
+    return next;
+  });
+
+  async function applyBulk() {
+    if (!selectedLeads.length) return;
+    if (action === "status" && !actionValue) { setMessage({ error: true, text: "Выберите новый статус." }); return; }
+    const actionLabel = action === "assign" ? "сменить ответственного" : action === "status" ? "сменить статус" : "скрыть из рабочих списков";
+    if (!window.confirm(`${actionLabel} для ${selectedLeads.length} заявок?`)) return;
+    setBusy(true); setMessage(null);
+    const result = await supabase.rpc("bulk_manage_offerpsp_leads", {
+      p_lead_ids: selectedLeads.map((lead) => lead.lead_id),
+      p_action: action,
+      p_value: action === "archive" ? null : actionValue || null,
+    });
+    if (result.error) setMessage({ error: true, text: result.error.message });
+    else {
+      setSelected(new Set());
+      await refresh();
+      setMessage({ text: `Обновлено заявок: ${Number((result.data as { updated_count?: number } | null)?.updated_count || selectedLeads.length)}.` });
+    }
+    setBusy(false);
+  }
+
+  return <PageFrame title="Входящие" description="Очередь новых и требующих решения заявок OfferPSP.">
+    <PageHeading eyebrow="Operations" title="Входящие заявки" description="Рабочий диспетчер: отфильтруйте поток, назначьте владельца и обработайте несколько заявок за одно действие."/>
+    <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4"><Metric label="В очереди" value={incoming.length} hint="новые и требующие решения"/><Metric label="Без владельца" value={incoming.filter((lead)=>!lead.assigned_to).length} hint="нужно назначить" tone="warning"/><Metric label="Нужны данные" value={incoming.filter((lead)=>lead.status === "needs_clarification").length} hint="ждут уточнения"/><Metric label="На проверке" value={incoming.filter((lead)=>attentionLeadIds.has(lead.lead_id)).length} hint="контрольный список" tone="warning"/></div>
+    {message && <div className={`mb-4 rounded-xl border px-4 py-3 text-sm ${message.error ? "border-error-200 bg-error-50 text-error-700 dark:border-error-500/20 dark:bg-error-500/10 dark:text-error-300" : "border-success-200 bg-success-50 text-success-700 dark:border-success-500/20 dark:bg-success-500/10 dark:text-success-300"}`}>{message.text}</div>}
+    <Panel className="mb-5"><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(260px,1fr)_180px_210px_180px]">
+      <input className="h-11 rounded-lg border border-gray-200 px-3 text-sm outline-none focus:border-brand-400 dark:border-gray-700 dark:bg-gray-900 dark:text-white" value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Компания, контакт, GEO или метод…"/>
+      <select className="h-11 rounded-lg border border-gray-200 px-3 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white" value={status} onChange={(event)=>setStatus(event.target.value)}><option value="all">Все статусы</option><option value="new">Новые</option><option value="qualifying">Квалификация</option><option value="needs_clarification">Нужны данные</option><option value="attention">Требуют проверки</option></select>
+      <select className="h-11 rounded-lg border border-gray-200 px-3 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white" value={owner} onChange={(event)=>setOwner(event.target.value)}><option value="all">Все ответственные</option><option value="unassigned">Без владельца</option>{staff.map((member)=><option key={member.user_id} value={member.user_id}>{member.display_name || member.user_id}</option>)}</select>
+      <select className="h-11 rounded-lg border border-gray-200 px-3 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white" value={risk} onChange={(event)=>setRisk(event.target.value)}><option value="all">Любая категория</option><option value="low">Low-risk</option><option value="high">High-risk</option><option value="unknown">Не определена</option></select>
+    </div><p className="mt-3 text-xs text-gray-400">Показано {filtered.length} из {incoming.length}. Отбор не меняет данные, пока вы не подтвердите массовое действие.</p></Panel>
+    {selectedLeads.length > 0 && <Panel className="mb-5 border-brand-200 bg-brand-50/50 dark:border-brand-500/30 dark:bg-brand-500/5"><div className="flex flex-col gap-3 xl:flex-row xl:items-center"><strong className="mr-auto text-sm text-gray-900 dark:text-white">Выбрано: {selectedLeads.length}</strong><select className="h-10 rounded-lg border border-gray-200 px-3 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white" value={action} onChange={(event)=>{setAction(event.target.value);setActionValue("");}}><option value="assign">Назначить владельца</option><option value="status">Изменить статус</option><option value="archive">Скрыть / в архив</option></select>{action === "assign" && <select className="h-10 rounded-lg border border-gray-200 px-3 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white" value={actionValue} onChange={(event)=>setActionValue(event.target.value)}><option value="">Снять назначение</option>{staff.map((member)=><option key={member.user_id} value={member.user_id}>{member.display_name || member.user_id}</option>)}</select>}{action === "status" && <select className="h-10 rounded-lg border border-gray-200 px-3 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white" value={actionValue} onChange={(event)=>setActionValue(event.target.value)}><option value="">Выберите статус</option>{["new","qualifying","needs_clarification","matching","closed","spam"].map((value)=><option key={value} value={value}>{statusLabels[value] || value}</option>)}</select>}<button disabled={busy} onClick={()=>void applyBulk()} className="rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40">{busy ? "Применяю…" : "Применить"}</button><button disabled={busy} onClick={()=>setSelected(new Set())} className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm dark:border-gray-700">Снять выбор</button></div></Panel>}
+    {!filtered.length ? <Panel><EmptyState title="Заявки не найдены" description="Измените фильтры — данные не удалены."/></Panel> : <>
+      <div className="space-y-3 md:hidden">{filtered.map((lead)=>{const stage=merchantStageMeta(lead);return <div key={lead.lead_id} className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900"><div className="flex items-start gap-3"><input type="checkbox" checked={selected.has(lead.lead_id)} onChange={()=>toggle(lead.lead_id)} className="mt-1 h-5 w-5 accent-[#ff477d]"/><Link to={`/merchants/${lead.lead_id}`} className="min-w-0 flex-1"><strong className="block truncate text-sm text-gray-900 dark:text-white">{lead.company || "Без названия"}</strong><span className="mt-1 block text-xs text-gray-400">{lead.name || lead.work_email || "Контакт не указан"}</span><div className="mt-3 flex flex-wrap gap-2"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${stage.className}`}>{stage.label}</span><span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs dark:bg-white/5">{staffName(lead.assigned_to)}</span></div></Link></div></div>;})}</div>
+      <Panel className="hidden overflow-hidden !p-0 md:block"><div className="overflow-x-auto"><table className="min-w-full"><thead className="bg-gray-50 dark:bg-white/[0.03]"><tr><th className="px-4 py-3"><input type="checkbox" checked={allVisibleSelected} onChange={toggleVisible} className="h-4 w-4 accent-[#ff477d]"/></th>{["Компания","Запрос","Этап","Ответственный","Обновлено",""].map((head)=><th key={head} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">{head}</th>)}</tr></thead><tbody className="divide-y divide-gray-100 dark:divide-gray-800">{filtered.map((lead)=>{const stage=merchantStageMeta(lead);return <tr key={lead.lead_id} className="hover:bg-gray-50/70 dark:hover:bg-white/[0.02]"><td className="px-4 py-4"><input type="checkbox" checked={selected.has(lead.lead_id)} onChange={()=>toggle(lead.lead_id)} className="h-4 w-4 accent-[#ff477d]"/></td><td className="px-4 py-4"><strong className="block text-sm text-gray-900 dark:text-white">{lead.company || "Без названия"}</strong><span className="mt-1 block text-xs text-gray-400">{lead.name || "—"} · {lead.work_email || lead.telegram || "нет контакта"}</span></td><td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">{lead.vertical || "—"}<span className="block text-xs text-gray-400">{list(lead.geos)} · {list(lead.methods)}</span></td><td className="px-4 py-4"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${stage.className}`}>{stage.label}</span>{attentionLeadIds.has(lead.lead_id)&&<span className="mt-1 block text-xs font-semibold text-warning-600">Требует проверки</span>}</td><td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">{staffName(lead.assigned_to)}</td><td className="px-4 py-4 text-sm text-gray-500">{date(lead.updated_at || lead.submitted_at)}</td><td className="px-4 py-4"><Link to={`/merchants/${lead.lead_id}`} className="text-sm font-semibold text-brand-500">Открыть →</Link></td></tr>;})}</tbody></table></div></Panel>
+    </>}
+  </PageFrame>;
 }
 
 const pipelineColumns = [

@@ -264,6 +264,7 @@ async function applyMigrations() {
     "20260812110000_offerpsp_route_coverage_mode_default_fix.sql",
     "20260812111500_offerpsp_atomic_replacement_compatibility_contract.sql",
     "20260812142000_offerpsp_email_attachments.sql",
+    "20260812170000_offerpsp_inbox_operations.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -2631,6 +2632,70 @@ async function verifyOperationsAndIntegrations() {
   process.stdout.write("PASS task CRUD, calendar data, safe integration settings, Telegram log and staff-only grants\n");
 }
 
+async function verifyInboxOperations() {
+  await setUser(STAFF_ID);
+  await setRole("authenticated");
+
+  const inserted = await query(`
+    insert into public.offerpsp_leads (
+      name, work_email, company, vertical, geos, consent, source, status
+    ) values
+      ('Inbox E2E A', 'inbox-e2e-a@example.invalid', 'Inbox E2E A', 'Marketplace', 'EU', true, 'regression', 'new'),
+      ('Inbox E2E B', 'inbox-e2e-b@example.invalid', 'Inbox E2E B', 'Marketplace', 'EU', true, 'regression', 'new')
+    returning lead_id
+  `);
+  const leadIds = inserted.rows.map((item) => item.lead_id);
+
+  await query(
+    "select public.bulk_manage_offerpsp_leads($1::uuid[], 'assign', $2)",
+    [leadIds, STAFF_ID],
+  );
+  await query(
+    "select public.bulk_manage_offerpsp_leads($1::uuid[], 'status', 'qualifying')",
+    [leadIds],
+  );
+  await query(
+    "select public.bulk_manage_offerpsp_leads($1::uuid[], 'archive', null)",
+    [leadIds],
+  );
+
+  const finalState = await query(`
+    select
+      count(*) filter (
+        where assigned_to = $2::uuid
+          and status = 'qualifying'
+          and record_state = 'archived'
+      )::integer as final_rows,
+      (
+        select count(*)::integer
+        from public.offerpsp_lead_activities
+        where lead_id = any($1::uuid[])
+          and activity_type = 'merchant_bulk_updated'
+      ) as audit_rows
+    from public.offerpsp_leads
+    where lead_id = any($1::uuid[])
+  `, [leadIds, STAFF_ID]);
+  if (finalState.rows[0].final_rows !== 2 || finalState.rows[0].audit_rows !== 6) {
+    throw new Error(`Inbox bulk operation was not atomic or auditable: ${JSON.stringify(finalState.rows[0])}`);
+  }
+
+  const grants = await query(`select
+    has_function_privilege('authenticated', 'public.bulk_manage_offerpsp_leads(uuid[],text,text)', 'EXECUTE') as staff_execute,
+    has_function_privilege('anon', 'public.bulk_manage_offerpsp_leads(uuid[],text,text)', 'EXECUTE') as anon_execute
+  `);
+  if (!grants.rows[0].staff_execute || grants.rows[0].anon_execute) {
+    throw new Error("Inbox bulk operation grants exceed the staff-only boundary");
+  }
+
+  await setUser(CLIENT_ID);
+  await expectQueryFailure(
+    "select public.bulk_manage_offerpsp_leads($1::uuid[], 'archive', null)",
+    [leadIds],
+    "OfferPSP staff access required",
+  );
+  process.stdout.write("PASS atomic Inbox assignment, status, archive, audit log and staff-only boundary\n");
+}
+
 async function verifyCounterpartyOrganizer() {
   const casino = await query(`insert into public.casino_leads
     (name, website, geo, email, contact_status, score, source, record_state)
@@ -2869,6 +2934,7 @@ try {
   await verifyAtomicRouteReplacement();
   await verifyCounterpartyOrganizer();
   await verifyOperationsAndIntegrations();
+  await verifyInboxOperations();
   await verifyPortalLeadClaims();
   await verifyPreComplianceGate();
   await importPreparedDrafts();
