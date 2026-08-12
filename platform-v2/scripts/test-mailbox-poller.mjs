@@ -17,6 +17,35 @@ assert.equal(parsed.from_email, "partner@example.com");
 assert.deepEqual(parsed.to, ["bizdev@offerpsp.com"]);
 assert.equal(parsed.message_id, "<offerpsp-test@example.com>");
 assert.match(parsed.text, /External inbound mailbox verification/);
+assert.deepEqual(parsed.attachments, []);
+
+const multipartSource = Buffer.from([
+  "From: PAYOK <partner@example.com>",
+  "To: bizdev@offerpsp.com",
+  "Subject: New PAYOK offer",
+  "Message-ID: <offerpsp-attachment-test@example.com>",
+  "MIME-Version: 1.0",
+  "Content-Type: multipart/mixed; boundary=offerpsp-boundary",
+  "",
+  "--offerpsp-boundary",
+  "Content-Type: text/plain; charset=utf-8",
+  "",
+  "Please review the attached rate card.",
+  "--offerpsp-boundary",
+  "Content-Type: text/plain; name=PAYOK-offer.txt",
+  "Content-Disposition: attachment; filename=PAYOK-offer.txt",
+  "Content-Transfer-Encoding: base64",
+  "",
+  Buffer.from("GEO: India\nMethod: UPI\nMDR PayIn: 6%").toString("base64"),
+  "--offerpsp-boundary--",
+  "",
+].join("\r\n"));
+const parsedWithAttachment = await parseMailboxMessage({ source: multipartSource, uid: 8, uidValidity: "42" });
+assert.equal(parsedWithAttachment.attachment_count, 1);
+assert.equal(parsedWithAttachment.attachments[0].filename, "PAYOK-offer.txt");
+assert.equal(parsedWithAttachment.attachments[0].status, "extracted");
+assert.match(parsedWithAttachment.attachments[0].extracted_text, /MDR PayIn: 6%/);
+assert.equal(Buffer.from(parsedWithAttachment.attachments[0].content_base64, "base64").toString("utf8"), "GEO: India\nMethod: UPI\nMDR PayIn: 6%");
 
 const marked = [];
 const searches = [];

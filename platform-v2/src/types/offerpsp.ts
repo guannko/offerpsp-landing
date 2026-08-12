@@ -124,10 +124,29 @@ export type EmailMessage = {
   created_at: string;
 };
 
+export type EmailAttachment = {
+  id: string;
+  message_id: string;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  storage_bucket: string;
+  storage_path: string;
+  extraction_method?: string | null;
+  extraction_error?: string | null;
+  has_extracted_text: boolean;
+  provider_id?: string | null;
+  provider_name?: string | null;
+  ingestion_job_id?: string | null;
+  status: "stored" | "extracted" | "needs_ocr" | "needs_review" | "queued" | "failed";
+  created_at: string;
+};
+
 export type MailCenterSnapshot = {
-  metrics: { threads: number; unread: number; awaiting_reply: number; follow_up: number };
+  metrics: { threads: number; unread: number; awaiting_reply: number; follow_up: number; attachments_to_review?: number };
   threads: EmailThread[];
   messages: EmailMessage[];
+  attachments: EmailAttachment[];
 };
 
 export type TelegramLog = {

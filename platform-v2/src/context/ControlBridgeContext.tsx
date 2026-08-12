@@ -47,7 +47,7 @@ const emptyData: ControlBridgeData = {
   complianceCases: [],
   commissionSummary: {},
   captainsBridge: { casino_leads: [], psp_providers: [], email_drafts: [], telegram_log: [], bot_tasks: [], offerpsp_tasks: [] },
-  mailCenter: { metrics: { threads: 0, unread: 0, awaiting_reply: 0, follow_up: 0 }, threads: [], messages: [] },
+  mailCenter: { metrics: { threads: 0, unread: 0, awaiting_reply: 0, follow_up: 0, attachments_to_review: 0 }, threads: [], messages: [], attachments: [] },
   loading: true,
   refreshing: false,
   ready: false,

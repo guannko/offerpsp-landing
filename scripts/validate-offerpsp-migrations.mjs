@@ -260,8 +260,10 @@ async function applyMigrations() {
     "20260811114342_offerpsp_korea_geo_correction.sql",
     "20260811133000_offerpsp_risk_segments.sql",
     "20260811201417_offerpsp_lead_attribution.sql",
+    "20260811233050_offerpsp_mail_ingest_idempotency.sql",
     "20260812110000_offerpsp_route_coverage_mode_default_fix.sql",
     "20260812111500_offerpsp_atomic_replacement_compatibility_contract.sql",
+    "20260812142000_offerpsp_email_attachments.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {

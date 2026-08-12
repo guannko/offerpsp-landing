@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
+import { prepareOfferEmailAttachments } from "./offer-email-attachments.mjs";
 
 const DEFAULT_BATCH_LIMIT = 25;
 const MAX_BATCH_LIMIT = 50;
@@ -36,6 +37,7 @@ export async function parseMailboxMessage({ source, uid, uidValidity }) {
   });
   const fromEmail = firstAddress(parsed.from);
   if (!fromEmail) throw new Error("Inbound email has no valid sender");
+  const attachments = await prepareOfferEmailAttachments(parsed.attachments || []);
 
   return {
     from_email: fromEmail,
@@ -59,7 +61,8 @@ export async function parseMailboxMessage({ source, uid, uidValidity }) {
     },
     imap_uid: uid,
     imap_uid_validity: uidValidity,
-    attachment_count: parsed.attachments?.length || 0,
+    attachment_count: attachments.length,
+    attachments,
   };
 }
 
