@@ -106,19 +106,23 @@ type ComplianceWorkspace = {
 type Tab = "overview" | "compliance" | "company" | "profile" | "contacts" | "matching" | "preview" | "deal" | "communications" | "documents" | "tasks" | "activity";
 
 const tabs: Array<{ id: Tab; label: string }> = [
-  { id: "overview", label: "Обзор" },
-  { id: "compliance", label: "Проверка" },
   { id: "company", label: "Компания" },
   { id: "profile", label: "Платёжный запрос" },
   { id: "contacts", label: "Контакты" },
   { id: "matching", label: "Офферы" },
   { id: "preview", label: "Кабинет клиента" },
-  { id: "deal", label: "Сделка" },
-  { id: "communications", label: "Связь" },
+  { id: "communications", label: "Сделка и связь" },
   { id: "documents", label: "Документы" },
   { id: "tasks", label: "Задачи" },
   { id: "activity", label: "История" },
 ];
+
+const normalizeTab = (tab: string | null): Tab | null => {
+  if (tab === "overview") return "company";
+  if (tab === "deal") return "communications";
+  if (tab && (["compliance", ...tabs.map((item) => item.id)] as string[]).includes(tab)) return tab as Tab;
+  return null;
+};
 
 const merchantStatusOptions: QuickStatusOption[] = [
   { value: "new", label: "Новый" },
@@ -214,7 +218,7 @@ export default function MerchantWorkspace() {
   const [searchParams] = useSearchParams();
   const { leads, routes, moduleEntitlements, loading: bridgeLoading, refresh } = useControlBridge();
   const lead = leads.find((candidate) => candidate.lead_id === leadId);
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>("company");
   const [matches, setMatches] = useState<Match[]>([]);
   const [shortlists, setShortlists] = useState<Shortlist[]>([]);
   const [dealWorkspace, setDealWorkspace] = useState<DealWorkspace | null>(null);
@@ -259,8 +263,8 @@ export default function MerchantWorkspace() {
   }, [bridgeLoading, lead, loadWorkspace]);
 
   useEffect(() => {
-    const requestedTab = searchParams.get("tab");
-    if (requestedTab && tabs.some((item) => item.id === requestedTab)) setTab(requestedTab as Tab);
+    const requestedTab = normalizeTab(searchParams.get("tab"));
+    if (requestedTab) setTab(requestedTab);
   }, [searchParams]);
 
   const latest = shortlists[0];
@@ -459,7 +463,7 @@ export default function MerchantWorkspace() {
       <div className="flex flex-wrap gap-2">
         <button onClick={() => void Promise.all([loadWorkspace(), entityWorkspace.refresh()])} disabled={loading || entityWorkspace.loading || Boolean(busy)} className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-brand-300 hover:text-brand-500 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300">Обновить</button>
         <VisibilityToggleButton hidden={lead.record_state === "archived"} busy={busy === "merchant-visibility"} onToggle={changeMerchantVisibility}/>
-        <button onClick={() => setTab(complianceWorkspace?.case.case_status === "cleared" ? "matching" : "compliance")} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600">{complianceWorkspace?.case.case_status === "cleared" ? "Подобрать и отправить офферы" : "Проверить заявку"}</button>
+        <button onClick={() => setTab("compliance")} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600">Проверить заявку</button>
       </div>
     </div>
 
@@ -470,12 +474,10 @@ export default function MerchantWorkspace() {
       {tabs.map((item) => <button key={item.id} onClick={() => setTab(item.id)} className={`whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium ${tab === item.id ? "bg-brand-500 text-white" : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"}`}>{item.label}</button>)}
     </div>
 
-    {loading ? <SkeletonPage/> : tab === "overview"
-      ? <Overview lead={lead} matches={matches} shortlist={latest}/>
-      : tab === "compliance"
+    {loading ? <SkeletonPage/> : tab === "compliance"
         ? <CompliancePanel workspace={complianceWorkspace} busy={busy} onSave={(input) => void saveComplianceDecision(input)}/>
-      : tab === "company"
-        ? <MerchantCompanyWorkspace leadId={lead.lead_id} onChanged={async () => { await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]); }}/>
+      : tab === "company" || tab === "overview"
+        ? <div className="space-y-6"><Overview lead={lead} matches={matches} shortlist={latest}/><MerchantCompanyWorkspace leadId={lead.lead_id} onChanged={async () => { await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]); }}/></div>
       : tab === "profile"
         ? <MerchantProfileEditor lead={lead} onChanged={async () => { await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]); }}/>
       : tab === "contacts"
@@ -498,10 +500,8 @@ export default function MerchantWorkspace() {
           />
       : tab === "preview"
           ? <Preview shortlist={latest} recipient={lead.work_email} busy={busy} onShare={() => void shareLatest()} onEmail={(locale) => void emailLatest(locale)}/>
-      : tab === "deal"
-          ? <DealDeskPanel workspace={dealWorkspace} reload={async () => { await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]); }}/>
-      : tab === "communications"
-          ? (entityWorkspace.loading ? <SkeletonPage/> : <CommunicationsPanel leadId={lead.lead_id} conversations={entityWorkspace.data.conversations} emails={entityWorkspace.data.emails}/>)
+      : tab === "communications" || tab === "deal"
+          ? (entityWorkspace.loading ? <SkeletonPage/> : <div className="space-y-6"><DealDeskPanel workspace={dealWorkspace} reload={async () => { await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]); }}/><CommunicationsPanel leadId={lead.lead_id} conversations={entityWorkspace.data.conversations} emails={entityWorkspace.data.emails}/></div>)
       : tab === "documents"
           ? (entityWorkspace.loading ? <SkeletonPage/> : <DocumentsPanel documents={entityWorkspace.data.documents} busy={entityWorkspace.busy} onSave={entityWorkspace.saveDocument} onArchive={entityWorkspace.archiveDocument}/>)
       : tab === "tasks"
