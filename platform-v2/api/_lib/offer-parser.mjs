@@ -417,7 +417,10 @@ function extractFixedFee(line) {
   const prefix = line.match(/\+\s*(A\$|€|\$|₽)\s*(\d+(?:[.,]\d+)?)/i);
   const match = suffix || prefix;
   if (!match) return null;
-  const amount = parseDecimal(suffix ? match[1] : match[2]);
+  // Fixed monetary amounts use locale-dependent grouping in incoming rate
+  // cards (for example `6,000 IDR`). Percentage values are parsed as
+  // decimals elsewhere; monetary amounts must use the grouping-aware parser.
+  const amount = parseAmount(suffix ? match[1] : match[2]);
   const symbol = (suffix ? match[2] : match[1]).toUpperCase();
   const currency = ({ "A$": "AUD", "€": "EUR", "$": "USD", "РУБ": "RUB", "₽": "RUB" }[symbol] || symbol);
   if (![...CURRENCY_CODES, "USDT", "USDC"].includes(currency)) return null;
