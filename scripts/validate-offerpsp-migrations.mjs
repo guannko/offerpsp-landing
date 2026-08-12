@@ -265,6 +265,8 @@ async function applyMigrations() {
     "20260812111500_offerpsp_atomic_replacement_compatibility_contract.sql",
     "20260812142000_offerpsp_email_attachments.sql",
     "20260812170000_offerpsp_inbox_operations.sql",
+    "20260812183000_aibot_durable_memory.sql",
+    "20260812190000_aibot_history_search.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -2367,6 +2369,98 @@ async function verifyAibotServiceBoundary() {
   process.stdout.write("PASS AIBot service RPCs, RLS and direct-access boundary\n");
 }
 
+async function verifyAibotDurableMemory() {
+  const grantsResult = await query(`select
+    has_table_privilege('service_role', 'public.aibot_memories', 'SELECT,INSERT,UPDATE,DELETE') as service_dml,
+    has_table_privilege('anon', 'public.aibot_memories', 'SELECT') as anon_select,
+    has_table_privilege('authenticated', 'public.aibot_memories', 'SELECT') as authenticated_select,
+    has_function_privilege('service_role', 'public.aibot_n8n_memory_v1(jsonb)', 'EXECUTE') as service_memory,
+    has_function_privilege('anon', 'public.aibot_n8n_memory_v1(jsonb)', 'EXECUTE') as anon_memory,
+    has_function_privilege('authenticated', 'public.aibot_n8n_get_agent_context_v1(text, text, text, integer, integer)', 'EXECUTE') as authenticated_context,
+    has_function_privilege('service_role', 'public.aibot_n8n_search_chat_history_v1(jsonb)', 'EXECUTE') as service_history,
+    has_function_privilege('anon', 'public.aibot_n8n_search_chat_history_v1(jsonb)', 'EXECUTE') as anon_history`);
+  const grants = grantsResult.rows[0];
+  if (!grants.service_dml || grants.anon_select || grants.authenticated_select
+      || !grants.service_memory || grants.anon_memory || grants.authenticated_context
+      || !grants.service_history || grants.anon_history) {
+    throw new Error("AIBot durable memory is not service-role-only");
+  }
+
+  const profileKey = `BIXOFFPSP-TEST-${Date.now()}`;
+  const telegramChatId = `telegram-memory-${Date.now()}`;
+  const webChatId = `web-memory-${Date.now()}`;
+  const memoryKey = "decision.test_shared_memory";
+
+  const remembered = await query(
+    "select public.aibot_n8n_memory_v1($1::jsonb) as value",
+    [JSON.stringify({
+      action: "remember",
+      profile_key: profileKey,
+      scope: "offerpsp",
+      memory_key: memoryKey,
+      memory_type: "decision",
+      content: "Telegram and Captain's Bridge share one project memory.",
+      importance: 90,
+      source_channel: "telegram",
+      source_chat_id: telegramChatId,
+    })],
+  );
+  if (remembered.rows[0].value.status !== "remembered") {
+    throw new Error("AIBot durable memory did not save a decision");
+  }
+
+  await query(
+    "select public.aibot_n8n_save_chat_history_v2($1, $2, $3, $4, $5, $6)",
+    [telegramChatId, profileKey, "telegram", telegramChatId, "Remember this decision", "Saved"],
+  );
+  await query(
+    "select public.aibot_n8n_save_chat_history_v2($1, $2, $3, $4, $5, $6)",
+    [webChatId, profileKey, "web", "session-1", "What did we decide?", "Checking"],
+  );
+
+  const contextResult = await query(
+    "select public.aibot_n8n_get_agent_context_v1($1, $2, $3, 30, 12) as value",
+    [webChatId, profileKey, "project memory"],
+  );
+  const context = contextResult.rows[0].value;
+  if (context.profile_key !== profileKey
+      || context.local_history.length !== 2
+      || context.shared_history.length !== 2
+      || context.memories.length !== 1
+      || context.memories[0].memory_key !== memoryKey) {
+    throw new Error(`AIBot cross-channel memory context is incomplete: ${JSON.stringify(context)}`);
+  }
+
+  const recalled = await query(
+    "select public.aibot_n8n_memory_v1($1::jsonb) as value",
+    [JSON.stringify({ action: "recall", profile_key: profileKey, scope: "offerpsp", query: "project memory" })],
+  );
+  if (recalled.rows[0].value.count !== 1) {
+    throw new Error("AIBot durable memory recall did not find the saved decision");
+  }
+
+  const archivedConversation = await query(
+    "select public.aibot_n8n_search_chat_history_v1($1::jsonb) as value",
+    [JSON.stringify({ profile_key: profileKey, query: "Remember this decision", limit: 10 })],
+  );
+  if (archivedConversation.rows[0].value.count !== 1
+      || archivedConversation.rows[0].value.items[0].channel !== "telegram") {
+    throw new Error("AIBot conversation archive search did not find the Telegram message");
+  }
+
+  const forgotten = await query(
+    "select public.aibot_n8n_memory_v1($1::jsonb) as value",
+    [JSON.stringify({ action: "forget", profile_key: profileKey, scope: "offerpsp", memory_key: memoryKey })],
+  );
+  if (forgotten.rows[0].value.status !== "forgotten") {
+    throw new Error("AIBot durable memory forget action failed");
+  }
+
+  await query("delete from public.aibot_memories where profile_key = $1", [profileKey]);
+  await query("delete from public.chat_logs where profile_key = $1", [profileKey]);
+  process.stdout.write("PASS BIXOFFPSP durable memory, cross-channel history and service isolation\n");
+}
+
 async function verifyMailCenter() {
   const grants = await query(`select
     has_function_privilege('service_role', 'public.aibot_n8n_ingest_email(jsonb)', 'EXECUTE') as service_ingest,
@@ -2950,6 +3044,7 @@ try {
   await verify360Workspaces();
   await verifyResearchCrud();
   await verifyAibotServiceBoundary();
+  await verifyAibotDurableMemory();
   await verifyMailCenter();
   await verifyPrivateSourceStorage();
   await verifyFreshnessReminders();

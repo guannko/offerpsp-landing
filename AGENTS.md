@@ -153,6 +153,14 @@ Important n8n workflows to verify by live ID and active version:
   business rules into separate Telegram and web prompts; both entries must use the same tools,
   confirmation-token protocol and system instructions.
 
+The durable project-memory profile for that shared core is `BIXOFFPSP`, not a personal Boris
+profile. Telegram and Captain's Bridge write conversation history into the same profile while
+preserving their channel/session identifiers. `Project Memory` stores durable decisions, rules,
+corrections, preferences and verified actions under stable keys; `Conversation Archive` searches
+the stored cross-channel dialogue. Never store credentials, passwords, tokens, full source
+offers, temporary test data or unverified assumptions in long-term memory. Memory is context from
+the past, not proof of the current database, deployment or workflow state.
+
 Captain's Bridge reaches the shared AIBot only through the staff-protected server function
 `platform-v2/api/aibot-command.mjs`. The browser must never receive the internal webhook secret.
 The function verifies the Supabase user and active OfferPSP staff role before forwarding a command

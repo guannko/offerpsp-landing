@@ -5,6 +5,29 @@ Updated: 2026-08-12
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## Durable AIBot memory — 2026-08-12
+
+Status: `VERIFIED` at the production database, published n8n graph and migration-regression levels.
+Natural-language recall through a fresh real Telegram/web conversation remains the final UX smoke.
+
+- [x] The shared memory profile is `BIXOFFPSP`; it is used by Telegram and Captain's Bridge rather
+  than being tied to a personal Boris profile.
+- [x] Existing `chat_logs` were backfilled into `BIXOFFPSP` and now preserve channel and session
+  identity. New Telegram and web conversations are saved through the service-role-only v2 RPC.
+- [x] Added durable keyed memory for decisions, facts, preferences, corrections, commitments and
+  verified actions. Stable keys update an earlier decision instead of creating contradictory copies.
+- [x] Added cross-channel context loading plus a full conversation-archive search tool. The agent
+  distinguishes remembered history from current facts and must still query the operating database.
+- [x] `anon` and `authenticated` cannot execute any of the four memory/history RPCs; only
+  `service_role` can use them. Production recall of `system.memory_profile` returned `BIXOFFPSP`.
+- [x] The published AIBot workflow contains `Project Memory`, `Conversation Archive`, durable
+  context loading and separate Telegram/web history writers. Runtime validation passes with zero
+  errors; the only warning is the pre-existing intentionally dynamic `Fetch URL` tool.
+- [x] All local migration regressions pass, including cross-channel history, remember/recall,
+  archive search, replacement by stable key, cleanup and service-role isolation.
+- [ ] Run one natural-language Telegram command (`Как называется общий профиль памяти?`) and one
+  fresh Captain's Bridge session to visually confirm that both surfaces recall `BIXOFFPSP`.
+
 ## Legacy automation cleanup — 2026-08-12
 
 Status: `VERIFIED` against the published n8n graphs. Cleanup is reversible: obsolete workflows and
