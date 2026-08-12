@@ -267,6 +267,8 @@ async function applyMigrations() {
     "20260812170000_offerpsp_inbox_operations.sql",
     "20260812183000_aibot_durable_memory.sql",
     "20260812190000_aibot_history_search.sql",
+    "20260812192420_offerpsp_contact_timeline.sql",
+    "20260812200000_aibot_execution_journal.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -3009,6 +3011,57 @@ async function verifyGeoRegionAliases() {
   process.stdout.write("PASS CIS/СНГ lead normalization, GEO edit synchronization and matching expansion\n");
 }
 
+async function verifyContactTimelineCooldown() {
+  const result = await query(`
+    select
+      private.offerpsp_business_days_after('2026-08-10 09:00:00+00'::timestamptz, '2026-08-12'::date) as monday_to_wednesday,
+      private.offerpsp_next_follow_up_date('2026-08-10 09:00:00+00'::timestamptz) as monday_next_allowed,
+      private.offerpsp_business_days_after('2026-08-07 09:00:00+00'::timestamptz, '2026-08-11'::date) as friday_to_tuesday,
+      private.offerpsp_next_follow_up_date('2026-08-07 09:00:00+00'::timestamptz) as friday_next_allowed,
+      has_function_privilege('anon', 'public.get_offerpsp_contact_timeline(text,text,integer)', 'execute') as anon_can_read,
+      has_function_privilege('authenticated', 'public.get_offerpsp_contact_timeline(text,text,integer)', 'execute') as staff_rpc_available,
+      has_function_privilege('authenticated', 'public.aibot_n8n_contact_timeline_v1(jsonb)', 'execute') as authenticated_can_use_service_rpc,
+      has_function_privilege('service_role', 'public.aibot_n8n_contact_timeline_v1(jsonb)', 'execute') as service_can_use_service_rpc
+  `);
+  const row = result.rows[0];
+  if (row.monday_to_wednesday !== 2
+      || new Date(row.monday_next_allowed).toISOString().slice(0, 10) !== "2026-08-13"
+      || row.friday_to_tuesday !== 2
+      || new Date(row.friday_next_allowed).toISOString().slice(0, 10) !== "2026-08-12"
+      || row.anon_can_read
+      || !row.staff_rpc_available
+      || row.authenticated_can_use_service_rpc
+      || !row.service_can_use_service_rpc) {
+    throw new Error(`Contact timeline cooldown or RPC boundary is incorrect: ${JSON.stringify(row)}`);
+  }
+  process.stdout.write("PASS contact timeline and three-business-day duplicate cooldown\n");
+}
+
+async function verifyAibotExecutionJournal() {
+  await setRole("service_role");
+  const planned = await query(`select public.aibot_n8n_execution_journal_v1(jsonb_build_object(
+    'action','plan','action_type','email_follow_up','description','Follow up fixture',
+    'scheduled_for','2026-08-13T09:00:00Z','idempotency_key','fixture-follow-up'
+  )) as value`);
+  const id = planned.rows[0].value.item.id;
+  const completed = await query(`select public.aibot_n8n_execution_journal_v1(jsonb_build_object(
+    'action','complete','id',$1::text,'result_summary','Fixture completed'
+  )) as value`, [id]);
+  const permissions = await query(`select
+    has_function_privilege('anon', 'public.aibot_n8n_execution_journal_v1(jsonb)', 'execute') as anon_execute,
+    has_function_privilege('authenticated', 'public.aibot_n8n_execution_journal_v1(jsonb)', 'execute') as authenticated_execute,
+    has_function_privilege('service_role', 'public.aibot_n8n_execution_journal_v1(jsonb)', 'execute') as service_execute`);
+  if (completed.rows[0].value.item.status !== "completed"
+      || completed.rows[0].value.item.result_summary !== "Fixture completed"
+      || permissions.rows[0].anon_execute
+      || permissions.rows[0].authenticated_execute
+      || !permissions.rows[0].service_execute) {
+    throw new Error(`AIBot execution journal lifecycle or boundary failed: ${JSON.stringify({ completed: completed.rows[0], permissions: permissions.rows[0] })}`);
+  }
+  await setRole("authenticated");
+  process.stdout.write("PASS AIBot execution journal lifecycle and service isolation\n");
+}
+
 try {
   verifyCanonicalGeoHeaderParsing();
   verifyWorldwideCoverageParsing();
@@ -3025,6 +3078,8 @@ try {
   await verifyResearchCrudGrants();
   await seedUsers();
   await verifyGeoRegionAliases();
+  await verifyContactTimelineCooldown();
+  await verifyAibotExecutionJournal();
   await verifyAtomicRouteReplacement();
   await verifyCounterpartyOrganizer();
   await verifyOperationsAndIntegrations();

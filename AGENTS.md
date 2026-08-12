@@ -173,8 +173,24 @@ Verified against the live published n8n graph on 2026-08-12.
 
 Keep these tools in the shared AIBot core: `Search Web`, `Fetch URL`, `Operating Desk`,
 `Bulk Operations`, `Save PSP Offer`, `PSP Email Tool`, `Manage Tasks`, `Run Contact Hunter` and
-`Send Email Tool`. `Operating Desk` is the canonical interface for cards, statuses, notes, tasks
-and email drafts. Mass changes must continue to use `Bulk Operations` preview plus confirmation.
+`Send Email Tool`. `Contact Timeline` is the canonical contact-history and outbound-email
+preflight tool. `Execution Journal` is the durable `BIXOFFPSP` action notebook for planned,
+scheduled, started, completed, failed and cancelled work. `Operating Desk` remains the canonical
+interface for cards, statuses, notes, tasks and email drafts. Mass changes must continue to use
+`Bulk Operations` preview plus confirmation.
+
+Before preparing, sending or repeating an email, query `Contact Timeline`. Three complete business
+days (Monday-Friday) must pass before an ordinary follow-up. A recent send, existing draft, reply,
+ambiguous recipient or conflicting history blocks only the external action, not the investigation.
+The agent must then inspect the card, timeline, email drafts/history, tasks, execution journal,
+project memory and conversation archive; report what it found and why the action is uncertain;
+recommend the safest next step; and ask Boris one precise question only when the answer still
+cannot be established. An explicit Boris decision may override the cooldown and must be recorded.
+
+Every action the agent promises, schedules or executes must enter `Execution Journal` before work
+starts and move through the real lifecycle. Never report an action as completed without verifying
+the result and recording the outcome. This journal is the operational notebook; durable memory is
+for stable facts and decisions, while contact events remain in `Contact Timeline`.
 
 The following legacy tool nodes remain on the AIBot canvas only for rollback and are disabled:
 `Casino DB`, `PSP DB Tool`, `Search Casino Leads`, `Save Email Draft`, `Notion Draft Tool` and

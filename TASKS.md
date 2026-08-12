@@ -5,6 +5,30 @@ Updated: 2026-08-12
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## AIBot contact history and execution notebook — 2026-08-12
+
+Status: `VERIFIED` at the production database, published n8n graph and migration-regression levels.
+
+- [x] Added one canonical contact timeline for merchants, PSPs, casinos and subagents. Existing
+  email, task, lead-activity, research and audit history was backfilled into 94 timestamped events;
+  new events are captured automatically by database triggers.
+- [x] Added an outbound-email preflight with a three-complete-business-day Monday-Friday cooldown.
+  Monday to Wednesday remains a duplicate; Thursday is the first ordinary repeat date. Friday to
+  Tuesday remains a duplicate; Wednesday is the first ordinary repeat date.
+- [x] A duplicate, conflicting history or unresolved recipient blocks only the external send. The
+  published agent must continue investigating the card, timeline, mail, tasks, journal and memory,
+  explain the uncertainty and ask Boris one precise question only if the answer remains unknown.
+- [x] Added the private `BIXOFFPSP` execution journal with `planned`, `in_progress`, `completed`,
+  `failed` and `cancelled` states, scheduling, entity links, result/error fields and idempotency.
+  A controlled production transaction passed `plan -> start -> complete` and was rolled back.
+- [x] Both service RPCs are executable by `service_role` only; `anon` and `authenticated` have no
+  execution access. Production contains no synthetic journal row after verification.
+- [x] The active published AIBot graph contains connected `Contact Timeline` and
+  `Execution Journal` tools. Runtime validation reports zero errors; the sole warning remains the
+  pre-existing intentionally dynamic `Fetch URL` tool.
+- [x] Full local migration replay passes the contact cooldown, journal lifecycle, idempotency and
+  service-isolation checks together with all prior OfferPSP migration regressions.
+
 ## Durable AIBot memory — 2026-08-12
 
 Status: `VERIFIED` at the production database, published n8n graph and migration-regression levels.
