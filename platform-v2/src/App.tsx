@@ -15,7 +15,6 @@ import {
   DealDeskPage,
   InboxPage,
   MerchantsPage,
-  ModulePage,
   OffersPage,
   PipelinePage,
   ProvidersPage,
@@ -38,7 +37,7 @@ export default function App() {
       <Route path="/psps/:providerId" element={<ProviderWorkspace/>}/>
       <Route path="/offers" element={<OffersPage/>}/>
       <Route path="/compliance" element={<CompliancePage/>}/>
-      <Route path="/matching" element={<ModulePage module="matching"/>}/>
+      <Route path="/matching" element={<Navigate to="/merchants" replace/>}/>
       <Route path="/deals" element={<DealDeskPage/>}/>
       <Route path="/intelligence" element={<Navigate to="/casinos" replace/>}/>
       <Route path="/communications" element={<CommunicationsWorkspace/>}/>

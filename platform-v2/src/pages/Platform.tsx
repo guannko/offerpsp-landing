@@ -19,6 +19,37 @@ import type { AgentPspProvider, Lead, OfferIngestionJob, RouteCoverage, StaffMem
 
 const activeStatuses = ["new", "qualifying", "needs_clarification", "matching", "matched", "shortlist_ready", "shared", "option_selected", "dossier_ready", "provider_reviewing", "provider_needs_info", "provider_accepted", "telegram_created", "zoom_scheduled", "negotiating"];
 
+const matchingReachedStatuses = new Set(["matching", "matched", "shortlist_ready", "shared", "option_selected", "dossier_ready", "provider_reviewing", "provider_needs_info", "provider_accepted", "provider_declined", "telegram_created", "zoom_scheduled", "negotiating", "won"]);
+const shortlistReachedStatuses = new Set(["shortlist_ready", "shared", "option_selected", "dossier_ready", "provider_reviewing", "provider_needs_info", "provider_accepted", "provider_declined", "telegram_created", "zoom_scheduled", "negotiating", "won"]);
+const providerReviewReachedStatuses = new Set(["provider_reviewing", "provider_needs_info", "provider_accepted", "provider_declined", "telegram_created", "zoom_scheduled", "negotiating", "won"]);
+const providerAcceptedReachedStatuses = new Set(["provider_accepted", "telegram_created", "zoom_scheduled", "negotiating", "won"]);
+
+const isTestFixtureLead = (lead: Lead) => {
+  const identity = [lead.company, lead.name, lead.work_email, lead.company_url].filter(Boolean).join(" ");
+  return /(^|[^a-z])e2e([^a-z]|$)/i.test(identity) || /workspace-role/i.test(identity) || String(lead.work_email || "").endsWith(".invalid");
+};
+
+const isVisibleBusinessLead = (lead: Lead) => lead.record_state !== "archived"
+  && !["closed", "spam"].includes(lead.status || "")
+  && !isTestFixtureLead(lead);
+
+const isOpenBusinessLead = (lead: Lead) => isVisibleBusinessLead(lead)
+  && !["won", "lost"].includes(lead.status || "");
+
+function leadFunnel(leads: Lead[]) {
+  const businessLeads = leads.filter(isVisibleBusinessLead);
+  return {
+    businessLeads,
+    applications: businessLeads.length,
+    matching: businessLeads.filter((lead) => matchingReachedStatuses.has(lead.status || "")).length,
+    shortlist: businessLeads.filter((lead) => shortlistReachedStatuses.has(lead.status || "")).length,
+    providerReview: businessLeads.filter((lead) => providerReviewReachedStatuses.has(lead.status || "")).length,
+    providerAccepted: businessLeads.filter((lead) => providerAcceptedReachedStatuses.has(lead.status || "")).length,
+    launched: businessLeads.filter((lead) => lead.status === "won").length,
+    lost: businessLeads.filter((lead) => lead.status === "lost").length,
+  };
+}
+
 const list = (value: unknown) => Array.isArray(value) ? value.join(", ") : String(value || "—");
 const date = (value?: string | null) => value ? new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value)) : "—";
 
@@ -30,13 +61,14 @@ function PageFrame({ title, description, children }: { title: string; descriptio
 
 export function CommandCenter() {
   const { leads, providers, routes, organizations, ingestionJobs, freshnessReminders, complianceCases, lastUpdatedAt, refreshing, refresh } = useControlBridge();
-  const operationalLeads = leads.filter((lead) => lead.record_state !== "archived" && !["closed", "spam"].includes(lead.status || ""));
+  const funnelMetrics = leadFunnel(leads);
+  const operationalLeads = funnelMetrics.businessLeads.filter(isOpenBusinessLead);
   const operationalProviders = providers.filter((provider) => provider.relationship_status !== "archived");
   const stats = useMemo(() => ({
     newLeads: operationalLeads.filter((lead) => lead.status === "new").length,
     needsData: operationalLeads.filter((lead) => ["needs_clarification", "provider_needs_info"].includes(lead.status || "")).length,
     activeDeals: operationalLeads.filter((lead) => activeStatuses.includes(lead.status || "") && !["new", "qualifying", "needs_clarification"].includes(lead.status || "")).length,
-    won: operationalLeads.filter((lead) => lead.status === "won").length,
+    won: funnelMetrics.launched,
     unassigned: operationalLeads.filter((lead) => !lead.assigned_to).length,
     pausedRoutes: routes.filter((route) => route.status === "paused").length,
     blockedRoutes: routes.filter((route) => Number(route.open_error_count || 0) > 0).length,
@@ -44,7 +76,7 @@ export function CommandCenter() {
     offerReviews: ingestionJobs.filter((job) => ["review", "failed", "duplicate"].includes(job.status) || Number(job.blocking_anomaly_count || 0) > 0).length,
     freshnessReminders: freshnessReminders.length,
     complianceReview: complianceCases.filter((item) => ["pending", "screening", "manual_review", "needs_info", "hold"].includes(item.case_status)).length,
-  }), [operationalLeads, routes, organizations, ingestionJobs, freshnessReminders, complianceCases]);
+  }), [operationalLeads, funnelMetrics.launched, routes, organizations, ingestionJobs, freshnessReminders, complianceCases]);
 
   const attention = [
     { label: "Проверка входящих лидов", count: stats.complianceReview, path: "/compliance", hint: "подлинность, роль компании и готовность досье" },
@@ -56,9 +88,9 @@ export function CommandCenter() {
   ].filter((item) => item.count > 0);
 
   const funnel = [
-    ["Заявки", operationalLeads.length],
-    ["В работе", operationalLeads.filter((lead) => activeStatuses.includes(lead.status || "")).length],
-    ["Переданы PSP", operationalLeads.filter((lead) => ["provider_reviewing", "provider_needs_info", "provider_accepted", "telegram_created", "zoom_scheduled", "negotiating", "won"].includes(lead.status || "")).length],
+    ["Заявки", funnelMetrics.applications],
+    ["Начат подбор", funnelMetrics.matching],
+    ["Переданы PSP", funnelMetrics.providerReview],
     ["Запущены", stats.won],
   ] as const;
   const maxFunnel = Math.max(1, ...funnel.map(([, value]) => value));
@@ -186,7 +218,7 @@ const pipelineColumns = [
 
 export function PipelinePage() {
   const { leads } = useControlBridge();
-  const operationalLeads = leads.filter((lead) => lead.record_state !== "archived");
+  const operationalLeads = leads.filter(isVisibleBusinessLead);
   return <PageFrame title="Воронка" description="Kanban сделок OfferPSP."><PageHeading eyebrow="Merchant pipeline" title="Воронка сделок" description="Каждая карточка показывает этап и следующий шаг. На телефоне колонки прокручиваются горизонтально, не ломая всю страницу."/><div className="-mx-4 overflow-x-auto px-4 pb-3 md:mx-0 md:px-0"><div className="grid min-w-[1100px] grid-cols-5 gap-4">{pipelineColumns.map((column) => { const items = operationalLeads.filter((lead) => column.statuses.includes(lead.status || "")); return <div key={column.title} className="rounded-2xl bg-gray-100/70 p-3 dark:bg-white/[0.03]"><div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-semibold text-gray-800 dark:text-white/90">{column.title}</h2><span className="rounded-full bg-white px-2 py-0.5 text-xs text-gray-500 dark:bg-gray-800">{items.length}</span></div><div className="space-y-3">{items.map((lead) => <Link to={`/merchants/${lead.lead_id}`} key={lead.lead_id} className="block rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs transition hover:border-brand-300 dark:border-gray-800 dark:bg-gray-900"><div className="flex items-start justify-between gap-2"><strong className="text-sm text-gray-900 dark:text-white">{lead.company || "Без названия"}</strong><span className="h-2 w-2 shrink-0 rounded-full bg-brand-500"/></div><p className="mt-2 text-xs text-gray-500">{lead.vertical || "Вертикаль не указана"} · {list(lead.geos)}</p><div className="mt-3"><StatusPill status={lead.status}/></div><p className="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-400 dark:border-gray-800">Следующий шаг: {lead.status === "new" ? "проверить заявку" : lead.status === "needs_clarification" ? "запросить данные" : "открыть карточку"}</p></Link>)}{!items.length && <div className="rounded-xl border border-dashed border-gray-300 px-3 py-8 text-center text-xs text-gray-400 dark:border-gray-700">Нет заявок</div>}</div></div>; })}</div></div></PageFrame>;
 }
 
@@ -194,7 +226,7 @@ const dealStatuses = ["option_selected", "dossier_ready", "provider_reviewing", 
 
 export function DealDeskPage() {
   const { leads } = useControlBridge();
-  const deals = leads.filter((lead) => dealStatuses.includes(lead.status || ""));
+  const deals = leads.filter((lead) => isVisibleBusinessLead(lead) && dealStatuses.includes(lead.status || ""));
   const nextAction = (status?: string | null) => {
     if (status === "option_selected") return "Проверить досье и передать PSP";
     if (status === "provider_reviewing") return "Получить решение PSP";
@@ -1030,21 +1062,14 @@ export function AgentsPage() {
 
 export function AnalyticsPage() {
   const { leads, providers, routes } = useControlBridge();
-  const operationalLeads = leads.filter((lead)=>lead.record_state !== "archived" && !["closed","spam"].includes(lead.status || ""));
-  const stageRank: Record<string, number> = {
-    new: 0, qualifying: 0, needs_clarification: 0,
-    matching: 1, matched: 1,
-    shortlist_ready: 2, shared: 2, option_selected: 2, dossier_ready: 2,
-    provider_reviewing: 3, provider_needs_info: 3, provider_declined: 3,
-    provider_accepted: 4, telegram_created: 4, zoom_scheduled: 4, negotiating: 4,
-    won: 5, lost: 5,
-  };
+  const funnelMetrics = leadFunnel(leads);
+  const operationalLeads = funnelMetrics.businessLeads;
   const funnel = [
-    { label: "Все заявки", value: operationalLeads.length },
-    { label: "Начат подбор", value: operationalLeads.filter((lead)=>Number(stageRank[lead.status || ""] ?? 0) >= 1).length },
-    { label: "Shortlist", value: operationalLeads.filter((lead)=>Number(stageRank[lead.status || ""] ?? 0) >= 2).length },
-    { label: "PSP принял", value: operationalLeads.filter((lead)=>Number(stageRank[lead.status || ""] ?? 0) >= 4).length },
-    { label: "Live processing", value: operationalLeads.filter((lead)=>lead.status === "won").length },
+    { label: "Все заявки", value: funnelMetrics.applications },
+    { label: "Начат подбор", value: funnelMetrics.matching },
+    { label: "Shortlist", value: funnelMetrics.shortlist },
+    { label: "PSP принял", value: funnelMetrics.providerAccepted },
+    { label: "Live processing", value: funnelMetrics.launched },
   ];
   const funnelMax = Math.max(1, funnel[0].value);
   const liveRoutes = routes.filter((route)=>route.status === "published").length;
@@ -1060,7 +1085,7 @@ export function AnalyticsPage() {
   });
   const weeklyMax = Math.max(1,...weekly.map((item)=>item.value));
   const linePoints = weekly.map((item,index)=>`${20+index*112},${160-(item.value/weeklyMax)*125}`).join(" ");
-  const launchRate = operationalLeads.length ? Math.round(operationalLeads.filter((lead)=>lead.status === "won").length/operationalLeads.length*100) : 0;
+  const launchRate = operationalLeads.length ? Math.round(funnelMetrics.launched/operationalLeads.length*100) : 0;
   const shortlistRate = funnel[1].value ? Math.round(funnel[2].value/funnel[1].value*100) : 0;
   return <PageFrame title="Аналитика" description="Воронка и качество supply."><PageHeading eyebrow="Business intelligence" title="Аналитика, которая отвечает на вопросы" description="Где тормозят сделки, достаточно ли покрытие и что требует внимания — без тестовых и архивных записей в рабочих показателях."/><div className="grid grid-cols-2 gap-3 xl:grid-cols-4"><Metric label="Launch conversion" value={`${launchRate}%`} hint={`${operationalLeads.filter((lead)=>lead.status === "won").length} запусков из ${operationalLeads.length} рабочих заявок`} tone="success"/><Metric label="Shortlist conversion" value={`${shortlistRate}%`} hint="от начатого подбора до shortlist"/><Metric label="Live coverage" value={`${liveRoutes}/${routes.length}`} hint="опубликовано маршрутов"/><Metric label="Supply blockers" value={errors} hint="открытых ошибок нормализации" tone={errors?"warning":"success"}/></div><div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3"><Panel className="xl:col-span-2"><div className="flex items-start justify-between gap-4"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Воронка до запуска</h2><p className="mt-1 text-sm text-gray-500">Кумулятивное прохождение, а не количество карточек в колонке.</p></div><span className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500 dark:bg-white/[0.03]">{operationalLeads.length} рабочих заявок</span></div><div className="mt-7 space-y-4">{funnel.map((stage,index)=><div key={stage.label} className="grid grid-cols-[110px_1fr_48px] items-center gap-3 sm:grid-cols-[150px_1fr_64px]"><span className="text-xs text-gray-500 sm:text-sm">{stage.label}</span><div className="h-9 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"><div className="flex h-full items-center rounded-lg bg-gradient-to-r from-brand-600 to-theme-purple-500 px-3 text-xs font-semibold text-white transition-all" style={{width:`${Math.max(stage.value?12:0,stage.value/funnelMax*100)}%`}}>{index>0&&funnel[index-1].value?`${Math.round(stage.value/funnel[index-1].value*100)}%`:""}</div></div><strong className="text-right text-sm text-gray-900 dark:text-white">{stage.value}</strong></div>)}</div></Panel><Panel><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Здоровье supply</h2><p className="mt-1 text-sm text-gray-500">То, что влияет на возможность отправить оффер.</p><div className="mt-6 space-y-5">{[["Опубликованы",liveRoutes,"success"],["Черновики",routes.filter((route)=>route.status === "draft").length,"warning"],["На паузе",routes.filter((route)=>route.status === "paused").length,"danger"],["Без маржи",routes.filter((route)=>!route.margin_ready).length,"danger"]].map(([label,value,tone])=><div key={String(label)}><div className="mb-2 flex justify-between text-sm"><span className="text-gray-500">{label}</span><strong className="text-gray-900 dark:text-white">{value}</strong></div><div className="h-2 rounded-full bg-gray-100 dark:bg-gray-800"><div className={`h-2 rounded-full ${tone === "success"?"bg-success-500":tone === "warning"?"bg-warning-500":"bg-error-500"}`} style={{width:`${routes.length?Math.max(5,Number(value)/routes.length*100):0}%`}}/></div></div>)}</div><div className="mt-6 rounded-xl bg-gray-50 p-4 dark:bg-white/[0.03]"><span className="text-xs text-gray-400">Рабочих PSP</span><strong className="mt-1 block text-2xl text-gray-900 dark:text-white">{activeProviders.length}</strong></div></Panel></div><div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2"><Panel><div className="flex items-start justify-between"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Новые заявки · 6 недель</h2><p className="mt-1 text-sm text-gray-500">Показывает реальный темп входящего потока.</p></div><strong className="text-2xl text-gray-900 dark:text-white">{weekly.reduce((sum,item)=>sum+item.value,0)}</strong></div><div className="mt-6 overflow-hidden"><svg viewBox="0 0 600 180" className="h-48 w-full" role="img" aria-label="Динамика новых заявок"><defs><linearGradient id="leadTrend" x1="0" x2="1"><stop offset="0" stopColor="#465fff"/><stop offset="1" stopColor="#9b51e0"/></linearGradient></defs><path d="M20 160 H580" stroke="currentColor" className="text-gray-200 dark:text-gray-800"/><polyline points={linePoints} fill="none" stroke="url(#leadTrend)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"/>{weekly.map((item,index)=><g key={item.label}><circle cx={20+index*112} cy={160-(item.value/weeklyMax)*125} r="6" fill="#fff" stroke="#465fff" strokeWidth="4"/><text x={20+index*112} y="178" textAnchor="middle" className="fill-gray-400 text-[10px]">{item.label}</text><text x={20+index*112} y={145-(item.value/weeklyMax)*125} textAnchor="middle" className="fill-gray-700 text-[11px] font-semibold dark:fill-gray-200">{item.value}</text></g>)}</svg></div></Panel><Panel><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Покрытие GEO</h2><p className="mt-1 text-sm text-gray-500">Где сейчас больше всего доступных маршрутов.</p><div className="mt-6 space-y-4">{geoCounts.map(([geo,count])=><div key={geo}><div className="mb-2 flex items-center justify-between text-sm"><span className="font-medium text-gray-700 dark:text-gray-300">{geo}</span><strong className="text-gray-900 dark:text-white">{count}</strong></div><div className="h-2.5 rounded-full bg-gray-100 dark:bg-gray-800"><div className="h-2.5 rounded-full bg-gradient-to-r from-brand-500 to-theme-purple-500" style={{width:`${count/maxGeo*100}%`}}/></div></div>)}{!geoCounts.length&&<EmptyState title="Нет данных покрытия" description="GEO появятся после нормализации маршрутов."/>}</div></Panel></div></PageFrame>;
 }

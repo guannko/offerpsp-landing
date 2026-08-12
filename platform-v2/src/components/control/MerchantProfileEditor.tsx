@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { supabase } from "../../lib/supabase";
 import type { Lead, StaffMember } from "../../types/offerpsp";
-import { Panel } from "./Ui";
+import { Panel, statusLabels } from "./Ui";
 
 const field = "mt-2 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:text-white";
 const area = "mt-2 min-h-28 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-3 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:text-white";
@@ -127,7 +127,7 @@ export default function MerchantProfileEditor({ lead, onChanged }: { lead: Lead;
       <Field label="План запуска"><input className={field} value={draft.launch_timeline} onChange={(e)=>set("launch_timeline",e.target.value)}/></Field>
     </div><div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2"><Field label="Текущий процессинг"><textarea className={area} value={draft.current_processing_setup} onChange={(e)=>set("current_processing_setup",e.target.value)}/></Field><Field label="Внутренние заметки"><textarea className={area} value={draft.qualification_notes} onChange={(e)=>set("qualification_notes",e.target.value)}/></Field></div></Panel>
     <Panel><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Управление записью</h2><div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <Field label="Статус"><select className={field} value={draft.status} onChange={(e)=>set("status",e.target.value)}>{statuses.map((value)=><option key={value} value={value}>{value}</option>)}</select></Field>
+      <Field label="Статус"><select className={field} value={draft.status} onChange={(e)=>set("status",e.target.value)}>{statuses.map((value)=><option key={value} value={value}>{statusLabels[value] || value}</option>)}</select></Field>
       <Field label="Ответственный"><select className={field} value={draft.assigned_to} onChange={(e)=>set("assigned_to",e.target.value)}><option value="">Не назначен</option>{staff.map((member)=><option key={member.user_id} value={member.user_id}>{member.display_name || member.user_id} · {member.role}</option>)}</select></Field>
       <Field label="Оценка 0–100"><input type="number" min="0" max="100" className={field} value={draft.quality_score} onChange={(e)=>set("quality_score",e.target.value)}/></Field>
       <Field label="Категория"><input className={field} value={draft.quality_grade} onChange={(e)=>set("quality_grade",e.target.value)}/></Field>
