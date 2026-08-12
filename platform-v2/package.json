@@ -8,22 +8,25 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test:pdf-extractor": "node scripts/test-pdf-extractor.mjs"
+    "test:pdf-extractor": "node scripts/test-pdf-extractor.mjs",
+    "test:mailbox-poller": "node scripts/test-mailbox-poller.mjs"
   },
   "dependencies": {
-    "@napi-rs/canvas": "^1.0.3",
     "@fullcalendar/core": "^6.1.15",
     "@fullcalendar/daygrid": "^6.1.15",
     "@fullcalendar/interaction": "^6.1.15",
     "@fullcalendar/list": "^6.1.15",
     "@fullcalendar/react": "^6.1.15",
     "@fullcalendar/timegrid": "^6.1.15",
+    "@napi-rs/canvas": "^1.0.3",
     "@react-jvectormap/core": "^1.0.4",
     "@react-jvectormap/world": "^1.1.2",
     "@supabase/supabase-js": "2.112.0",
     "apexcharts": "^4.1.0",
     "clsx": "^2.1.1",
     "flatpickr": "^4.6.13",
+    "imapflow": "1.6.6",
+    "mailparser": "3.9.15",
     "mammoth": "^1.12.0",
     "pdfjs-dist": "^6.2.108",
     "react": "^19.0.0",
@@ -56,6 +59,7 @@
     "vite-plugin-svgr": "^4.3.0"
   },
   "overrides": {
+    "nanoid": "3.3.17",
     "react-helmet-async": {
       "react": "^16.8.0 || ^17 || ^18 || ^19"
     },
