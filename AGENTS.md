@@ -145,7 +145,8 @@ Important n8n workflows to verify by live ID and active version:
 - offer intake queue: `GOhHiyw8pNrBZeHy`;
 - offer parser worker: `MLDnePB4WW3jzX4S`;
 - outbound Telegram: `yCPozZQX7EoxQf6P`;
-- incoming `bizdev@offerpsp.com` mailbox: `N0GEPhmvvRD4KRhw`.
+- active Titan mailbox poller: `tiEQBHg4iNHCHbQI`;
+- legacy IMAP-trigger experiment: `N0GEPhmvvRD4KRhw` (do not treat it as the active ingest path).
 
 Do not assume that a workflow is active merely because it exists.
 
@@ -272,7 +273,9 @@ Boris separately asks to implement the findings.
 
 These are audit leads, not guaranteed current facts:
 
-- incoming mailbox activation has historically been blocked by the live IMAP credential;
+- incoming mailbox messages are currently polled every minute through n8n → protected Vercel API
+  → Titan IMAP → protected Supabase Edge Function → service-only RPC. Binary email attachments are
+  not yet connected to the offer source parser and remain a separate verification target;
 - outbound Telegram has historically lacked unified inbound replies and retry/outbox handling;
 - Inbox has historically lacked triage filters, bulk actions and inline assignment;
 - Pipeline has historically been a read-only projection rather than an editable Kanban;

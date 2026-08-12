@@ -233,7 +233,8 @@ await an actual subagent organization instead of synthetic production data.
 
 ## AIBot security and OfferPSP mail center — 2026-08-05
 
-Status: `VERIFIED` in production except for inbound mailbox activation.
+Status: `VERIFIED` in production for incoming and outgoing mailbox messages. Binary attachment
+ingestion from email into the offer parser remains `PARTIAL`.
 
 - [x] Legacy AIBot tables `casino_leads`, `psp_providers`, `bot_tasks`, `chat_logs` and
   `email_drafts` now have RLS enabled; direct `anon`/`authenticated` access is revoked.
@@ -251,9 +252,16 @@ Status: `VERIFIED` in production except for inbound mailbox activation.
 - [x] Production mail E2E verified ingest, unread counter, opening, follow-up state and cleanup.
 - [x] Outgoing mail through the active Brevo/n8n sender remains operational for
   `bizdev@offerpsp.com`.
-- [ ] `BLOCKED`: activate n8n workflow `N0GEPhmvvRD4KRhw` for incoming mail after the current
-  GoDaddy IMAP password for `bizdev@offerpsp.com` is installed. The archived Titan and GoDaddy
-  credentials are rejected by the live mailbox; the prepared workflow remains inactive.
+- [x] Incoming Titan mailbox ingestion is active through n8n workflow `tiEQBHg4iNHCHbQI`, which
+  polls every minute and calls the protected Vercel mailbox endpoint. The endpoint reads Titan IMAP,
+  forwards parsed MIME messages through the protected Supabase Edge gateway and stores them through
+  the service-only idempotent RPC.
+- [x] Production external-email verification passed for Test ID `20260811T232211Z`: the message was
+  stored exactly once, remained unread in Mail Center and did not inflate thread counters. Already
+  read mailbox messages are still ingested; the poller marks its own `$OfferPSPIngested` flag without
+  changing the mailbox `\\Seen` state.
+- [x] The mailbox poller is connected to `BIX — Global Error Alerts`; consecutive scheduled n8n
+  executions completed successfully after activation.
 
 ## Editable research base and scalable offer catalogue — 2026-08-04
 
@@ -843,8 +851,9 @@ The first operational UI is deployed. Daily-use refinement remains.
 - [x] Add guarded staff purge for rejected/test sources. It refuses queued/processing/published
   data and removes the job, non-published draft batch, queue-created provider and private Storage
   object. Production E2E cleanup left the 12 published routes unchanged.
-- [ ] Connect incoming mailbox messages and attachments to the source adapters before the existing
-  queue/parser worker. Activation remains blocked by the invalid GoDaddy IMAP credential above.
+- [ ] `PARTIAL`: incoming mailbox message bodies are connected and verified in production. Persist
+  binary email attachments and send supported rate-card files into the existing private source
+  adapters and review-only queue before the parser worker.
 - [x] Add browser-side English/Russian OCR for scanned PDF pages and PNG/JPEG/WebP sources.
   Domain labels are normalized before parsing, and the canonical `GEO - Country` header is accepted.
   Production E2E converted a generated PNG rate card into one complete India/INR/UPI draft route
@@ -857,9 +866,9 @@ The first operational UI is deployed. Daily-use refinement remains.
   drafts remain review-only and never falsely confirm partner terms.
 
 The production queue, AIBot text and attachment transport, automatic text parser and private
-admin-file ingestion are connected and verified with a real Telegram file. Incoming mailbox
-activation remains the next external-channel step. Partner follow-up reminders are advisory and do
-not control offer availability.
+admin-file ingestion are connected and verified with a real Telegram file. Incoming mailbox message
+ingestion is active and idempotent; binary email attachments still need the private-source adapter.
+Partner follow-up reminders are advisory and do not control offer availability.
 
 ### Impact Control — production delivery 2026-08-08
 
