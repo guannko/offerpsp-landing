@@ -5,6 +5,34 @@ Updated: 2026-08-12
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## Emergency recovery and sale-ready package — 2026-08-13
+
+Status: `VERIFIED` for archive integrity, exact production workflow capture, sanitized distribution
+content and clean source build. Full isolated disaster recovery remains `PARTIAL` until a separate
+Supabase/n8n/Vercel environment is restored and exercised end to end.
+
+- [x] Captured the complete Git history and refs, exact HEAD source archive and the preserved
+  uncommitted worktree patch without changing the existing user edit.
+- [x] Exported the exact active versions of 17 production n8n workflows plus 14 inactive legacy
+  workflows for rollback/history. Added a credential-placement inventory without secret values.
+- [x] Captured 90 Supabase migrations, live schema/security catalogs, two Edge Functions, relevant
+  Auth identity mapping, 66 application tables with 2,278 rows and generated restore SQL.
+- [x] Captured Vercel project, deployment, protection and local-link metadata for the public portal
+  and Captain's Bridge; platform secret values remain in their native stores.
+- [x] Built a separate sale-ready package with full application and workflow logic, no production
+  data, personal identifiers, production IDs or credentials. All workflows start inactive.
+- [x] Verified checksums, Git bundle integrity, 17/17 active workflow coverage and zero secret-scan
+  violations in the sale package. A clean install, root validation and Captain's Bridge production
+  build pass.
+- [ ] Recover two original private Storage source objects that ordinary staff/client sessions could
+  not download. Their metadata and all parsed database results are present.
+- [ ] Perform one full isolated restore rehearsal and certify the lead intake, matching, merchant
+  portal, Telegram agent, Titan email and Captain's Bridge paths before claiming byte-complete
+  disaster recovery.
+
+Private artifacts are intentionally stored under `.private/recovery-packs/` and must never be
+committed. Reproducible tooling and runbooks live in `recovery/sale-pack/`.
+
 ## AIBot contact history and execution notebook — 2026-08-12
 
 Status: `VERIFIED` at the production database, published n8n graph and migration-regression levels.
