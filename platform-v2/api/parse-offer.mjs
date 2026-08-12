@@ -42,7 +42,7 @@ export default async function handler(request, response) {
       sourceText,
       sourceType: input.source_type || "api",
       sourceReference: input.source_reference || "api-source",
-      sourceFormat: input.source_format,
+      sourceFormat: input.source_format || sourceMetadata.source_format,
       originalSource: input.original_source,
       extractionMethod: input.extraction_method || sourceMetadata.extraction_method || "plain-text",
       extractorVersion: input.extractor_version || sourceMetadata.extractor_version,
