@@ -21,6 +21,7 @@ const PROVIDERS = {
 };
 
 const GEO_RULES = [
+  ["BD", /bangladesh|\bbdt\b/i],
   ["ID", /indonesia|индонези|\bidr\b/i],
   ["UZ", /uzbekistan|узбекистан|\buzs\b/i],
   ["KG", /kyrgyzstan|kyrgyz|киргиз|\bkgs\b/i],
@@ -43,12 +44,22 @@ const GEO_RULES = [
 ];
 
 const CURRENCY_CODES = [
-  "IDR", "UZS", "KGS", "INR", "AZN", "RUB", "ARS", "BRL", "VND", "COP", "THB", "KRW", "EUR", "TRY", "PLN", "AUD", "USD", "GBP", "KZT",
+  "BDT", "IDR", "UZS", "KGS", "INR", "AZN", "RUB", "ARS", "BRL", "VND", "COP", "THB", "KRW", "EUR", "TRY", "PLN", "AUD", "USD", "GBP", "KZT",
 ];
 
 const METHOD_RULES = [
   ["BANK_VA", /\bbank\s+va\b|virtual account/i],
   ["E_WALLET", /e[-\s]?wallet/i],
+  ["BKASH", /\bbkash\b/i],
+  ["NAGAD", /\bnagad\b/i],
+  ["MOMO", /\bmomo\b/i],
+  ["DANA", /\bdana\b/i],
+  ["OVO", /\bovo\b/i],
+  ["LINKAJA", /\blinkaja\b/i],
+  ["SHOPEEPAY", /\bshopee\s*pay\b/i],
+  ["VIETQR", /\bviet\s*qr\b/i],
+  ["BRE_B", /\bbre[-\s]?b\b/i],
+  ["EFECTY", /\befecty\b/i],
   ["QRIS", /\bqris\b/i],
   ["PIX", /\bpix\b/i],
   ["PAPARA", /\bpapara\b/i],
@@ -149,10 +160,26 @@ function startsBlock(line) {
   const value = line.trim();
   if (!value) return false;
   return /^(?:[🇦-🇿]{2}|🌎|🌍)\s*/u.test(value)
+    || /^country\s*:/i.test(value)
     || /^(?:geo|гео)\s*[-:—]/iu.test(value)
     || /^(?:классический p2p|турция(?:\s|$)|payouts?\s+-\s+cards|offers?\s+rf|оффер\s+рф)/iu.test(value)
     || /^(?:trustly|ideal|apple\s*pay\s*\/\s*google\s*pay)\b/i.test(value)
     || /^(?:australia|poland|india|argentina|south korea)\b/i.test(value);
+}
+
+function normalizeFlatCountryTable(sourceText) {
+  if (!/country\s*:/i.test(sourceText) || !/pricing\s*\/\s*fee/i.test(sourceText)) return sourceText;
+
+  return sourceText
+    .replace(/\s+(?=Country\s*:)/gi, "\n")
+    .replace(/\s+(?=Type\s+APMs\s+Pricing\s*\/\s*Fee)/gi, "\n")
+    .replace(/\s+(?=Pay-in\b)/gi, "\n")
+    .replace(/\s+(?=Pay-out\b)/gi, "\n")
+    .replace(/\s+(T\s*\+\s*\d+)\s+/gi, "\nSettlement: $1 ")
+    .replace(/\s+(?=PAYOK\.COM\b)/gi, "\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n +/g, "\n")
+    .trim();
 }
 
 function needsFollowingHeader(block) {
@@ -160,7 +187,7 @@ function needsFollowingHeader(block) {
 }
 
 function splitBlocks(sourceText) {
-  const lines = sourceText.split("\n");
+  const lines = normalizeFlatCountryTable(sourceText).split("\n");
   const blocks = [];
   let current = [];
   let started = false;
@@ -180,6 +207,34 @@ function splitBlocks(sourceText) {
   }
   if (current.some((item) => item.trim())) blocks.push(current.join("\n").trim());
   return blocks.filter((block) => block.length >= 30);
+}
+
+function expandFlatCountryTableBlocks(blocks) {
+  const expanded = [];
+  for (const block of blocks) {
+    if (!/^country\s*:/i.test(block) || !/pricing\s*\/\s*fee/i.test(block)) {
+      expanded.push(block);
+      continue;
+    }
+
+    const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
+    const countryHeader = lines[0];
+    const rowStarts = lines
+      .map((line, index) => (/^pay-(?:in|out)\b/i.test(line) ? index : -1))
+      .filter((index) => index >= 0);
+
+    rowStarts.forEach((start, position) => {
+      const end = rowStarts[position + 1] ?? lines.length;
+      const row = lines
+        .slice(start, end)
+        .filter((line) => !/^PAYOK\.COM$/i.test(line))
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (row) expanded.push(`${countryHeader}\n${row}`);
+    });
+  }
+  return expanded;
 }
 
 function expandCompoundBlocks(blocks) {
@@ -303,7 +358,7 @@ function extractCurrencies(block, geos) {
   if (/\$/u.test(block)) return ["USD"];
 
   const geoCurrency = {
-    ID: "IDR", UZ: "UZS", KG: "KGS", IN: "INR", AZ: "AZN", RU: "RUB", AR: "ARS", BR: "BRL", VN: "VND", CO: "COP", TH: "THB", KR: "KRW", TR: "TRY", PL: "PLN", AU: "AUD", GB: "GBP", CH: "CHF", NL: "EUR", EU: "EUR",
+    BD: "BDT", ID: "IDR", UZ: "UZS", KG: "KGS", IN: "INR", AZ: "AZN", RU: "RUB", AR: "ARS", BR: "BRL", VN: "VND", CO: "COP", TH: "THB", KR: "KRW", TR: "TRY", PL: "PLN", AU: "AUD", GB: "GBP", CH: "CHF", NL: "EUR", EU: "EUR",
   };
   return unique(geos.map((geo) => geoCurrency[geo]));
 }
@@ -313,14 +368,7 @@ function extractByRules(block, rules) {
 }
 
 function extractMethods(block) {
-  const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
-  const methodText = lines.filter((line, index) => (
-    index < 3
-    || /^(?:method(?:\s*\/\s*apm)?|methods|метод|card brands?|карты|банки)\s*[-:]/i.test(line)
-    || /поддерживаются|карты/i.test(line)
-    || (index < 8 && /(?:account\s+transfer|bank\s+transfer|mercado\s+pago|one\s+click|\bblik\b|\btrustly\b|\bideal\b|apple\s*pay|google\s*pay)/i.test(line))
-  )).join("\n");
-  return unique(extractByRules(methodText, METHOD_RULES));
+  return unique(extractByRules(block, METHOD_RULES));
 }
 
 function extractCardBrands(block) {
@@ -354,13 +402,13 @@ function inferFlow(block) {
 
 function inferFeeFlow(line, fallbackFlow) {
   if (/pay[-\s]?out|payout|выплат/i.test(line)) return "payout";
+  if (/pay[-\s]?in|deposit|при[её]м|\bmdr\b/i.test(line)) return "payin";
   if (/settlement|сеттл|расч[её]т|funding|kraken|binance|bybit|rapira|htx|paribu|uznex|\bxe\b/i.test(line)) return "settlement";
   if (/refund/i.test(line)) return "refund";
   if (/charge\s?back|chargeback/i.test(line)) return "chargeback";
   // A combined "Success + Decline" transaction fee still belongs to the
   // route flow. Only a standalone decline charge is a decline fee component.
   if (/decline/i.test(line) && !/success/i.test(line)) return "decline";
-  if (/pay[-\s]?in|deposit|при[её]м|\bmdr\b/i.test(line)) return "payin";
   return fallbackFlow === "both" ? null : fallbackFlow;
 }
 
@@ -372,6 +420,7 @@ function extractFixedFee(line) {
   const amount = parseDecimal(suffix ? match[1] : match[2]);
   const symbol = (suffix ? match[2] : match[1]).toUpperCase();
   const currency = ({ "A$": "AUD", "€": "EUR", "$": "USD", "РУБ": "RUB", "₽": "RUB" }[symbol] || symbol);
+  if (![...CURRENCY_CODES, "USDT", "USDC"].includes(currency)) return null;
   return { amount, currency };
 }
 
@@ -455,7 +504,10 @@ function extractLimits(block, fallbackFlow, currencies) {
     }
     const match = line.match(rangePattern) || line.match(fromToPattern) || line.match(englishFromToPattern);
     const bareRangeLine = Boolean(contextFlow) && Boolean(match) && line.replace(match?.[0] || "", "").replace(/[•:]/g, "").trim() === "";
-    const isLimitLine = /limit|\blim\b|лим|min\s*\/\s*max|мин|макс|transaction|транзакц|чек|деп\b/i.test(line) || limitContext || bareRangeLine;
+    const isLimitLine = /limit|\blim\b|лим|min\s*\/\s*max|мин|макс|transaction|транзакц|чек|деп\b/i.test(line)
+      || /^(?:pay-in|pay-out)\b/i.test(line)
+      || limitContext
+      || bareRangeLine;
     const singleAmount = line.match(/(?:мин(?:\.\s*деп)?|макс(?:\.\s*деп)?)[^\d]*(\d[\d\s.,]*)\s*(A\$|€|\$|₽|[A-Z]{3}|руб)?/i);
     if (!match && singleAmount) {
       const isMaximum = /макс/i.test(line);
@@ -482,7 +534,8 @@ function extractLimits(block, fallbackFlow, currencies) {
     if (!match || !isLimitLine) continue;
     const flow = inferFeeFlow(line, contextFlow || fallbackFlow) || fallbackFlow || "both";
     const symbol = (match[5] || match[3] || match[1] || "").toUpperCase();
-    const currency = ({ "A$": "AUD", "₽": "RUB", "€": "EUR", "$": "USD" }[symbol] || symbol || currencies[0] || "").toUpperCase();
+    const parsedCurrency = ({ "A$": "AUD", "₽": "RUB", "€": "EUR", "$": "USD" }[symbol] || symbol || "").toUpperCase();
+    const currency = ([...CURRENCY_CODES, "USDT", "USDC"].includes(parsedCurrency) ? parsedCurrency : currencies[0] || "").toUpperCase();
     if (!currency) continue;
     limits.push({
       flow,
@@ -504,10 +557,11 @@ function extractLimits(block, fallbackFlow, currencies) {
 }
 
 function extractSettlement(block) {
-  const settlementLines = block.split("\n").filter((line) => /settlement|сеттл|курс|usdt|usdc|netting|неттинг/i.test(line));
+  const settlementLines = block.split("\n").filter((line) => /settlement|сеттл|курс|usdt|usdc|netting|неттинг|\bT\s*\+\s*\d+\b|binance|bybit|kraken|\bxe\b/i.test(line));
   if (!settlementLines.length) return [];
   const joined = settlementLines.join(" | ");
-  const feeMatch = joined.match(/(?:fee|usdt|usdc|сеттл)[^%]{0,40}(\d+(?:[.,]\d+)?)\s*%/i);
+  const feeMatch = joined.match(/\bT\s*\+\s*\d+\b[^%]{0,100}?\+\s*(\d+(?:[.,]\d+)?)\s*%/i)
+    || joined.match(/(?:fee|usdt|usdc|сеттл)[^%]{0,40}(\d+(?:[.,]\d+)?)\s*%/i);
   const fixedMatch = joined.match(/(?:commission|комиссия)[^\d]{0,20}(\d+(?:[.,]\d+)?)\s*(USDT|USDC|EUR|USD)/i);
   const periodMatch = joined.match(/\bT\s*\+\s*\d+\b/i);
   const sourceMatch = joined.match(/(Binance|Bybit|Rapira|Kraken|Google|XE|HTX|Paribu|Uznex)/i);
@@ -677,7 +731,7 @@ export function parseOfferSource({
   const provider = providerFromArgs(providerArgs);
   const sourceText = normalizeText(rawSourceText);
   const sourceBlocks = splitBlocks(sourceText);
-  const expandedBlocks = expandSchemeSpecificBlocks(expandCompoundBlocks(sourceBlocks));
+  const expandedBlocks = expandSchemeSpecificBlocks(expandCompoundBlocks(expandFlatCountryTableBlocks(sourceBlocks)));
   const { routes, duplicateBlockCount } = validateAndDeduplicate(expandedBlocks.map(parseRoute));
   const batchAnomalies = routes.length ? [] : [{
     code: "source_unparsed",

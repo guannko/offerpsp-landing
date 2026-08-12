@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test:pdf-extractor": "node scripts/test-pdf-extractor.mjs",
+    "test:offer-parser": "node scripts/test-offer-parser.mjs",
     "test:mailbox-poller": "node scripts/test-mailbox-poller.mjs"
   },
   "dependencies": {

@@ -57,7 +57,9 @@ async function extractPdf(buffer: ArrayBuffer, onProgress?: ExtractionProgress) 
     import("pdfjs-dist/build/pdf.worker.min.mjs?url"),
   ]);
   GlobalWorkerOptions.workerSrc = workerUrl.default;
-  const pdfDocument = await getDocument({ data: new Uint8Array(buffer) }).promise;
+  // pdf.js may transfer/detach the supplied ArrayBuffer. Keep the caller's
+  // buffer intact because it is also used for the immutable source hash.
+  const pdfDocument = await getDocument({ data: new Uint8Array(buffer.slice(0)) }).promise;
   const pages: string[] = [];
   let ocrWorker: Awaited<ReturnType<typeof createOcrWorker>> | null = null;
   let usedOcr = false;
@@ -110,6 +112,8 @@ async function extractXlsx(file: File) {
 export async function extractOfferSource(file: File, onProgress?: ExtractionProgress): Promise<ExtractedOfferSource> {
   if (file.size > MAX_SOURCE_SIZE) throw new Error("Максимальный размер исходника — 15 МБ.");
   const buffer = await file.arrayBuffer();
+  // Calculate this before any extractor can transfer or detach the buffer.
+  const sha256 = await digestHex(buffer.slice(0));
   const suffix = file.name.split(".").pop()?.toLowerCase() || "";
   let text = "";
   let extractionMethod = `offerpsp-browser-adapter:${suffix || "text"}`;
@@ -137,7 +141,7 @@ export async function extractOfferSource(file: File, onProgress?: ExtractionProg
     text,
     format,
     extractionMethod,
-    sha256: await digestHex(buffer),
+    sha256,
     size: file.size,
     mimeType: file.type || "application/octet-stream",
   };

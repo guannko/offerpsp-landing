@@ -264,11 +264,13 @@ async function applyMigrations() {
     "20260812110000_offerpsp_route_coverage_mode_default_fix.sql",
     "20260812111500_offerpsp_atomic_replacement_compatibility_contract.sql",
     "20260812142000_offerpsp_email_attachments.sql",
+    "20260812153000_offerpsp_empty_import_guard.sql",
     "20260812170000_offerpsp_inbox_operations.sql",
     "20260812183000_aibot_durable_memory.sql",
     "20260812190000_aibot_history_search.sql",
     "20260812192420_offerpsp_contact_timeline.sql",
     "20260812200000_aibot_execution_journal.sql",
+    "20260812223000_offerpsp_file_classification.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
