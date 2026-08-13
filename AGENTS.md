@@ -1,6 +1,6 @@
 # OfferPSP — shared project context for Codex and Claude Code
 
-Updated: 2026-08-12
+Updated: 2026-08-13
 
 Owner: Boris Kononenko / Brain Index
 
@@ -152,6 +152,20 @@ Important n8n workflows to verify by live ID and active version:
   management surface and the protected floating assistant in Captain's Bridge. Do not fork its
   business rules into separate Telegram and web prompts; both entries must use the same tools,
   confirmation-token protocol and system instructions.
+
+The staff merchant workspace can explicitly queue a background pre-compliance run with
+`queue_offerpsp_pre_compliance_screening(lead_id)`. The UI action is named
+`Запустить автопроверку`; it is not the staff clearance decision. Automated screening always
+returns the case to manual review. Applicant classification must be based on the applicant's
+company/site identity: wording inside a payment request such as “looking for a PSP” describes the
+requested service and must never classify the applicant itself as a PSP.
+
+The canonical private PSP provider may be linked to its AIBot research record through
+`private.offerpsp_providers.legacy_psp_id`. Captain's Bridge must merge that linked research record
+into the canonical provider card instead of displaying two PSP cards. Registry sections are based
+on the working lifecycle (`active`, processing/research, inactive, hidden), not on which subsystem
+originally created the record. PAYOK remains processing/research until its source and terms are
+reviewed and staff explicitly activates it.
 
 The durable project-memory profile for that shared core is `BIXOFFPSP`, not a personal Boris
 profile. Telegram and Captain's Bridge write conversation history into the same profile while

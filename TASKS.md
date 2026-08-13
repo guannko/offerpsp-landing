@@ -346,6 +346,24 @@ until a staff decision.
 - [ ] Staff decision for MBA: request represented merchant names/sites, licence per merchant,
   payment methods and PayIn/PayOut requirements before clearance.
 
+### Manual screening and PSP identity consolidation — production delivery 2026-08-13
+
+- [x] Staff can explicitly launch background screening from a merchant workspace. The action is
+  labelled `Запустить автопроверку` in both the header and empty dossier and queues the selected lead
+  through `queue_offerpsp_pre_compliance_screening` without clearing it automatically.
+- [x] Controlled Oura Ring Store execution `349574` completed successfully, classified the applicant
+  as `merchant` and saved a `manual_review` case. The n8n classifier now derives PSP identity from
+  company/site signals rather than phrases such as “looking for a PSP” in a merchant request.
+- [x] The canonical BR-Pay supply provider is linked to and merged with its AIBot research record.
+  The production active registry shows one BR-Pay card plus Antarex; the duplicate research card is
+  not rendered.
+- [x] PSP registry buckets now reflect working lifecycle rather than source subsystem. PAYOK remains
+  in `В обработке` as a potential partner until source review and explicit staff activation.
+- [x] Migrations `offerpsp_provider_identity_and_manual_screening` and
+  `expose_offerpsp_provider_identity_link` are applied. Production Captain's Bridge deployment
+  `dpl_F1jmFvNywCDmMghc1EDGqepvLMPq` is `READY` at
+  `https://ops-7q4m2x9k8v3n.vercel.app` from commit `23ece2e`.
+
 ## Agent operations — 2026-08-06
 
 Status: `VERIFIED` in production at the technical journey level. A controlled authenticated member

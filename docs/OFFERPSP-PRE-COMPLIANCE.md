@@ -1,6 +1,6 @@
 # OfferPSP Pre-Compliance — PRO module
 
-Updated: 2026-08-06
+Updated: 2026-08-13
 
 ## Product contract
 
@@ -43,9 +43,14 @@ Each score is `0–100`; an absent score means “not checked”, not zero.
 
 Classification controls routing but does not expose private PSP identities to the applicant.
 
+Classify the applicant from the submitted company and its website, not from the service request.
+For example, “we are looking for a PSP” means that the applicant needs payment processing; it does
+not make the applicant a PSP. Request text may still be used to detect a subagent relationship, but
+PSP identity requires a strong provider signal in the applicant's own name or site positioning.
+
 ## Automated worker contract
 
-The n8n worker uses two service-only RPCs.
+The n8n worker uses service-only RPCs, while staff has one guarded queue action.
 
 Production workflow: `wiEFFDaHd3uaJoJi` (`OfferPSP | Pre-Compliance PRO`). It is active and its
 controlled production executions `320586` and `320600` completed successfully using the dedicated
@@ -53,6 +58,9 @@ OfferPSP service-role credential.
 
 1. `claim_offerpsp_pre_compliance_jobs(limit)` atomically claims pending or stale jobs. A job stuck in `screening` for 30 minutes becomes available again.
 2. `record_offerpsp_pre_compliance_screening(lead_id, payload)` saves evidence and scores. It always leaves the case awaiting a staff decision.
+3. `queue_offerpsp_pre_compliance_screening(lead_id)` lets an active staff member explicitly queue
+   the selected merchant. In Captain's Bridge this is the `Запустить автопроверку` button. It starts
+   evidence collection only and never records a clearance decision.
 
 Recommended checks:
 
@@ -149,3 +157,16 @@ Every decision is immutable history. A later decision creates a new record rathe
 - MBA remains in `manual_review` with no staff decision. Matching is locked until a staff member records
   `cleared`; the recommended current action is `needs_info` for represented merchant names and
   sites, licence per merchant, payment methods, and PayIn/PayOut requirements.
+
+## Production verification — 2026-08-13
+
+- Migration `offerpsp_provider_identity_and_manual_screening` provides the guarded manual queue;
+  `expose_offerpsp_provider_identity_link` exposes only the staff-side canonical/research link.
+- Captain's Bridge production shows `Запустить автопроверку` both in the merchant header and in an
+  empty dossier. A successful queue action explains that the result normally appears within five
+  minutes.
+- Controlled Oura Ring Store execution `349574` completed successfully. It classified the applicant
+  as `merchant`, saved the case as `manual_review` and replaced the empty dossier with screening
+  scores and evidence.
+- The worker correction was published in active workflow `wiEFFDaHd3uaJoJi`: a merchant asking for
+  a PSP is no longer misclassified as a PSP merely because that phrase appears in the request.
