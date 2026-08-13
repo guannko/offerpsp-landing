@@ -26,6 +26,7 @@ const pageNames: Record<string, string> = {
   "/operations": "Задачи и календарь",
   "/agents": "Субагенты",
   "/analytics": "Аналитика",
+  "/seo-geo": "SEO / GEO",
   "/integrations": "Интеграции",
 };
 

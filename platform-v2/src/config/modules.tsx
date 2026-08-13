@@ -44,6 +44,7 @@ export const featureFlags = {
   tasks: true,
   agents: true,
   analytics: true,
+  seoGeo: true,
   finance: false,
   integrations: true,
   settings: false,
@@ -64,6 +65,7 @@ export const platformModules: PlatformModule[] = [
   { id: "tasks", label: "Задачи и календарь", shortLabel: "Задачи", path: "/operations", icon: <TaskIcon />, enabled: featureFlags.tasks, group: "growth" },
   { id: "agents", label: "Субагенты", shortLabel: "Агенты", path: "/agents", icon: <UserCircleIcon />, enabled: featureFlags.agents, group: "growth" },
   { id: "analytics", label: "Аналитика", shortLabel: "Аналитика", path: "/analytics", icon: <PieChartIcon />, enabled: featureFlags.analytics, group: "control" },
+  { id: "seoGeo", label: "SEO / GEO", shortLabel: "SEO / GEO", path: "/seo-geo", icon: <ShootingStarIcon />, enabled: featureFlags.seoGeo, group: "control" },
   { id: "finance", label: "Финансы", shortLabel: "Финансы", path: "/finance", icon: <DollarLineIcon />, enabled: featureFlags.finance, group: "control" },
   { id: "integrations", label: "Интеграции", shortLabel: "Интеграции", path: "/integrations", icon: <PlugInIcon />, enabled: featureFlags.integrations, group: "control" },
 ];

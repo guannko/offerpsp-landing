@@ -1,0 +1,206 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router";
+import PageMeta from "../components/common/PageMeta";
+import { EmptyState, ErrorBanner, Metric, PageHeading, Panel, SkeletonPage } from "../components/control/Ui";
+import { supabase } from "../lib/supabase";
+
+type CountRow = { key?: string; source?: string; category?: string; geo?: string; visitors?: number; pageviews?: number; leads?: number };
+type RecentLead = {
+  lead_id: string;
+  company?: string | null;
+  submitted_at?: string | null;
+  source_category?: string | null;
+  source_platform?: string | null;
+  source_referrer?: string | null;
+  landing_path?: string | null;
+  utm_source?: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
+};
+type AuditIssue = { severity: "critical" | "warning" | "notice"; code: string; count: number; title: string; action: string };
+type TrafficSnapshot = {
+  source?: string;
+  period_start?: string;
+  period_end?: string;
+  captured_at?: string;
+  visitors?: number;
+  pageviews?: number;
+  countries?: CountRow[];
+  referrers?: CountRow[];
+  paths?: CountRow[];
+  limitations?: Array<{ code: string; message: string }>;
+};
+type TechnicalAudit = {
+  tool?: string;
+  tool_version?: string;
+  target_url?: string;
+  audited_at?: string;
+  overall_score?: number;
+  category_scores?: Record<string, number>;
+  crawl_stats?: Record<string, number>;
+  issues?: AuditIssue[];
+};
+type AnalyticsPayload = {
+  generated_at?: string;
+  traffic?: TrafficSnapshot;
+  traffic_history?: TrafficSnapshot[];
+  technical_audit?: TechnicalAudit;
+  audit_history?: TechnicalAudit[];
+  lead_attribution?: {
+    total_business_leads?: number;
+    last_30_days?: number;
+    attributed_leads?: number;
+    sources?: CountRow[];
+    utm?: Array<{ source: string; medium: string; campaign: string; leads: number }>;
+    recent?: RecentLead[];
+    geo_demand?: CountRow[];
+  };
+};
+
+const number = (value: unknown) => Number(value || 0);
+const dateTime = (value?: string | null) => value
+  ? new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value))
+  : "—";
+const shortDate = (value?: string | null) => value
+  ? new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "short" }).format(new Date(value))
+  : "—";
+const sourceName = (value?: string | null) => {
+  if (!value || value === "Не определён") return "Источник не определён";
+  const normalized = value.toLowerCase();
+  if (normalized.includes("chatgpt") || normalized.includes("openai")) return "ChatGPT / OpenAI";
+  if (normalized.includes("gemini")) return "Google Gemini";
+  if (normalized.includes("claude")) return "Claude";
+  if (normalized === "direct") return "Прямой заход";
+  return value;
+};
+const countryName = (value?: string) => ({ CY: "Кипр", RU: "Россия", IN: "Индия", DE: "Германия", IT: "Италия", GB: "Великобритания" }[value || ""] || value || "—");
+
+function BarList({ rows, valueKey, empty }: { rows: CountRow[]; valueKey: "visitors" | "pageviews" | "leads"; empty: string }) {
+  const maximum = Math.max(1, ...rows.map((row) => number(row[valueKey])));
+  if (!rows.length) return <EmptyState title="Данных пока нет" description={empty}/>;
+  return <div className="space-y-4">{rows.map((row, index) => {
+    const label = valueKey === "leads" ? sourceName(row.source || row.geo || row.key) : countryName(row.key);
+    const value = number(row[valueKey]);
+    return <div key={`${label}-${index}`}>
+      <div className="mb-2 flex items-center justify-between gap-4 text-sm">
+        <span className="truncate font-medium text-gray-700 dark:text-gray-300">{label}</span>
+        <strong className="text-gray-900 dark:text-white">{value}</strong>
+      </div>
+      <div className="h-2.5 rounded-full bg-gray-100 dark:bg-gray-800"><div className="h-2.5 rounded-full bg-gradient-to-r from-brand-500 to-theme-purple-500" style={{ width: `${Math.max(6, value / maximum * 100)}%` }}/></div>
+    </div>;
+  })}</div>;
+}
+
+export default function SeoGeoPage() {
+  const [payload, setPayload] = useState<AnalyticsPayload | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async (refresh = false) => {
+    if (refresh) setRefreshing(true); else setLoading(true);
+    setError(null);
+    const { data, error: loadError } = await supabase.rpc("get_offerpsp_seo_geo_analytics");
+    if (loadError) setError(loadError.message);
+    else setPayload((data || {}) as AnalyticsPayload);
+    setLoading(false);
+    setRefreshing(false);
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const traffic = payload?.traffic || {};
+  const attribution = payload?.lead_attribution || {};
+  const audit = payload?.technical_audit || {};
+  const totalLeads = number(attribution.total_business_leads);
+  const attributedLeads = number(attribution.attributed_leads);
+  const coverage = totalLeads ? Math.round(attributedLeads / totalLeads * 100) : 0;
+  const issues = audit.issues || [];
+  const categoryScores = Object.entries(audit.category_scores || {});
+  const referrers = (traffic.referrers || []).map((row) => ({ ...row, key: row.key === "direct" ? "Прямой заход" : row.key }));
+  const recent = attribution.recent || [];
+  const sourceRows = attribution.sources || [];
+  const maxSource = useMemo(() => Math.max(1, ...sourceRows.map((row) => number(row.leads))), [sourceRows]);
+
+  if (loading) return <SkeletonPage/>;
+
+  return <>
+    <PageMeta title="SEO / GEO | OfferPSP" description="Источники трафика, география, атрибуция лидов и техническое здоровье OfferPSP."/>
+    {error && <ErrorBanner message={error}/>}
+    <PageHeading
+      eyebrow="Growth intelligence"
+      title="SEO / GEO и источники лидов"
+      description="Показывает, откуда нас находят, какие страницы приводят заявки и какие технические проблемы мешают росту. Только фактические данные — без декоративных графиков."
+      action={<button onClick={() => void load(true)} disabled={refreshing} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50">{refreshing ? "Обновляю…" : "Обновить"}</button>}
+    />
+
+    <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
+      <Metric label="Посетители" value={number(traffic.visitors)} hint={`${shortDate(traffic.period_start)} — ${shortDate(traffic.period_end)}`}/>
+      <Metric label="Просмотры" value={number(traffic.pageviews)} hint="production‑сайт по данным Vercel"/>
+      <Metric label="Заявки · 30 дней" value={number(attribution.last_30_days)} hint="без E2E, спама и архивных дублей" tone="success"/>
+      <Metric label="Атрибуция" value={`${coverage}%`} hint={`${attributedLeads} из ${totalLeads} рабочих заявок`} tone={coverage < 50 ? "warning" : "success"}/>
+      <Metric label="Техаудит" value={`${number(audit.overall_score).toFixed(1)}/10`} hint={`${audit.tool || "аудит"} ${audit.tool_version || ""}`} tone={number(audit.overall_score) >= 9 ? "success" : "warning"}/>
+    </div>
+
+    <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
+      <Panel className="xl:col-span-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Источники заявок</h2><p className="mt-1 text-sm text-gray-500">Наша собственная first/last‑touch атрибуция из формы, независимо от ограничений Vercel.</p></div>
+          <span className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500 dark:bg-white/[0.03]">Обновлено {dateTime(payload?.generated_at)}</span>
+        </div>
+        <div className="mt-6 space-y-4">{sourceRows.map((row, index) => {
+          const value = number(row.leads);
+          return <div key={`${row.source}-${index}`} className="grid grid-cols-[minmax(120px,180px)_1fr_42px] items-center gap-3">
+            <div className="min-w-0"><strong className="block truncate text-sm text-gray-800 dark:text-white/90">{sourceName(row.source)}</strong><span className="text-xs text-gray-400">{row.category || "—"}</span></div>
+            <div className="h-9 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"><div className="h-full rounded-lg bg-gradient-to-r from-brand-600 to-theme-purple-500" style={{ width: `${Math.max(7, value / maxSource * 100)}%` }}/></div>
+            <strong className="text-right text-sm text-gray-900 dark:text-white">{value}</strong>
+          </div>;
+        })}{!sourceRows.length && <EmptyState title="Источники ещё не записаны" description="Новые заявки уже сохраняют referrer, AI‑платформу и UTM автоматически."/>}</div>
+      </Panel>
+      <Panel>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">География посещений</h2>
+        <p className="mt-1 text-sm text-gray-500">Страны реальных посетителей сайта, не GEO платёжного запроса.</p>
+        <div className="mt-6"><BarList rows={traffic.countries || []} valueKey="visitors" empty="Vercel ещё не зафиксировал географию посетителей."/></div>
+      </Panel>
+    </div>
+
+    <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
+      <Panel>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Referrer</h2>
+        <p className="mt-1 text-sm text-gray-500">Откуда пришёл визит по данным Vercel.</p>
+        <div className="mt-6"><BarList rows={referrers} valueKey="visitors" empty="Источники посещений ещё не зафиксированы."/></div>
+      </Panel>
+      <Panel>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Посадочные страницы</h2>
+        <p className="mt-1 text-sm text-gray-500">Какие URL получают входящий трафик.</p>
+        <div className="mt-6 space-y-3">{(traffic.paths || []).map((row, index) => <div key={`${row.key}-${index}`} className="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3 dark:border-gray-800"><code className="text-sm text-gray-700 dark:text-gray-300">{row.key || "/"}</code><strong className="text-sm text-gray-900 dark:text-white">{number(row.pageviews)}</strong></div>)}{!(traffic.paths || []).length && <EmptyState title="Страниц пока нет" description="Данные появятся после посещений."/>}</div>
+      </Panel>
+      <Panel>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Спрос по GEO</h2>
+        <p className="mt-1 text-sm text-gray-500">Целевые рынки из реальных заявок мерчей.</p>
+        <div className="mt-6"><BarList rows={attribution.geo_demand || []} valueKey="leads" empty="В заявках пока нет нормализованных target GEO."/></div>
+      </Panel>
+    </div>
+
+    <Panel className="mt-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Последние рабочие заявки и атрибуция</h2><p className="mt-1 text-sm text-gray-500">Тестовые fixtures и спам исключены. «Не определён» означает старую заявку без сохранённого источника.</p></div><span className="text-xs text-gray-400">{totalLeads} рабочих заявок</span></div>
+      <div className="mt-5 overflow-x-auto"><table className="min-w-[900px] w-full text-left text-sm"><thead><tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-400 dark:border-gray-800"><th className="px-3 py-3">Компания</th><th className="px-3 py-3">Дата</th><th className="px-3 py-3">Источник</th><th className="px-3 py-3">UTM</th><th className="px-3 py-3">Landing</th></tr></thead><tbody>{recent.map((lead) => <tr key={lead.lead_id} className="border-b border-gray-100 last:border-0 dark:border-gray-800"><td className="px-3 py-4"><Link to={`/merchants/${lead.lead_id}`} className="font-semibold text-gray-900 hover:text-brand-500 dark:text-white">{lead.company || "Без названия"}</Link></td><td className="px-3 py-4 text-gray-500">{dateTime(lead.submitted_at)}</td><td className="px-3 py-4"><strong className="block text-gray-700 dark:text-gray-300">{sourceName(lead.source_platform || lead.utm_source || lead.source_referrer)}</strong><span className="text-xs text-gray-400">{lead.source_category || "—"}</span></td><td className="px-3 py-4 text-gray-500">{lead.utm_source || "—"}{lead.utm_campaign ? ` · ${lead.utm_campaign}` : ""}</td><td className="px-3 py-4"><code className="text-xs text-gray-500">{lead.landing_path || "—"}</code></td></tr>)}{!recent.length && <tr><td colSpan={5} className="py-8"><EmptyState title="Заявок нет" description="Атрибуция появится после первой рабочей заявки."/></td></tr>}</tbody></table></div>
+    </Panel>
+
+    <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
+      <Panel className="xl:col-span-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Техническое здоровье сайта</h2><p className="mt-1 text-sm text-gray-500">Последний независимый crawl: производительность, SEO, безопасность и доступность.</p></div><a href={audit.target_url || "https://offerpsp.com/"} target="_blank" rel="noreferrer" className="text-sm font-semibold text-brand-500">Открыть сайт ↗</a></div>
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">{categoryScores.map(([label, score]) => <div key={label} className="rounded-xl bg-gray-50 p-4 dark:bg-white/[0.03]"><span className="block text-xs text-gray-400">{{ performance: "Скорость", seo: "SEO", security: "Защита", accessibility: "Доступность", best_practices: "Практики" }[label] || label}</span><strong className={`mt-2 block text-2xl ${score >= 9 ? "text-success-600 dark:text-success-400" : score >= 8 ? "text-warning-600" : "text-error-600"}`}>{score.toFixed(1)}</strong></div>)}</div>
+        <div className="mt-6 divide-y divide-gray-100 dark:divide-gray-800">{issues.map((issue) => <div key={issue.code} className="flex flex-col gap-3 py-4 first:pt-0 sm:flex-row sm:items-start"><span className={`w-fit shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${issue.severity === "critical" ? "bg-error-50 text-error-700 dark:bg-error-500/10 dark:text-error-300" : issue.severity === "warning" ? "bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-300" : "bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300"}`}>{issue.severity === "critical" ? "Критично" : issue.severity === "warning" ? "Предупреждение" : "Замечание"} · {issue.count}</span><div><strong className="text-sm text-gray-900 dark:text-white">{issue.title}</strong><p className="mt-1 text-sm text-gray-500">{issue.action}</p></div></div>)}</div>
+      </Panel>
+      <Panel>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Достоверность данных</h2>
+        <div className="mt-5 space-y-4">
+          <div className="rounded-xl bg-success-50 p-4 text-sm text-success-800 dark:bg-success-500/10 dark:text-success-300"><strong>Lead attribution работает</strong><p className="mt-1 text-xs">Новые формы сохраняют AI‑платформу, referrer, first/last touch и UTM в нашей базе.</p></div>
+          {(traffic.limitations || []).map((item) => <div key={item.code} className="rounded-xl bg-warning-50 p-4 text-sm text-warning-800 dark:bg-warning-500/10 dark:text-warning-300"><strong>{item.code === "utm_dimensions_unavailable" ? "Ограничение тарифа Vercel" : "Короткая история"}</strong><p className="mt-1 text-xs">{item.message}</p></div>)}
+          <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800"><span className="block text-xs text-gray-400">Снимок трафика</span><strong className="mt-1 block text-sm text-gray-800 dark:text-white/90">{dateTime(traffic.captured_at)}</strong><span className="mt-3 block text-xs text-gray-400">Технический аудит</span><strong className="mt-1 block text-sm text-gray-800 dark:text-white/90">{dateTime(audit.audited_at)}</strong></div>
+        </div>
+      </Panel>
+    </div>
+  </>;
+}

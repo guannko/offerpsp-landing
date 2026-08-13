@@ -51,7 +51,15 @@ export type Lead = {
   qualification_notes?: string | null;
   details?: string | null;
   utm_source?: string | null;
+  utm_medium?: string | null;
   utm_campaign?: string | null;
+  utm_term?: string | null;
+  utm_content?: string | null;
+  source_category?: string | null;
+  source_platform?: string | null;
+  source_referrer?: string | null;
+  landing_path?: string | null;
+  attribution?: Record<string, unknown> | null;
   merchant_organization_id?: string | null;
   agent_organization_id?: string | null;
 };
