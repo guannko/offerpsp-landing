@@ -1111,6 +1111,9 @@ locally verified. No external service has been deployed or connected to producti
   environment template, architecture document and module contract tests.
 - [x] Verify the exact Vercel preview build locally. All serverless functions package successfully
   and the GoRules policy file is explicitly included in both rule-evaluation and health functions.
+- [x] Add the protected production module-health panel to Captain's Bridge and verify deployment
+  `dpl_7mvyrS3JEnN1i9LAnmMkyP7ErDWs`: GoRules is healthy in shadow mode; Docling,
+  Meilisearch, Mem0 and PostHog are explicitly shown as unconfigured rather than implied active.
 - [ ] Pin and deploy private Docling and Meilisearch images, configure secrets and verify health.
 - [ ] Run the first search-index sync and compare known merchant, PSP, casino and offer queries with
   direct Supabase results before enabling it.
