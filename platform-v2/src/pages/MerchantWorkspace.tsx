@@ -94,6 +94,7 @@ type ComplianceCase = {
   yellow_flags?: Array<{ title?: string; detail?: string } | string>;
   source_links?: Array<{ url?: string; label?: string; kind?: string }>;
   last_screened_at?: string | null;
+  manual_requested_at?: string | null;
 };
 
 type ComplianceWorkspace = {
@@ -449,6 +450,15 @@ export default function MerchantWorkspace() {
     }, input.decision === "cleared" ? "Лид допущен. Matching разблокирован." : "Решение сохранено в истории проверки.");
   }
 
+  async function requestComplianceScreening() {
+    if (!leadId) return;
+    setTab("compliance");
+    await runAction("compliance-screening", async () => {
+      const result = await supabase.rpc("queue_offerpsp_pre_compliance_screening", { p_lead_id: leadId });
+      return { error: result.error };
+    }, "Проверка запущена. Результаты обычно появляются в течение пяти минут.");
+  }
+
   if (bridgeLoading) return <SkeletonPage />;
   if (!lead) return <><PageMeta title="Мерч не найден | OfferPSP" description="Merchant workspace"/><ErrorBanner message="Мерч не найден или заявка находится в архиве."/><Link className="text-sm font-medium text-brand-500" to="/merchants">← Вернуться к мерчам</Link></>;
 
@@ -463,7 +473,7 @@ export default function MerchantWorkspace() {
       <div className="flex flex-wrap gap-2">
         <button onClick={() => void Promise.all([loadWorkspace(), entityWorkspace.refresh()])} disabled={loading || entityWorkspace.loading || Boolean(busy)} className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-brand-300 hover:text-brand-500 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300">Обновить</button>
         <VisibilityToggleButton hidden={lead.record_state === "archived"} busy={busy === "merchant-visibility"} onToggle={changeMerchantVisibility}/>
-        <button onClick={() => setTab("compliance")} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600">Проверить заявку</button>
+        <button onClick={() => void requestComplianceScreening()} disabled={busy === "compliance-screening"} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50">{busy === "compliance-screening" ? "Запускаю…" : "Запустить проверку"}</button>
       </div>
     </div>
 
@@ -475,7 +485,7 @@ export default function MerchantWorkspace() {
     </div>
 
     {loading ? <SkeletonPage/> : tab === "compliance"
-        ? <CompliancePanel workspace={complianceWorkspace} busy={busy} onSave={(input) => void saveComplianceDecision(input)}/>
+        ? <CompliancePanel workspace={complianceWorkspace} busy={busy} onRun={() => void requestComplianceScreening()} onSave={(input) => void saveComplianceDecision(input)}/>
       : tab === "company" || tab === "overview"
         ? <div className="space-y-6"><Overview lead={lead} matches={matches} shortlist={latest}/><MerchantCompanyWorkspace leadId={lead.lead_id} onChanged={async () => { await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]); }}/></div>
       : tab === "profile"
@@ -510,9 +520,10 @@ export default function MerchantWorkspace() {
   </>;
 }
 
-function CompliancePanel({ workspace, busy, onSave }: {
+function CompliancePanel({ workspace, busy, onRun, onSave }: {
   workspace: ComplianceWorkspace | null;
   busy: string | null;
+  onRun: () => void;
   onSave: (input: { decision: string; classification: string; notes: string; summary: string; missing: string[] }) => void;
 }) {
   const [classification, setClassification] = useState("unknown");
@@ -550,7 +561,7 @@ function CompliancePanel({ workspace, busy, onSave }: {
       </Panel>
       <Panel>
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Проверки и доказательства</h3>
-        <div className="mt-4 space-y-3">{workspace.checks?.length ? workspace.checks.map((check) => <div key={check.id} className="rounded-xl border border-gray-200 p-4 dark:border-gray-800"><div className="flex items-start justify-between gap-3"><div><strong className="text-sm text-gray-900 dark:text-white">{check.title}</strong><p className="mt-1 text-sm text-gray-500">{check.detail || check.check_key}</p>{check.source_url && <a href={check.source_url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-semibold text-brand-500">Открыть источник ↗</a>}</div><StatusPill status={check.check_status}/></div></div>) : <EmptyState title="Автопроверка ещё не запускалась" description="После подключения workflow здесь появятся домен, сайт, email, сеть, лицензия, санкционные и репутационные сигналы."/>}</div>
+        <div className="mt-4 space-y-3">{workspace.checks?.length ? workspace.checks.map((check) => <div key={check.id} className="rounded-xl border border-gray-200 p-4 dark:border-gray-800"><div className="flex items-start justify-between gap-3"><div><strong className="text-sm text-gray-900 dark:text-white">{check.title}</strong><p className="mt-1 text-sm text-gray-500">{check.detail || check.check_key}</p>{check.source_url && <a href={check.source_url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-semibold text-brand-500">Открыть источник ↗</a>}</div><StatusPill status={check.check_status}/></div></div>) : <div className="rounded-xl border border-dashed border-gray-200 p-6 text-center dark:border-gray-800"><h4 className="font-semibold text-gray-900 dark:text-white">Автопроверка ещё не запускалась</h4><p className="mx-auto mt-2 max-w-xl text-sm text-gray-500">Запустите проверку — система соберёт сигналы по домену, сайту, email, сети, лицензии, санкциям и репутации. Обычно это занимает до пяти минут.</p><button onClick={onRun} disabled={busy === "compliance-screening"} className="mt-4 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy === "compliance-screening" ? "Запускаю…" : "Запустить проверку"}</button></div>}</div>
       </Panel>
       {!!workspace.decisions?.length && <Panel><h3 className="text-lg font-semibold text-gray-900 dark:text-white">История решений</h3><div className="mt-4 divide-y divide-gray-100 dark:divide-gray-800">{workspace.decisions.map((decision) => <div key={decision.id} className="py-3"><div className="flex items-center justify-between gap-3"><StatusPill status={decision.decision}/><span className="text-xs text-gray-400">{new Date(decision.created_at).toLocaleString("ru-RU")}</span></div><p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{decision.notes || `Классификация: ${decision.classification}`}</p></div>)}</div></Panel>}
     </div>
