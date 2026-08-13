@@ -4,14 +4,23 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
-    "api/evaluate-rules.mjs": {
-      "includeFiles": "rules/**"
-    },
-    "api/module-health.mjs": {
+    "api/platform-modules.mjs": {
       "includeFiles": "rules/**"
     }
   },
   "rewrites": [
+    {
+      "source": "/api/evaluate-rules",
+      "destination": "/api/platform-modules?module=evaluate-rules"
+    },
+    {
+      "source": "/api/module-health",
+      "destination": "/api/platform-modules?module=module-health"
+    },
+    {
+      "source": "/api/semantic-memory",
+      "destination": "/api/platform-modules?module=semantic-memory"
+    },
     {
       "source": "/api/(.*)",
       "destination": "/api/$1"

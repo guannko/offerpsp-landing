@@ -33,7 +33,7 @@ Purpose: move deterministic eligibility policies out of UI code. The first JDM p
 merchant and route risk categories.
 
 - Policy: `rules/merchant-route-risk-v1.jdm.json`.
-- Staff-only evaluation: `POST /api/evaluate-rules`.
+- Staff-only evaluation: `POST /api/evaluate-rules` (routed through the shared platform modules function).
 - Current authority: shadow only.
 - The existing Supabase matching and confidentiality rules remain authoritative until rule-by-rule
   parity tests pass on production snapshots.
@@ -102,7 +102,7 @@ without a separate privacy review and Boris's approval. `shadow` is the default 
 | Meilisearch | verified adapter | not deployed | header fallback preserved; initial sync not run |
 
 The exact Vercel preview build is verified. The GoRules policy appears in the generated function
-file map for both `evaluate-rules` and `module-health`. This proves packaging, not production
+file map for the shared `platform-modules` function. This proves packaging, not production
 activation of the external services.
 
 This package is deliberately fail-open for the existing UI and fail-closed for external writes:
