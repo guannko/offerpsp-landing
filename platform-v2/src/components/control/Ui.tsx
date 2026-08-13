@@ -117,7 +117,7 @@ export function PageHeading({ eyebrow, title, description, action }: { eyebrow: 
 }
 
 export function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <section className={`rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900 ${className}`}>{children}</section>;
+  return <section className={`rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-xs transition-colors dark:border-[#34435a] dark:bg-[#202d42] ${className}`}>{children}</section>;
 }
 
 export function Metric({ label, value, hint, tone = "default" }: { label: string; value: string | number; hint: string; tone?: "default" | "warning" | "success" | "danger" }) {

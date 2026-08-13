@@ -103,7 +103,7 @@ export default function AppHeader() {
     return () => document.removeEventListener("keydown", handler);
   }, []);
 
-  return <header className="sticky top-0 z-40 flex w-full border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+  return <header className="sticky top-0 z-40 flex w-full border-b border-gray-200 bg-white dark:border-[#34435a] dark:bg-[#1c283b]">
     <div className="flex w-full items-center justify-between gap-3 px-4 py-3 lg:px-6">
       <div className="flex min-w-0 items-center gap-3">
         <button onClick={() => window.innerWidth >= 1024 ? toggleSidebar() : toggleMobileSidebar()} aria-label="Открыть меню" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-500 dark:border-gray-800 dark:text-gray-400">{isMobileOpen ? "×" : "☰"}</button>

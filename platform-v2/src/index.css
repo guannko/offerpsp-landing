@@ -188,6 +188,11 @@ layer(base);
   body {
     @apply relative font-normal font-outfit z-1 bg-gray-50;
   }
+
+  .dark body {
+    background-color: #172235;
+    color: #e8edf5;
+  }
 }
 
 @utility menu-item {
@@ -575,7 +580,7 @@ span.flatpickr-weekday,
   @apply gap-2;
 }
 .fc-button-group .fc-button {
-  @apply flex h-10 w-10 items-center justify-center !rounded-lg border border-gray-200 bg-transparent hover:border-gray-200 hover:bg-gray-50 focus:shadow-none active:!border-gray-200 active:!bg-transparent active:!shadow-none dark:border-gray-800 dark:hover:border-gray-800 dark:hover:bg-gray-900 dark:active:border-gray-800!;
+  @apply flex h-10 w-10 items-center justify-center !rounded-lg border border-gray-200 bg-transparent text-gray-600 hover:border-gray-200 hover:bg-gray-50 focus:shadow-none active:!border-gray-200 active:!bg-transparent active:!shadow-none dark:border-gray-700 dark:text-gray-200 dark:hover:border-gray-600 dark:hover:bg-white/5 dark:active:border-gray-700!;
 }
 
 .fc-button-group .fc-button.fc-prev-button:before {
@@ -602,10 +607,10 @@ span.flatpickr-weekday,
   @apply !text-lg !font-medium text-gray-800 dark:text-white/90;
 }
 .fc-header-toolbar.fc-toolbar .fc-toolbar-chunk:last-child {
-  @apply rounded-lg bg-gray-100 p-0.5 dark:bg-gray-900;
+  @apply rounded-lg bg-gray-100 p-0.5 dark:bg-[#26354c];
 }
 .fc-header-toolbar.fc-toolbar .fc-toolbar-chunk:last-child .fc-button {
-  @apply !h-auto !w-auto rounded-md !border-0 bg-transparent !px-5 !py-2 text-sm font-medium text-gray-500 hover:text-gray-700 focus:!shadow-none dark:text-gray-400;
+  @apply !h-auto !w-auto rounded-md !border-0 bg-transparent !px-5 !py-2 text-sm font-medium text-gray-500 hover:text-gray-700 focus:!shadow-none dark:text-gray-200 dark:hover:text-white;
 }
 .fc-header-toolbar.fc-toolbar
   .fc-toolbar-chunk:last-child
@@ -613,11 +618,11 @@ span.flatpickr-weekday,
   @apply text-gray-900 bg-white dark:bg-gray-800 dark:text-white;
 }
 .fc-theme-standard th {
-  @apply !border-x-0 border-t !border-gray-200 bg-gray-50 !text-left dark:!border-gray-800 dark:bg-gray-900;
+  @apply !border-x-0 border-t !border-gray-200 bg-gray-50 !text-left dark:!border-[#34435a] dark:bg-[#26354c];
 }
 .fc-theme-standard td,
 .fc-theme-standard .fc-scrollgrid {
-  @apply !border-gray-200 dark:!border-gray-800;
+  @apply !border-gray-200 dark:!border-[#34435a];
 }
 .fc .fc-col-header-cell-cushion {
   @apply !px-5 !py-4 text-sm font-medium uppercase text-gray-400;
@@ -629,10 +634,10 @@ span.flatpickr-weekday,
   @apply p-2;
 }
 .fc .fc-daygrid-day.fc-day-today .fc-scrollgrid-sync-inner {
-  @apply rounded-sm bg-gray-100 dark:bg-white/[0.03];
+  @apply rounded-sm bg-gray-100 dark:bg-brand-500/10;
 }
 .fc .fc-daygrid-day-number {
-  @apply !p-3 text-sm font-medium text-gray-700 dark:text-gray-400;
+  @apply !p-3 text-sm font-medium text-gray-700 dark:text-gray-200;
 }
 .fc .fc-daygrid-day-top {
   @apply !flex-row;
@@ -647,7 +652,7 @@ span.flatpickr-weekday,
   @apply rounded-lg py-2.5 pl-4 pr-3;
 }
 .event-fc-color .fc-event-title {
-  @apply p-0 text-sm font-normal text-gray-700;
+  @apply p-0 text-sm font-medium text-gray-700 dark:text-white;
 }
 .fc-daygrid-event-dot {
   @apply w-1 h-5 ml-0 mr-3 border-none rounded-sm;
@@ -773,7 +778,33 @@ span.flatpickr-weekday,
 .custom-calendar .fc-h-event {
   background-color: transparent;
   border: none;
-  color: black;
+  color: #344054;
+}
+
+.dark .custom-calendar .fc-h-event {
+  color: #eef2f7;
+}
+
+.offerpsp-calendar .fc-event,
+.offerpsp-calendar .fc-event-main,
+.offerpsp-calendar .fc-event-title {
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+.dark .offerpsp-calendar .fc-daygrid-day-frame:hover {
+  background-color: rgba(255, 255, 255, 0.025);
+}
+
+.dark .offerpsp-calendar .fc-list,
+.dark .offerpsp-calendar .fc-list-table,
+.dark .offerpsp-calendar .fc-list-day-cushion {
+  background-color: #202d42;
+  color: #e8edf5;
+}
+
+.dark .offerpsp-calendar .fc-list-event:hover td {
+  background-color: #26354c;
 }
 .fc.fc-media-screen {
   @apply min-h-screen;
