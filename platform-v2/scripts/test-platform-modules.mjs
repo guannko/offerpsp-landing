@@ -70,10 +70,10 @@ async function testRules() {
 }
 
 async function testSearch() {
-  const state = { settings: null, documents: null, indexes: new Set(["offerpsp_entities_v1"]) };
+  const state = { settings: null, documents: null, searchOptions: null, indexes: new Set(["offerpsp_entities_v1"]) };
   let taskUid = 10;
   const index = (uid) => ({
-    search: async () => ({ hits: [{ id: "provider:1", label: "BR-Pay", path: "/psps/1" }] }),
+    search: async (_query, options) => { state.searchOptions = options; return { hits: [{ id: "provider:1", label: "BR-Pay", path: "/psps/1" }] }; },
     updateSettings: async (settings) => { state.settings = settings; return { taskUid: taskUid++ }; },
     addDocuments: async (documents) => { state.documents = documents; return { taskUid: taskUid++ }; },
   });
@@ -88,7 +88,9 @@ async function testSearch() {
     swapIndexes: async () => ({ taskUid: taskUid++ }),
     deleteIndex: async (uid) => { state.indexes.delete(uid); return { taskUid: taskUid++ }; },
     deleteIndexIfExists: async (uid) => state.indexes.delete(uid),
-    waitForTask: async (uid) => ({ uid, status: "succeeded" }),
+    tasks: {
+      waitForTask: async (task) => ({ uid: task.taskUid, status: "succeeded" }),
+    },
   };
   const config = {
     mode: "active",
@@ -96,7 +98,8 @@ async function testSearch() {
     state: { name: "meilisearch", enabled: true },
   };
   assert.equal((await probeSearch(config, client)).healthy, true);
-  assert.equal((await searchOfferPsp("BR", {}, config, client))[0].label, "BR-Pay");
+  assert.equal((await searchOfferPsp("BR", { filter: 'record_state = "active"' }, config, client))[0].label, "BR-Pay");
+  assert.equal(state.searchOptions.filter, 'record_state = "active"');
   const task = await syncSearchDocuments([{ id: "provider:1", label: "BR-Pay" }], config, client);
   assert.equal(task.strategy, "atomic_swap");
   assert.deepEqual(state.settings.filterableAttributes, ["kind", "status", "record_state"]);
@@ -108,7 +111,10 @@ async function testSearch() {
       providers: [{ id: "provider-1", brand_name: "BR-Pay", website: "https://brpay.io", legacy_psp_id: 7 }],
       organizations: [{ id: "agent-1", name: "Agent One", organization_type: "agent", status: "active" }],
     },
-    coverage: { routes: [{ route_id: "route-1", provider_id: "provider-1", client_title: "EU Cards" }] },
+    coverage: { routes: [
+      { route_id: "route-1", provider_id: "provider-1", client_title: "IN UPI", geos: ["IN"], methods: ["UPI"] },
+      { route_id: "route-2", provider_id: "provider-1", client_title: "KZ P2P", geos: ["KZ"], methods: ["P2P"] },
+    ] },
     captainsBridge: {
       casino_leads: [{ id: 12, name: "Casino One", website: "casino.test" }],
       psp_providers: [
@@ -119,6 +125,12 @@ async function testSearch() {
   });
   assert.equal(documents.filter((item) => item.label.includes("BR")).length, 1);
   assert.deepEqual(new Set(documents.map((item) => item.kind)), new Set(["merchant", "provider", "casino", "agent", "route"]));
+  const indiaRoute = documents.find((item) => item.id === "route_route-1");
+  assert.match(indiaRoute.search_text, /India/);
+  assert.match(indiaRoute.search_text, /Индия/);
+  const cisRoute = documents.find((item) => item.id === "route_route-2");
+  assert.match(cisRoute.search_text, /CIS/);
+  assert.match(cisRoute.search_text, /СНГ/);
 }
 
 async function testSemanticMemory() {

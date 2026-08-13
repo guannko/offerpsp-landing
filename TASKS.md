@@ -1091,8 +1091,8 @@ deactivated on 2026-08-08 because offer availability is version-driven, not date
 
 ### Modular platform nodes — local first package 2026-08-13
 
-Status: `PARTIAL`. The code, contracts, private container definition and fail-safe fallbacks are
-locally verified. No external service has been deployed or connected to production yet.
+Status: `PARTIAL`. Meilisearch is now connected to production and the remaining optional modules
+stay isolated behind feature modes until their own verification is complete.
 
 - [x] Add Docling adapter and protected universal document-extraction endpoint. Existing PDF intake
   can use Docling as an active extractor or as a rescue path when native extraction fails; parsing,
@@ -1114,9 +1114,19 @@ locally verified. No external service has been deployed or connected to producti
 - [x] Add the protected production module-health panel to Captain's Bridge and verify deployment
   `dpl_7mvyrS3JEnN1i9LAnmMkyP7ErDWs`: GoRules is healthy in shadow mode; Docling,
   Meilisearch, Mem0 and PostHog are explicitly shown as unconfigured rather than implied active.
-- [ ] Pin and deploy private Docling and Meilisearch images, configure secrets and verify health.
-- [ ] Run the first search-index sync and compare known merchant, PSP, casino and offer queries with
-  direct Supabase results before enabling it.
+- [x] Replace the obsolete Northflank `btc-predictor` service with private Meilisearch `v1.22`,
+  protect it with a master key and verify authenticated health and index access. The search index is
+  disposable; Supabase remains the only source of truth.
+- [x] Add a service-role-only Supabase snapshot RPC, protected staff/cron sync endpoint, atomic index
+  replacement, daily Vercel refresh and a manual `Обновить индекс` control in Integrations.
+- [x] Run the first production sync: 516 deduplicated documents from 17 merchants, 81 PSP records,
+  251 casinos, 4 agents and 163 routes. Anonymous index access is denied; ordinary cockpit search
+  excludes archived records while preserving them in Supabase.
+- [x] Verify multilingual GEO search in production: country codes expand to English and Russian
+  names, EU resolves as Europe/Европа, and the CIS member codes resolve through both CIS and СНГ.
+  Production deployment `dpl_8gtEJ1vomiN35z74pXsG9UtnhieZ` is READY and the protected index still
+  returns `401` without its server-side key.
+- [ ] Pin and deploy private Docling, configure its secret and verify health.
 - [ ] Run real PDF, spreadsheet and scanned-image fixtures through native and Docling extraction,
   compare route counts/anomalies and only then choose `active` mode.
 - [ ] Configure a PostHog EU project and verify the captured payload contains no contacts, offer

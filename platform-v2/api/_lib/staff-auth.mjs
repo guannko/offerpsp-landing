@@ -47,8 +47,8 @@ function bearerToken(request) {
   return value.slice(7).trim();
 }
 
-async function supabaseJson(url, token, init = {}) {
-  const publishableKey = firstEnv(
+async function supabaseJson(url, token, init = {}, apiKeyOverride = "") {
+  const publishableKey = apiKeyOverride || firstEnv(
     "SUPABASE_PUBLISHABLE_KEY",
     "SUPABASE_ANON_KEY",
     "VITE_SUPABASE_PUBLISHABLE_KEY",
@@ -101,4 +101,15 @@ export async function requireOfferPspStaff(request) {
 
 export async function staffSupabaseRequest(context, path, init = {}) {
   return supabaseJson(`${context.supabaseUrl}/rest/v1/${path.replace(/^\//, "")}`, context.token, init);
+}
+
+export async function serviceSupabaseRequest(path, init = {}) {
+  const supabaseUrl = requiredEnv("SUPABASE_URL", "SUPABASE_URL", "VITE_SUPABASE_URL");
+  const serviceRoleKey = requiredEnv("SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SERVICE_ROLE_KEY");
+  return supabaseJson(
+    `${supabaseUrl}/rest/v1/${path.replace(/^\//, "")}`,
+    serviceRoleKey,
+    init,
+    serviceRoleKey,
+  );
 }

@@ -41,7 +41,7 @@ export async function searchOfferPsp(query, options = {}, config = getSearchConf
 }
 
 async function waitForSuccess(client, task) {
-  const result = await client.waitForTask(task.taskUid);
+  const result = await client.tasks.waitForTask(task, { timeout: 30_000 });
   if (result?.status === "failed" || result?.status === "canceled") {
     throw new Error(result?.error?.message || `Meilisearch task ${task.taskUid} ${result.status}`);
   }

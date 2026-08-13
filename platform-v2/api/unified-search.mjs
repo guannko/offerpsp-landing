@@ -11,7 +11,10 @@ export default async function handler(request, response) {
     if (!config.state.enabled) {
       return sendJson(response, 200, { source: "local_fallback", results: [] });
     }
-    const results = await searchOfferPsp(query, { limit: request.query?.limit }, config);
+    const results = await searchOfferPsp(query, {
+      limit: request.query?.limit,
+      filter: 'record_state = "active"',
+    }, config);
     return sendJson(response, 200, { source: "meilisearch", results });
   } catch (error) {
     return sendError(response, error);

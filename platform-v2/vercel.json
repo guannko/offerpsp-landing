@@ -6,8 +6,17 @@
   "functions": {
     "api/platform-modules.mjs": {
       "includeFiles": "rules/**"
+    },
+    "api/search-index-sync.mjs": {
+      "maxDuration": 60
     }
   },
+  "crons": [
+    {
+      "path": "/api/search-index-sync",
+      "schedule": "0 2 * * *"
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/evaluate-rules",

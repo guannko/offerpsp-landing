@@ -125,6 +125,22 @@ export default function IntegrationsWorkspace() {
     setBusy(null);
   }
 
+  async function syncSearchIndex() {
+    setBusy("sync-meilisearch"); setError(null); setNotice(null);
+    try {
+      const headers = await authHeaders();
+      const response = await fetch("/api/search-index-sync", { method: "POST", headers });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "Не удалось обновить поисковый индекс");
+      setNotice(`Meilisearch: индекс обновлён, объектов: ${Number(result.document_count || 0)}.`);
+      await load();
+    } catch (syncError) {
+      setError(syncError instanceof Error ? syncError.message : "Не удалось обновить поисковый индекс");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   if (bridge.loading || loading) return <SkeletonPage/>;
   const status = (ok?: boolean) => <span className={`rounded-full px-3 py-1 text-xs font-semibold ${ok?"bg-success-50 text-success-700":"bg-warning-50 text-warning-700"}`}>{ok?"Подключено":"Не настроено"}</span>;
   const moduleItems = platformModules ? [...platformModules.modules, platformModules.posthog] : [];
@@ -163,6 +179,7 @@ export default function IntegrationsWorkspace() {
             <p className="mt-3 text-sm leading-5 text-gray-500 dark:text-gray-400">{meta.description}</p>
             {item.detail && <p className="mt-3 truncate text-xs text-gray-400 dark:text-gray-500" title={item.detail}>{item.detail}</p>}
             {(item.error || item.reason) && <p className="mt-3 text-xs text-error-600 dark:text-error-300">{item.error || (item.reason === "disabled_or_unconfigured" ? "Модуль выключен или не настроен." : item.reason)}</p>}
+            {item.name === "meilisearch" && <button disabled={Boolean(busy) || !item.enabled} onClick={()=>void syncSearchIndex()} className="mt-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-100">{busy === "sync-meilisearch" ? "Обновляю…" : "Обновить индекс"}</button>}
           </div>;
         })}
       </div>

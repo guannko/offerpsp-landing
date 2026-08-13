@@ -231,6 +231,7 @@ export type Provider = {
   website?: string | null;
   relationship_status?: string | null;
   relationship_tier?: string | null;
+  record_state?: string | null;
   strategic_priority?: number | null;
   margin_included_default?: boolean | null;
   last_verified_at?: string | null;
