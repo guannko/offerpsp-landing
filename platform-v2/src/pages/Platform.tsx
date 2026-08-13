@@ -379,7 +379,8 @@ export function ProvidersPage() {
     normalizeName(provider.brand_name) ? `name:${normalizeName(provider.brand_name)}` : "",
     normalizeDomain(provider.website) ? `domain:${normalizeDomain(provider.website)}` : "",
   ]).filter(Boolean));
-  const researchProviders = captainsBridge.psp_providers.filter((provider) => ![
+  const linkedResearchProviderIds = new Set(providers.map((provider) => provider.legacy_psp_id).filter((id): id is number => typeof id === "number"));
+  const researchProviders = captainsBridge.psp_providers.filter((provider) => !linkedResearchProviderIds.has(provider.id) && ![
     normalizeName(provider.name) ? `name:${normalizeName(provider.name)}` : "",
     normalizeDomain(provider.website) ? `domain:${normalizeDomain(provider.website)}` : "",
   ].some((identity) => identity && operationalIdentities.has(identity)));

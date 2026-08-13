@@ -175,9 +175,14 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
           const supply = (supplyResult.data || {}) as Record<string, unknown>;
           const coverage = (coverageResult.data || {}) as Record<string, unknown>;
           const firstError = [leadsResult.error, managementResult.error, supplyResult.error, coverageResult.error, entitlementsResult.error, complianceResult.error].find(Boolean);
+          const supplyProviders = asArray<Provider>(supply.providers);
+          const supplyProviderById = new Map(supplyProviders.map((provider) => [provider.id, provider]));
           const snapshot: CoreSnapshot = {
             leads: asArray<Lead>(leadsResult.data),
-            providers: asArray<Provider>(management.providers || supply.providers),
+            providers: asArray<Provider>(management.providers || supply.providers).map((provider) => ({
+              ...provider,
+              legacy_psp_id: supplyProviderById.get(provider.id)?.legacy_psp_id ?? provider.legacy_psp_id ?? null,
+            })),
             routes: asArray<RouteCoverage>(coverage.routes),
             organizations: asArray<Organization>(management.organizations),
             assignments: asArray<AgentAssignment>(management.assignments),

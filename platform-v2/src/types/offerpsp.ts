@@ -216,6 +216,7 @@ export type CaptainsBridgeSnapshot = {
 
 export type Provider = {
   id: string;
+  legacy_psp_id?: number | null;
   internal_code?: string | null;
   brand_name: string;
   legal_name?: string | null;
