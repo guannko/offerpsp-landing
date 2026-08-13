@@ -4,6 +4,15 @@ import { platformModules } from "../config/modules";
 import { ThemeToggleButton } from "../components/common/ThemeToggleButton";
 import { useControlBridge } from "../context/ControlBridgeContext";
 import { useSidebar } from "../context/SidebarContext";
+import { supabase } from "../lib/supabase";
+import { captureProductEvent } from "../lib/analytics";
+
+type HeaderSearchResult = {
+  key: string;
+  label: string;
+  meta: string;
+  path: string;
+};
 
 export default function AppHeader() {
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
@@ -15,17 +24,68 @@ export default function AppHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [remoteSearchResults, setRemoteSearchResults] = useState<HeaderSearchResult[]>([]);
   const activeModule = platformModules.find((item) => item.path === "/" ? location.pathname === "/" : location.pathname.startsWith(item.path));
   const attentionLeadIds = new Set(complianceCases.filter((item) => ["pending", "screening", "manual_review", "needs_info", "hold"].includes(item.case_status)).map((item) => item.lead_id));
   const attentionCount = leads.filter((lead) => ["new", "needs_clarification", "provider_needs_info"].includes(lead.status || "") || attentionLeadIds.has(lead.lead_id)).length + routes.filter((route) => Number(route.open_error_count || 0) > 0).length;
-  const searchResults = useMemo(() => {
+  const localSearchResults = useMemo<HeaderSearchResult[]>(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return [];
     const merchantResults = leads.filter((item) => [item.company, item.name, item.work_email, item.telegram, item.company_url].join(" ").toLowerCase().includes(needle)).map((item) => ({ key: `merchant:${item.lead_id}`, label: item.company || item.name || "Без названия", meta: `Мерч · ${item.status || "без статуса"}`, path: `/merchants/${item.lead_id}` }));
     const providerResults = providers.filter((item) => [item.brand_name, item.legal_name, item.internal_code, item.website].join(" ").toLowerCase().includes(needle)).map((item) => ({ key: `provider:${item.id}`, label: item.brand_name, meta: `PSP · ${item.relationship_status || "без статуса"}`, path: `/psps/${item.id}` }));
     const routeResults = routes.filter((item) => [item.client_title, item.route_code, item.provider_name, item.provider_code, ...(item.geos || []), ...(item.currencies || []), ...(item.methods || [])].join(" ").toLowerCase().includes(needle)).map((item) => ({ key: `route:${item.route_id}`, label: item.client_title || item.route_code || "Маршрут", meta: `Оффер · ${item.provider_name || item.provider_code || "PSP"}`, path: `/psps/${item.provider_id}?route=${item.route_id}` }));
-    return [...merchantResults, ...providerResults, ...routeResults].slice(0, 8);
+    return [...merchantResults, ...providerResults, ...routeResults].slice(0, 10);
   }, [leads, providers, routes, query]);
+
+  const searchResults = useMemo(() => {
+    const merged = [...remoteSearchResults, ...localSearchResults];
+    return merged.filter((item, index) => merged.findIndex((candidate) => candidate.path === item.path) === index).slice(0, 10);
+  }, [localSearchResults, remoteSearchResults]);
+
+  useEffect(() => {
+    const term = query.trim();
+    if (term.length < 2) {
+      setRemoteSearchResults([]);
+      return;
+    }
+    setRemoteSearchResults([]);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        if (!token) return;
+        const response = await fetch(`/api/unified-search?q=${encodeURIComponent(term)}&limit=10`, {
+          headers: { authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        });
+        if (!response.ok) return;
+        const payload = await response.json();
+        if (payload?.source !== "meilisearch" || !Array.isArray(payload.results)) {
+          setRemoteSearchResults([]);
+          return;
+        }
+        captureProductEvent("control_bridge_search_used", {
+          source: "meilisearch",
+          result_count: payload.results.length,
+        });
+        setRemoteSearchResults(payload.results.map((item: Record<string, unknown>) => ({
+          key: String(item.id || item.path || item.label || "result"),
+          label: String(item.label || "Без названия"),
+          meta: String(item.meta || item.kind || "Результат"),
+          path: String(item.path || "/"),
+        })));
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          console.warn("Remote search unavailable; using local index", error);
+        }
+      }
+    }, 180);
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [query]);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {

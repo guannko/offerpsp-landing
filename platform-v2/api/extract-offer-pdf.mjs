@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
+import { decodeBase64File, FileInputError } from "./_lib/file-input.mjs";
 import { extractPdfText } from "./_lib/pdf-text-extractor.mjs";
+import { convertWithDocling, getDoclingConfig } from "./_lib/modules/docling.mjs";
 
 const MAX_PDF_BYTES = 15 * 1024 * 1024;
 
@@ -26,9 +28,10 @@ export default async function handler(request, response) {
 
   let buffer;
   try {
-    buffer = Buffer.from(encoded, "base64");
-  } catch {
-    return sendJson(response, 422, { error: "invalid_base64" });
+    buffer = decodeBase64File(encoded);
+  } catch (error) {
+    if (error instanceof FileInputError) return sendJson(response, 422, { error: error.code });
+    throw error;
   }
   if (!buffer.length || buffer.length > MAX_PDF_BYTES) {
     return sendJson(response, 413, { error: "pdf_size_invalid", max_bytes: MAX_PDF_BYTES });
@@ -38,13 +41,48 @@ export default async function handler(request, response) {
   }
 
   try {
-    const extracted = await extractPdfText(buffer);
+    const doclingConfig = getDoclingConfig();
+    let extracted = null;
+    let nativeError = null;
+    let docling = null;
+
+    try {
+      extracted = await extractPdfText(buffer);
+    } catch (error) {
+      nativeError = error instanceof Error ? error.message : "Native PDF extraction failed";
+    }
+
+    if (doclingConfig.state.enabled) {
+      try {
+        docling = await convertWithDocling(
+          { filename: String(input.filename || "offer.pdf"), buffer, mimeType: "application/pdf" },
+          doclingConfig,
+        );
+      } catch (error) {
+        docling = { engine: "docling", error: error instanceof Error ? error.message : "Docling failed" };
+      }
+    }
+
+    const hasDoclingText = Boolean(docling && "text" in docling && docling.text);
+    const useDocling = hasDoclingText && (doclingConfig.mode === "active" || !extracted);
+    if (!extracted && !useDocling) {
+      throw new Error([nativeError, docling?.error].filter(Boolean).join("; ") || "No PDF extractor succeeded");
+    }
+
+    const text = useDocling ? docling.text : extracted.text;
     return sendJson(response, 200, {
-      text: extracted.text,
-      page_count: extracted.pageCount,
-      extraction_method: extracted.extractionMethod,
+      text,
+      page_count: extracted?.pageCount || null,
+      extraction_method: useDocling ? "docling" : extracted.extractionMethod,
       source_sha256: createHash("sha256").update(buffer).digest("hex"),
-      needs_ocr: !extracted.text,
+      needs_ocr: !text,
+      module_trace: {
+        docling_mode: doclingConfig.mode,
+        native_status: extracted ? "success" : "failed",
+        docling_status: hasDoclingText ? "success" : docling?.error ? "failed" : "disabled",
+        ...(nativeError ? { native_error: nativeError } : {}),
+        ...(hasDoclingText ? { docling_text_length: docling.text.length } : {}),
+      },
     });
   } catch (error) {
     return sendJson(response, 422, {

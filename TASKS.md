@@ -1089,6 +1089,40 @@ deactivated on 2026-08-08 because offer availability is version-driven, not date
 - [x] Publishing a successor replaces the previous route. Identical terms silently rebind existing
   shortlist items; commercial changes enter Impact Control for merchant review.
 
+### Modular platform nodes — local first package 2026-08-13
+
+Status: `PARTIAL`. The code, contracts, private container definition and fail-safe fallbacks are
+locally verified. No external service has been deployed or connected to production yet.
+
+- [x] Add Docling adapter and protected universal document-extraction endpoint. Existing PDF intake
+  can use Docling as an active extractor or as a rescue path when native extraction fails; parsing,
+  anomaly review and publication controls remain unchanged.
+- [x] Add GoRules Zen policy and staff-only shadow endpoint for deterministic merchant/route risk
+  compatibility. It is explicitly non-authoritative until parity tests cover real route snapshots.
+- [x] Add privacy-restricted PostHog client with only explicit page/search events. Autocapture,
+  session recording, page text and element attributes are disabled.
+- [x] Add Mem0 adapter under profile `BIXOFFPSP` and a hybrid search endpoint that returns semantic
+  recall beside the existing Supabase operational memory. Supabase remains authoritative; shadow
+  mode does not write to Mem0.
+- [x] Add Meilisearch adapter, unified staff search and Supabase-derived index builder with provider
+  deduplication and atomic staging-index replacement. The cockpit keeps its current local fallback
+  whenever Meilisearch is off or unavailable.
+- [x] Add localhost-only Docker Compose definitions for private Docling and Meilisearch services,
+  environment template, architecture document and module contract tests.
+- [x] Verify the exact Vercel preview build locally. All serverless functions package successfully
+  and the GoRules policy file is explicitly included in both rule-evaluation and health functions.
+- [ ] Pin and deploy private Docling and Meilisearch images, configure secrets and verify health.
+- [ ] Run the first search-index sync and compare known merchant, PSP, casino and offer queries with
+  direct Supabase results before enabling it.
+- [ ] Run real PDF, spreadsheet and scanned-image fixtures through native and Docling extraction,
+  compare route counts/anomalies and only then choose `active` mode.
+- [ ] Configure a PostHog EU project and verify the captured payload contains no contacts, offer
+  terms, provider identity or secrets.
+- [ ] Keep Mem0 in shadow, compare it with Supabase Memory/Journal/Timeline and connect semantic
+  recall to AIBot only after a privacy and contradiction test.
+- [ ] Keep Chatwoot for the second packet after email, Telegram and portal conversations share one
+  canonical conversation model.
+
 ### P2 — Analytics
 
 - [ ] Acquisition and campaign attribution.

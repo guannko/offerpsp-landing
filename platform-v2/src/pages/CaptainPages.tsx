@@ -29,6 +29,7 @@ function Frame({ title, description, children }: { title: string; description: s
 
 export function CasinosWorkspace() {
   const { captainsBridge, refresh } = useControlBridge();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState("");
   const [scope, setScope] = useState<"active" | "pipeline" | "inactive" | "hidden" | "all">("active");
   const [contactFilter, setContactFilter] = useState("all");
@@ -48,6 +49,21 @@ export function CasinosWorkspace() {
     const active = !inactive && activeCasinoStatuses.includes(lead.contact_status || "");
     return kind === "hidden" ? hidden : !hidden && (kind === "inactive" ? inactive : kind === "active" ? active : !active && !inactive);
   }).length;
+
+  const requestedEntity = searchParams.get("entity");
+  useEffect(() => {
+    if (!requestedEntity) return;
+    const record = captainsBridge.casino_leads.find((lead) => String(lead.id) === requestedEntity);
+    if (record) setEditor({ record });
+  }, [captainsBridge.casino_leads, requestedEntity]);
+
+  const closeEditor = () => {
+    setEditor(null);
+    if (!requestedEntity) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("entity");
+    setSearchParams(next, { replace: true });
+  };
   return <Frame title="Казино" description="Рабочий реестр онлайн-казино."><PageHeading eyebrow="Counterparty organizer" title="Казино" description="Единый реестр найденных и активных компаний. AIBot наполняет его из Telegram, а команда ведёт контакт, почту, заметки и задачи в рабочей карточке." action={<button onClick={()=>setEditor({})} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white">+ Добавить казино</button>}/>
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-5"><Metric label="Всего" value={captainsBridge.casino_leads.length} hint="в едином реестре"/><Metric label="Активные" value={count("active")} hint="контакт и работа начаты" tone="success"/><Metric label="В обработке" value={count("pipeline")} hint="исследование и переговоры"/><Metric label="Неактивные" value={count("inactive")} hint="пауза или отказ"/><Metric label="Скрытые" value={count("hidden")} hint="сохранены вне работы"/></div>
     <Panel className="mt-6">
@@ -57,7 +73,7 @@ export function CasinosWorkspace() {
       <p className="mt-3 text-xs text-gray-400">Показано {leads.length} из {captainsBridge.casino_leads.length}.</p>
       <div className="mt-3 divide-y divide-gray-100 dark:divide-gray-800">{leads.map((lead)=><div key={lead.id} role="button" tabIndex={0} onClick={()=>setEditor({record:lead})} onKeyDown={(event)=>{if(event.key==="Enter")setEditor({record:lead});}} className="grid cursor-pointer gap-3 py-4 hover:bg-gray-50/70 lg:grid-cols-[1.3fr_1fr_1fr_140px] dark:hover:bg-white/[0.02]"><div><strong className="text-sm text-gray-900 dark:text-white">{lead.name || lead.website || "Без названия"}</strong>{lead.website ? <a onClick={(event)=>event.stopPropagation()} className="mt-1 block truncate text-xs text-brand-500 hover:underline" href={lead.website.startsWith("http")?lead.website:`https://${lead.website}`} target="_blank" rel="noreferrer">{lead.website}</a>:<span className="mt-1 block text-xs text-gray-400">сайт не найден</span>}</div><div className="text-sm text-gray-600 dark:text-gray-300">{lead.contact_name || "Контакт не указан"}<span className="block text-xs text-gray-400">{lead.email || lead.telegram || "нет канала"}</span></div><div className="text-sm text-gray-600 dark:text-gray-300">{lead.geo || "GEO —"}<span className="block text-xs text-gray-400">{lead.license || "лицензия не указана"}</span></div><div className="lg:text-right"><strong className="text-sm text-gray-900 dark:text-white">Score {lead.score ?? "—"}</strong><span className="block text-xs text-gray-400">{humanizeCode(lead.record_state === "archived" ? "archived" : lead.contact_status || "new")}</span><span className="mt-1 block text-xs font-semibold text-brand-500">Открыть карточку →</span></div></div>)}{!leads.length&&<EmptyState title="Казино не найдены" description="Измените фильтры или добавьте запись вручную."/>}</div>
     </Panel>
-    {editor && <ResearchEntityEditor entityType="casino" record={editor.record} onClose={()=>setEditor(null)} onSaved={refresh}/>}
+    {editor && <ResearchEntityEditor entityType="casino" record={editor.record} onClose={closeEditor} onSaved={refresh}/>}
   </Frame>;
 }
 

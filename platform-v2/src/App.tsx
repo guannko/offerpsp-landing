@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { ScrollToTop } from "./components/common/ScrollToTop";
+import AnalyticsBridge from "./components/analytics/AnalyticsBridge";
 import { ControlBridgeProvider } from "./context/ControlBridgeContext";
 import StaffGate from "./features/auth/StaffGate";
 import AppLayout from "./layout/AppLayout";
@@ -35,7 +36,7 @@ function RouteFallback() {
 
 export default function App() {
   const basename = import.meta.env.BASE_URL === "/" ? undefined : import.meta.env.BASE_URL.replace(/\/$/, "");
-  return <BrowserRouter basename={basename}><ControlBridgeProvider><ScrollToTop/><Suspense fallback={<RouteFallback/>}><Routes>
+  return <BrowserRouter basename={basename}><ControlBridgeProvider><ScrollToTop/><AnalyticsBridge/><Suspense fallback={<RouteFallback/>}><Routes>
     <Route path="/signin" element={<ControlSignIn/>}/>
     <Route element={<StaffGate><AppLayout/></StaffGate>}>
       <Route index element={<CommandCenter/>}/>

@@ -365,6 +365,7 @@ function RiskBadge({ segment }: { segment?: string | null }) {
 
 export function ProvidersPage() {
   const { providers, captainsBridge, refresh } = useControlBridge();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [scope, setScope] = useState<"active" | "pipeline" | "inactive" | "hidden" | "all">("active");
   const [query, setQuery] = useState("");
   const [editor, setEditor] = useState<{ record?: AgentPspProvider } | null>(null);
@@ -389,13 +390,26 @@ export function ProvidersPage() {
   const allCount = providers.length + researchProviders.length;
   const countKind = (kind: "active" | "pipeline" | "inactive") => providers.filter((item)=>!privateHidden(item) && privateKind(item.relationship_status)===kind).length + researchProviders.filter((item)=>!researchHidden(item) && researchKind(item)===kind).length;
   const hiddenCount = providers.filter(privateHidden).length + researchProviders.filter(researchHidden).length;
+  const requestedResearch = searchParams.get("research");
+  useEffect(() => {
+    if (!requestedResearch) return;
+    const record = captainsBridge.psp_providers.find((provider) => String(provider.id) === requestedResearch);
+    if (record) setEditor({ record });
+  }, [captainsBridge.psp_providers, requestedResearch]);
+  const closeResearchEditor = () => {
+    setEditor(null);
+    if (!requestedResearch) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("research");
+    setSearchParams(next, { replace: true });
+  };
   return <PageFrame title="PSP" description="Единый реестр PSP и партнёров."><PageHeading eyebrow="Counterparty organizer" title="PSP" description="Действующие партнёры, новые PSP из AIBot и история переговоров находятся в одном разделе. Настоящие названия и контакты видит только команда." action={<button onClick={()=>setEditor({})} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white">+ Добавить PSP</button>}/>
     <div className="mb-5 grid grid-cols-2 gap-3 xl:grid-cols-5"><Metric label="Всего" value={allCount} hint="партнёры и кандидаты"/><Metric label="Активные" value={countKind("active")} hint="работаем сейчас" tone="success"/><Metric label="В обработке" value={countKind("pipeline")} hint="исследование и переговоры"/><Metric label="Неактивные" value={countKind("inactive")} hint="пауза или отказ"/><Metric label="Скрытые" value={hiddenCount} hint="сохранены вне работы"/></div>
     <Panel className="mb-5"><div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"><div className="flex flex-wrap gap-2">{[["active","Активные"],["pipeline","В обработке"],["inactive","Неактивные"],["hidden","Скрытые"],["all","Все"]].map(([value,label]) => <button key={value} onClick={() => setScope(value as typeof scope)} className={`rounded-lg px-3 py-2 text-sm ${scope === value ? "bg-brand-500 text-white" : "bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300"}`}>{label}</button>)}</div><input className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm outline-none focus:border-brand-400 dark:border-gray-700 dark:bg-gray-900 dark:text-white lg:max-w-sm" value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="PSP, GEO, метод, контакт…"/></div><p className="mt-3 text-xs text-gray-400">Показано {privateVisible.length + researchVisible.length} из {allCount}. Скрытые PSP сохраняются в базе, но не мешают рабочему реестру.</p></Panel>
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">{privateVisible.map((provider) => <Panel key={`partner-${provider.id}`}><div className="flex items-start justify-between"><div><span className="text-xs font-semibold uppercase tracking-wide text-brand-500">Партнёр · {provider.internal_code || "PSP"}</span><h2 className="mt-2 text-xl font-semibold text-gray-900 dark:text-white">{provider.brand_name}</h2><p className="mt-1 text-sm text-gray-500">{provider.legal_name || provider.website || "Юридические данные не заполнены"}</p></div><StatusPill status={provider.relationship_status}/></div><div className="mt-5 grid grid-cols-3 gap-3 border-t border-gray-100 pt-4 text-center dark:border-gray-800"><div><strong className="block text-lg text-gray-900 dark:text-white">{provider.route_count || 0}</strong><span className="text-xs text-gray-400">офферов</span></div><div><strong className="block text-lg text-gray-900 dark:text-white">{provider.published_route_count || 0}</strong><span className="text-xs text-gray-400">live</span></div><div><strong className="block text-lg text-gray-900 dark:text-white">{provider.strategic_priority ?? "—"}</strong><span className="text-xs text-gray-400">приоритет</span></div></div><Link to={`/psps/${provider.id}`} className="mt-5 block w-full rounded-lg border border-gray-200 px-4 py-2 text-center text-sm font-medium text-gray-700 hover:border-brand-300 hover:text-brand-500 dark:border-gray-700 dark:text-gray-300">Открыть workspace</Link></Panel>)}
       {researchVisible.map((provider)=><Panel key={`research-${provider.id}`}><div className="flex items-start justify-between gap-3"><div><span className="text-xs font-semibold uppercase tracking-wide text-theme-purple-500">Кандидат · AIBot</span><h2 className="mt-2 text-xl font-semibold text-gray-900 dark:text-white">{provider.name}</h2><p className="mt-1 text-sm text-gray-500">{provider.specialization || provider.website || "Профиль ещё не заполнен"}</p></div><StatusPill status={provider.provider_status || provider.contact_status}/></div><div className="mt-4 space-y-2 border-t border-gray-100 pt-4 text-sm text-gray-500 dark:border-gray-800"><p>GEO: {(provider.supported_countries || []).join(", ") || provider.geo || "—"}</p><p className="truncate">Методы: {(provider.payment_methods || []).join(", ") || provider.methods || "—"}</p><p className="truncate">Контакт: {provider.email || provider.telegram || "не найден"}</p></div><button onClick={()=>setEditor({record:provider})} className="mt-5 w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:border-brand-300 hover:text-brand-500 dark:border-gray-700 dark:text-gray-300">Открыть органайзер</button></Panel>)}
       {!privateVisible.length && !researchVisible.length && <Panel className="lg:col-span-2 xl:col-span-3"><EmptyState title="PSP не найдены" description="Измените фильтр или добавьте нового партнёра."/></Panel>}
-    </div>{editor && <ResearchEntityEditor entityType="psp" record={editor.record} onClose={()=>setEditor(null)} onSaved={refresh}/>}</PageFrame>;
+    </div>{editor && <ResearchEntityEditor entityType="psp" record={editor.record} onClose={closeResearchEditor} onSaved={refresh}/>}</PageFrame>;
 }
 
 function OfferIntakePanel({ providerNames, onImported }: { providerNames: string[]; onImported: () => Promise<void> }) {
