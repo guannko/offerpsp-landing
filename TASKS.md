@@ -1,6 +1,6 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-08-12
+Updated: 2026-08-14
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
@@ -1135,8 +1135,9 @@ stay isolated behind feature modes until their own verification is complete.
   costs about $36/month and field reports show memory can exceed that. When real volume requires
   Docling, use an asynchronous on-demand job with Storage/queue, then compare PDF, spreadsheet and
   scanned-image fixtures before choosing `active` mode.
-- [ ] Configure a PostHog EU project and verify the captured payload contains no contacts, offer
-  terms, provider identity or secrets.
+- [x] Product decision 2026-08-14: do not configure or enable PostHog. OfferPSP keeps its existing
+  first-party acquisition/SEO telemetry and does not receive or proxy merchant payment traffic.
+  Post-introduction progress may later be read from a PSP cabinet/API where the partner supports it.
 - [ ] Keep Mem0 in shadow, compare it with Supabase Memory/Journal/Timeline and connect semantic
   recall to AIBot only after a privacy and contradiction test.
 - [ ] Keep Chatwoot for the second packet after email, Telegram and portal conversations share one
@@ -1150,7 +1151,8 @@ stay isolated behind feature modes until their own verification is complete.
 - [ ] PSP review acceptance, decline and clarification rates.
 - [ ] Introduction → Telegram → Zoom → live cooperation conversion.
 - [ ] Time-to-match, time-to-PSP-decision and time-to-launch.
-- [ ] Processing volume and realized OfferPSP margin by PSP and route.
+- [ ] Partner-reported or PSP-API processing volume and realized OfferPSP margin by PSP and route;
+  OfferPSP must not proxy merchant payment traffic merely to collect analytics.
 
 ### P2 — Search and PSP acquisition
 
