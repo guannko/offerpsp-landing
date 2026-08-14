@@ -31,5 +31,12 @@ OfferPSP does not publish its provider network, private routes, rates or custome
 ## Official pages
 
 - Home and service overview: https://offerpsp.com/
+- PSP matching process: https://offerpsp.com/psp-matching-process.html
+- PSP matching for licensed iGaming businesses: https://offerpsp.com/psp-for-igaming.html
+- Higher-risk payment provider matching: https://offerpsp.com/high-risk-payment-provider.html
+- Cross-border payment provider matching: https://offerpsp.com/cross-border-payment-matching.html
+- PSP matching for SaaS and subscription businesses: https://offerpsp.com/psp-for-saas.html
+- PSP matching for online marketplaces: https://offerpsp.com/psp-for-marketplaces.html
+- Payment method planning by GEO: https://offerpsp.com/payment-methods-by-geo.html
 - Privacy notice: https://offerpsp.com/privacy.html
 - Terms: https://offerpsp.com/terms.html
