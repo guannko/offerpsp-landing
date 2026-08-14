@@ -95,7 +95,7 @@ const sitemapXml = `<?xml version="1.0"?><urlset>
 </urlset>`;
 const pageHtml = (title, h1) => `<!doctype html><html lang="en"><head>
   <title>${title}</title><meta name="description" content="Confidential payment matching">
-  <link rel="canonical" href="https://offerpsp.com/"><script type="application/ld+json">{}</script>
+  <link rel="canonical" href="https://offerpsp.com/"><script type="application/ld+json">{"@graph":[{"@type":"Organization"},{"@type":"Service"}]}</script>
   </head><body><h1>${h1}</h1><h2>How it works</h2><p>Qualified payment introductions for merchants and PSPs.</p></body></html>`;
 const securityHeaders = {
   "content-security-policy": "default-src 'self'",
@@ -115,6 +115,7 @@ assert.equal(evidence.pages.length, 2);
 assert.equal(evidence.pages[0].title, "OfferPSP");
 assert.deepEqual(evidence.pages[0].h1, ["The right PSP"]);
 assert.equal(evidence.pages[0].json_ld_blocks, 1);
+assert.deepEqual(evidence.pages[0].json_ld_types, ["Organization", "Service"]);
 assert.equal(evidence.pages[0].image_inventory.content_raster_images, 0);
 assert.equal(evidence.pages[0].response_headers["content-security-policy"], "default-src 'self'");
 
@@ -189,6 +190,30 @@ assert.equal(unsupportedAggregates.confidence, "medium");
 assert.doesNotMatch(unsupportedAggregates.executive_summary, /(WebP|AVIF|Brotli)/i);
 assert.match(unsupportedAggregates.limitations.join(" "), /no content raster images/i);
 assert.match(unsupportedAggregates.limitations.join(" "), /use Brotli/i);
+
+const unsupportedSummaryOnly = normalizeSeoAgentAnalysis({ analysis: {
+  ...rawAgentAnalysis,
+  executive_summary: "Site health is strong. The main problem is absence of WebP/AVIF, although indexed pages have no content raster images.",
+  priorities: rawAgentAnalysis.priorities,
+} }, evidence);
+assert.doesNotMatch(unsupportedSummaryOnly.executive_summary, /(WebP|AVIF)/i);
+assert.match(unsupportedSummaryOnly.limitations.join(" "), /no content raster images/i);
+
+const unsupportedStructuredData = normalizeSeoAgentAnalysis({ analysis: {
+  ...rawAgentAnalysis,
+  confidence: "high",
+  priorities: [{
+    priority: "P1",
+    area: "GEO",
+    title: "Improve structured data",
+    evidence: "The JSON-LD type is not specified in the supplied data.",
+    recommendation: "Add a Schema.org Service type.",
+    affected_urls: ["https://offerpsp.com/"],
+  }],
+} }, evidence);
+assert.equal(unsupportedStructuredData.priorities.length, 0);
+assert.equal(unsupportedStructuredData.confidence, "medium");
+assert.match(unsupportedStructuredData.limitations.join(" "), /already declares Schema\.org types/i);
 
 let agentRequest = null;
 const agentResult = await runSeoGeoAgent(agentAudit, {

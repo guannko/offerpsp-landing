@@ -60,6 +60,29 @@ function visibleText(html) {
     .replace(/<[^>]+>/g, " ")), MAX_TEXT_SAMPLE);
 }
 
+function jsonLdTypes(html) {
+  const types = new Set();
+  const blocks = [...String(html || "").matchAll(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
+  const visit = (value) => {
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (!value || typeof value !== "object") return;
+    const declared = value["@type"];
+    (Array.isArray(declared) ? declared : [declared]).filter(Boolean).forEach((type) => types.add(clampText(type, 120)));
+    if (value["@graph"]) visit(value["@graph"]);
+  };
+  for (const block of blocks) {
+    try {
+      visit(JSON.parse(decodeHtml(block[1])));
+    } catch {
+      // Invalid JSON-LD remains visible through json_ld_blocks, but no type is asserted.
+    }
+  }
+  return [...types].filter(Boolean).slice(0, 20);
+}
+
 function sitemapUrls(xml, targetOrigin) {
   const urls = [...String(xml || "").matchAll(/<loc>\s*([^<]+?)\s*<\/loc>/gi)]
     .map((match) => decodeHtml(match[1]).trim())
@@ -111,6 +134,7 @@ function pageBrief(url, result) {
     h2: tagValues(html, "h2", 10),
     lang: clampText(html.match(/<html\b[^>]*\blang=["']([^"']+)["']/i)?.[1], 20),
     json_ld_blocks: (html.match(/application\/ld\+json/gi) || []).length,
+    json_ld_types: jsonLdTypes(html),
     image_inventory: {
       content_images: imageSources.length,
       content_raster_images: contentRasterImages.length,
@@ -196,7 +220,13 @@ function claimsMissingBrotli(item) {
 
 function claimsMissingModernImages(item) {
   const text = [item?.title, item?.evidence, item?.recommendation].join(" ");
-  return /(webp|avif)/i.test(text) && /(add|convert|missing|absent|добав|конверт|отсутств|нет\s+(?:webp|avif))/i.test(text);
+  return /(webp|avif)/i.test(text) && /(add|convert|missing|absent|absence|добав|конверт|отсутств|нет\s+(?:webp|avif))/i.test(text);
+}
+
+function claimsMissingStructuredDataTypes(item) {
+  const text = [item?.title, item?.evidence, item?.recommendation].join(" ");
+  return /(json-?ld|structured data|schema\.org|структурирован)/i.test(text)
+    && /(type (?:is )?not specified|type (?:is )?missing|тип не указан|тип отсутств)/i.test(text);
 }
 
 function hasVerifiedBrotli(evidence) {
@@ -207,6 +237,11 @@ function hasVerifiedBrotli(evidence) {
 function hasNoContentRasterImages(evidence) {
   const pages = Array.isArray(evidence?.pages) ? evidence.pages.filter((page) => page.status >= 200 && page.status < 400) : [];
   return pages.length > 0 && pages.every((page) => Number(page.image_inventory?.content_raster_images || 0) === 0);
+}
+
+function hasVerifiedStructuredDataTypes(evidence) {
+  const pages = Array.isArray(evidence?.pages) ? evidence.pages.filter((page) => page.status >= 200 && page.status < 400) : [];
+  return pages.some((page) => Array.isArray(page.json_ld_types) && page.json_ld_types.length > 0);
 }
 
 function stripUnsupportedSummarySentences(summary, { modernImages, brotli }) {
@@ -231,13 +266,21 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
   const verifiedSecurity = hasVerifiedSecurityHeaders(evidence);
   const verifiedBrotli = hasVerifiedBrotli(evidence);
   const noContentRasterImages = hasNoContentRasterImages(evidence);
-  const removedUnsupportedSecurity = verifiedSecurity && normalizedPriorities.some(claimsMissingSecurityHeaders);
-  const removedUnsupportedBrotli = verifiedBrotli && normalizedPriorities.some(claimsMissingBrotli);
-  const removedUnsupportedImages = noContentRasterImages && normalizedPriorities.some(claimsMissingModernImages);
+  const verifiedStructuredDataTypes = hasVerifiedStructuredDataTypes(evidence);
+  const summaryItem = { title: executiveSummary };
+  const removedUnsupportedSecurity = verifiedSecurity
+    && (normalizedPriorities.some(claimsMissingSecurityHeaders) || claimsMissingSecurityHeaders(summaryItem));
+  const removedUnsupportedBrotli = verifiedBrotli
+    && (normalizedPriorities.some(claimsMissingBrotli) || claimsMissingBrotli(summaryItem));
+  const removedUnsupportedImages = noContentRasterImages
+    && (normalizedPriorities.some(claimsMissingModernImages) || claimsMissingModernImages(summaryItem));
+  const removedUnsupportedStructuredData = verifiedStructuredDataTypes
+    && (normalizedPriorities.some(claimsMissingStructuredDataTypes) || claimsMissingStructuredDataTypes(summaryItem));
   const priorities = normalizedPriorities.filter((item) => {
     if (removedUnsupportedSecurity && claimsMissingSecurityHeaders(item)) return false;
     if (removedUnsupportedBrotli && claimsMissingBrotli(item)) return false;
     if (removedUnsupportedImages && claimsMissingModernImages(item)) return false;
+    if (removedUnsupportedStructuredData && claimsMissingStructuredDataTypes(item)) return false;
     return true;
   });
   const limitations = Array.isArray(source.limitations)
@@ -252,6 +295,9 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
   if (removedUnsupportedImages) {
     limitations.unshift("Indexed pages contain no content raster images; the PNG social preview is intentionally kept for crawler compatibility, so WebP/AVIF absence is not an optimization defect.");
   }
+  if (removedUnsupportedStructuredData) {
+    limitations.unshift("Live JSON-LD already declares Schema.org types; recommendations claiming the type is unspecified were discarded.");
+  }
   executiveSummary = stripUnsupportedSummarySentences(executiveSummary, {
     modernImages: removedUnsupportedImages,
     brotli: removedUnsupportedBrotli,
@@ -265,7 +311,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     model: clampText(value?.model || source.model || "deepseek-chat", 120),
     generated_at: new Date().toISOString(),
     executive_summary: executiveSummary,
-    confidence: removedUnsupportedSecurity || removedUnsupportedBrotli || removedUnsupportedImages
+    confidence: removedUnsupportedSecurity || removedUnsupportedBrotli || removedUnsupportedImages || removedUnsupportedStructuredData
       ? "medium"
       : (["high", "medium", "low"].includes(source.confidence) ? source.confidence : "medium"),
     priorities,
