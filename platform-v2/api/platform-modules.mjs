@@ -8,6 +8,7 @@ import {
 } from "./_lib/staff-auth.mjs";
 import { collectGeoSignals, normalizeSiteOneAudit } from "./_lib/siteone-audit.mjs";
 import { runSiteOneAudit } from "./_lib/siteone-runner.mjs";
+import { runSeoGeoAgent } from "./_lib/seo-geo-agent.mjs";
 import { probeDocling } from "./_lib/modules/docling.mjs";
 import {
   evaluateMerchantRouteRisk,
@@ -141,6 +142,16 @@ async function executeAuditRun(runId) {
     const report = await runSiteOneAudit();
     const audit = normalizeSiteOneAudit(report, "https://offerpsp.com/");
     audit.metadata = { ...audit.metadata, geo_signals: await collectGeoSignals() };
+    try {
+      audit.agent_analysis = await runSeoGeoAgent(audit);
+    } catch (agentError) {
+      audit.agent_analysis = {
+        status: "failed",
+        agent: "OfferPSP SEO/GEO Agent",
+        generated_at: new Date().toISOString(),
+        error_message: String(agentError?.message || agentError).slice(0, 500),
+      };
+    }
     const inserted = await serviceSupabaseRequest("offerpsp_technical_audits", {
       method: "POST",
       headers: { Prefer: "return=representation" },
@@ -156,7 +167,12 @@ async function executeAuditRun(runId) {
         completed_at: new Date().toISOString(),
         technical_audit_id: auditRow.id,
         error_message: null,
-        metadata: { tool: audit.tool, tool_version: audit.tool_version },
+        metadata: {
+          tool: audit.tool,
+          tool_version: audit.tool_version,
+          agent_status: audit.agent_analysis?.status || "unknown",
+          agent_model: audit.agent_analysis?.model || null,
+        },
       }),
     });
     return auditRow;

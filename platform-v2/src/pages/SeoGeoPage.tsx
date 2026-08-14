@@ -18,6 +18,34 @@ type RecentLead = {
   utm_campaign?: string | null;
 };
 type AuditIssue = { severity: "critical" | "warning" | "notice"; code: string; count: number; title: string; action: string };
+type AgentPriority = {
+  priority: "P0" | "P1" | "P2";
+  area: "SEO" | "GEO" | "Content" | "Technical";
+  title: string;
+  evidence: string;
+  recommendation: string;
+  affected_urls?: string[];
+};
+type AgentAnalysis = {
+  status?: "completed" | "failed";
+  agent?: string;
+  agent_version?: string;
+  model?: string;
+  generated_at?: string;
+  executive_summary?: string;
+  confidence?: "high" | "medium" | "low";
+  priorities?: AgentPriority[];
+  quick_wins?: string[];
+  content_recommendations?: Array<{
+    url: string;
+    suggested_title?: string;
+    suggested_meta_description?: string;
+    rationale?: string;
+  }>;
+  geo_recommendations?: string[];
+  limitations?: string[];
+  error_message?: string;
+};
 type TrafficSnapshot = {
   source?: string;
   period_start?: string;
@@ -39,6 +67,7 @@ type TechnicalAudit = {
   category_scores?: Record<string, number>;
   crawl_stats?: Record<string, number>;
   issues?: AuditIssue[];
+  agent_analysis?: AgentAnalysis;
   metadata?: {
     geo_signals?: {
       checked_at?: string;
@@ -155,8 +184,8 @@ export default function SeoGeoPage() {
       setRefreshNotice(result.reused
         ? "Аудит уже выполняется. Страница обновится автоматически после завершения."
         : result.status === "completed"
-          ? "Новый crawl завершён. Ниже показан свежий результат SiteOne."
-          : "Новый crawl запущен. SiteOne проверяет production-сайт; результат появится здесь автоматически.");
+          ? "Новый crawl и AI-анализ завершены. Ниже показаны свежие результаты SiteOne и нашего SEO/GEO-агента."
+          : "Полный аудит запущен. SiteOne проверяет production-сайт, затем наш агент расставит приоритеты.");
       await load(true);
     } catch (startError) {
       setError(startError instanceof Error ? startError.message : "Не удалось запустить SEO-аудит");
@@ -172,6 +201,8 @@ export default function SeoGeoPage() {
   const attributedLeads = number(attribution.attributed_leads);
   const coverage = totalLeads ? Math.round(attributedLeads / totalLeads * 100) : 0;
   const issues = audit.issues || [];
+  const agent = audit.agent_analysis || {};
+  const agentPriorities = agent.priorities || [];
   const categoryScores = Object.entries(audit.category_scores || {});
   const geoSignals = audit.metadata?.geo_signals;
   const referrers = (traffic.referrers || []).map((row) => ({ ...row, key: row.key === "direct" ? "Прямой заход" : row.key }));
@@ -187,8 +218,8 @@ export default function SeoGeoPage() {
     <PageHeading
       eyebrow="Growth intelligence"
       title="SEO / GEO и источники лидов"
-      description="Трафик, география и атрибуция собраны из production-данных. Кнопка запускает новый технический crawl сайта, а не перечитывает старый снимок."
-      action={<button onClick={() => void startAudit()} disabled={startingAudit || auditActive} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50">{startingAudit ? "Запускаю…" : auditActive ? "Аудит выполняется…" : "Запустить новый аудит"}</button>}
+      description="Трафик и атрибуция собраны из production-данных. Каждый аудит заново запускает SiteOne, после чего наш read-only AI-агент анализирует страницы и расставляет приоритеты."
+      action={<button onClick={() => void startAudit()} disabled={startingAudit || auditActive} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50">{startingAudit ? "Запускаю…" : auditActive ? "Аудит выполняется…" : "Запустить полный аудит"}</button>}
     />
     {refreshNotice && <div className="mb-5 rounded-xl border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-700 dark:border-success-500/20 dark:bg-success-500/10 dark:text-success-300">{refreshNotice}</div>}
 
@@ -273,5 +304,31 @@ export default function SeoGeoPage() {
         </div>
       </Panel>
     </div>
+
+    <Panel className="mt-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Наш SEO/GEO‑агент</h2>{agent.status === "completed" && <span className="rounded-full bg-success-50 px-2.5 py-1 text-xs font-semibold text-success-700 dark:bg-success-500/10 dark:text-success-300">Read-only · готов</span>}</div>
+          <p className="mt-1 text-sm text-gray-500">Интерпретирует факты SiteOne и содержимое публичных страниц. Его рекомендации не меняют объективный технический балл.</p>
+        </div>
+        <span className="text-xs text-gray-400">{agent.model ? `${agent.model} · ${dateTime(agent.generated_at)}` : "Отдельный AI-контур"}</span>
+      </div>
+
+      {agent.status === "completed" ? <>
+        <div className="mt-5 rounded-xl border border-brand-100 bg-brand-50/60 p-5 dark:border-brand-500/20 dark:bg-brand-500/10">
+          <span className="text-xs font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-300">Вывод агента · уверенность {{ high: "высокая", medium: "средняя", low: "низкая" }[agent.confidence || "medium"]}</span>
+          <p className="mt-2 text-sm leading-6 text-gray-700 dark:text-gray-300">{agent.executive_summary}</p>
+        </div>
+        <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          {agentPriorities.map((item, index) => <div key={`${item.priority}-${item.title}-${index}`} className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+            <div className="flex items-center justify-between gap-3"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${item.priority === "P0" ? "bg-error-50 text-error-700 dark:bg-error-500/10 dark:text-error-300" : item.priority === "P1" ? "bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-300" : "bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300"}`}>{item.priority}</span><span className="text-xs text-gray-400">{item.area}</span></div>
+            <strong className="mt-3 block text-sm text-gray-900 dark:text-white">{item.title}</strong>
+            <p className="mt-2 text-xs leading-5 text-gray-500"><span className="font-semibold text-gray-600 dark:text-gray-400">Основание:</span> {item.evidence}</p>
+            <p className="mt-2 text-sm leading-5 text-gray-700 dark:text-gray-300">{item.recommendation}</p>
+          </div>)}
+        </div>
+        {!!agent.quick_wins?.length && <div className="mt-5 rounded-xl bg-gray-50 p-4 dark:bg-white/[0.03]"><h3 className="text-sm font-semibold text-gray-900 dark:text-white">Быстрые улучшения</h3><ul className="mt-3 grid grid-cols-1 gap-2 text-sm text-gray-600 dark:text-gray-300 md:grid-cols-2">{agent.quick_wins.map((item, index) => <li key={`${item}-${index}`} className="flex gap-2"><span className="text-success-500">✓</span><span>{item}</span></li>)}</ul></div>}
+      </> : agent.status === "failed" ? <div className="mt-5 rounded-xl bg-error-50 p-4 text-sm text-error-800 dark:bg-error-500/10 dark:text-error-300"><strong>SiteOne завершил crawl, но AI-анализ не получен</strong><p className="mt-1 text-xs">{agent.error_message || "Повторите полный аудит или проверьте SEO/GEO workflow."}</p></div> : <EmptyState title="AI-анализ ещё не запускался" description="Нажмите «Запустить полный аудит»: сначала SiteOne соберёт факты, затем отдельный агент подготовит рекомендации."/>}
+    </Panel>
   </>;
 }

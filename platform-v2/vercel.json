@@ -6,7 +6,7 @@
   "functions": {
     "api/platform-modules.mjs": {
       "includeFiles": "{rules/**,vendor/siteone-crawler/**}",
-      "maxDuration": 60
+      "maxDuration": 120
     },
     "api/search-index-sync.mjs": {
       "maxDuration": 60
