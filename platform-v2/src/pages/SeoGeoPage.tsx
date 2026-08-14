@@ -96,13 +96,18 @@ export default function SeoGeoPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshNotice, setRefreshNotice] = useState<string | null>(null);
 
   const load = useCallback(async (refresh = false) => {
     if (refresh) setRefreshing(true); else setLoading(true);
     setError(null);
+    if (refresh) setRefreshNotice(null);
     const { data, error: loadError } = await supabase.rpc("get_offerpsp_seo_geo_analytics");
     if (loadError) setError(loadError.message);
-    else setPayload((data || {}) as AnalyticsPayload);
+    else {
+      setPayload((data || {}) as AnalyticsPayload);
+      if (refresh) setRefreshNotice("Данные перечитаны из сохранённых источников. Новый технический crawl не запускался.");
+    }
     setLoading(false);
     setRefreshing(false);
   }, []);
@@ -130,16 +135,17 @@ export default function SeoGeoPage() {
     <PageHeading
       eyebrow="Growth intelligence"
       title="SEO / GEO и источники лидов"
-      description="Показывает, откуда нас находят, какие страницы приводят заявки и какие технические проблемы мешают росту. Только фактические данные — без декоративных графиков."
-      action={<button onClick={() => void load(true)} disabled={refreshing} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50">{refreshing ? "Обновляю…" : "Обновить"}</button>}
+      description="Трафик и атрибуция перечитываются из сохранённых production-данных. Технические оценки показывают последний сохранённый crawl, а не живое сканирование."
+      action={<button onClick={() => void load(true)} disabled={refreshing} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50">{refreshing ? "Перечитываю…" : "Перечитать данные"}</button>}
     />
+    {refreshNotice && <div className="mb-5 rounded-xl border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-700 dark:border-success-500/20 dark:bg-success-500/10 dark:text-success-300">{refreshNotice}</div>}
 
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
       <Metric label="Посетители" value={number(traffic.visitors)} hint={`${shortDate(traffic.period_start)} — ${shortDate(traffic.period_end)}`}/>
       <Metric label="Просмотры" value={number(traffic.pageviews)} hint="production‑сайт по данным Vercel"/>
       <Metric label="Заявки · 30 дней" value={number(attribution.last_30_days)} hint="без E2E, спама и архивных дублей" tone="success"/>
       <Metric label="Атрибуция" value={`${coverage}%`} hint={`${attributedLeads} из ${totalLeads} рабочих заявок`} tone={coverage < 50 ? "warning" : "success"}/>
-      <Metric label="Техаудит" value={`${number(audit.overall_score).toFixed(1)}/10`} hint={`${audit.tool || "аудит"} ${audit.tool_version || ""}`} tone={number(audit.overall_score) >= 9 ? "success" : "warning"}/>
+      <Metric label="Техаудит" value={audit.audited_at ? `${number(audit.overall_score).toFixed(1)}/10` : "—"} hint={audit.audited_at ? `${audit.tool || "аудит"} ${audit.tool_version || ""}` : "сохранённого crawl пока нет"} tone={audit.audited_at && number(audit.overall_score) >= 9 ? "success" : "warning"}/>
     </div>
 
     <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
@@ -189,7 +195,7 @@ export default function SeoGeoPage() {
 
     <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
       <Panel className="xl:col-span-2">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Техническое здоровье сайта</h2><p className="mt-1 text-sm text-gray-500">Последний независимый crawl: производительность, SEO, безопасность и доступность.</p></div><a href={audit.target_url || "https://offerpsp.com/"} target="_blank" rel="noreferrer" className="text-sm font-semibold text-brand-500">Открыть сайт ↗</a></div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Сохранённый технический снимок</h2><p className="mt-1 text-sm text-gray-500">Последний crawl {audit.tool || "аудита"} {audit.tool_version || ""} от {dateTime(audit.audited_at)}. Кнопка наверху перечитывает снимок, но не запускает новый скан.</p></div><a href={audit.target_url || "https://offerpsp.com/"} target="_blank" rel="noreferrer" className="text-sm font-semibold text-brand-500">Открыть сайт ↗</a></div>
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">{categoryScores.map(([label, score]) => <div key={label} className="rounded-xl bg-gray-50 p-4 dark:bg-white/[0.03]"><span className="block text-xs text-gray-400">{{ performance: "Скорость", seo: "SEO", security: "Защита", accessibility: "Доступность", best_practices: "Практики" }[label] || label}</span><strong className={`mt-2 block text-2xl ${score >= 9 ? "text-success-600 dark:text-success-400" : score >= 8 ? "text-warning-600" : "text-error-600"}`}>{score.toFixed(1)}</strong></div>)}</div>
         <div className="mt-6 divide-y divide-gray-100 dark:divide-gray-800">{issues.map((issue) => <div key={issue.code} className="flex flex-col gap-3 py-4 first:pt-0 sm:flex-row sm:items-start"><span className={`w-fit shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${issue.severity === "critical" ? "bg-error-50 text-error-700 dark:bg-error-500/10 dark:text-error-300" : issue.severity === "warning" ? "bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-300" : "bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300"}`}>{issue.severity === "critical" ? "Критично" : issue.severity === "warning" ? "Предупреждение" : "Замечание"} · {issue.count}</span><div><strong className="text-sm text-gray-900 dark:text-white">{issue.title}</strong><p className="mt-1 text-sm text-gray-500">{issue.action}</p></div></div>)}</div>
       </Panel>
@@ -197,6 +203,7 @@ export default function SeoGeoPage() {
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Достоверность данных</h2>
         <div className="mt-5 space-y-4">
           <div className="rounded-xl bg-success-50 p-4 text-sm text-success-800 dark:bg-success-500/10 dark:text-success-300"><strong>Lead attribution работает</strong><p className="mt-1 text-xs">Новые формы сохраняют AI‑платформу, referrer, first/last touch и UTM в нашей базе.</p></div>
+          <div className="rounded-xl bg-warning-50 p-4 text-sm text-warning-800 dark:bg-warning-500/10 dark:text-warning-300"><strong>Живой crawler не подключён</strong><p className="mt-1 text-xs">Технические баллы меняются только после отдельного проверенного crawl и сохранения нового снимка.</p></div>
           {(traffic.limitations || []).map((item) => <div key={item.code} className="rounded-xl bg-warning-50 p-4 text-sm text-warning-800 dark:bg-warning-500/10 dark:text-warning-300"><strong>{item.code === "utm_dimensions_unavailable" ? "Ограничение тарифа Vercel" : "Короткая история"}</strong><p className="mt-1 text-xs">{item.message}</p></div>)}
           <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800"><span className="block text-xs text-gray-400">Снимок трафика</span><strong className="mt-1 block text-sm text-gray-800 dark:text-white/90">{dateTime(traffic.captured_at)}</strong><span className="mt-3 block text-xs text-gray-400">Технический аудит</span><strong className="mt-1 block text-sm text-gray-800 dark:text-white/90">{dateTime(audit.audited_at)}</strong></div>
         </div>

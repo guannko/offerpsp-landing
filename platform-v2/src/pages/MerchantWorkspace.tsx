@@ -163,15 +163,10 @@ function isShareable(shortlist?: Shortlist) {
   if (!items?.length) return false;
   return items.every((item) => {
     const snapshot = item.client_snapshot;
-    const hasGeos = snapshot?.coverage_scope !== "specific" || Boolean(snapshot?.geos?.length);
     return Boolean(
       item.private_provider_id
       && item.offer_route_id
       && snapshot?.title?.trim()
-      && snapshot.currencies?.length
-      && snapshot.methods?.length
-      && snapshot.client_fees?.length
-      && hasGeos,
     );
   });
 }
@@ -272,7 +267,7 @@ export default function MerchantWorkspace() {
   const publishedRoutes = useMemo(() => {
     const query = search.trim().toLowerCase();
     return routes.filter((route) => {
-      if (route.status !== "published" || route.open_error_count) return false;
+      if (route.status !== "published") return false;
       if (!query) return true;
       return [route.provider_name, route.provider_code, route.route_code, route.client_title, route.flow, ...(route.geos || []), ...(route.currencies || []), ...(route.methods || [])]
         .join(" ").toLowerCase().includes(query);
@@ -614,7 +609,7 @@ function MatchingPanel({ matches, selectedMatches, setSelectedMatches, published
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Ручной выбор</p><h2 className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">Любой актуальный оффер</h2>
       <p className="mt-1 text-sm text-gray-500">Можно отправить решение вне исходного запроса. Клиент увидит анонимный Telegram‑формат, а настоящий PSP останется внутри системы.</p>
       <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Поиск: GEO, валюта, метод, PSP…" className="mt-5 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:text-white"/>
-      <div className="mt-4 max-h-[520px] space-y-3 overflow-y-auto pr-1">{publishedRoutes.length ? publishedRoutes.map((route) => <SelectionCard key={route.route_id} selected={selectedRoutes.includes(route.route_id)} onChange={() => setSelectedRoutes(toggle(selectedRoutes, route.route_id))} title={route.client_title || route.route_code || "Оффер"} meta={`${textList(route.geos)} · ${textList(route.currencies)} · ${textList(route.methods)} · ${String(route.flow || "—").toUpperCase()}`} detail={`${route.provider_name || "PSP"} · ${route.provider_code || ""}`} aside="готов"/>) : <EmptyState title="Подходящих опубликованных офферов нет" description="Проверьте фильтр, статус публикации и ошибки нормализации."/>}</div>
+      <div className="mt-4 max-h-[520px] space-y-3 overflow-y-auto pr-1">{publishedRoutes.length ? publishedRoutes.map((route) => <SelectionCard key={route.route_id} selected={selectedRoutes.includes(route.route_id)} onChange={() => setSelectedRoutes(toggle(selectedRoutes, route.route_id))} title={route.client_title || route.route_code || "Оффер"} meta={`${textList(route.geos)} · ${textList(route.currencies)} · ${textList(route.methods)} · ${String(route.flow || "—").toUpperCase()}`} detail={`${route.provider_name || "PSP"} · ${route.provider_code || ""}`} aside="готов"/>) : <EmptyState title="Подходящих опубликованных офферов нет" description="Проверьте фильтр и статус публикации."/>}</div>
       <button onClick={createManual} disabled={!selectedRoutes.length || Boolean(busy) || !complianceReady} className="mt-5 w-full rounded-lg bg-gray-900 px-4 py-3 text-sm font-semibold text-white hover:bg-black disabled:opacity-40 dark:bg-white dark:text-gray-900">{busy === "manual-shortlist" ? "Создаю…" : `Создать ручной shortlist (${selectedRoutes.length})`}</button>
     </Panel>
   </div>;
@@ -642,7 +637,7 @@ function Preview({ shortlist, recipient, busy, onShare, onEmail }: { shortlist?:
   const shareable = isShareable(shortlist);
   return <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
     <Panel><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Client-safe preview</p><h2 className="mt-2 text-xl font-semibold text-gray-900 dark:text-white">{shortlist.title} · v{shortlist.version}</h2><p className="mt-1 text-sm text-gray-500">Telegram‑стандарт: PayIn и PayOut показаны раздельно, PSP и внутренняя маржа скрыты.</p></div><div className="flex items-center gap-2"><div className="flex rounded-lg bg-gray-100 p-1 dark:bg-white/5">{(["ru", "en"] as const).map((value) => <button key={value} onClick={() => setLocale(value)} className={`rounded-md px-2.5 py-1 text-xs font-semibold uppercase ${locale === value ? "bg-white text-gray-900 shadow-theme-xs dark:bg-gray-800 dark:text-white" : "text-gray-400"}`}>{value}</button>)}</div><StatusPill status={shortlist.status}/></div></div><div className="mt-6 grid grid-cols-1 gap-4 2xl:grid-cols-2">{(shortlist.offerpsp_shortlist_items || []).map((item, index) => <OfferPreview key={item.id} snapshot={item.client_snapshot || {}} index={index} locale={locale} staleness={item.route_staleness_status}/>)}</div></Panel>
-    <Panel><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Проверка перед отправкой</h2><div className="mt-5 space-y-3 text-sm">{[["Есть нормализованный маршрут", shareable],["Ставки и методы заполнены", shareable],["Настоящий PSP скрыт", true],["Email клиента указан", Boolean(recipient)]].map(([label, ok]) => <div key={String(label)} className="flex items-center justify-between gap-3"><span className="text-gray-500">{label}</span><strong className={ok ? "text-success-600" : "text-error-600"}>{ok ? "Да" : "Нет"}</strong></div>)}</div>{shortlist.status === "shared" && <div className="mt-5 rounded-lg bg-success-50 p-3 text-sm text-success-700 dark:bg-success-500/10 dark:text-success-300">Shortlist уже доступен клиенту в ЛК.</div>}<div className="mt-5 space-y-2">{shortlist.status !== "shared" && <button onClick={onShare} disabled={!shareable || Boolean(busy)} className="w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-40">{busy === "share" ? "Отправляю…" : "Отправить в ЛК клиента"}</button>}<button onClick={() => onEmail(locale)} disabled={!shareable || !recipient || Boolean(busy)} className="w-full rounded-lg border border-brand-300 px-4 py-3 text-sm font-semibold text-brand-600 hover:bg-brand-50 disabled:opacity-40 dark:border-brand-700 dark:text-brand-300 dark:hover:bg-brand-500/10">{busy === "email-shortlist" ? "Отправляю email…" : "Отправить на почту"}</button></div>{recipient ? <p className="mt-3 break-all text-xs text-gray-400">Получатель: {recipient}</p> : <p className="mt-3 text-xs text-error-500">Добавьте рабочий email во вкладке «Контакты».</p>}</Panel>
+    <Panel><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Проверка перед отправкой</h2><div className="mt-5 space-y-3 text-sm">{[["Есть маршрут из источника PSP", shareable],["Неуказанные условия показаны как «не указано»", true],["Настоящий PSP скрыт", true],["Email клиента указан", Boolean(recipient)]].map(([label, ok]) => <div key={String(label)} className="flex items-center justify-between gap-3"><span className="text-gray-500">{label}</span><strong className={ok ? "text-success-600" : "text-error-600"}>{ok ? "Да" : "Нет"}</strong></div>)}</div>{shortlist.status === "shared" && <div className="mt-5 rounded-lg bg-success-50 p-3 text-sm text-success-700 dark:bg-success-500/10 dark:text-success-300">Shortlist уже доступен клиенту в ЛК.</div>}<div className="mt-5 space-y-2">{shortlist.status !== "shared" && <button onClick={onShare} disabled={!shareable || Boolean(busy)} className="w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-40">{busy === "share" ? "Отправляю…" : "Отправить в ЛК клиента"}</button>}<button onClick={() => onEmail(locale)} disabled={!shareable || !recipient || Boolean(busy)} className="w-full rounded-lg border border-brand-300 px-4 py-3 text-sm font-semibold text-brand-600 hover:bg-brand-50 disabled:opacity-40 dark:border-brand-700 dark:text-brand-300 dark:hover:bg-brand-500/10">{busy === "email-shortlist" ? "Отправляю email…" : "Отправить на почту"}</button></div>{recipient ? <p className="mt-3 break-all text-xs text-gray-400">Получатель: {recipient}</p> : <p className="mt-3 text-xs text-error-500">Добавьте рабочий email во вкладке «Контакты».</p>}</Panel>
   </div>;
 }
 

@@ -105,7 +105,7 @@ archived, restored and reprioritized without code changes.
 - Merchant output always follows the concise Telegram-message standard, regardless of input.
 - Portal, staff preview, bot and copied messages use the same presentation contract.
 - RU portal mode produces a Russian offer; EN mode produces an English offer.
-- Never infer a missing commercial term. Flag it for staff review.
+- Never infer a missing commercial term. Preserve it as “not specified” and flag it for staff review; parser notes never block an explicit staff publication decision.
 
 Full rules: `docs/OFFERPSP-INGESTION-STANDARD.md`.
 
@@ -377,8 +377,9 @@ npm run validate
 ```
 
 Before any future production change, also verify Git status, exact migration state, Supabase access
-boundaries, n8n published versions and the Vercel deployment. Never publish an offer batch with
-blocking anomalies, and never mutate production only to make an audit report look complete.
+boundaries, n8n published versions and the Vercel deployment. Treat parser anomalies and missing
+extracted fields as non-blocking staff review notes. Publication remains an explicit staff decision
+based on the source document; never mutate production only to make an audit report look complete.
 
 ## Research references
 
