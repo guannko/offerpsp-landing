@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
 import PageMeta from "../components/common/PageMeta";
 import { EmptyState, ErrorBanner, Metric, PageHeading, Panel, SkeletonPage } from "../components/control/Ui";
@@ -208,7 +208,7 @@ export default function SeoGeoPage() {
   const referrers = (traffic.referrers || []).map((row) => ({ ...row, key: row.key === "direct" ? "Прямой заход" : row.key }));
   const recent = attribution.recent || [];
   const sourceRows = attribution.sources || [];
-  const maxSource = useMemo(() => Math.max(1, ...sourceRows.map((row) => number(row.leads))), [sourceRows]);
+  const maxSource = Math.max(1, ...sourceRows.map((row) => number(row.leads)));
 
   if (loading) return <SkeletonPage/>;
 

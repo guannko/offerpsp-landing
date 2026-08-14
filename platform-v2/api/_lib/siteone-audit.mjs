@@ -1,6 +1,6 @@
 const ISSUE_ACTIONS = {
   "pages-with-multiple-h1": "Оставить один H1 на страницу; скрытые состояния оформить через H2/H3.",
-  security: "Добавить и проверить CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy и Permissions-Policy.",
+  security: "Проверить точный SiteOne-check и живые заголовки на каждом затронутом URL; общий агрегат не доказывает отсутствие security headers.",
   "brotli-support": "Проверить Brotli-сжатие текстовых ответов на production CDN.",
   "webp-support": "Для новых растровых изображений отдавать WebP или AVIF.",
   "avif-support": "Для новых растровых изображений добавить AVIF/WebP fallback.",

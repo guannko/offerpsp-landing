@@ -65,9 +65,9 @@ export function CommandCenter() {
   const operationalLeads = funnelMetrics.businessLeads.filter(isOpenBusinessLead);
   const operationalProviders = providers.filter((provider) => provider.relationship_status !== "archived");
   const stats = useMemo(() => ({
-    newLeads: operationalLeads.filter((lead) => lead.status === "new").length,
+    newLeads: operationalLeads.filter((lead) => ["new", "qualifying", "needs_clarification"].includes(lead.status || "")).length,
     needsData: operationalLeads.filter((lead) => ["needs_clarification", "provider_needs_info"].includes(lead.status || "")).length,
-    activeDeals: operationalLeads.filter((lead) => activeStatuses.includes(lead.status || "") && !["new", "qualifying", "needs_clarification"].includes(lead.status || "")).length,
+    activeDeals: operationalLeads.filter((lead) => dealStatuses.includes(lead.status || "")).length,
     won: funnelMetrics.launched,
     unassigned: operationalLeads.filter((lead) => !lead.assigned_to).length,
     pausedRoutes: routes.filter((route) => route.status === "paused").length,
@@ -98,7 +98,7 @@ export function CommandCenter() {
   return <PageFrame title="Командный центр" description="Единая операционная панель OfferPSP и лидогенерации.">
     <PageHeading eyebrow="OfferPSP Control Bridge" title="Что требует внимания сегодня" description="Не витрина цифр, а рабочая очередь: заявки, офферы, сделки и риски в одном месте." action={<div className="flex flex-wrap gap-2"><Link to="/psps/new" className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-brand-300 hover:text-brand-600 dark:border-gray-700 dark:text-gray-300">+ Добавить PSP</Link><button onClick={() => void refresh()} disabled={refreshing} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50">{refreshing ? "Обновляю…" : "Обновить данные"}</button></div>}/>
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <Metric label="Новые" value={stats.newLeads} hint="заявок ждут первичной проверки" tone={stats.newLeads ? "warning" : "default"}/>
+      <Metric label="Первичная проверка" value={stats.newLeads} hint="новые заявки и уточнение данных" tone={stats.newLeads ? "warning" : "default"}/>
       <Metric label="Сделки в работе" value={stats.activeDeals} hint="от matching до переговоров"/>
       <Metric label="PSP и маршруты" value={`${operationalProviders.length} / ${routes.length}`} hint="рабочие партнёры / нормализованные офферы"/>
       <Metric label="Запущено" value={stats.won} hint="сделок дошли до live processing" tone="success"/>

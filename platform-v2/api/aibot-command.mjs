@@ -71,9 +71,11 @@ export default async function handler(request, response) {
     const result = await agentResponse.json().catch(() => null);
     if (!agentResponse.ok || result?.success === false) return json(response, 502, { success: false, error: result?.error || "AIBot workflow failed" });
     const payload = Array.isArray(result) ? result[0] : result;
+    const answer = String(payload?.answer || payload?.message || payload?.output || "").trim();
+    if (!answer) return json(response, 502, { success: false, error: "AIBot returned an empty answer" });
     return json(response, 200, {
       success: true,
-      answer: payload?.answer || payload?.message || payload?.output || "Готово.",
+      answer,
       confirmation_required: payload?.confirmation_required === true,
       confirmation_token: payload?.confirmation_token || null,
     });

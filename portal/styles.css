@@ -223,6 +223,7 @@ textarea::placeholder { color: #646a78; }
 
 .status.error { color: #ff8585; }
 .status.success { color: var(--mint); }
+.status.warning { color: #ffc27d; }
 
 .portal {
   min-height: 100vh;

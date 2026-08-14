@@ -97,16 +97,24 @@ const pageHtml = (title, h1) => `<!doctype html><html lang="en"><head>
   <title>${title}</title><meta name="description" content="Confidential payment matching">
   <link rel="canonical" href="https://offerpsp.com/"><script type="application/ld+json">{}</script>
   </head><body><h1>${h1}</h1><h2>How it works</h2><p>Qualified payment introductions for merchants and PSPs.</p></body></html>`;
+const securityHeaders = {
+  "content-security-policy": "default-src 'self'",
+  "x-frame-options": "DENY",
+  "x-content-type-options": "nosniff",
+  "referrer-policy": "strict-origin-when-cross-origin",
+  "permissions-policy": "camera=()",
+};
 const evidence = await collectSeoAgentEvidence(agentAudit, async (url) => {
-  if (url === "https://offerpsp.com/sitemap.xml") return new Response(sitemapXml, { status: 200 });
-  if (url === "https://offerpsp.com/") return new Response(pageHtml("OfferPSP", "The right PSP"), { status: 200 });
-  if (url === "https://offerpsp.com/privacy.html") return new Response(pageHtml("Privacy", "Privacy policy"), { status: 200 });
+  if (url === "https://offerpsp.com/sitemap.xml") return new Response(sitemapXml, { status: 200, headers: securityHeaders });
+  if (url === "https://offerpsp.com/") return new Response(pageHtml("OfferPSP", "The right PSP"), { status: 200, headers: securityHeaders });
+  if (url === "https://offerpsp.com/privacy.html") return new Response(pageHtml("Privacy", "Privacy policy"), { status: 200, headers: securityHeaders });
   return new Response("not found", { status: 404 });
 });
 assert.equal(evidence.pages.length, 2);
 assert.equal(evidence.pages[0].title, "OfferPSP");
 assert.deepEqual(evidence.pages[0].h1, ["The right PSP"]);
 assert.equal(evidence.pages[0].json_ld_blocks, 1);
+assert.equal(evidence.pages[0].response_headers["content-security-policy"], "default-src 'self'");
 
 assert.equal(resolveSeoAgentWebhookUrl({
   AIBOT_WEBHOOK_URL: "https://n8n.test/webhook/captains-bridge-aibot",
@@ -132,6 +140,22 @@ const normalizedAgent = normalizeSeoAgentAnalysis({ analysis: rawAgentAnalysis, 
 assert.equal(normalizedAgent.status, "completed");
 assert.equal(normalizedAgent.priorities[0].priority, "P1");
 assert.throws(() => normalizeSeoAgentAnalysis({ analysis: {} }), /empty summary/);
+
+const unsupportedSecurity = normalizeSeoAgentAnalysis({ analysis: {
+  ...rawAgentAnalysis,
+  confidence: "high",
+  priorities: [{
+    priority: "P0",
+    area: "Technical",
+    title: "Add missing CSP and X-Frame-Options",
+    evidence: "The aggregate crawler security warning reports missing headers.",
+    recommendation: "Add CSP, X-Frame-Options and Permissions-Policy.",
+    affected_urls: ["https://offerpsp.com/"],
+  }],
+} }, evidence);
+assert.equal(unsupportedSecurity.priorities.length, 0);
+assert.equal(unsupportedSecurity.confidence, "medium");
+assert.match(unsupportedSecurity.limitations[0], /already contain/i);
 
 let agentRequest = null;
 const agentResult = await runSeoGeoAgent(agentAudit, {

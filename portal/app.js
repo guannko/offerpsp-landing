@@ -13,8 +13,7 @@ const supabase = createClient(
   { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } },
 );
 
-const MESSAGE_NOTIFICATION_ENDPOINT =
-  "https://annoris--n8n-make--xjvz9xynmzwk.code.run/webhook/offerpsp-portal-message-v1";
+const MESSAGE_NOTIFICATION_ENDPOINT = "/api/portal-notification";
 const LANGUAGE_STORAGE_KEY = "offerpsp-portal-language";
 
 const COPY = {
@@ -59,7 +58,7 @@ const COPY = {
     stalenessUnavailable: "оффер больше недоступен", stalenessExpired: "срок действия истёк",
     stalenessNote: "Этот вариант изменился. Менеджер OfferPSP подготовит актуальную версию.",
     sharedAt: "Обновлено", noMessages: "Сообщений пока нет. Здесь сохраняется весь рабочий контекст.",
-    sent: "Сообщение отправлено.", loginPassword: "Введите пароль или используйте безопасную ссылку.",
+    sent: "Сообщение отправлено.", notificationDelayed: "Сообщение сохранено, но уведомление менеджеру задерживается.", loginPassword: "Введите пароль или используйте безопасную ссылку.",
     loginEmail: "Сначала введите рабочий email.", linkSent: "Ссылка отправлена. Проверьте почту.",
     signingIn: "Входим…", sending: "Отправляем…", openingGoogle: "Открываем Google…", saving: "Сохраняем…",
     dossierReadyMessage: "Запрос принят. Мы проверим досье перед отправкой PSP.", missingPrefix: "Нужно дополнить:",
@@ -143,7 +142,7 @@ const COPY = {
     stalenessUpdated: "terms updated", stalenessPaused: "offer paused",
     stalenessUnavailable: "offer no longer available", stalenessExpired: "offer expired",
     stalenessNote: "This option has changed. Your OfferPSP manager will prepare an updated version.",
-    sharedAt: "Updated", noMessages: "No messages yet. The full working context stays here.", sent: "Message sent.",
+    sharedAt: "Updated", noMessages: "No messages yet. The full working context stays here.", sent: "Message sent.", notificationDelayed: "Message saved, but the manager notification is delayed.",
     loginPassword: "Enter a password or use a secure link.", loginEmail: "Enter your work email first.",
     linkSent: "Secure link sent. Check your inbox.", signingIn: "Signing in…", sending: "Sending…",
     openingGoogle: "Opening Google…", saving: "Saving…", dossierReadyMessage: "Request accepted. We will verify the dossier before PSP review.",
@@ -958,19 +957,20 @@ elements.messageForm.addEventListener("submit", async (event) => {
   }).select("id").single();
   setLoading(button, false);
   if (error) { setStatus(elements.messageStatus, state.language === "ru" ? "Не удалось отправить сообщение. Текст сохранён в поле — попробуйте ещё раз." : "Could not send the message. Your text is still here; try again.", "error"); return; }
+  let notificationDelivered = false;
   try {
-    await fetch(MESSAGE_NOTIFICATION_ENDPOINT, {
+    const session = await supabase.auth.getSession();
+    const notification = await fetch(MESSAGE_NOTIFICATION_ENDPOINT, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.data.session?.access_token || ""}` },
       body: JSON.stringify({
         portal_message_id: savedMessage.id,
-        conversation_id: state.conversationId,
-        lead_id: state.lead.lead_id,
       }),
     });
+    notificationDelivered = notification.ok;
   } catch { /* The database message is already saved. */ }
   elements.messageInput.value = "";
-  setStatus(elements.messageStatus, t("sent"), "success");
+  setStatus(elements.messageStatus, t(notificationDelivered ? "sent" : "notificationDelayed"), notificationDelivered ? "success" : "warning");
   await loadConversation(state.lead.lead_id);
   renderMessages();
 });

@@ -138,13 +138,15 @@ export default function AIBotAssistant() {
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || result.success === false) throw new Error(result.error || "AIBot не ответил.");
+      const answer = plainText(result.answer || result.message || result.output || "").trim();
+      if (!answer) throw new Error("AIBot вернул пустой ответ. Команда не считается выполненной.");
 
       setMessages((current) => [
         ...current,
         {
           id: createId(),
           role: "assistant",
-          text: plainText(result.answer || result.message || result.output || "Готово."),
+          text: answer,
           confirmationToken: result.confirmation_required ? result.confirmation_token : null,
         },
       ]);

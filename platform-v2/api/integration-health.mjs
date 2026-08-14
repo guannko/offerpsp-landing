@@ -5,6 +5,50 @@ const json = (response, status, body) => {
   response.end(JSON.stringify(body));
 };
 
+function healthUrl(senderUrl, explicitUrl, path) {
+  if (explicitUrl) return String(explicitUrl).trim();
+  if (!senderUrl) return "";
+  try {
+    const url = new URL(senderUrl);
+    url.pathname = url.pathname.includes("/webhook/")
+      ? url.pathname.replace(/\/webhook\/.+$/, `/webhook/${path}`)
+      : `/webhook/${path}`;
+    url.search = "";
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
+
+async function probeGateway(url, secret, channel) {
+  const configured = Boolean(url && secret);
+  if (!configured) return { configured: false, reachable: false, authenticated: false, delivery_tested: false, detail: `${channel}: server connector is not configured` };
+  try {
+    const probe = await fetch(url, {
+      method: "GET",
+      headers: { "x-captain-secret": secret },
+      signal: AbortSignal.timeout(6_000),
+    });
+    const result = await probe.json().catch(() => null);
+    const healthy = probe.ok && result?.success === true && result?.check === "authenticated_gateway";
+    return {
+      configured: true,
+      reachable: healthy,
+      authenticated: healthy,
+      delivery_tested: false,
+      detail: healthy ? `${channel}: authenticated gateway responded` : `${channel}: gateway returned HTTP ${probe.status}`,
+    };
+  } catch (error) {
+    return {
+      configured: true,
+      reachable: false,
+      authenticated: false,
+      delivery_tested: false,
+      detail: `${channel}: ${error instanceof Error ? error.message : "gateway unavailable"}`,
+    };
+  }
+}
+
 export default async function handler(request, response) {
   if (!["GET", "POST"].includes(request.method)) return json(response, 405, { success: false, error: "Method not allowed" });
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -19,31 +63,39 @@ export default async function handler(request, response) {
   const isStaff = staffResponse.ok ? await staffResponse.json() : false;
   if (isStaff !== true) return json(response, 403, { success: false, error: "Active OfferPSP staff account required" });
 
+  const webhookSecret = String(process.env.AIBOT_WEBHOOK_SECRET || "").trim();
+  const emailUrl = healthUrl(process.env.N8N_EMAIL_WEBHOOK_URL, process.env.N8N_EMAIL_HEALTH_URL, "offerpsp-email-gateway-health");
+  const telegramUrl = healthUrl(process.env.N8N_TELEGRAM_WEBHOOK_URL, process.env.N8N_TELEGRAM_HEALTH_URL, "offerpsp-telegram-gateway-health");
+  const [email, telegram] = await Promise.all([
+    probeGateway(emailUrl, webhookSecret, "Email"),
+    probeGateway(telegramUrl, webhookSecret, "Telegram"),
+  ]);
   const checks = {
-    supabase: true,
-    n8n_email_webhook: Boolean(process.env.N8N_EMAIL_WEBHOOK_URL),
-    n8n_telegram_webhook: Boolean(process.env.N8N_TELEGRAM_WEBHOOK_URL),
+    supabase: { configured: true, reachable: true, authenticated: true, delivery_tested: true, detail: "Supabase staff session verified" },
+    email,
+    telegram,
+    n8n: {
+      configured: email.configured && telegram.configured,
+      reachable: email.reachable && telegram.reachable,
+      authenticated: email.authenticated && telegram.authenticated,
+      delivery_tested: false,
+      detail: email.reachable && telegram.reachable ? "Both authenticated n8n gateways responded" : "One or more n8n gateways failed",
+    },
   };
 
   if (request.method === "POST") {
-    const body = typeof request.body === "string" ? JSON.parse(request.body || "{}") : (request.body || {});
+    let body = {};
+    try {
+      body = typeof request.body === "string" ? JSON.parse(request.body || "{}") : (request.body || {});
+    } catch {
+      return json(response, 400, { success: false, error: "Invalid JSON" });
+    }
     const integration = String(body.integration || "");
-    const success = integration === "supabase"
-      || (integration === "email" && checks.n8n_email_webhook)
-      || (integration === "telegram" && checks.n8n_telegram_webhook)
-      || (integration === "n8n" && checks.n8n_email_webhook && checks.n8n_telegram_webhook);
-    if (!["supabase", "n8n", "email", "telegram"].includes(integration)) return json(response, 400, { success: false, error: "Unknown integration" });
-    await fetch(`${supabaseUrl}/rest/v1/rpc/record_offerpsp_integration_test`, {
-      method: "POST",
-      headers: { apikey: supabaseKey, Authorization: authorization, "Content-Type": "application/json" },
-      body: JSON.stringify({ p_integration_key: integration, p_success: success, p_error: success ? null : "Server-side connector is not configured" }),
-    });
-    if (!success) return json(response, 503, { success: false, error: "Server-side connector is not configured" });
+    if (!Object.hasOwn(checks, integration)) return json(response, 400, { success: false, error: "Unknown integration" });
+    const check = checks[integration];
+    if (!check.reachable || !check.authenticated) return json(response, 503, { success: false, error: check.detail, check });
+    return json(response, 200, { success: true, check, checked_at: new Date().toISOString() });
   }
 
-  return json(response, 200, {
-    success: true,
-    checks,
-    checked_at: new Date().toISOString(),
-  });
+  return json(response, 200, { success: true, checks, checked_at: new Date().toISOString() });
 }

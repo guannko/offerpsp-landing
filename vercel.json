@@ -3,6 +3,11 @@
   "framework": null,
   "buildCommand": "npm run build",
   "outputDirectory": ".vercel-static",
+  "functions": {
+    "api/portal-notification.mjs": {
+      "maxDuration": 20
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",

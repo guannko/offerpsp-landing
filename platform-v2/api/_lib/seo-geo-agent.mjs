@@ -3,6 +3,13 @@ const AGENT_VERSION = "offerpsp-seo-geo-agent-v1";
 const DEFAULT_WEBHOOK_PATH = "offerpsp-seo-geo-agent";
 const MAX_PAGES = 12;
 const MAX_TEXT_SAMPLE = 3_500;
+const SECURITY_HEADERS = [
+  "content-security-policy",
+  "x-frame-options",
+  "x-content-type-options",
+  "referrer-policy",
+  "permissions-policy",
+];
 
 const clampText = (value, maximum = 1_000) => String(value || "").replace(/\s+/g, " ").trim().slice(0, maximum);
 
@@ -72,7 +79,13 @@ async function fetchText(url, fetchImpl) {
     signal: AbortSignal.timeout(15_000),
   });
   const text = await response.text();
-  return { ok: response.ok, status: response.status, text };
+  const headers = Object.fromEntries([
+    ...SECURITY_HEADERS,
+    "strict-transport-security",
+    "content-encoding",
+    "cache-control",
+  ].map((name) => [name, clampText(response.headers?.get?.(name), 1_000)]));
+  return { ok: response.ok, status: response.status, text, headers };
 }
 
 function pageBrief(url, result) {
@@ -90,6 +103,7 @@ function pageBrief(url, result) {
     lang: clampText(html.match(/<html\b[^>]*\blang=["']([^"']+)["']/i)?.[1], 20),
     json_ld_blocks: (html.match(/application\/ld\+json/gi) || []).length,
     word_count: text ? text.split(/\s+/).length : 0,
+    response_headers: result.headers || {},
     text_sample: text,
   };
 }
@@ -149,11 +163,37 @@ function normalizeContentRecommendation(item) {
   };
 }
 
-export function normalizeSeoAgentAnalysis(value) {
+function hasVerifiedSecurityHeaders(evidence) {
+  const pages = Array.isArray(evidence?.pages) ? evidence.pages.filter((page) => page.status >= 200 && page.status < 400) : [];
+  return pages.length > 0 && pages.every((page) => SECURITY_HEADERS.every((name) => Boolean(page.response_headers?.[name])));
+}
+
+function claimsMissingSecurityHeaders(item) {
+  const text = [item?.title, item?.evidence, item?.recommendation].join(" ");
+  return /(CSP|content-security-policy|x-frame-options|x-content-type-options|referrer-policy|permissions-policy)/i.test(text)
+    && /(add|missing|absent|добав|отсутств|не установлен|нет заголов)/i.test(text);
+}
+
+export function normalizeSeoAgentAnalysis(value, evidence) {
   const source = value?.analysis && typeof value.analysis === "object" ? value.analysis : value;
   if (!source || typeof source !== "object") throw new Error("SEO/GEO agent returned no analysis");
   const executiveSummary = clampText(source.executive_summary, 1_200);
   if (!executiveSummary) throw new Error("SEO/GEO agent returned an empty summary");
+
+  const normalizedPriorities = Array.isArray(source.priorities)
+    ? source.priorities.slice(0, 10).map(normalizePriority).filter((item) => item.title)
+    : [];
+  const verifiedSecurity = hasVerifiedSecurityHeaders(evidence);
+  const removedUnsupportedSecurity = verifiedSecurity && normalizedPriorities.some(claimsMissingSecurityHeaders);
+  const priorities = removedUnsupportedSecurity
+    ? normalizedPriorities.filter((item) => !claimsMissingSecurityHeaders(item))
+    : normalizedPriorities;
+  const limitations = Array.isArray(source.limitations)
+    ? source.limitations.slice(0, 6).map((item) => clampText(item, 500)).filter(Boolean)
+    : [];
+  if (removedUnsupportedSecurity) {
+    limitations.unshift("Live responses already contain the baseline security headers; the aggregate SiteOne security finding needs URL/check-level evidence.");
+  }
 
   return {
     status: "completed",
@@ -162,8 +202,8 @@ export function normalizeSeoAgentAnalysis(value) {
     model: clampText(value?.model || source.model || "deepseek-chat", 120),
     generated_at: new Date().toISOString(),
     executive_summary: executiveSummary,
-    confidence: ["high", "medium", "low"].includes(source.confidence) ? source.confidence : "medium",
-    priorities: Array.isArray(source.priorities) ? source.priorities.slice(0, 10).map(normalizePriority).filter((item) => item.title) : [],
+    confidence: removedUnsupportedSecurity ? "medium" : (["high", "medium", "low"].includes(source.confidence) ? source.confidence : "medium"),
+    priorities,
     quick_wins: Array.isArray(source.quick_wins) ? source.quick_wins.slice(0, 8).map((item) => clampText(item, 500)).filter(Boolean) : [],
     content_recommendations: Array.isArray(source.content_recommendations)
       ? source.content_recommendations.slice(0, 8).map(normalizeContentRecommendation).filter((item) => item.url)
@@ -171,7 +211,7 @@ export function normalizeSeoAgentAnalysis(value) {
     geo_recommendations: Array.isArray(source.geo_recommendations)
       ? source.geo_recommendations.slice(0, 8).map((item) => clampText(item, 600)).filter(Boolean)
       : [],
-    limitations: Array.isArray(source.limitations) ? source.limitations.slice(0, 6).map((item) => clampText(item, 500)).filter(Boolean) : [],
+    limitations: limitations.slice(0, 6),
   };
 }
 
@@ -201,7 +241,7 @@ export async function runSeoGeoAgent(audit, {
   if (!response.ok || result?.success === false) {
     throw new Error(clampText(result?.error || `SEO/GEO agent failed with HTTP ${response.status}`, 500));
   }
-  return normalizeSeoAgentAnalysis(result);
+  return normalizeSeoAgentAnalysis(result, payload);
 }
 
 export const seoAgentConstants = { AGENT_NAME, AGENT_VERSION, DEFAULT_WEBHOOK_PATH };

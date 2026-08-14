@@ -9,7 +9,8 @@ export default async function handler(request, response) {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   const senderUrl = process.env.N8N_EMAIL_WEBHOOK_URL;
-  if (!supabaseUrl || !supabaseKey || !senderUrl) return json(response, 503, { success: false, error: "Email bridge is not configured" });
+  const webhookSecret = process.env.AIBOT_WEBHOOK_SECRET;
+  if (!supabaseUrl || !supabaseKey || !senderUrl || !webhookSecret) return json(response, 503, { success: false, error: "Email bridge is not configured" });
   const authorization = request.headers.authorization || "";
   if (!authorization.startsWith("Bearer ")) return json(response, 401, { success: false, error: "Authentication required" });
 
@@ -35,7 +36,7 @@ export default async function handler(request, response) {
   if (subject.length > 240 || emailBody.length > 50000) return json(response, 400, { success: false, error: "Email is too large" });
 
   const configuration = emailSettings.configuration || {};
-  const delivery = await fetch(senderUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to, subject, body: emailBody, from_name: configuration.from_name || "OfferPSP", from_email: configuration.from_email || "bizdev@offerpsp.com", reply_to: configuration.reply_to || "bizdev@offerpsp.com", lead_id: body.lead_id || null }) });
+  const delivery = await fetch(senderUrl, { method: "POST", headers: { "Content-Type": "application/json", "x-captain-secret": webhookSecret }, body: JSON.stringify({ to, subject, body: emailBody, from_name: configuration.from_name || "OfferPSP", from_email: configuration.from_email || "bizdev@offerpsp.com", reply_to: configuration.reply_to || "bizdev@offerpsp.com", lead_id: body.lead_id || null }) });
   const result = await delivery.json().catch(() => ({}));
   if (!delivery.ok || result.success === false) return json(response, 502, { success: false, error: result.message || "Email sender failed" });
   return json(response, 200, { success: true, to });

@@ -20,8 +20,9 @@ export default async function handler(request, response) {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   const senderUrl = process.env.N8N_TELEGRAM_WEBHOOK_URL;
+  const webhookSecret = process.env.AIBOT_WEBHOOK_SECRET;
   const authorization = request.headers.authorization || "";
-  if (!supabaseUrl || !supabaseKey || !senderUrl) return json(response, 503, { success: false, error: "Telegram bridge is not configured" });
+  if (!supabaseUrl || !supabaseKey || !senderUrl || !webhookSecret) return json(response, 503, { success: false, error: "Telegram bridge is not configured" });
   if (!authorization.startsWith("Bearer ")) return json(response, 401, { success: false, error: "Authentication required" });
 
   const userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, { headers: { apikey: supabaseKey, Authorization: authorization } });
@@ -48,7 +49,7 @@ export default async function handler(request, response) {
   try {
     const delivery = await fetch(senderUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-captain-secret": webhookSecret },
       body: JSON.stringify({ chat_id: chatId, text: message }),
     });
     const result = await delivery.json().catch(() => ({}));

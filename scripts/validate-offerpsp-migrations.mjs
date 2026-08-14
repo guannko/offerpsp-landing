@@ -271,6 +271,16 @@ async function applyMigrations() {
     "20260812192420_offerpsp_contact_timeline.sql",
     "20260812200000_aibot_execution_journal.sql",
     "20260812223000_offerpsp_file_classification.sql",
+    "20260813023000_offerpsp_provider_identity_and_manual_screening.sql",
+    "20260813031500_expose_offerpsp_provider_identity_link.sql",
+    "20260813113000_offerpsp_seo_geo_analytics.sql",
+    "20260814010000_offerpsp_search_index_snapshot.sql",
+    "20260814052000_offerpsp_optional_markup.sql",
+    "20260814053000_offerpsp_source_truth_publication.sql",
+    "20260814115843_offerpsp_live_seo_audits.sql",
+    "20260814133349_offerpsp_seo_geo_agent.sql",
+    "20260814162123_offerpsp_security_and_lifecycle_remediation.sql",
+    "20260814165107_offerpsp_fixture_thread_visibility_fix.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -797,8 +807,8 @@ async function verifyPortalLeadClaims() {
 
 async function importPreparedDrafts() {
   for (const [providerKey, fileName, expected] of [
-    ["brpay", ".private/imports/brpay-2026-07-23-v3.json", { routes: 14, errors: 4, duplicates: 0, publishError: "Resolve or exclude every error-level route before publication" }],
-    ["antarex", ".private/imports/antarex-2026-07-30-v3.json", { routes: 24, errors: 0, duplicates: 2, publishError: "A provider margin policy is required before publication" }],
+    ["brpay", ".private/imports/brpay-2026-07-23-v3.json", { routes: 14, errors: 4, duplicates: 0 }],
+    ["antarex", ".private/imports/antarex-2026-07-30-v3.json", { routes: 24, errors: 0, duplicates: 2 }],
   ]) {
     const payload = JSON.parse(await readFile(resolve(fileName), "utf8"));
     if (
@@ -896,14 +906,14 @@ async function importPreparedDrafts() {
          )`,
       [imported.batch_id],
     );
-    if (publishability.rows.length > 0 && expected.publishError === "A provider margin policy is required before publication") {
+    if (publishability.rows.length > 0 && providerKey === "antarex") {
       throw new Error(`${providerKey} normalized routes lost required dimensions: ${JSON.stringify(publishability.rows)}`);
     }
-    await expectQueryFailure(
-      "select public.publish_offerpsp_rate_card($1)",
-      [imported.batch_id],
-      expected.publishError,
-    );
+    const published = await query("select public.publish_offerpsp_rate_card($1) as value", [imported.batch_id]);
+    if (published.rows[0].value.status !== "published"
+        || published.rows[0].value.route_count !== expected.routes) {
+      throw new Error(`${providerKey} explicit source-truth publication failed: ${JSON.stringify(published.rows[0].value)}`);
+    }
     process.stdout.write(`PASS private draft ${providerKey}: ${imported.route_count} routes\n`);
   }
 }
@@ -1036,6 +1046,11 @@ async function verifySupplyOperations() {
   await query("select public.save_offerpsp_provider_contact($1, $2, $3::jsonb)", [providerId, contact.rows[0].value.id, JSON.stringify({ full_name: "Validation Contact", role_title: "Account manager", telegram: "@validation", preferred_channel: "telegram", active: true })]);
 
   const route = activeRoutes[0];
+  if (route.status === "published") {
+    await query("select public.set_offerpsp_route_status($1, 'paused')", [route.id]);
+    await query("select public.set_offerpsp_route_status($1, 'archived')", [route.id]);
+    await query("select public.set_offerpsp_route_status($1, 'review')", [route.id]);
+  }
   await query("select public.save_offerpsp_route($1, $2::jsonb)", [route.id, JSON.stringify({ operational_notes: "Route checked in supply workspace", freshness_days: 21 })]);
   await query("select public.set_offerpsp_margin_policy($1, $2, 'payin', 'percentage_points', 1.25, null, null, 'Validation route margin')", [providerId, route.id]);
   const anomaly = route.anomalies.find((item) => item.status === "open" && item.severity !== "error") || route.anomalies.find((item) => item.status === "open");
@@ -1096,11 +1111,6 @@ async function verifyRouteLevelPublication() {
     [providerCode, JSON.stringify(routes)],
   );
   const batchId = imported.rows[0].value.batch_id;
-  await expectQueryFailure(
-    "select public.publish_offerpsp_rate_card($1)",
-    [batchId],
-    "Resolve or exclude every error-level route before publication",
-  );
   const malformed = await query(
     "select id from private.offerpsp_offer_routes where batch_id = $1 and client_title = 'Excluded malformed route'",
     [batchId],
@@ -1366,21 +1376,21 @@ async function runEndToEndFixture() {
     ) as value`,
   );
   const providerCode = providerResult.rows[0].value.internal_code;
-  const sourceText = "Validation rate card v1: India INR UPI PayIn 6%, limit 100-100000 INR, T+1.";
+  const sourceText = "Validation rate card v1: India INR VALIDATION_RAIL PayIn 6%, limit 100-100000 INR, T+1.";
   const routes = [{
-    client_title: "India · INR · UPI PayIn",
+    client_title: "India · INR · validation rail PayIn",
     coverage_scope: "specific",
     geos: ["IN"],
     blocked_geos: [],
     currencies: ["INR"],
     flow: "payin",
-    methods: ["UPI"],
+    methods: ["VALIDATION_RAIL"],
     card_brands: ["VISA", "MASTERCARD"],
     traffic_types: ["FTD"],
     verticals: ["IGAMING"],
     prohibited_verticals: [],
     integrations: ["H2H"],
-    niche_key: "IN|INR|PAYIN|UPI|FTD|IGAMING|H2H",
+    niche_key: "IN|INR|PAYIN|VALIDATION_RAIL|FTD|IGAMING|H2H",
     effective_from: "2026-07-31",
     freshness_days: 30,
     risk_terms: { chargeback: "Chargeback penalty: NO", refund: "Refund fee: NO" },
@@ -1388,7 +1398,7 @@ async function runEndToEndFixture() {
     fees: [{
       flow: "payin",
       traffic_tier: "FTD",
-      method_scope: ["UPI"],
+      method_scope: ["VALIDATION_RAIL"],
       region_scope: ["IN"],
       fee_type: "percent",
       base_percent: 6,
@@ -1398,7 +1408,7 @@ async function runEndToEndFixture() {
     limits: [{
       flow: "payin",
       scope: "transaction",
-      method_scope: ["UPI"],
+      method_scope: ["VALIDATION_RAIL"],
       traffic_tier: "FTD",
       currency: "INR",
       minimum_amount: 100,
@@ -1446,9 +1456,9 @@ async function runEndToEndFixture() {
       launch_timeline, current_processing_setup
     ) values (
       'Client User', 'client@example.com', '@client', 'Merchant Ltd',
-      'https://merchant.invalid', 'iGaming', '500000 USD', 'India', 'UPI',
-      'Licensed iGaming merchant seeking India UPI PayIn.', 'validation', 'new', true,
-      array['IN'], array['INR'], array['PAYIN'], array['UPI'], array['FTD'],
+      'https://merchant.invalid', 'iGaming', '500000 USD', 'India', 'VALIDATION_RAIL',
+      'Licensed iGaming merchant seeking India validation rail PayIn.', 'validation', 'new', true,
+      array['IN'], array['INR'], array['PAYIN'], array['VALIDATION_RAIL'], array['FTD'],
       500000, 'USD', 500, 50000, 'INR', 'CY', 'Online casino',
       'licensed', 'CY', 'Immediate', 'Existing card processing'
     ) returning lead_id`,
@@ -1828,26 +1838,35 @@ async function verifyAgentWorkspaceAndPricing() {
   await query("select public.rebuild_offerpsp_route_matches($1)", [leadId]);
   const matches = await query("select public.list_offerpsp_route_matches($1) as value", [leadId]);
   const matchId = matches.rows[0].value[0].match_id;
-  await expectQueryFailure(
-    "select public.create_offerpsp_route_shortlist($1, array[$2::uuid])",
-    [leadId, matchId],
-    "OfferPSP or agent margin is missing",
-  );
-
-  const route = await query(`
-    select r.id
-    from private.offerpsp_offer_routes r
-    where r.client_title = 'India · INR · UPI PayIn'
-      and r.status = 'published'
-    order by r.created_at desc
+  const route = await query("select route_id as id from private.offerpsp_route_matches where id = $1", [matchId]);
+  const noMarkup = await query(`
+    select private.offerpsp_calculate_resale_fee(f.id, $2) as value
+    from private.offerpsp_offer_fee_components f
+    where f.route_id = $1
+    order by f.created_at
     limit 1
-  `);
+  `, [route.rows[0].id, leadId]);
+  if (noMarkup.rows[0].value.agent_margin_mode !== "none") {
+    throw new Error(`Missing agent markup did not resolve to an explicit zero-markup state: ${JSON.stringify(noMarkup.rows[0].value)}`);
+  }
   await query(`
     insert into private.offerpsp_agent_margin_policies (
       agent_organization_id, merchant_organization_id, route_id, flow,
       mode, percent_value, notes, created_by
     ) values ($1, $2, $3, 'payin', 'percentage_points', 1, 'Validation agent markup', $4)
   `, [agentOrgId, merchantOrgId, route.rows[0].id, STAFF_ID]);
+  const withMarkup = await query(`
+    select private.offerpsp_calculate_resale_fee(f.id, $2) as value
+    from private.offerpsp_offer_fee_components f
+    where f.route_id = $1 and f.flow = 'payin'
+    order by f.created_at
+    limit 1
+  `, [route.rows[0].id, leadId]);
+  const expectedAgentPercent = Number(withMarkup.rows[0].value.client_percent);
+  if (withMarkup.rows[0].value.agent_margin_mode !== "percentage_points"
+      || !Number.isFinite(expectedAgentPercent)) {
+    throw new Error(`Agent markup policy was not applied to resale pricing: ${JSON.stringify(withMarkup.rows[0].value)}`);
+  }
   const shortlist = await query(
     "select public.create_offerpsp_route_shortlist($1, array[$2::uuid]) as value",
     [leadId, matchId],
@@ -1949,7 +1968,8 @@ async function verifyAgentWorkspaceAndPricing() {
     throw new Error("Active agent cannot see the assigned merchant workspace");
   }
   const options = await query("select * from public.list_offerpsp_client_offers($1)", [leadId]);
-  if (options.rows.length !== 1 || Number(options.rows[0].client_fees[0].client_percent) !== 7) {
+  const payinFee = options.rows[0]?.client_fees?.find((fee) => fee.flow === "payin");
+  if (options.rows.length !== 1 || Number(payinFee?.client_percent) !== expectedAgentPercent) {
     throw new Error(`Agent final merchant rate is incorrect: ${JSON.stringify(options.rows)}`);
   }
   if (/agent_margin|margin_mode|base_percent|provider_id|offer_route_id/i.test(JSON.stringify(options.rows[0]))) {
@@ -3064,6 +3084,60 @@ async function verifyAibotExecutionJournal() {
   process.stdout.write("PASS AIBot execution journal lifecycle and service isolation\n");
 }
 
+async function verifySecurityAndLifecycleRemediation() {
+  const grants = await query(`select
+    has_function_privilege('anon', 'public.list_offerpsp_client_options(uuid)', 'execute') as anon_legacy,
+    has_function_privilege('authenticated', 'public.list_offerpsp_client_options(uuid)', 'execute') as authenticated_legacy,
+    has_function_privilege('service_role', 'public.list_offerpsp_client_options(uuid)', 'execute') as service_legacy
+  `);
+  if (grants.rows[0].anon_legacy
+      || grants.rows[0].authenticated_legacy
+      || !grants.rows[0].service_legacy) {
+    throw new Error(`Legacy client RPC grants remain unsafe: ${JSON.stringify(grants.rows[0])}`);
+  }
+
+  const queues = await query(`select
+    (select count(*)::integer
+      from public.offerpsp_tasks t
+      join public.offerpsp_leads l on l.lead_id = t.lead_id
+      where t.status in ('pending','in_progress')
+        and (l.record_state = 'archived' or l.status in ('closed','spam'))) as inactive_tasks,
+    (select count(*)::integer
+      from public.offerpsp_email_threads
+      where status <> 'archived'
+        and (subject ilike '[TEST]%' or subject ilike '[LIVE E2E]%')) as visible_fixture_threads
+  `);
+  if (queues.rows[0].inactive_tasks !== 0 || queues.rows[0].visible_fixture_threads !== 0) {
+    throw new Error(`Inactive work remains in live queues: ${JSON.stringify(queues.rows[0])}`);
+  }
+
+  await query("begin");
+  try {
+    const archived = await query(`
+      insert into public.offerpsp_leads (
+        name, work_email, company, vertical, geos, consent,
+        client_user_id, status, record_state
+      ) values (
+        'Archived client fixture', 'archived-client@example.invalid',
+        'Archived client fixture', 'iGaming', 'India', true,
+        $1, 'shared', 'archived'
+      ) returning lead_id
+    `, [CLIENT_ID]);
+    await setUser(CLIENT_ID);
+    const access = await query(
+      "select public.can_access_offerpsp_client_lead($1) as allowed",
+      [archived.rows[0].lead_id],
+    );
+    if (access.rows[0].allowed) {
+      throw new Error("Archived merchant workspace remains client-accessible");
+    }
+  } finally {
+    await query("rollback");
+    await setUser(STAFF_ID);
+  }
+  process.stdout.write("PASS legacy client RPC denied and archived workspace access revoked\n");
+}
+
 try {
   verifyCanonicalGeoHeaderParsing();
   verifyWorldwideCoverageParsing();
@@ -3082,6 +3156,7 @@ try {
   await verifyGeoRegionAliases();
   await verifyContactTimelineCooldown();
   await verifyAibotExecutionJournal();
+  await verifySecurityAndLifecycleRemediation();
   await verifyAtomicRouteReplacement();
   await verifyCounterpartyOrganizer();
   await verifyOperationsAndIntegrations();
