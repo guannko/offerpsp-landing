@@ -507,3 +507,136 @@ Client portal на ширине 390 px не имел горизонтально�
 ---
 
 **Итог:** OfferPSP + AI Agent Bot — рабочая система с реальными данными и исполняемыми automation, а не витрина. Главный риск не в отсутствии функции, а в параллельных старых обходах защиты и в статусах, которые подтверждают запуск/наличие конфигурации вместо фактического результата. Сначала закрыть P0, затем честность delivery/health/lifecycle, и только после этого расширять клиентский и агентский контур.
+
+## 15. Дополнение 2026-08-15 — админский прогон Captain's Bridge
+
+### Вердикт
+
+**PARTIAL — все доступные администратору навигационные, фильтрующие и открывающие элементы, проверенные в production, работают по назначению. Пользовательских кнопок без обработчика в активных модулях не найдено.**
+
+Ограничение `PARTIAL` связано не с декоративным интерфейсом, а с безопасностью проверки: действия, которые отправляют письмо/Telegram, меняют статус, публикуют оффер, создают shortlist, удаляют запись или запускают новый SEO crawl, не нажимались. Их путь проверен по production UI, обработчику, API/RPC-контракту и существующим подтверждённым execution/result, но не новым боевым воздействием.
+
+### Release evidence
+
+- Repository/branch: `offerpsp-landing` / `agent/offerpsp-platform`.
+- Local/origin HEAD: `c2aa0ca75445ab7fab8ffb6204ebd710f3d312c1`.
+- Latest production deployment: `dpl_LZJ5CmPQAoNrq3vsdSye6ax1pYUn`, `READY`.
+- Production alias: `https://ops-7q4m2x9k8v3n.vercel.app`.
+- Deployment Git SHA совпадает с локальным HEAD.
+- В runtime logs именно этого deployment за 24 часа не найдено `error`, `warning` или `fatal`.
+- До дополнения worktree содержал только пользовательское изменение `TASKS.md`; оно не изменялось.
+
+### Проверенные модули и элементы
+
+| Модуль | Статус | Фактическая проверка |
+|---|---|---|
+| Общая оболочка | VERIFIED | Все пункты меню открывают правильные маршруты; theme toggle переключает и восстанавливает тему; профиль открывает меню выхода; глобальный поиск находит мерча и открывает его workspace; обновление данных меняет timestamp. |
+| Mobile shell | VERIFIED | На `390×844` меню открывается/закрывается, поиск открывается/закрывается, карточки и header перестраиваются без наблюдавшегося горизонтального overflow. |
+| AIBot | VERIFIED / PARTIAL | Панель, закрытие, composer, disabled empty submit и форма загрузки оффера работают. Новая AI-команда и новый файл в read-only прогоне не отправлялись. |
+| Входящие | VERIFIED | Поиск, status/risk filters, row selection и появление bulk-панели работают; переход к заявке корректный. Bulk mutation намеренно не применялась. |
+| Воронка | VERIFIED read-only / PARTIAL workflow | Карточки находятся в правильных колонках и ведут к мерчу. Перемещения карточек, смены стадии и drag-and-drop в этом экране нет. |
+| Мерчи | VERIFIED | Все stage filters возвращают количество, совпадающее с KPI; поиск и risk filter работают; workspace открывается. |
+| Workspace мерча | VERIFIED / PARTIAL mutations | Девять вкладок меняют содержимое; company/request/contacts/offers/portal/deal/documents/tasks/history подключены. Save/status/hide/matching/shortlist/send проверены по handlers/RPC, но не исполнялись. |
+| Казино | VERIFIED / PARTIAL mutations | Scope/contact filters, поиск, создание новой карточки, открытие существующей карточки и вкладки Card/Edit/Notes/Tasks/Mail/History работают. Запись не создавалась. |
+| PSP | VERIFIED / PARTIAL mutations | Все status filters и поиск работают; новая карточка открывается; workspace и вкладки Card/Edit/Contacts/Offers/Margin/Documents/History работают. Publish/archive/freshness/save не исполнялись. |
+| Офферы | VERIFIED / PARTIAL mutations | Catalog/Intake/Update merchants, filters и reset работают. `+ Новый оффер` действительно открывает форму и меняется на `Закрыть`; `Редактировать` открывает нужный PSP/route. Intake/publish/vNext не исполнялись. |
+| Проверка лидов | VERIFIED / PARTIAL mutations | Все очереди, поиск и `Открыть досье` работают; досье показывает evidence, risk и ручное решение. Auto-screen/reject не исполнялись. |
+| Сделки | PARTIAL | Экран подключён, но активных сделок нет, поэтому action controls Deal Desk в живом UI не появились. Код ведёт к audited RPC, но production journey на текущих данных не воспроизведён. |
+| Коммуникации | VERIFIED / PARTIAL send | Почтовый центр, поиск, выбор thread, reply composer, новая почта и Telegram workspace работают. Реальная отправка не выполнялась. |
+| Задачи и календарь | VERIFIED / PARTIAL mutations | Tasks/Calendar/AIBot Missions, Month/List, previous/next/today и New task form работают. Пустой Save честно показывает validation; запись не создавалась. |
+| Субагенты | PARTIAL | Filters и переход к New Agent работают; форма загружается и пустой save disabled. Существующих субагентов нет, поэтому их lifecycle не проверен в UI. |
+| Аналитика | VERIFIED | Production metrics и диаграммы загружаются; декоративных action controls нет. |
+| SEO / GEO | VERIFIED | Кнопка связана с `/api/seo-audit`, повторно блокируется во время активного run и опрашивает результат. Новый crawl в этом прогоне не запускался. В БД подтверждён completed staff run `3f674f9a-e964-4114-bdd2-13c97f553d11`: SiteOne `2.5.1.20260627`, `offerpsp.com`, score `9.60`, 9 issues, 2026-08-14 19:54 UTC. |
+| Интеграции | VERIFIED / PARTIAL actions | Status cards загружаются; Supabase, n8n/AIBot, Email и Telegram показывают verified state; кнопки ведут к настоящим health/sync endpoints. Проверки и sync не запускались, потому что они сохраняют test timestamp или изменяют search index. |
+
+### Найденные несоответствия
+
+#### P1 — Communications и Integrations выглядят пустыми во время долгой загрузки
+
+**VERIFIED.** В production содержимое этих экранов появлялось примерно через 6–7 секунд. На промежуточном снимке около 3 секунд полезного содержимого ещё не было. Пользователь может решить, что кнопка перехода или модуль не работает.
+
+Исправление: сразу показывать page skeleton с явным текстом стадии (`Загружаем почту`, `Проверяем интеграции`), добавить timeout/error state и локально кэшировать уже полученный workspace.
+
+#### P1 — открытие письма необратимо помечает его прочитанным в интерфейсе
+
+**VERIFIED.** `openThread()` автоматически вызывает `set_offerpsp_email_thread_state(..., p_mark_read: true)`. Кнопки `Пометить непрочитанным` в Captain's Bridge нет. Это соответствует обычному открытию письма, но администратор не может вернуть его в очередь внимания.
+
+Во время аудита один тестовый thread был автоматически помечен прочитанным. Состояние полностью восстановлено: у thread снова `unread_count = 1`, у inbound message `is_read = false`, общий счётчик снова `2`; production UI повторно показал `2 непрочитано`.
+
+Исправление: добавить явное `Пометить непрочитанным` и не использовать прочтение как единственный механизм операционного follow-up.
+
+#### P1 — возможен честный delivery при нечестном статусе почтового центра
+
+**VERIFIED code path.** После успешного `/api/send-email` интерфейс не проверяет ошибку финального RPC `set_offerpsp_email_draft_status(..., sent)` и всё равно показывает `Письмо отправлено`. Само письмо при этом может быть доставлено, но внутренний статус останется `sending/failed`, что расходится с сообщением оператору.
+
+Исправление: разделить `delivered` и `recorded`; проверять результат каждого status RPC и показывать `Письмо доставлено, но статус не записан`, аналогично уже честно реализованному Telegram sender.
+
+#### P2 — health-check интеграции может зависнуть после сетевого исключения
+
+**VERIFIED code path.** `check()` в `IntegrationsWorkspace` не обёрнут в `try/finally`. Если `fetch('/api/integration-health')` выбросит network exception до ответа, `busy` не сбросится, ошибка не будет показана, кнопки останутся disabled до перезагрузки.
+
+Исправление: `try/catch/finally`, понятный timeout и обязательный сброс `busy`.
+
+#### P2 — Воронка является навигационной проекцией, а не управляемым Kanban
+
+**VERIFIED.** Карточки открывают workspace, но экран не позволяет менять стадию. Это не ложная кнопка, однако название и визуальная форма создают ожидание drag-and-drop управления.
+
+Исправление: либо добавить контролируемую смену стадии с confirmation/audit, либо прямо назвать экран `Обзор воронки` и пояснить, что редактирование выполняется в карточке мерча.
+
+#### DEAD CODE — кнопка поисковой миссии в отключённом модуле
+
+`IntelligencePage` содержит кнопку `Новая поисковая миссия` без `onClick`, но feature flag `intelligence` выключен, и кнопка отсутствует в доступном админском меню. Она не является текущим production-дефектом, но должна быть удалена либо подключена до включения модуля.
+
+### Что оказалось настоящим, хотя выглядело подозрительно
+
+- `+ Новый оффер` не муляж: он открывает inline form и меняет подпись на `Закрыть`.
+- `Редактировать` в каталоге офферов ведёт к конкретному route editor; переход медленный, но корректный.
+- Пустые `Казино → Активные`, `Сделки` и `Субагенты` являются состоянием данных, а не заглушкой.
+- Кнопка SEO запускает новый SiteOne crawl и AI-анализ, а не вращает spinner над старым snapshot.
+- Integration checks вызывают защищённый gateway health endpoint и по собственному описанию ничего не отправляют.
+- Пустой Save в задаче и Send в коммуникациях не создают пустую сущность: handlers возвращают validation error.
+
+### Проверки кода
+
+- `npm --prefix platform-v2 run lint` — passed.
+- `npm --prefix platform-v2 run build` — passed (`tsc -b`, Vite, 691 modules).
+- `npm --prefix platform-v2 run test:modules` — passed.
+- `npm --prefix platform-v2 run test:siteone-audit` — passed.
+- `npm --prefix platform-v2 run test:bridges` — passed.
+- `npm run validate` — passed (portal/Deal Desk/PSP supply guards and notification bridge contracts).
+
+### Ограничения дополнения
+
+- Logout не нажимался, чтобы не разрушить staff-сессию.
+- Не выполнялись send/publish/archive/delete/status/shortlist/matching/sync/crawl mutations.
+- `Сделки` и существующий `Субагент` не могли быть полноценно проверены из-за отсутствия production-объектов в этих состояниях.
+- Browser extension Brave и macOS Computer Use были недоступны; authenticated audit выполнен через встроенный browser с фактической staff-сессией `Boris / owner`.
+
+**Итог дополнения:** Captain's Bridge не является набором декоративных экранов. Активные кнопки и переходы в основном соответствуют назначениям. Главные оставшиеся проблемы — не «мёртвые» кнопки, а отсутствие явного loading state на тяжёлых экранах, необратимый mark-read, один потенциальный false-success статуса email и отсутствие управления стадиями непосредственно из воронки.
+
+## 16. Исправления по результатам админского прогона — 2026-08-15
+
+### VERIFIED локально и в базе
+
+- Communications и Integrations получили явные состояния загрузки вместо временно пустого экрана.
+- В почтовом центре добавлено обратимое действие `Пометить непрочитанным`; изменение состояния прочтения отделено от смены workflow-статуса thread.
+- Миграция `20260815090000_offerpsp_email_mark_unread.sql` применена к production Supabase. Staff RPC проверена в транзакции: `mark read → unread_count 0`, `mark unread → unread_count 1`, после rollback исходное состояние восстановлено.
+- Email delivery и внутренний статус теперь разделены: интерфейс не сообщает безусловное `Письмо отправлено`, если доставка прошла, но запись статуса не удалась.
+- Проверка интеграций получила timeout, обработку сетевой ошибки и гарантированный сброс busy-state.
+- Экран `Воронка` переименован в `Обзор воронки`; в интерфейсе явно указано, что стадия меняется в workspace мерча.
+- Мёртвая кнопка `Новая поисковая миссия` удалена из отключённого модуля Intelligence.
+- Добавлен статический control-integrity тест, который защищает эти исправления от возврата.
+
+### Проверки исправлений
+
+- `npm --prefix platform-v2 run lint` — passed.
+- `npm --prefix platform-v2 run build` — passed (`691 modules`).
+- `npm run validate` — passed, включая новый `test:control-integrity`.
+- `npm --prefix platform-v2 run test:modules` — passed.
+- `npm --prefix platform-v2 run test:siteone-audit` — passed.
+- `npm --prefix platform-v2 run test:bridges` — passed.
+- `git diff --check` — passed.
+
+### Статус публикации
+
+На момент этой записи исправления готовы к выпуску, но новый production deployment ещё не подтверждён. Этот пункт закрывается только после статуса `READY`, проверки production URL и просмотра runtime logs нового deployment.

@@ -128,12 +128,23 @@ export default function IntegrationsWorkspace() {
 
   async function check(key: IntegrationSetting["key"]) {
     setBusy(`check-${key}`); setError(null); setNotice(null);
-    const headers = await authHeaders();
-    const response = await fetch("/api/integration-health", { method:"POST", headers:{...headers,"Content-Type":"application/json"}, body:JSON.stringify({integration:key}) });
-    const result = await response.json().catch(()=>({}));
-    if (!response.ok || !result.success) setError(result.error || "Проверка не пройдена");
-    else { setNotice(`${byKey[key]?.display_name || key}: защищённый шлюз ответил. Это проверка связи, не тестовая отправка.`); await load(); }
-    setBusy(null);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 12_000);
+    try {
+      const headers = await authHeaders();
+      const response = await fetch("/api/integration-health", { method:"POST", headers:{...headers,"Content-Type":"application/json"}, body:JSON.stringify({integration:key}), signal:controller.signal });
+      const result = await response.json().catch(()=>({}));
+      if (!response.ok || !result.success) throw new Error(result.error || "Проверка не пройдена");
+      setNotice(`${byKey[key]?.display_name || key}: защищённый шлюз ответил. Это проверка связи, не тестовая отправка.`);
+      await load();
+    } catch (checkError) {
+      setError(checkError instanceof DOMException && checkError.name === "AbortError"
+        ? "Проверка заняла больше 12 секунд и была остановлена. Повторите позже."
+        : checkError instanceof Error ? checkError.message : "Проверка не пройдена");
+    } finally {
+      window.clearTimeout(timeout);
+      setBusy(null);
+    }
   }
 
   async function syncSearchIndex() {
@@ -152,7 +163,7 @@ export default function IntegrationsWorkspace() {
     }
   }
 
-  if (bridge.loading || loading) return <SkeletonPage/>;
+  if (bridge.loading || loading) return <SkeletonPage label="Проверяем настройки и подключения…"/>;
   const status = (item?: ConnectorHealth) => {
     const verified = Boolean(item?.reachable && item?.authenticated);
     const label = verified ? "Шлюз проверен" : item?.configured ? "Ошибка связи" : "Не настроено";

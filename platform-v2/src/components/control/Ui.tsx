@@ -161,6 +161,6 @@ export function ErrorBanner({ message }: { message: string }) {
   return <div className="mb-6 rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-500/20 dark:bg-error-500/10 dark:text-error-300">{message}</div>;
 }
 
-export function SkeletonPage() {
-  return <div className="animate-pulse space-y-5"><div className="h-9 w-80 rounded bg-gray-200 dark:bg-gray-800"/><div className="grid grid-cols-1 gap-4 md:grid-cols-4">{[1,2,3,4].map((item)=><div key={item} className="h-36 rounded-2xl bg-gray-200 dark:bg-gray-800"/>)}</div><div className="h-96 rounded-2xl bg-gray-200 dark:bg-gray-800"/></div>;
+export function SkeletonPage({ label = "Загружаем рабочие данные…" }: { label?: string }) {
+  return <div className="space-y-5" role="status" aria-live="polite"><div className="flex items-center gap-3 text-sm font-medium text-gray-500 dark:text-gray-400"><span className="h-2.5 w-2.5 animate-pulse rounded-full bg-brand-500"/>{label}</div><div className="animate-pulse space-y-5"><div className="h-9 w-80 max-w-full rounded bg-gray-200 dark:bg-gray-800"/><div className="grid grid-cols-1 gap-4 md:grid-cols-4">{[1,2,3,4].map((item)=><div key={item} className="h-36 rounded-2xl bg-gray-200 dark:bg-gray-800"/>)}</div><div className="h-96 rounded-2xl bg-gray-200 dark:bg-gray-800"/></div></div>;
 }

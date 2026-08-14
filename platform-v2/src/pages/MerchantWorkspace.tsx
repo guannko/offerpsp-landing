@@ -408,7 +408,19 @@ export default function MerchantWorkspace() {
     }
 
     const draftId = Number((draftResult.data as { id?: number } | null)?.id);
-    if (Number.isFinite(draftId)) await supabase.rpc("set_offerpsp_email_draft_status", { p_draft_id: draftId, p_status: "sending" });
+    if (!Number.isFinite(draftId)) {
+      await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]);
+      setMessage({ tone: "error", text: "Shortlist опубликован в ЛК, но email остановлен: черновик создан без корректного ID." });
+      setBusy(null);
+      return;
+    }
+    const sendingState = await supabase.rpc("set_offerpsp_email_draft_status", { p_draft_id: draftId, p_status: "sending" });
+    if (sendingState.error) {
+      await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]);
+      setMessage({ tone: "error", text: `Shortlist опубликован в ЛК, но email остановлен: статус отправки не записан (${sendingState.error.message}).` });
+      setBusy(null);
+      return;
+    }
     const session = await supabase.auth.getSession();
     try {
       const response = await fetch("/api/send-email", {
@@ -418,14 +430,16 @@ export default function MerchantWorkspace() {
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || result.success !== true) throw new Error(result.error || result.message || "Email sender returned an error");
-      if (Number.isFinite(draftId)) await supabase.rpc("set_offerpsp_email_draft_status", { p_draft_id: draftId, p_status: "sent" });
+      const sentState = await supabase.rpc("set_offerpsp_email_draft_status", { p_draft_id: draftId, p_status: "sent" });
       await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]);
-      setMessage({ tone: "success", text: `Shortlist отправлен в ЛК и на ${lead.work_email}.` });
+      setMessage(sentState.error
+        ? { tone: "error", text: `Shortlist отправлен в ЛК и email доставлен на ${lead.work_email}, но статус в почтовом центре не записан: ${sentState.error.message}` }
+        : { tone: "success", text: `Shortlist отправлен в ЛК и на ${lead.work_email}; доставка записана в почтовом центре.` });
       setTab("communications");
     } catch (error) {
-      if (Number.isFinite(draftId)) await supabase.rpc("set_offerpsp_email_draft_status", { p_draft_id: draftId, p_status: "failed" });
+      const failedState = await supabase.rpc("set_offerpsp_email_draft_status", { p_draft_id: draftId, p_status: "failed" });
       await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]);
-      setMessage({ tone: "error", text: `Shortlist опубликован в ЛК, но email не отправлен: ${error instanceof Error ? error.message : "неизвестная ошибка"}` });
+      setMessage({ tone: "error", text: `Shortlist опубликован в ЛК, но email не отправлен: ${error instanceof Error ? error.message : "неизвестная ошибка"}${failedState.error ? `. Статус ошибки не записан: ${failedState.error.message}` : ""}` });
     }
     setBusy(null);
   }

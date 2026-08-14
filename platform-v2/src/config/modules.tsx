@@ -53,7 +53,7 @@ export const featureFlags = {
 export const platformModules: PlatformModule[] = [
   { id: "commandCenter", label: "Командный центр", shortLabel: "Центр", path: "/", icon: <GridIcon />, enabled: featureFlags.commandCenter, group: "operations" },
   { id: "inbox", label: "Входящие", shortLabel: "Входящие", path: "/inbox", icon: <ListIcon />, enabled: featureFlags.inbox, group: "operations" },
-  { id: "pipeline", label: "Воронка", shortLabel: "Воронка", path: "/pipeline", icon: <TableIcon />, enabled: featureFlags.pipeline, group: "operations" },
+  { id: "pipeline", label: "Обзор воронки", shortLabel: "Воронка", path: "/pipeline", icon: <TableIcon />, enabled: featureFlags.pipeline, group: "operations" },
   { id: "merchants", label: "Мерчи", shortLabel: "Мерчи", path: "/merchants", icon: <GroupIcon />, enabled: featureFlags.merchants, group: "operations" },
   { id: "casinos", label: "Казино", shortLabel: "Казино", path: "/casinos", icon: <BoltIcon />, enabled: featureFlags.casinos, group: "operations" },
   { id: "providers", label: "PSP", shortLabel: "PSP", path: "/psps", icon: <BoxCubeIcon />, enabled: featureFlags.providers, group: "operations" },
