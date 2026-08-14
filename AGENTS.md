@@ -1,6 +1,6 @@
 # OfferPSP — shared project context for Codex and Claude Code
 
-Updated: 2026-08-13
+Updated: 2026-08-15
 
 Owner: Boris Kononenko / Brain Index
 
@@ -136,6 +136,35 @@ These addresses are routing information, not proof that the latest deployment is
 - Staff Captain's Bridge: `https://ops-7q4m2x9k8v3n.vercel.app/`
 - Legacy rollback UI: `https://offerpsp.com/admin/`
 - Supabase project: `xcizofpejsomjiflesbx`
+
+## Verified handoff — 2026-08-15
+
+- Captain's Bridge is installable from Brave and Chrome as `OfferPSP Captain's Bridge`. The
+  production manifest and 192/512/maskable icons return HTTP 200, and Boris visually confirmed the
+  browser install control on 2026-08-15. The implementation is commit `d2e27e5`; production
+  deployment `dpl_4AKT15LpAzP3sspzR1oGtbyMCMoh` was `READY` and aliased to the staff URL above.
+- The installed cockpit remains the live web application, not a separate packaged fork. It has no
+  service worker and deliberately does not cache authenticated pages, API responses, Supabase data
+  or other private operational content for offline use.
+- The protected SEO/GEO workspace runs the packaged SiteOne crawler on demand and reports the
+  actual run source and time. A failed or unavailable crawl must be shown as a limitation; never
+  replace it silently with an old snapshot or animate a spinner that implies a crawl occurred.
+- Public SEO/GEO acquisition pages for iGaming, high-risk payments, cross-border matching, SaaS,
+  marketplaces, payment methods by GEO and the PSP-matching process are live from commit `07e3658`.
+  The public sitemap, internal links, JSON-LD and `llms.txt` include these routes. Search Console
+  submission and current ranking remain external state to verify live rather than infer from code.
+- Controlled production E2E on 2026-08-14 confirmed the Titan email delivery path and the Telegram
+  gateway. Synthetic verification messages marked `No action required` are transport tests, not
+  merchant leads or operator tasks.
+- Product decision: do not configure or enable PostHog. Keep first-party acquisition/SEO telemetry;
+  do not proxy merchant payment traffic merely to collect analytics. Processing volume and realized
+  margin may be obtained from partner reports or PSP APIs when supported.
+- A dedicated OfferPSP MCP/Codex operator is a proposed next architecture step, not an implemented
+  module. It must expose the existing protected staff operations and shared `BIXOFFPSP` core rather
+  than create a second independent AIBot, prompt, memory or source of truth. Never expose
+  `service_role` to the client/plugin. Reads may be directly authorized; mutations must use the
+  existing audited RPC/tool paths, and external sends or mass changes must retain server-issued
+  confirmation tokens.
 
 Important n8n workflows to verify by live ID and active version:
 
