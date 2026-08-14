@@ -13,6 +13,7 @@
     "test:mailbox-poller": "node scripts/test-mailbox-poller.mjs",
     "test:modules": "node scripts/test-platform-modules.mjs",
     "test:control-integrity": "node scripts/test-control-integrity.mjs",
+    "test:pwa": "node scripts/test-pwa.mjs",
     "test:siteone-audit": "node scripts/test-siteone-audit.mjs",
     "test:bridges": "node scripts/test-integration-bridges.mjs"
   },
