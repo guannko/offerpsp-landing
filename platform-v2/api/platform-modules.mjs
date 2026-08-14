@@ -1,4 +1,13 @@
-import { HttpError, requireOfferPspStaff, sendError, sendJson } from "./_lib/staff-auth.mjs";
+import {
+  HttpError,
+  requireOfferPspStaff,
+  sendError,
+  sendJson,
+  serviceSupabaseRequest,
+  staffSupabaseRequest,
+} from "./_lib/staff-auth.mjs";
+import { collectGeoSignals, normalizeSiteOneAudit } from "./_lib/siteone-audit.mjs";
+import { runSiteOneAudit } from "./_lib/siteone-runner.mjs";
 import { probeDocling } from "./_lib/modules/docling.mjs";
 import {
   evaluateMerchantRouteRisk,
@@ -88,19 +97,110 @@ async function semanticMemory(request, response) {
   throw new HttpError(400, "Unsupported semantic memory action");
 }
 
+async function seoAudit(request, response, staffContext) {
+  if (request.method !== "POST") return sendJson(response, 405, { error: "Method not allowed" });
+  const run = await staffSupabaseRequest(staffContext, "rpc/request_offerpsp_seo_audit", {
+    method: "POST",
+    body: "{}",
+  });
+  if (!run?.id) throw new HttpError(502, "SEO audit request was not created");
+  if (run.reused) {
+    return sendJson(response, 202, { accepted: true, reused: true, run_id: run.id, status: run.status });
+  }
+
+  const audit = await executeAuditRun(run.id);
+  return sendJson(response, 201, {
+    accepted: true,
+    reused: false,
+    run_id: run.id,
+    status: "completed",
+    audit_id: audit.id,
+  });
+}
+
+async function failAuditRun(runId, message) {
+  await serviceSupabaseRequest(`offerpsp_seo_audit_runs?id=eq.${encodeURIComponent(runId)}`, {
+    method: "PATCH",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({
+      status: "failed",
+      completed_at: new Date().toISOString(),
+      error_message: String(message || "SEO audit failed").slice(0, 500),
+    }),
+  });
+}
+
+async function executeAuditRun(runId) {
+  await serviceSupabaseRequest(`offerpsp_seo_audit_runs?id=eq.${encodeURIComponent(runId)}`, {
+    method: "PATCH",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ status: "running", started_at: new Date().toISOString(), error_message: null }),
+  });
+
+  try {
+    const report = await runSiteOneAudit();
+    const audit = normalizeSiteOneAudit(report, "https://offerpsp.com/");
+    audit.metadata = { ...audit.metadata, geo_signals: await collectGeoSignals() };
+    const inserted = await serviceSupabaseRequest("offerpsp_technical_audits", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(audit),
+    });
+    const auditRow = Array.isArray(inserted) ? inserted[0] : inserted;
+    if (!auditRow?.id) throw new Error("Technical audit was not stored");
+    await serviceSupabaseRequest(`offerpsp_seo_audit_runs?id=eq.${encodeURIComponent(runId)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({
+        status: "completed",
+        completed_at: new Date().toISOString(),
+        technical_audit_id: auditRow.id,
+        error_message: null,
+        metadata: { tool: audit.tool, tool_version: audit.tool_version },
+      }),
+    });
+    return auditRow;
+  } catch (error) {
+    await failAuditRun(runId, error?.message || error);
+    throw error;
+  }
+}
+
+async function seoAuditScheduled(request, response) {
+  if (request.method !== "GET") return sendJson(response, 405, { error: "Method not allowed" });
+  const cronSecret = String(process.env.CRON_SECRET || "").trim();
+  if (!cronSecret || request.headers.authorization !== `Bearer ${cronSecret}`) {
+    throw new HttpError(401, "Invalid cron authorization");
+  }
+  const rows = await serviceSupabaseRequest("offerpsp_seo_audit_runs", {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify({ status: "running", trigger_source: "schedule", started_at: new Date().toISOString() }),
+  });
+  const run = Array.isArray(rows) ? rows[0] : rows;
+  if (!run?.id) throw new HttpError(502, "Scheduled SEO audit run was not created");
+  const audit = await executeAuditRun(run.id);
+  return sendJson(response, 201, { run_id: run.id, status: "completed", audit_id: audit.id });
+}
+
 const handlers = {
   "evaluate-rules": evaluateRules,
   "module-health": moduleHealth,
+  "seo-audit": seoAudit,
+  "seo-audit-scheduled": seoAuditScheduled,
   "semantic-memory": semanticMemory,
 };
 
 export default async function handler(request, response) {
   try {
-    await requireOfferPspStaff(request);
     const moduleName = String(request.query?.module || "");
     const moduleHandler = handlers[moduleName];
     if (!moduleHandler) throw new HttpError(404, "Unknown platform module endpoint");
-    return await moduleHandler(request, response);
+    if (moduleName === "seo-audit-scheduled") {
+      return await moduleHandler(request, response);
+    }
+    const staffContext = await requireOfferPspStaff(request);
+    return await moduleHandler(request, response, staffContext);
   } catch (error) {
     return sendError(response, error);
   }

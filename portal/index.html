@@ -52,7 +52,7 @@
       <section class="workspace-head">
         <div>
           <p class="eyebrow" data-i18n="workspace">Платёжный кабинет</p>
-          <h1 data-i18n="workspaceTitle">Управляйте подключениями, а не перепиской по кругу.</h1>
+          <h2 data-i18n="workspaceTitle">Управляйте подключениями, а не перепиской по кругу.</h2>
           <p data-i18n="workspaceCopy">Новые рынки, маршруты, знакомства и действующие подключения собраны в одном процессе.</p>
         </div>
         <a class="button primary" href="/#request" data-i18n="newRequest">Новая платёжная задача</a>
@@ -79,7 +79,7 @@
             <div><p class="eyebrow" data-i18n="requests">Задачи</p><h2 data-i18n="yourRequests">Ваши запросы</h2></div>
             <a href="/#request" class="rail-add" aria-label="New request">+</a>
           </div>
-          <input id="portfolioSearch" class="portfolio-search" type="search" data-i18n-placeholder="searchPortfolio" placeholder="Мерч, GEO, статус…" autocomplete="off">
+          <input id="portfolioSearch" class="portfolio-search" type="search" data-i18n-placeholder="searchPortfolio" placeholder="Мерч, GEO, статус…" autocomplete="off" aria-label="Поиск по платёжным задачам">
           <p id="portfolioResult" class="portfolio-result"></p>
           <div id="requestList" class="request-list"></div>
         </aside>
@@ -206,7 +206,7 @@
             <div class="section-head"><div><p class="eyebrow" data-i18n="directLine">Прямая связь</p><h2 data-i18n="conversation">Рабочий чат с OfferPSP</h2></div></div>
             <div id="messageList" class="message-list"></div>
             <form id="messageForm" class="message-form">
-              <textarea id="messageInput" rows="3" data-i18n-placeholder="messagePlaceholder" placeholder="Задайте вопрос или сообщите об изменении…" required></textarea>
+              <textarea id="messageInput" rows="3" data-i18n-placeholder="messagePlaceholder" placeholder="Задайте вопрос или сообщите об изменении…" aria-label="Сообщение OfferPSP" required></textarea>
               <button class="button primary" type="submit" data-i18n="sendMessage">Отправить</button>
             </form>
             <p id="messageStatus" class="status" role="status" aria-live="polite"></p>

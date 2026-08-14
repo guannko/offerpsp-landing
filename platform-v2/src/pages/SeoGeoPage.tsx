@@ -39,6 +39,24 @@ type TechnicalAudit = {
   category_scores?: Record<string, number>;
   crawl_stats?: Record<string, number>;
   issues?: AuditIssue[];
+  metadata?: {
+    geo_signals?: {
+      checked_at?: string;
+      robots_txt?: { ok?: boolean; status?: number; ai_crawlers_allowed?: boolean };
+      llms_txt?: { ok?: boolean; status?: number; bytes?: number };
+      sitemap?: { ok?: boolean; status?: number };
+      structured_data?: { ok?: boolean; blocks?: number };
+    };
+  };
+};
+type AuditRun = {
+  id?: string;
+  status?: "queued" | "running" | "completed" | "failed";
+  trigger_source?: string;
+  requested_at?: string;
+  started_at?: string;
+  completed_at?: string;
+  error_message?: string | null;
 };
 type AnalyticsPayload = {
   generated_at?: string;
@@ -46,6 +64,7 @@ type AnalyticsPayload = {
   traffic_history?: TrafficSnapshot[];
   technical_audit?: TechnicalAudit;
   audit_history?: TechnicalAudit[];
+  audit_run?: AuditRun;
   lead_attribution?: {
     total_business_leads?: number;
     last_30_days?: number;
@@ -94,25 +113,57 @@ function BarList({ rows, valueKey, empty }: { rows: CountRow[]; valueKey: "visit
 export default function SeoGeoPage() {
   const [payload, setPayload] = useState<AnalyticsPayload | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [startingAudit, setStartingAudit] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshNotice, setRefreshNotice] = useState<string | null>(null);
 
-  const load = useCallback(async (refresh = false) => {
-    if (refresh) setRefreshing(true); else setLoading(true);
+  const load = useCallback(async (background = false) => {
+    if (!background) setLoading(true);
     setError(null);
-    if (refresh) setRefreshNotice(null);
     const { data, error: loadError } = await supabase.rpc("get_offerpsp_seo_geo_analytics");
     if (loadError) setError(loadError.message);
-    else {
-      setPayload((data || {}) as AnalyticsPayload);
-      if (refresh) setRefreshNotice("Данные перечитаны из сохранённых источников. Новый технический crawl не запускался.");
-    }
+    else setPayload((data || {}) as AnalyticsPayload);
     setLoading(false);
-    setRefreshing(false);
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  const auditRun = payload?.audit_run || {};
+  const auditActive = auditRun.status === "queued" || auditRun.status === "running";
+
+  useEffect(() => {
+    if (!auditActive) return undefined;
+    const interval = window.setInterval(() => { void load(true); }, 4_000);
+    return () => window.clearInterval(interval);
+  }, [auditActive, load]);
+
+  const startAudit = useCallback(async () => {
+    setStartingAudit(true);
+    setError(null);
+    setRefreshNotice(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) throw new Error("Сессия истекла. Войдите снова.");
+      const response = await fetch("/api/seo-audit", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "Не удалось запустить SEO-аудит");
+      setRefreshNotice(result.reused
+        ? "Аудит уже выполняется. Страница обновится автоматически после завершения."
+        : result.status === "completed"
+          ? "Новый crawl завершён. Ниже показан свежий результат SiteOne."
+          : "Новый crawl запущен. SiteOne проверяет production-сайт; результат появится здесь автоматически.");
+      await load(true);
+    } catch (startError) {
+      setError(startError instanceof Error ? startError.message : "Не удалось запустить SEO-аудит");
+    } finally {
+      setStartingAudit(false);
+    }
+  }, [load]);
 
   const traffic = payload?.traffic || {};
   const attribution = payload?.lead_attribution || {};
@@ -122,6 +173,7 @@ export default function SeoGeoPage() {
   const coverage = totalLeads ? Math.round(attributedLeads / totalLeads * 100) : 0;
   const issues = audit.issues || [];
   const categoryScores = Object.entries(audit.category_scores || {});
+  const geoSignals = audit.metadata?.geo_signals;
   const referrers = (traffic.referrers || []).map((row) => ({ ...row, key: row.key === "direct" ? "Прямой заход" : row.key }));
   const recent = attribution.recent || [];
   const sourceRows = attribution.sources || [];
@@ -135,8 +187,8 @@ export default function SeoGeoPage() {
     <PageHeading
       eyebrow="Growth intelligence"
       title="SEO / GEO и источники лидов"
-      description="Трафик и атрибуция перечитываются из сохранённых production-данных. Технические оценки показывают последний сохранённый crawl, а не живое сканирование."
-      action={<button onClick={() => void load(true)} disabled={refreshing} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50">{refreshing ? "Перечитываю…" : "Перечитать данные"}</button>}
+      description="Трафик, география и атрибуция собраны из production-данных. Кнопка запускает новый технический crawl сайта, а не перечитывает старый снимок."
+      action={<button onClick={() => void startAudit()} disabled={startingAudit || auditActive} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50">{startingAudit ? "Запускаю…" : auditActive ? "Аудит выполняется…" : "Запустить новый аудит"}</button>}
     />
     {refreshNotice && <div className="mb-5 rounded-xl border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-700 dark:border-success-500/20 dark:bg-success-500/10 dark:text-success-300">{refreshNotice}</div>}
 
@@ -145,7 +197,7 @@ export default function SeoGeoPage() {
       <Metric label="Просмотры" value={number(traffic.pageviews)} hint="production‑сайт по данным Vercel"/>
       <Metric label="Заявки · 30 дней" value={number(attribution.last_30_days)} hint="без E2E, спама и архивных дублей" tone="success"/>
       <Metric label="Атрибуция" value={`${coverage}%`} hint={`${attributedLeads} из ${totalLeads} рабочих заявок`} tone={coverage < 50 ? "warning" : "success"}/>
-      <Metric label="Техаудит" value={audit.audited_at ? `${number(audit.overall_score).toFixed(1)}/10` : "—"} hint={audit.audited_at ? `${audit.tool || "аудит"} ${audit.tool_version || ""}` : "сохранённого crawl пока нет"} tone={audit.audited_at && number(audit.overall_score) >= 9 ? "success" : "warning"}/>
+      <Metric label="Техаудит" value={audit.audited_at ? `${number(audit.overall_score).toFixed(1)}/10` : "—"} hint={auditActive ? "новый crawl выполняется" : audit.audited_at ? `${audit.tool || "аудит"} ${audit.tool_version || ""}` : "crawl пока не запускался"} tone={audit.audited_at && number(audit.overall_score) >= 9 ? "success" : "warning"}/>
     </div>
 
     <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
@@ -195,15 +247,27 @@ export default function SeoGeoPage() {
 
     <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
       <Panel className="xl:col-span-2">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Сохранённый технический снимок</h2><p className="mt-1 text-sm text-gray-500">Последний crawl {audit.tool || "аудита"} {audit.tool_version || ""} от {dateTime(audit.audited_at)}. Кнопка наверху перечитывает снимок, но не запускает новый скан.</p></div><a href={audit.target_url || "https://offerpsp.com/"} target="_blank" rel="noreferrer" className="text-sm font-semibold text-brand-500">Открыть сайт ↗</a></div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Последний технический аудит</h2><p className="mt-1 text-sm text-gray-500">SiteOne Crawler {audit.tool_version || ""} проверил production-сайт {dateTime(audit.audited_at)}. Каждый запуск создаёт новый результат и сохраняет историю.</p></div><a href={audit.target_url || "https://offerpsp.com/"} target="_blank" rel="noreferrer" className="text-sm font-semibold text-brand-500">Открыть сайт ↗</a></div>
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">{categoryScores.map(([label, score]) => <div key={label} className="rounded-xl bg-gray-50 p-4 dark:bg-white/[0.03]"><span className="block text-xs text-gray-400">{{ performance: "Скорость", seo: "SEO", security: "Защита", accessibility: "Доступность", best_practices: "Практики" }[label] || label}</span><strong className={`mt-2 block text-2xl ${score >= 9 ? "text-success-600 dark:text-success-400" : score >= 8 ? "text-warning-600" : "text-error-600"}`}>{score.toFixed(1)}</strong></div>)}</div>
+        {geoSignals && <div className="mt-6">
+          <div className="flex items-end justify-between gap-4"><div><h3 className="text-sm font-semibold text-gray-900 dark:text-white">GEO readiness</h3><p className="mt-1 text-xs text-gray-500">Проверяемые сигналы доступности для AI‑поиска и answer engines.</p></div><span className="text-xs text-gray-400">{dateTime(geoSignals.checked_at)}</span></div>
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              ["AI‑краулеры", geoSignals.robots_txt?.ai_crawlers_allowed, "robots.txt"],
+              ["llms.txt", geoSignals.llms_txt?.ok, `${number(geoSignals.llms_txt?.bytes)} байт`],
+              ["Sitemap", geoSignals.sitemap?.ok, `HTTP ${number(geoSignals.sitemap?.status) || "—"}`],
+              ["Structured data", geoSignals.structured_data?.ok, `${number(geoSignals.structured_data?.blocks)} JSON‑LD`],
+            ].map(([label, ok, hint]) => <div key={String(label)} className="rounded-xl border border-gray-200 p-3 dark:border-gray-800"><span className="block text-xs text-gray-400">{label}</span><strong className={`mt-1 block text-sm ${ok ? "text-success-600 dark:text-success-400" : "text-error-600"}`}>{ok ? "Доступно" : "Проблема"}</strong><span className="mt-1 block text-xs text-gray-400">{hint}</span></div>)}
+          </div>
+        </div>}
         <div className="mt-6 divide-y divide-gray-100 dark:divide-gray-800">{issues.map((issue) => <div key={issue.code} className="flex flex-col gap-3 py-4 first:pt-0 sm:flex-row sm:items-start"><span className={`w-fit shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${issue.severity === "critical" ? "bg-error-50 text-error-700 dark:bg-error-500/10 dark:text-error-300" : issue.severity === "warning" ? "bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-300" : "bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300"}`}>{issue.severity === "critical" ? "Критично" : issue.severity === "warning" ? "Предупреждение" : "Замечание"} · {issue.count}</span><div><strong className="text-sm text-gray-900 dark:text-white">{issue.title}</strong><p className="mt-1 text-sm text-gray-500">{issue.action}</p></div></div>)}</div>
       </Panel>
       <Panel>
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Достоверность данных</h2>
         <div className="mt-5 space-y-4">
           <div className="rounded-xl bg-success-50 p-4 text-sm text-success-800 dark:bg-success-500/10 dark:text-success-300"><strong>Lead attribution работает</strong><p className="mt-1 text-xs">Новые формы сохраняют AI‑платформу, referrer, first/last touch и UTM в нашей базе.</p></div>
-          <div className="rounded-xl bg-warning-50 p-4 text-sm text-warning-800 dark:bg-warning-500/10 dark:text-warning-300"><strong>Живой crawler не подключён</strong><p className="mt-1 text-xs">Технические баллы меняются только после отдельного проверенного crawl и сохранения нового снимка.</p></div>
+          <div className="rounded-xl bg-success-50 p-4 text-sm text-success-800 dark:bg-success-500/10 dark:text-success-300"><strong>Живой crawler подключён</strong><p className="mt-1 text-xs">SiteOne Crawler запускается вручную этой страницей и по расписанию, затем сохраняет новый проверяемый аудит.</p></div>
+          {auditRun.status === "failed" && <div className="rounded-xl bg-error-50 p-4 text-sm text-error-800 dark:bg-error-500/10 dark:text-error-300"><strong>Последний запуск завершился ошибкой</strong><p className="mt-1 text-xs">{auditRun.error_message || "Повторите запуск или проверьте runtime-логи модуля."}</p></div>}
           {(traffic.limitations || []).map((item) => <div key={item.code} className="rounded-xl bg-warning-50 p-4 text-sm text-warning-800 dark:bg-warning-500/10 dark:text-warning-300"><strong>{item.code === "utm_dimensions_unavailable" ? "Ограничение тарифа Vercel" : "Короткая история"}</strong><p className="mt-1 text-xs">{item.message}</p></div>)}
           <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800"><span className="block text-xs text-gray-400">Снимок трафика</span><strong className="mt-1 block text-sm text-gray-800 dark:text-white/90">{dateTime(traffic.captured_at)}</strong><span className="mt-3 block text-xs text-gray-400">Технический аудит</span><strong className="mt-1 block text-sm text-gray-800 dark:text-white/90">{dateTime(audit.audited_at)}</strong></div>
         </div>

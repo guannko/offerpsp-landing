@@ -11,7 +11,8 @@
     "test:pdf-extractor": "node scripts/test-pdf-extractor.mjs",
     "test:offer-parser": "node scripts/test-offer-parser.mjs",
     "test:mailbox-poller": "node scripts/test-mailbox-poller.mjs",
-    "test:modules": "node scripts/test-platform-modules.mjs"
+    "test:modules": "node scripts/test-platform-modules.mjs",
+    "test:siteone-audit": "node scripts/test-siteone-audit.mjs"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.15",

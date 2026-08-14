@@ -5,7 +5,8 @@
   "outputDirectory": "dist",
   "functions": {
     "api/platform-modules.mjs": {
-      "includeFiles": "rules/**"
+      "includeFiles": "{rules/**,vendor/siteone-crawler/**}",
+      "maxDuration": 60
     },
     "api/search-index-sync.mjs": {
       "maxDuration": 60
@@ -18,6 +19,10 @@
     {
       "path": "/api/search-index-sync",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/seo-audit-scheduled",
+      "schedule": "0 6 * * 1"
     }
   ],
   "rewrites": [
@@ -32,6 +37,14 @@
     {
       "source": "/api/semantic-memory",
       "destination": "/api/platform-modules?module=semantic-memory"
+    },
+    {
+      "source": "/api/seo-audit",
+      "destination": "/api/platform-modules?module=seo-audit"
+    },
+    {
+      "source": "/api/seo-audit-scheduled",
+      "destination": "/api/platform-modules?module=seo-audit-scheduled"
     },
     {
       "source": "/api/(.*)",
