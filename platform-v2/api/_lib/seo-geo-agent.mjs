@@ -75,7 +75,10 @@ function sitemapUrls(xml, targetOrigin) {
 
 async function fetchText(url, fetchImpl) {
   const response = await fetchImpl(url, {
-    headers: { "user-agent": "OfferPSP-SEO-GEO-Agent/1.0" },
+    headers: {
+      "user-agent": "OfferPSP-SEO-GEO-Agent/1.0",
+      "accept-encoding": "br, gzip",
+    },
     signal: AbortSignal.timeout(15_000),
   });
   const text = await response.text();
@@ -91,6 +94,12 @@ async function fetchText(url, fetchImpl) {
 function pageBrief(url, result) {
   const html = result.text || "";
   const text = visibleText(html);
+  const imageTags = String(html).match(/<img\b[^>]*>/gi) || [];
+  const imageSources = imageTags
+    .map((tag) => clampText(decodeHtml(tag.match(/\bsrc=["']([^"']+)["']/i)?.[1]), 1_000))
+    .filter(Boolean);
+  const contentRasterImages = imageSources.filter((source) => /\.(?:avif|webp|png|jpe?g)(?:[?#]|$)/i.test(source));
+  const socialPreview = metaContent(html, "og:image");
   return {
     url,
     status: result.status,
@@ -102,6 +111,12 @@ function pageBrief(url, result) {
     h2: tagValues(html, "h2", 10),
     lang: clampText(html.match(/<html\b[^>]*\blang=["']([^"']+)["']/i)?.[1], 20),
     json_ld_blocks: (html.match(/application\/ld\+json/gi) || []).length,
+    image_inventory: {
+      content_images: imageSources.length,
+      content_raster_images: contentRasterImages.length,
+      modern_content_images: contentRasterImages.filter((source) => /\.(?:avif|webp)(?:[?#]|$)/i.test(source)).length,
+      social_preview_image: socialPreview,
+    },
     word_count: text ? text.split(/\s+/).length : 0,
     response_headers: result.headers || {},
     text_sample: text,
@@ -174,26 +189,74 @@ function claimsMissingSecurityHeaders(item) {
     && /(add|missing|absent|добав|отсутств|не установлен|нет заголов)/i.test(text);
 }
 
+function claimsMissingBrotli(item) {
+  const text = [item?.title, item?.evidence, item?.recommendation].join(" ");
+  return /brotli/i.test(text) && /(missing|absent|unsupported|support|enable|отсутств|не поддерж|включ|провер)/i.test(text);
+}
+
+function claimsMissingModernImages(item) {
+  const text = [item?.title, item?.evidence, item?.recommendation].join(" ");
+  return /(webp|avif)/i.test(text) && /(add|convert|missing|absent|добав|конверт|отсутств|нет\s+(?:webp|avif))/i.test(text);
+}
+
+function hasVerifiedBrotli(evidence) {
+  const pages = Array.isArray(evidence?.pages) ? evidence.pages.filter((page) => page.status >= 200 && page.status < 400) : [];
+  return pages.length > 0 && pages.every((page) => /(?:^|[,\s])br(?:$|[,\s])/i.test(page.response_headers?.["content-encoding"] || ""));
+}
+
+function hasNoContentRasterImages(evidence) {
+  const pages = Array.isArray(evidence?.pages) ? evidence.pages.filter((page) => page.status >= 200 && page.status < 400) : [];
+  return pages.length > 0 && pages.every((page) => Number(page.image_inventory?.content_raster_images || 0) === 0);
+}
+
+function stripUnsupportedSummarySentences(summary, { modernImages, brotli }) {
+  const sentences = String(summary || "").split(/(?<=[.!?])\s+/).filter(Boolean);
+  const filtered = sentences.filter((sentence) => {
+    if (modernImages && /(webp|avif)/i.test(sentence)) return false;
+    if (brotli && /brotli/i.test(sentence)) return false;
+    return true;
+  });
+  return clampText(filtered.join(" ") || "Техническое состояние сайта подтверждено живым crawl и проверкой production-ответов.", 1_200);
+}
+
 export function normalizeSeoAgentAnalysis(value, evidence) {
   const source = value?.analysis && typeof value.analysis === "object" ? value.analysis : value;
   if (!source || typeof source !== "object") throw new Error("SEO/GEO agent returned no analysis");
-  const executiveSummary = clampText(source.executive_summary, 1_200);
+  let executiveSummary = clampText(source.executive_summary, 1_200);
   if (!executiveSummary) throw new Error("SEO/GEO agent returned an empty summary");
 
   const normalizedPriorities = Array.isArray(source.priorities)
     ? source.priorities.slice(0, 10).map(normalizePriority).filter((item) => item.title)
     : [];
   const verifiedSecurity = hasVerifiedSecurityHeaders(evidence);
+  const verifiedBrotli = hasVerifiedBrotli(evidence);
+  const noContentRasterImages = hasNoContentRasterImages(evidence);
   const removedUnsupportedSecurity = verifiedSecurity && normalizedPriorities.some(claimsMissingSecurityHeaders);
-  const priorities = removedUnsupportedSecurity
-    ? normalizedPriorities.filter((item) => !claimsMissingSecurityHeaders(item))
-    : normalizedPriorities;
+  const removedUnsupportedBrotli = verifiedBrotli && normalizedPriorities.some(claimsMissingBrotli);
+  const removedUnsupportedImages = noContentRasterImages && normalizedPriorities.some(claimsMissingModernImages);
+  const priorities = normalizedPriorities.filter((item) => {
+    if (removedUnsupportedSecurity && claimsMissingSecurityHeaders(item)) return false;
+    if (removedUnsupportedBrotli && claimsMissingBrotli(item)) return false;
+    if (removedUnsupportedImages && claimsMissingModernImages(item)) return false;
+    return true;
+  });
   const limitations = Array.isArray(source.limitations)
     ? source.limitations.slice(0, 6).map((item) => clampText(item, 500)).filter(Boolean)
     : [];
   if (removedUnsupportedSecurity) {
     limitations.unshift("Live responses already contain the baseline security headers; the aggregate SiteOne security finding needs URL/check-level evidence.");
   }
+  if (removedUnsupportedBrotli) {
+    limitations.unshift("Live HTML responses use Brotli when requested; the aggregate SiteOne Brotli finding is not actionable.");
+  }
+  if (removedUnsupportedImages) {
+    limitations.unshift("Indexed pages contain no content raster images; the PNG social preview is intentionally kept for crawler compatibility, so WebP/AVIF absence is not an optimization defect.");
+  }
+  executiveSummary = stripUnsupportedSummarySentences(executiveSummary, {
+    modernImages: removedUnsupportedImages,
+    brotli: removedUnsupportedBrotli,
+  });
+  const quickWins = Array.isArray(source.quick_wins) ? source.quick_wins.slice(0, 8).map((item) => clampText(item, 500)).filter(Boolean) : [];
 
   return {
     status: "completed",
@@ -202,9 +265,15 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     model: clampText(value?.model || source.model || "deepseek-chat", 120),
     generated_at: new Date().toISOString(),
     executive_summary: executiveSummary,
-    confidence: removedUnsupportedSecurity ? "medium" : (["high", "medium", "low"].includes(source.confidence) ? source.confidence : "medium"),
+    confidence: removedUnsupportedSecurity || removedUnsupportedBrotli || removedUnsupportedImages
+      ? "medium"
+      : (["high", "medium", "low"].includes(source.confidence) ? source.confidence : "medium"),
     priorities,
-    quick_wins: Array.isArray(source.quick_wins) ? source.quick_wins.slice(0, 8).map((item) => clampText(item, 500)).filter(Boolean) : [],
+    quick_wins: quickWins.filter((item) => {
+      if (removedUnsupportedBrotli && /brotli/i.test(item)) return false;
+      if (removedUnsupportedImages && /(webp|avif)/i.test(item)) return false;
+      return true;
+    }),
     content_recommendations: Array.isArray(source.content_recommendations)
       ? source.content_recommendations.slice(0, 8).map(normalizeContentRecommendation).filter((item) => item.url)
       : [],

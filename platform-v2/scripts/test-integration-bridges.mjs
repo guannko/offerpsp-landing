@@ -65,6 +65,7 @@ try {
     calls.push({ url: String(url), init });
     if (String(url).endsWith("/auth/v1/user")) return Response.json({ id: "staff-id" });
     if (String(url).endsWith("/rpc/is_offerpsp_staff")) return Response.json(true);
+    if (String(url).endsWith("/rpc/record_offerpsp_integration_test")) return Response.json(true);
     if (String(url).includes("gateway-health")) return Response.json({ success: true, check: "authenticated_gateway" });
     throw new Error(`Unexpected URL ${url}`);
   };
@@ -75,6 +76,18 @@ try {
   assert.equal(healthResponse.body.checks.email.delivery_tested, false);
   assert.equal(calls.filter((call) => call.url.includes("gateway-health")).every((call) => call.init.method === "GET"), true);
   assert.equal(calls.filter((call) => call.url.includes("gateway-health")).every((call) => call.init.headers["x-captain-secret"] === "bridge-secret"), true);
+
+  calls = [];
+  const recordedHealthResponse = responseRecorder();
+  await healthHandler(request({ integration: "email" }), recordedHealthResponse);
+  assert.equal(recordedHealthResponse.statusCode, 200);
+  assert.equal(recordedHealthResponse.body.recorded, true);
+  const recordCall = calls.find((call) => call.url.endsWith("/rpc/record_offerpsp_integration_test"));
+  assert.deepEqual(JSON.parse(recordCall.init.body), {
+    p_integration_key: "email",
+    p_success: true,
+    p_error: null,
+  });
 
   globalThis.fetch = async (url) => {
     if (String(url).endsWith("/auth/v1/user")) return Response.json({ id: "staff-id" });

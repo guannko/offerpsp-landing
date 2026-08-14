@@ -36,7 +36,6 @@
     "meilisearch": "^0.60.0",
     "mem0ai": "^3.1.6",
     "pdfjs-dist": "^6.2.108",
-    "posthog-js": "^1.417.0",
     "react": "^19.0.0",
     "react-apexcharts": "^1.7.0",
     "react-dnd": "^16.0.1",

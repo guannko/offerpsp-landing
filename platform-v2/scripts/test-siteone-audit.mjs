@@ -103,6 +103,7 @@ const securityHeaders = {
   "x-content-type-options": "nosniff",
   "referrer-policy": "strict-origin-when-cross-origin",
   "permissions-policy": "camera=()",
+  "content-encoding": "br",
 };
 const evidence = await collectSeoAgentEvidence(agentAudit, async (url) => {
   if (url === "https://offerpsp.com/sitemap.xml") return new Response(sitemapXml, { status: 200, headers: securityHeaders });
@@ -114,6 +115,7 @@ assert.equal(evidence.pages.length, 2);
 assert.equal(evidence.pages[0].title, "OfferPSP");
 assert.deepEqual(evidence.pages[0].h1, ["The right PSP"]);
 assert.equal(evidence.pages[0].json_ld_blocks, 1);
+assert.equal(evidence.pages[0].image_inventory.content_raster_images, 0);
 assert.equal(evidence.pages[0].response_headers["content-security-policy"], "default-src 'self'");
 
 assert.equal(resolveSeoAgentWebhookUrl({
@@ -156,6 +158,37 @@ const unsupportedSecurity = normalizeSeoAgentAnalysis({ analysis: {
 assert.equal(unsupportedSecurity.priorities.length, 0);
 assert.equal(unsupportedSecurity.confidence, "medium");
 assert.match(unsupportedSecurity.limitations[0], /already contain/i);
+
+const unsupportedAggregates = normalizeSeoAgentAnalysis({ analysis: {
+  ...rawAgentAnalysis,
+  executive_summary: "The site is healthy. Missing WebP/AVIF images and Brotli support are the main technical problems.",
+  confidence: "high",
+  priorities: [
+    {
+      priority: "P1",
+      area: "Technical",
+      title: "Add WebP/AVIF images",
+      evidence: "SiteOne found no WebP or AVIF image.",
+      recommendation: "Convert raster images to WebP.",
+      affected_urls: ["https://offerpsp.com/"],
+    },
+    {
+      priority: "P2",
+      area: "Technical",
+      title: "Enable Brotli support",
+      evidence: "Aggregate crawler warning.",
+      recommendation: "Enable Brotli on the CDN.",
+      affected_urls: ["https://offerpsp.com/"],
+    },
+  ],
+  quick_wins: ["Add WebP images", "Enable Brotli"],
+} }, evidence);
+assert.equal(unsupportedAggregates.priorities.length, 0);
+assert.equal(unsupportedAggregates.quick_wins.length, 0);
+assert.equal(unsupportedAggregates.confidence, "medium");
+assert.doesNotMatch(unsupportedAggregates.executive_summary, /(WebP|AVIF|Brotli)/i);
+assert.match(unsupportedAggregates.limitations.join(" "), /no content raster images/i);
+assert.match(unsupportedAggregates.limitations.join(" "), /use Brotli/i);
 
 let agentRequest = null;
 const agentResult = await runSeoGeoAgent(agentAudit, {

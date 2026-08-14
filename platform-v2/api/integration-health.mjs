@@ -49,6 +49,23 @@ async function probeGateway(url, secret, channel) {
   }
 }
 
+async function recordIntegrationCheck(url, key, authorization, integration, check) {
+  try {
+    const result = await fetch(`${url}/rest/v1/rpc/record_offerpsp_integration_test`, {
+      method: "POST",
+      headers: { apikey: key, Authorization: authorization, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        p_integration_key: integration,
+        p_success: Boolean(check.reachable && check.authenticated),
+        p_error: check.reachable && check.authenticated ? null : check.detail,
+      }),
+    });
+    return result.ok;
+  } catch {
+    return false;
+  }
+}
+
 export default async function handler(request, response) {
   if (!["GET", "POST"].includes(request.method)) return json(response, 405, { success: false, error: "Method not allowed" });
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -93,8 +110,9 @@ export default async function handler(request, response) {
     const integration = String(body.integration || "");
     if (!Object.hasOwn(checks, integration)) return json(response, 400, { success: false, error: "Unknown integration" });
     const check = checks[integration];
-    if (!check.reachable || !check.authenticated) return json(response, 503, { success: false, error: check.detail, check });
-    return json(response, 200, { success: true, check, checked_at: new Date().toISOString() });
+    const recorded = await recordIntegrationCheck(supabaseUrl, supabaseKey, authorization, integration, check);
+    if (!check.reachable || !check.authenticated) return json(response, 503, { success: false, error: check.detail, check, recorded });
+    return json(response, 200, { success: true, check, recorded, checked_at: new Date().toISOString() });
   }
 
   return json(response, 200, { success: true, checks, checked_at: new Date().toISOString() });

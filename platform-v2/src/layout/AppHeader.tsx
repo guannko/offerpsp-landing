@@ -5,7 +5,6 @@ import { ThemeToggleButton } from "../components/common/ThemeToggleButton";
 import { useControlBridge } from "../context/ControlBridgeContext";
 import { useSidebar } from "../context/SidebarContext";
 import { supabase } from "../lib/supabase";
-import { captureProductEvent } from "../lib/analytics";
 
 type HeaderSearchResult = {
   key: string;
@@ -65,10 +64,6 @@ export default function AppHeader() {
           setRemoteSearchResults([]);
           return;
         }
-        captureProductEvent("control_bridge_search_used", {
-          source: "meilisearch",
-          result_count: payload.results.length,
-        });
         setRemoteSearchResults(payload.results.map((item: Record<string, unknown>) => ({
           key: String(item.id || item.path || item.label || "result"),
           label: String(item.label || "Без названия"),

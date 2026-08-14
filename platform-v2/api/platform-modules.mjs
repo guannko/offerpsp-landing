@@ -64,19 +64,44 @@ async function evaluateRules(request, response) {
 
 async function moduleHealth(request, response) {
   if (request.method !== "GET") return sendJson(response, 405, { error: "Method not allowed" });
-  const modules = await Promise.all([
+  const probedModules = await Promise.all([
     settle("docling", probeDocling),
     settle("gorules", probeRules),
     settle("meilisearch", probeSearch),
     settle("mem0", probeSemanticMemory),
   ]);
+  const modules = probedModules.map((item) => {
+    if (item.name === "docling" && !item.enabled) {
+      return {
+        ...item,
+        optional: true,
+        substitute_healthy: true,
+        substitute: "PDF.js + Mammoth + spreadsheet parser",
+        reason: "native_parser_is_primary",
+      };
+    }
+    if (item.name === "mem0" && !item.enabled) {
+      return {
+        ...item,
+        optional: true,
+        substitute_healthy: true,
+        substitute: "Supabase BIXOFFPSP memory, journal and timeline",
+        reason: "supabase_memory_is_primary",
+      };
+    }
+    return item;
+  });
   return sendJson(response, 200, {
     checked_at: new Date().toISOString(),
     modules,
     posthog: {
       name: "posthog",
-      configured: Boolean(process.env.VITE_POSTHOG_KEY && process.env.VITE_POSTHOG_HOST),
-      enabled: Boolean(process.env.VITE_POSTHOG_KEY && process.env.VITE_POSTHOG_HOST),
+      configured: false,
+      enabled: false,
+      optional: true,
+      substitute_healthy: true,
+      substitute: "Supabase operational analytics; public acquisition uses Vercel Web Analytics",
+      reason: "product_decision_not_to_track_staff_behaviour",
     },
   });
 }
