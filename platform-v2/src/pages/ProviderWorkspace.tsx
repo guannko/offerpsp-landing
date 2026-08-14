@@ -272,7 +272,7 @@ function ProviderOverview({ workspace, entity, setTab }: { workspace: Workspace;
           <ProfileRow label="Статус" value={statusLabels[workspace.provider.relationship_status || ""] || workspace.provider.relationship_status || "—"}/>
           <ProfileRow label="Категория" value={statusLabels[workspace.provider.relationship_tier || "standard"] || workspace.provider.relationship_tier || "—"}/>
           <ProfileRow label="Приоритет" value={String(workspace.provider.strategic_priority ?? 50)}/>
-          <ProfileRow label="Агентская маржа" value={workspace.provider.margin_included_default ? "Уже включена PSP" : "Добавляется OfferPSP"}/>
+          <ProfileRow label="Наценка OfferPSP" value={workspace.provider.margin_included_default ? "Уже включена PSP" : "По умолчанию 0%; можно настроить"}/>
           <ProfileRow label="Наша наценка PayIn" value={formatMarkup(payinMarkup)}/>
           <ProfileRow label="Наша наценка PayOut" value={formatMarkup(payoutMarkup)}/>
           <ProfileRow label="Условия проверены" value={formatProviderDate(workspace.provider.last_verified_at)}/>
@@ -294,7 +294,7 @@ function ProviderOverview({ workspace, entity, setTab }: { workspace: Workspace;
 
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-4">
       <SummaryPanel title="Офферы" count={activeRoutes.length} action="Открыть офферы" onOpen={() => setTab("offers")}><p>{publishedRoutes.length} опубликовано · {activeRoutes.filter((route) => route.status === "paused").length} на паузе</p>{activeRoutes.slice(0, 3).map((route) => <p key={route.id} className="truncate">{route.client_title} · {statusLabels[route.status] || route.status}</p>)}</SummaryPanel>
-      <SummaryPanel title="Маржа" count={activeMargins.length} action="Настроить маржу" onOpen={() => setTab("pricing")}><p>{activeMargins.length ? `${activeMargins.length} активных правил` : "Активных правил нет"}</p><p>{workspace.provider.margin_included_default ? "Маржа включена поставщиком" : "Маржа управляется OfferPSP"}</p></SummaryPanel>
+      <SummaryPanel title="Маржа" count={activeMargins.length} action="Настроить маржу" onOpen={() => setTab("pricing")}><p>{activeMargins.length ? `${activeMargins.length} активных правил` : "Наценка 0% до настройки"}</p><p>{workspace.provider.margin_included_default ? "Маржа включена поставщиком" : "Отдельная наценка необязательна"}</p></SummaryPanel>
       <SummaryPanel title="Документы" count={activeDocuments.length} action="Открыть документы" onOpen={() => setTab("documents")}>{activeDocuments.slice(0, 3).map((document) => <p key={document.id} className="truncate">{document.title} · {documentCategoryLabels[document.category] || document.category}</p>)}{!activeDocuments.length && <p>Документов пока нет</p>}</SummaryPanel>
       <SummaryPanel title="История" count={entity.activities.length} action="Открыть историю" onOpen={() => setTab("activity")}>{entity.activities.slice(0, 3).map((activity) => <p key={activity.id} className="line-clamp-2">{activity.title || activity.summary || activity.action_type || "Событие"} · {formatProviderDate(activity.created_at)}</p>)}{!entity.activities.length && <p>История пока пуста</p>}</SummaryPanel>
     </div>

@@ -260,6 +260,8 @@ export type RouteCoverage = {
   open_error_count?: number | null;
   open_warning_count?: number | null;
   margin_ready?: boolean | null;
+  margin_configured?: boolean | null;
+  margin_mode?: "included" | "configured" | "zero_markup" | string | null;
 };
 
 export type Organization = {

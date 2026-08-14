@@ -272,7 +272,7 @@ export default function MerchantWorkspace() {
   const publishedRoutes = useMemo(() => {
     const query = search.trim().toLowerCase();
     return routes.filter((route) => {
-      if (route.status !== "published" || route.open_error_count || !route.margin_ready) return false;
+      if (route.status !== "published" || route.open_error_count) return false;
       if (!query) return true;
       return [route.provider_name, route.provider_code, route.route_code, route.client_title, route.flow, ...(route.geos || []), ...(route.currencies || []), ...(route.methods || [])]
         .join(" ").toLowerCase().includes(query);
@@ -614,7 +614,7 @@ function MatchingPanel({ matches, selectedMatches, setSelectedMatches, published
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Ручной выбор</p><h2 className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">Любой актуальный оффер</h2>
       <p className="mt-1 text-sm text-gray-500">Можно отправить решение вне исходного запроса. Клиент увидит анонимный Telegram‑формат, а настоящий PSP останется внутри системы.</p>
       <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Поиск: GEO, валюта, метод, PSP…" className="mt-5 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:text-white"/>
-      <div className="mt-4 max-h-[520px] space-y-3 overflow-y-auto pr-1">{publishedRoutes.length ? publishedRoutes.map((route) => <SelectionCard key={route.route_id} selected={selectedRoutes.includes(route.route_id)} onChange={() => setSelectedRoutes(toggle(selectedRoutes, route.route_id))} title={route.client_title || route.route_code || "Оффер"} meta={`${textList(route.geos)} · ${textList(route.currencies)} · ${textList(route.methods)} · ${String(route.flow || "—").toUpperCase()}`} detail={`${route.provider_name || "PSP"} · ${route.provider_code || ""}`} aside="готов"/>) : <EmptyState title="Подходящих опубликованных офферов нет" description="Проверьте фильтр, публикацию и наличие клиентской маржи."/>}</div>
+      <div className="mt-4 max-h-[520px] space-y-3 overflow-y-auto pr-1">{publishedRoutes.length ? publishedRoutes.map((route) => <SelectionCard key={route.route_id} selected={selectedRoutes.includes(route.route_id)} onChange={() => setSelectedRoutes(toggle(selectedRoutes, route.route_id))} title={route.client_title || route.route_code || "Оффер"} meta={`${textList(route.geos)} · ${textList(route.currencies)} · ${textList(route.methods)} · ${String(route.flow || "—").toUpperCase()}`} detail={`${route.provider_name || "PSP"} · ${route.provider_code || ""}`} aside="готов"/>) : <EmptyState title="Подходящих опубликованных офферов нет" description="Проверьте фильтр, статус публикации и ошибки нормализации."/>}</div>
       <button onClick={createManual} disabled={!selectedRoutes.length || Boolean(busy) || !complianceReady} className="mt-5 w-full rounded-lg bg-gray-900 px-4 py-3 text-sm font-semibold text-white hover:bg-black disabled:opacity-40 dark:bg-white dark:text-gray-900">{busy === "manual-shortlist" ? "Создаю…" : `Создать ручной shortlist (${selectedRoutes.length})`}</button>
     </Panel>
   </div>;
