@@ -174,7 +174,8 @@ export default function AIBotAssistant() {
     setUploadStatus("Извлекаю условия из файла…");
     let uploadedPath: string | null = null;
     try {
-      const extracted = await extractOfferSource(offerFile, setUploadStatus);
+      const { data: { session } } = await supabase.auth.getSession();
+      const extracted = await extractOfferSource(offerFile, setUploadStatus, { accessToken: session?.access_token });
       uploadedPath = `${new Date().toISOString().slice(0, 10)}/${createId()}-${safeStorageName(offerFile.name)}`;
       const uploaded = await supabase.storage.from("offerpsp-private-sources").upload(uploadedPath, offerFile, {
         contentType: offerFile.type || undefined,
@@ -195,6 +196,9 @@ export default function AIBotAssistant() {
           original_size_bytes: extracted.size,
           original_sha256: extracted.sha256,
           extraction_method: extracted.extractionMethod,
+          extractor_version: extracted.extractionMethod === "docling"
+            ? "docling-serve-v1.28.0"
+            : "offerpsp-browser-source-extractor-v1",
           source_format: extracted.format,
           operator_note: offerNote.trim() || null,
         },
@@ -279,7 +283,7 @@ export default function AIBotAssistant() {
               <div className="mt-3 space-y-2">
                 <input list="aibot-offer-provider-names" value={offerProviderName} onChange={(event) => setOfferProviderName(event.target.value)} placeholder="Название PSP" className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                 <datalist id="aibot-offer-provider-names">{providers.filter((provider) => provider.relationship_status !== "archived").map((provider) => <option key={provider.id} value={provider.brand_name} />)}</datalist>
-                <input ref={fileInputRef} type="file" accept=".txt,.md,.csv,.tsv,.json,.html,.xml,.pdf,.docx,.xlsx,.png,.jpg,.jpeg,.webp" onChange={(event) => { setOfferFile(event.target.files?.[0] || null); setUploadStatus(""); }} className="block w-full text-xs text-gray-500 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:font-semibold file:text-brand-600 dark:file:bg-brand-500/10" />
+                <input ref={fileInputRef} type="file" accept=".txt,.md,.csv,.tsv,.json,.html,.xml,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.eml,.msg,.png,.jpg,.jpeg,.tif,.tiff,.webp" onChange={(event) => { setOfferFile(event.target.files?.[0] || null); setUploadStatus(""); }} className="block w-full text-xs text-gray-500 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:font-semibold file:text-brand-600 dark:file:bg-brand-500/10" />
                 <input value={offerNote} onChange={(event) => setOfferNote(event.target.value)} placeholder="Комментарий: новый, тестовый, не публиковать…" className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                 {uploadStatus ? <p className="text-xs text-gray-500">{uploadStatus}</p> : null}
                 <p className="text-[11px] leading-4 text-gray-400">Оригинал сохраняется приватно. После разбора оффер попадёт на ручную проверку и не будет опубликован автоматически.</p>

@@ -12,7 +12,7 @@ services:
       - "127.0.0.1:7700:7700"
 
   docling:
-    image: ${DOCLING_IMAGE:-quay.io/docling-project/docling-serve:latest}
+    image: ${DOCLING_IMAGE:-quay.io/docling-project/docling-serve-cpu:v1.28.0}
     restart: unless-stopped
     environment:
       DOCLING_SERVE_API_KEY: ${DOCLING_SERVE_API_KEY:?required}

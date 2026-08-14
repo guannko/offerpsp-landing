@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { decodeBase64File, FileInputError } from "./_lib/file-input.mjs";
 import { convertWithDocling, getDoclingConfig } from "./_lib/modules/docling.mjs";
+import { HttpError, requireOfferPspStaff } from "./_lib/staff-auth.mjs";
 
 const MAX_DOCUMENT_BYTES = 15 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = new Set([
@@ -17,17 +18,24 @@ function extension(filename) {
   return String(filename || "").split(".").pop()?.toLowerCase() || "";
 }
 
+async function authorizeRequest(request) {
+  const expectedToken = String(process.env.OFFERPSP_PARSER_TOKEN || "");
+  const suppliedToken = request.headers["x-offerpsp-parser-token"];
+  if (expectedToken && typeof suppliedToken === "string" && suppliedToken === expectedToken) return;
+  await requireOfferPspStaff(request);
+}
+
 export default async function handler(request, response) {
   if (request.method !== "POST") {
     response.setHeader("Allow", "POST");
     return sendJson(response, 405, { error: "method_not_allowed" });
   }
 
-  const expectedToken = process.env.OFFERPSP_PARSER_TOKEN;
-  const suppliedToken = request.headers["x-offerpsp-parser-token"];
-  if (!expectedToken) return sendJson(response, 503, { error: "parser_not_configured" });
-  if (typeof suppliedToken !== "string" || suppliedToken !== expectedToken) {
-    return sendJson(response, 401, { error: "unauthorized" });
+  try {
+    await authorizeRequest(request);
+  } catch (error) {
+    if (error instanceof HttpError) return sendJson(response, error.status, { error: error.message });
+    throw error;
   }
 
   const input = request.body && typeof request.body === "object" ? request.body : {};

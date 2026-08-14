@@ -461,7 +461,9 @@ function OfferIntakePanel({ providerNames, onImported }: { providerNames: string
         original_size_bytes: fileMetadata.size,
         original_sha256: fileMetadata.sha256,
         extraction_method: fileMetadata.extractionMethod,
-        extractor_version: "offerpsp-browser-source-extractor-v1",
+        extractor_version: fileMetadata.extractionMethod === "docling"
+          ? "docling-serve-v1.28.0"
+          : "offerpsp-browser-source-extractor-v1",
         submitted_reference: sourceReference.trim() || null,
       });
     }
@@ -519,7 +521,8 @@ function OfferIntakePanel({ providerNames, onImported }: { providerNames: string
     if (!file) return;
     setBusy(true); setMessage("Извлекаю текст и проверяю файл…");
     try {
-      const extracted = await extractOfferSource(file, setMessage);
+      const { data: { session } } = await supabase.auth.getSession();
+      const extracted = await extractOfferSource(file, setMessage, { accessToken: session?.access_token });
       setSourceText(extracted.text);
       setSourceReference(file.name);
       setSourceType("admin_file");
@@ -549,7 +552,7 @@ function OfferIntakePanel({ providerNames, onImported }: { providerNames: string
             <input list="offerpsp-provider-names" className={field} value={providerName} onChange={(event)=>setProviderName(event.target.value)} placeholder="Название PSP"/>
             <datalist id="offerpsp-provider-names">{providerNames.map((name)=><option key={name} value={name}/>)}</datalist>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><select className={field} value={sourceType} onChange={(event)=>setSourceType(event.target.value)}><option value="telegram">Telegram</option><option value="email">Email</option><option value="admin_text">Ручной текст</option><option value="admin_file">Файл</option><option value="api">API</option></select><input className={field} value={sourceReference} onChange={(event)=>setSourceReference(event.target.value)} placeholder="Ссылка / message ID"/></div>
-            <label className="flex cursor-pointer items-center justify-center rounded-lg border border-dashed border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-600 hover:border-brand-400 hover:text-brand-500 dark:border-gray-700 dark:text-gray-300">Загрузить PDF / DOCX / XLSX / TXT / скан<input type="file" className="hidden" accept=".txt,.md,.csv,.tsv,.json,.html,.xml,.pdf,.docx,.xlsx,.png,.jpg,.jpeg,.webp" onChange={(event)=>void readSourceFile(event.target.files?.[0])}/></label>
+            <label className="flex cursor-pointer items-center justify-center rounded-lg border border-dashed border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-600 hover:border-brand-400 hover:text-brand-500 dark:border-gray-700 dark:text-gray-300">Загрузить PDF / Office / email / скан<input type="file" className="hidden" accept=".txt,.md,.csv,.tsv,.json,.html,.xml,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.eml,.msg,.png,.jpg,.jpeg,.tif,.tiff,.webp" onChange={(event)=>void readSourceFile(event.target.files?.[0])}/></label>
             {sourceFile&&fileMetadata&&<div className="rounded-lg bg-success-50 px-3 py-2 text-xs text-success-700 dark:bg-success-500/10 dark:text-success-300"><strong>{sourceFile.name}</strong><span className="mt-1 block">{Math.ceil(fileMetadata.size/1024)} КБ · {fileMetadata.format.toUpperCase()} · приватный оригинал</span></div>}
           </div>
         </div>

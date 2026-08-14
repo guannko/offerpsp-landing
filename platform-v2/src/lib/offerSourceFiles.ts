@@ -1,4 +1,8 @@
 const MAX_SOURCE_SIZE = 15 * 1024 * 1024;
+// Vercel request bodies are substantially smaller than the private source
+// storage limit. Larger files keep using the local adapters until the server
+// receives storage references instead of base64 payloads.
+const MAX_SERVER_EXTRACTION_SIZE = 3 * 1024 * 1024;
 
 export type ExtractedOfferSource = {
   text: string;
@@ -34,6 +38,57 @@ const valueToText = (value: unknown) => {
 };
 
 type ExtractionProgress = (message: string) => void;
+
+type ExtractionOptions = {
+  accessToken?: string | null;
+};
+
+const SERVER_DOCUMENT_FORMATS = new Set([
+  "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "eml", "msg", "tif", "tiff",
+]);
+
+const LOCAL_DOCUMENT_FORMATS = new Set([
+  "txt", "md", "csv", "tsv", "json", "html", "xml", "pdf", "docx", "xlsx", "png", "jpg", "jpeg", "webp",
+]);
+
+function arrayBufferToBase64(buffer: ArrayBuffer) {
+  const bytes = new Uint8Array(buffer);
+  const chunks: string[] = [];
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    chunks.push(String.fromCharCode(...bytes.subarray(offset, offset + chunkSize)));
+  }
+  return btoa(chunks.join(""));
+}
+
+async function extractOnServer(file: File, buffer: ArrayBuffer, accessToken: string, onProgress?: ExtractionProgress) {
+  onProgress?.("Разбираю документ серверным модулем…");
+  const response = await fetch("/api/extract-document", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      filename: file.name,
+      mime_type: file.type || "application/octet-stream",
+      file_base64: arrayBufferToBase64(buffer),
+    }),
+  });
+  const payload = await response.json().catch(() => ({})) as {
+    text?: string;
+    extraction_method?: string;
+    error?: string;
+    message?: string;
+  };
+  if (!response.ok) throw new Error(payload.message || payload.error || `Серверный разбор вернул ${response.status}.`);
+  const text = normalizeText(String(payload.text || ""));
+  if (!text) throw new Error("Серверный модуль не извлёк текст.");
+  return {
+    text,
+    extractionMethod: payload.extraction_method || "docling",
+  };
+}
 
 async function createOcrWorker() {
   const { createWorker } = await import("tesseract.js");
@@ -109,7 +164,11 @@ async function extractXlsx(file: File) {
   }).join("\n\n"));
 }
 
-export async function extractOfferSource(file: File, onProgress?: ExtractionProgress): Promise<ExtractedOfferSource> {
+export async function extractOfferSource(
+  file: File,
+  onProgress?: ExtractionProgress,
+  options: ExtractionOptions = {},
+): Promise<ExtractedOfferSource> {
   if (file.size > MAX_SOURCE_SIZE) throw new Error("Максимальный размер исходника — 15 МБ.");
   const buffer = await file.arrayBuffer();
   // Calculate this before any extractor can transfer or detach the buffer.
@@ -118,6 +177,23 @@ export async function extractOfferSource(file: File, onProgress?: ExtractionProg
   let text = "";
   let extractionMethod = `offerpsp-browser-adapter:${suffix || "text"}`;
   const format = suffix || "text";
+
+  if (SERVER_DOCUMENT_FORMATS.has(suffix) && options.accessToken && file.size <= MAX_SERVER_EXTRACTION_SIZE) {
+    try {
+      const extracted = await extractOnServer(file, buffer, options.accessToken, onProgress);
+      return {
+        text: extracted.text,
+        format,
+        extractionMethod: extracted.extractionMethod,
+        sha256,
+        size: file.size,
+        mimeType: file.type || "application/octet-stream",
+      };
+    } catch (error) {
+      if (!LOCAL_DOCUMENT_FORMATS.has(suffix)) throw error;
+      onProgress?.(`Серверный разбор недоступен, использую резервный: ${error instanceof Error ? error.message : "неизвестная ошибка"}`);
+    }
+  }
 
   if (["txt", "md", "csv", "tsv", "json", "html", "xml"].includes(suffix)) {
     text = normalizeText(new TextDecoder("utf-8").decode(buffer));
@@ -133,7 +209,13 @@ export async function extractOfferSource(file: File, onProgress?: ExtractionProg
     text = await extractImageWithOcr(file, onProgress);
     extractionMethod = `offerpsp-browser-adapter:${format}+ocr`;
   } else {
-    throw new Error("Поддерживаются TXT, CSV, JSON, PDF, DOCX, XLSX, PNG, JPG и WebP.");
+    if (SERVER_DOCUMENT_FORMATS.has(suffix) && file.size > MAX_SERVER_EXTRACTION_SIZE) {
+      throw new Error("Этот формат пока разбирается сервером только до 3 МБ. Уменьшите файл или загрузите PDF/DOCX/XLSX.");
+    }
+    if (SERVER_DOCUMENT_FORMATS.has(suffix) && !options.accessToken) {
+      throw new Error("Для этого формата нужна активная staff-сессия Captain's Bridge.");
+    }
+    throw new Error("Поддерживаются TXT, CSV, JSON, PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, EML/MSG и изображения.");
   }
 
   if (!text) throw new Error("Из файла не удалось извлечь текст.");

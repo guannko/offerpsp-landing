@@ -9,6 +9,9 @@
     },
     "api/search-index-sync.mjs": {
       "maxDuration": 60
+    },
+    "api/extract-document.mjs": {
+      "maxDuration": 60
     }
   },
   "crons": [

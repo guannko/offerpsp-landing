@@ -1126,9 +1126,15 @@ stay isolated behind feature modes until their own verification is complete.
   names, EU resolves as Europe/Европа, and the CIS member codes resolve through both CIS and СНГ.
   Production deployment `dpl_8gtEJ1vomiN35z74pXsG9UtnhieZ` is READY and the protected index still
   returns `401` without its server-side key.
-- [ ] Pin and deploy private Docling, configure its secret and verify health.
-- [ ] Run real PDF, spreadsheet and scanned-image fixtures through native and Docling extraction,
-  compare route counts/anomalies and only then choose `active` mode.
+- [x] Pin the private CPU Docling runtime to `docling-serve-cpu:v1.28.0`, authorize Captain's Bridge
+  staff uploads without exposing the service key, support Office/email/scanned-image inputs and
+  preserve the existing local extraction fallback.
+- [x] Re-run the real PAYOK PDF fixture through native extraction: one page, 2,078 extracted
+  characters, table content present; normalized parser output remains 8 routes with 0 blockers.
+- [ ] Do not provision permanent Docling capacity blindly: the practical 4 GB Northflank service
+  costs about $36/month and field reports show memory can exceed that. When real volume requires
+  Docling, use an asynchronous on-demand job with Storage/queue, then compare PDF, spreadsheet and
+  scanned-image fixtures before choosing `active` mode.
 - [ ] Configure a PostHog EU project and verify the captured payload contains no contacts, offer
   terms, provider identity or secrets.
 - [ ] Keep Mem0 in shadow, compare it with Supabase Memory/Journal/Timeline and connect semantic

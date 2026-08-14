@@ -13,9 +13,11 @@ import {
 
 async function testDocling() {
   let conversionBody = null;
+  let conversionHeaders = null;
   const fetchImpl = async (url, init = {}) => {
     if (String(url).endsWith("/health")) return new Response("ok", { status: 200 });
     conversionBody = JSON.parse(String(init.body));
+    conversionHeaders = init.headers;
     return Response.json({
       status: "success",
       document: { md_content: "# PAYOK\nIndia UPI", json_content: { title: "PAYOK" } },
@@ -40,6 +42,7 @@ async function testDocling() {
   assert.match(result.text, /PAYOK/);
   assert.equal(conversionBody.file_sources[0].filename, "payok.pdf");
   assert.equal(conversionBody.do_ocr, true);
+  assert.equal(conversionHeaders["x-api-key"], "test-key");
   assert.equal(Buffer.from(conversionBody.file_sources[0].base64_string, "base64").toString(), "fake-pdf");
 }
 

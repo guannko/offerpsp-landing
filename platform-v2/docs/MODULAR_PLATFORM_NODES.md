@@ -1,6 +1,6 @@
 # OfferPSP modular platform nodes
 
-Updated: 2026-08-13
+Updated: 2026-08-14
 
 ## Non-negotiable boundary
 
@@ -23,9 +23,15 @@ structured JSON before the existing OfferPSP parser creates atomic route drafts.
 
 - Existing PDF path: `POST /api/extract-offer-pdf`.
 - Universal path: `POST /api/extract-document`.
-- Authentication: server-only `X-OfferPSP-Parser-Token`.
+- Authentication: server-to-server `X-OfferPSP-Parser-Token` or the current authenticated
+  Captain's Bridge staff session. The Docling API key remains server-only.
 - Safety: extraction never publishes an offer. Existing parser, anomaly checks and manual review
   remain mandatory.
+- Runtime: the CPU deployment image is pinned to
+  `quay.io/docling-project/docling-serve-cpu:v1.28.0`.
+- Browser upload boundary: complex documents up to 3 MB can be sent through the protected Vercel
+  endpoint. Larger PDF, DOCX, XLSX and images retain the existing local fallback; moving larger
+  opaque Office/email files through a private Storage reference is a later hardening step.
 
 ### GoRules — explainable decision rules
 
@@ -95,29 +101,30 @@ without a separate privacy review and Boris's approval. `shadow` is the default 
 
 | Node | Local code | Production service | Connected to working flow |
 |---|---|---|---|
-| Docling | verified | not deployed | shadow fallback prepared for PDF; universal intake endpoint ready |
+| Docling | verified | not deployed | protected universal intake and native fallback ready |
 | GoRules | verified | bundled with API | staff-only shadow evaluation ready; matching unchanged |
 | PostHog | verified build | not configured | page/search allowlist ready, sends nothing without env |
 | Mem0 | verified adapter | not configured | hybrid staff endpoint ready; AIBot recall not switched |
-| Meilisearch | verified adapter | not deployed | header fallback preserved; initial sync not run |
+| Meilisearch | verified | Northflank, private | production index and cockpit search active |
 
-The exact Vercel preview build is verified. The GoRules policy appears in the generated function
-file map for the shared `platform-modules` function. This proves packaging, not production
-activation of the external services.
+The exact local production build is verified. Meilisearch is deployed privately on Northflank and
+connected to the cockpit. The remaining external modules are not implied active until their own
+production health and behaviour are verified.
 
 This package is deliberately fail-open for the existing UI and fail-closed for external writes:
 turning every new variable off leaves the current production system unchanged.
 
 ## Rollout order
 
-1. Deploy private Docling and Meilisearch services and verify their health endpoints.
-2. Configure Vercel server variables; leave Docling, search and semantic memory in `shadow`.
-3. Configure a PostHog EU project and verify that only the two allowlisted event types arrive.
-4. Run `POST /api/search-index-sync`, then compare ten known searches with direct Supabase results.
-5. Run document fixtures through native and Docling extraction; compare route count and anomalies.
-6. Compare GoRules decisions with existing matching on low-risk, high-risk and unknown cases.
-7. Compare operational and semantic memory results without enabling Mem0 writes.
-8. Activate one node at a time. Roll back by changing its mode to `off`; no Supabase data rollback
+1. Keep the verified Meilisearch production index and fallback search under monitoring.
+2. Do not provision permanent Docling capacity until the document volume justifies its minimum
+   practical CPU/RAM cost. Prefer an on-demand job with asynchronous queue/storage when required.
+3. Run real document fixtures through native extraction now; compare them with Docling before
+   selecting `shadow` or `active` for the external extractor.
+4. Configure a PostHog EU project and verify that only the two allowlisted event types arrive.
+5. Compare GoRules decisions with existing matching on low-risk, high-risk and unknown cases.
+6. Compare operational and semantic memory results without enabling Mem0 writes.
+7. Activate one node at a time. Roll back by changing its mode to `off`; no Supabase data rollback
    is required.
 
 ## Verification commands
