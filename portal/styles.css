@@ -1642,6 +1642,34 @@ textarea::placeholder { color: #646a78; }
 .dialog-actions .status { margin: 0; }
 .dialog-actions .button { min-width: 130px; }
 
+.support-dialog { width: min(720px, calc(100% - 36px)); }
+
+.support-message-list {
+  min-height: 210px;
+  max-height: min(430px, 46vh);
+  margin-top: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: rgba(4, 6, 12, .58);
+}
+
+.support-message-form textarea { min-height: 94px; }
+
+.support-fallback {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 18px;
+  padding-top: 15px;
+  border-top: 1px solid var(--line);
+  color: #737987;
+  font-size: 10px;
+}
+
+.support-fallback a { color: #bfc4ce; text-decoration: none; }
+.support-fallback a:hover { color: var(--mint); }
+
 .portal-toast {
   position: fixed;
   right: 22px;
@@ -1669,4 +1697,6 @@ textarea::placeholder { color: #646a78; }
   .dialog-actions .status { grid-column: 1 / -1; }
   .dialog-actions .button { min-width: 0; padding: 0 12px; }
   .portal-toast { right: 12px; bottom: 12px; max-width: calc(100% - 24px); }
+  .support-message-form { grid-template-columns: 1fr; }
+  .support-message-form .button { width: 100%; }
 }

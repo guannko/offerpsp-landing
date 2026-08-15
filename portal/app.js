@@ -37,6 +37,9 @@ const COPY = {
     prepareVolume: "Ожидаемый оборот и лимиты", prepareLicense: "Статус лицензии и документы",
     supportTitle: "Поддержка", supportHeading: "Нужна помощь с формулировкой запроса?",
     supportCopy: "Напишите команде OfferPSP. Поможем собрать требования до отправки задачи.",
+    supportDialogEyebrow: "Прямая связь", supportDialogTitle: "Связаться с командой OfferPSP",
+    supportDialogIntro: "Напишите прямо из кабинета. Переписка сохранится здесь, а команда получит уведомление.",
+    supportMessagePlaceholder: "Чем мы можем помочь?", supportFallback: "Если вопрос срочный:",
     newRequestEyebrow: "Новая задача", newRequestTitle: "Создать платёжную задачу",
     newRequestIntro: "Опишите новое GEO, метод или проблему с действующим подключением. Профиль компании останется связан с этой задачей.",
     selectVertical: "Выберите вертикаль", monthlyVolumeRange: "Ожидаемый оборот в месяц", selectRange: "Выберите диапазон",
@@ -142,6 +145,9 @@ const COPY = {
     prepareVolume: "Expected volume and limits", prepareLicense: "Licence status and documents",
     supportTitle: "Support", supportHeading: "Need help defining the request?",
     supportCopy: "Contact the OfferPSP team. We will help structure the requirements before submission.",
+    supportDialogEyebrow: "Direct line", supportDialogTitle: "Contact the OfferPSP team",
+    supportDialogIntro: "Write directly from your workspace. The conversation stays here and the team is notified.",
+    supportMessagePlaceholder: "How can we help?", supportFallback: "For urgent matters:",
     newRequestEyebrow: "New request", newRequestTitle: "Create a payment request",
     newRequestIntro: "Describe a new GEO, method or issue with an existing connection. Your company profile will remain linked to this request.",
     selectVertical: "Select vertical", monthlyVolumeRange: "Expected monthly volume", selectRange: "Select range",
@@ -239,7 +245,8 @@ const STATUS_KEYS = {
 
 const state = {
   user: null, requests: [], lead: null, allOptions: [], options: [], allDeals: [], deals: [], organizations: [],
-  agentBrand: null, profile: null, companyWorkspace: null, conversationId: null, messages: [], language: "ru", portfolioQuery: "",
+  agentBrand: null, profile: null, companyWorkspace: null, conversationId: null, messages: [],
+  supportConversationId: null, supportMessages: [], language: "ru", portfolioQuery: "",
 };
 const ids = [
   "authView", "portalView", "loginForm", "emailInput", "passwordInput", "googleLoginButton", "magicLinkButton",
@@ -262,6 +269,7 @@ const ids = [
   "newRequestDialog", "newRequestForm", "newRequestName", "newRequestEmail", "newRequestCompany", "newRequestCompanyUrl",
   "newRequestVertical", "newRequestVolume", "newRequestGeos", "newRequestMethods", "newRequestTelegram", "newRequestDetails",
   "newRequestConsent", "newRequestWebsiteUrl", "newRequestStatus", "newRequestSubmit", "portalToast",
+  "supportDialog", "supportMessageList", "supportMessageForm", "supportMessageInput", "supportMessageStatus",
 ];
 const elements = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
 
@@ -699,6 +707,66 @@ function renderMessages() {
   elements.messageList.scrollTop = elements.messageList.scrollHeight;
 }
 
+function renderSupportMessages() {
+  elements.supportMessageList.innerHTML = state.supportMessages.length ? state.supportMessages.map((message) => `
+    <article class="message${message.sender_type === "client" ? " client" : ""}">${escapeHtml(message.body)}<small>${escapeHtml(formatDate(message.sent_at))}</small></article>`).join("")
+    : `<p class="status">${escapeHtml(t("noMessages"))}</p>`;
+  elements.supportMessageList.scrollTop = elements.supportMessageList.scrollHeight;
+}
+
+async function loadSupportConversation() {
+  const ensured = await supabase.rpc("ensure_offerpsp_portal_support_conversation");
+  if (ensured.error) throw ensured.error;
+  state.supportConversationId = ensured.data;
+  const messages = await supabase.from("offerpsp_messages").select("id, sender_type, direction, body, sent_at")
+    .eq("conversation_id", ensured.data).order("sent_at", { ascending: true });
+  if (messages.error) throw messages.error;
+  state.supportMessages = messages.data || [];
+}
+
+async function openSupportDialog() {
+  if (!state.user || elements.supportDialog.open) return;
+  setStatus(elements.supportMessageStatus, t("sending"));
+  elements.supportDialog.showModal();
+  try {
+    await loadSupportConversation();
+    setStatus(elements.supportMessageStatus);
+    renderSupportMessages();
+    elements.supportMessageInput.focus();
+  } catch (error) {
+    setStatus(elements.supportMessageStatus, friendlyError(error, state.language === "ru" ? "Чат поддержки пока недоступен." : "Support chat is currently unavailable."), "error");
+  }
+}
+
+function closeSupportDialog() {
+  const button = elements.supportMessageForm.querySelector("button");
+  if (!button.disabled && elements.supportDialog.open) elements.supportDialog.close();
+}
+
+async function sendPortalMessage(conversationId, body, button, statusElement) {
+  setLoading(button, true, t("sending"));
+  const { data: savedMessage, error } = await supabase.from("offerpsp_messages").insert({
+    conversation_id: conversationId, sender_type: "client", sender_user_id: state.user.id, direction: "inbound", body,
+  }).select("id").single();
+  setLoading(button, false);
+  if (error) {
+    setStatus(statusElement, state.language === "ru" ? "Не удалось отправить сообщение. Текст сохранён в поле — попробуйте ещё раз." : "Could not send the message. Your text is still here; try again.", "error");
+    return false;
+  }
+  let notificationDelivered = false;
+  try {
+    const session = await supabase.auth.getSession();
+    const notification = await fetch(MESSAGE_NOTIFICATION_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.data.session?.access_token || ""}` },
+      body: JSON.stringify({ portal_message_id: savedMessage.id }),
+    });
+    notificationDelivered = notification.ok;
+  } catch { /* The database message is already saved. */ }
+  setStatus(statusElement, t(notificationDelivered ? "sent" : "notificationDelayed"), notificationDelivered ? "success" : "warning");
+  return true;
+}
+
 async function enterPortal(session) {
   if (!session?.user) {
     state.user = null; state.requests = []; state.lead = null;
@@ -802,6 +870,8 @@ function closeNewRequestDialog() {
 document.addEventListener("click", async (event) => {
   const languageButton = event.target.closest("[data-language]");
   if (languageButton) { setLanguage(languageButton.dataset.language); return; }
+  if (event.target.closest("[data-open-support]")) { await openSupportDialog(); return; }
+  if (event.target.closest("[data-close-support]")) { closeSupportDialog(); return; }
   if (event.target.closest("[data-open-new-request]")) { openNewRequestDialog(); return; }
   if (event.target.closest("[data-close-new-request]")) { closeNewRequestDialog(); return; }
   const requestButton = event.target.closest("[data-request-id]");
@@ -862,6 +932,13 @@ elements.newRequestDialog.addEventListener("click", (event) => {
 });
 elements.newRequestDialog.addEventListener("cancel", (event) => {
   if (elements.newRequestSubmit.disabled) event.preventDefault();
+});
+
+elements.supportDialog.addEventListener("click", (event) => {
+  if (event.target === elements.supportDialog) closeSupportDialog();
+});
+elements.supportDialog.addEventListener("cancel", (event) => {
+  if (elements.supportMessageForm.querySelector("button").disabled) event.preventDefault();
 });
 
 elements.newRequestForm.addEventListener("submit", async (event) => {
@@ -1096,28 +1173,21 @@ elements.messageForm.addEventListener("submit", async (event) => {
   const body = elements.messageInput.value.trim();
   if (!body || !state.conversationId) return;
   const button = elements.messageForm.querySelector("button");
-  setLoading(button, true, t("sending"));
-  const { data: savedMessage, error } = await supabase.from("offerpsp_messages").insert({
-    conversation_id: state.conversationId, sender_type: "client", sender_user_id: state.user.id, direction: "inbound", body,
-  }).select("id").single();
-  setLoading(button, false);
-  if (error) { setStatus(elements.messageStatus, state.language === "ru" ? "Не удалось отправить сообщение. Текст сохранён в поле — попробуйте ещё раз." : "Could not send the message. Your text is still here; try again.", "error"); return; }
-  let notificationDelivered = false;
-  try {
-    const session = await supabase.auth.getSession();
-    const notification = await fetch(MESSAGE_NOTIFICATION_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.data.session?.access_token || ""}` },
-      body: JSON.stringify({
-        portal_message_id: savedMessage.id,
-      }),
-    });
-    notificationDelivered = notification.ok;
-  } catch { /* The database message is already saved. */ }
+  if (!await sendPortalMessage(state.conversationId, body, button, elements.messageStatus)) return;
   elements.messageInput.value = "";
-  setStatus(elements.messageStatus, t(notificationDelivered ? "sent" : "notificationDelayed"), notificationDelivered ? "success" : "warning");
   await loadConversation(state.lead.lead_id);
   renderMessages();
+});
+
+elements.supportMessageForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const body = elements.supportMessageInput.value.trim();
+  if (!body || !state.supportConversationId) return;
+  const button = elements.supportMessageForm.querySelector("button");
+  if (!await sendPortalMessage(state.supportConversationId, body, button, elements.supportMessageStatus)) return;
+  elements.supportMessageInput.value = "";
+  await loadSupportConversation();
+  renderSupportMessages();
 });
 
 elements.signOutButton.addEventListener("click", async () => { await supabase.auth.signOut(); await enterPortal(null); });

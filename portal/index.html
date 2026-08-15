@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#080a13">
   <title>OfferPSP Payment Workspace</title>
   <link rel="icon" href="/favicon.svg?v=20260814-3" type="image/svg+xml">
-  <link rel="stylesheet" href="/portal/styles.css?v=20260815-2">
+  <link rel="stylesheet" href="/portal/styles.css?v=20260815-3">
 </head>
 <body>
   <div class="ambient" aria-hidden="true"></div>
@@ -56,7 +56,7 @@
           <p data-i18n="workspaceCopy">Заявки, документы, варианты и связь с OfferPSP — в одном защищённом кабинете.</p>
         </div>
         <div class="workspace-actions">
-          <a class="button secondary" href="mailto:bizdev@offerpsp.com" data-i18n="getSupport">Связаться с командой</a>
+          <button class="button secondary" type="button" data-open-support data-i18n="getSupport">Связаться с командой</button>
           <button class="button primary" type="button" data-open-new-request data-i18n="newRequest">Новая платёжная задача</button>
         </div>
       </section>
@@ -297,8 +297,32 @@
     </div>
   </dialog>
 
+  <dialog id="supportDialog" class="request-dialog support-dialog" aria-labelledby="supportDialogTitle">
+    <div class="dialog-shell">
+      <header class="dialog-head">
+        <div>
+          <p class="eyebrow" data-i18n="supportDialogEyebrow">Прямая связь</p>
+          <h2 id="supportDialogTitle" data-i18n="supportDialogTitle">Связаться с командой OfferPSP</h2>
+          <p data-i18n="supportDialogIntro">Напишите прямо из кабинета. Переписка сохранится здесь, а команда получит уведомление.</p>
+        </div>
+        <button class="dialog-close" type="button" data-close-support aria-label="Close">×</button>
+      </header>
+      <div id="supportMessageList" class="message-list support-message-list" aria-live="polite"></div>
+      <form id="supportMessageForm" class="message-form support-message-form">
+        <textarea id="supportMessageInput" rows="4" maxlength="4000" data-i18n-placeholder="supportMessagePlaceholder" placeholder="Чем мы можем помочь?" aria-label="Сообщение команде OfferPSP" required></textarea>
+        <button class="button primary" type="submit" data-i18n="sendMessage">Отправить</button>
+      </form>
+      <p id="supportMessageStatus" class="status" role="status" aria-live="polite"></p>
+      <footer class="support-fallback">
+        <span data-i18n="supportFallback">Если вопрос срочный:</span>
+        <a href="https://t.me/Brain_Index" target="_blank" rel="noopener noreferrer">Telegram ↗</a>
+        <a href="mailto:bizdev@offerpsp.com">bizdev@offerpsp.com</a>
+      </footer>
+    </div>
+  </dialog>
+
   <div id="portalToast" class="portal-toast is-hidden" role="status" aria-live="polite"></div>
 
-  <script type="module" src="/portal/app.js?v=20260815-2"></script>
+  <script type="module" src="/portal/app.js?v=20260815-3"></script>
 </body>
 </html>
