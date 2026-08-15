@@ -7,9 +7,8 @@ Code or a passing local test is not evidence that production has been updated.
 
 ## OfferPSP Operator MCP and owned OAuth — 2026-08-15
 
-Status: `VERIFIED` for production OAuth, staff authorization, read tools, SEO/GEO and the shared
-AIBot safe-mode path. A fresh Telegram natural-language smoke after the MCP update remains pending
-because it is an external message and requires explicit operator confirmation.
+Status: `VERIFIED` for production OAuth, staff authorization, read tools, SEO/GEO, the shared
+AIBot safe-mode path and the operator-confirmed Telegram natural-language smoke.
 
 - [x] Installed the personal Codex plugin `OfferPSP Operator`; it remains visible in Connections so
   future OfferPSP MCP connections can be added without involving Brain Index Admin.
@@ -30,8 +29,10 @@ because it is an external message and requires explicit operator confirmation.
 - [x] Local `test:mcp`, bridge contract tests, lint, TypeScript and Vite production build pass.
   Commits `3978e6c`, `d59b48c`, `db7c45d` and `a510c5c` are pushed. Production deployment
   `dpl_G5C91rzmjzdTtREuCi6Vr9gJWFEV` is `READY` and aliased to the Captain's Bridge URL.
-- [ ] Send one controlled Telegram prompt asking for MCP health/modes without mutations, then verify
-  the Telegram reply and corresponding successful n8n execution.
+- [x] Sent one controlled Telegram prompt asking for MCP health/modes without mutations. The first
+  run exposed and led to the repair of the same escaped-newline defect in `Prepare Message`;
+  retry execution `364179` finished `success`, `Send to Telegram` succeeded, Telegram accepted the
+  reply and `Save to chat_logs` completed.
 
 ## Emergency recovery and sale-ready package — 2026-08-13
 

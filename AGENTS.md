@@ -170,8 +170,9 @@ These addresses are routing information, not proof that the latest deployment is
 - Production MCP OAuth, search/fetch, SEO/GEO analytics, memory and AIBot delegation were verified
   on 2026-08-15. Commit `a510c5c` isolates the interactive AIBot credential from email/Telegram;
   deployment `dpl_G5C91rzmjzdTtREuCi6Vr9gJWFEV` is `READY` and aliased to the staff URL. n8n
-  execution `364125` completed successfully through the MCP safe-mode path. A fresh Telegram
-  natural-language smoke after these changes remains an explicit operator-confirmed external test.
+  execution `364125` completed successfully through the MCP safe-mode path. The operator-confirmed
+  Telegram smoke also passed after repairing the same escaped-newline defect in `Prepare Message`:
+  retry execution `364179` completed successfully, Telegram accepted the reply and history was saved.
 
 Important n8n workflows to verify by live ID and active version:
 
