@@ -27,6 +27,18 @@
   ],
   "rewrites": [
     {
+      "source": "/mcp",
+      "destination": "/api/platform-modules?module=mcp"
+    },
+    {
+      "source": "/.well-known/oauth-protected-resource",
+      "destination": "/api/platform-modules?module=mcp-resource-metadata"
+    },
+    {
+      "source": "/.well-known/oauth-protected-resource/mcp",
+      "destination": "/api/platform-modules?module=mcp-resource-metadata"
+    },
+    {
       "source": "/api/evaluate-rules",
       "destination": "/api/platform-modules?module=evaluate-rules"
     },

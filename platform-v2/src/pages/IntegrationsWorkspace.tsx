@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import PageMeta from "../components/common/PageMeta";
 import { ErrorBanner, PageHeading, Panel, SkeletonPage } from "../components/control/Ui";
+import McpConnectionPanel from "../components/control/McpConnectionPanel";
 import { useControlBridge } from "../context/ControlBridgeContext";
 import { supabase } from "../lib/supabase";
 import type { IntegrationSetting } from "../types/offerpsp";
@@ -176,6 +177,7 @@ export default function IntegrationsWorkspace() {
   return <>
     <PageMeta title="Интеграции | OfferPSP" description="Настройки и проверки рабочих интеграций."/>
     <PageHeading eyebrow="System control" title="Интеграции" description="Операционные настройки меняются здесь. Токены и webhook URL остаются в защищённом хранилище сервера и никогда не показываются браузеру."/>
+    <McpConnectionPanel/>
     {(bridge.error || error) && <ErrorBanner message={bridge.error || error || "Ошибка"}/>}
     {notice && <div className="mb-5 rounded-xl border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-700">{notice}</div>}
     <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">

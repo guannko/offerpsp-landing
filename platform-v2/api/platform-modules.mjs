@@ -7,6 +7,7 @@ import {
   staffSupabaseRequest,
 } from "./_lib/staff-auth.mjs";
 import { collectGeoSignals, normalizeSiteOneAudit } from "./_lib/siteone-audit.mjs";
+import { mcpResourceMetadataHandler, offerPspMcpHandler } from "./_lib/offerpsp-mcp-http.mjs";
 import { runSiteOneAudit } from "./_lib/siteone-runner.mjs";
 import { runSeoGeoAgent } from "./_lib/seo-geo-agent.mjs";
 import { probeDocling } from "./_lib/modules/docling.mjs";
@@ -227,6 +228,8 @@ async function seoAuditScheduled(request, response) {
 const handlers = {
   "evaluate-rules": evaluateRules,
   "module-health": moduleHealth,
+  "mcp": offerPspMcpHandler,
+  "mcp-resource-metadata": mcpResourceMetadataHandler,
   "seo-audit": seoAudit,
   "seo-audit-scheduled": seoAuditScheduled,
   "semantic-memory": semanticMemory,
@@ -237,6 +240,9 @@ export default async function handler(request, response) {
     const moduleName = String(request.query?.module || "");
     const moduleHandler = handlers[moduleName];
     if (!moduleHandler) throw new HttpError(404, "Unknown platform module endpoint");
+    if (moduleName === "mcp" || moduleName === "mcp-resource-metadata") {
+      return await moduleHandler(request, response);
+    }
     if (moduleName === "seo-audit-scheduled") {
       return await moduleHandler(request, response);
     }

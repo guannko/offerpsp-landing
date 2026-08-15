@@ -15,7 +15,8 @@
     "test:control-integrity": "node scripts/test-control-integrity.mjs",
     "test:pwa": "node scripts/test-pwa.mjs",
     "test:siteone-audit": "node scripts/test-siteone-audit.mjs",
-    "test:bridges": "node scripts/test-integration-bridges.mjs"
+    "test:bridges": "node scripts/test-integration-bridges.mjs",
+    "test:mcp": "node scripts/test-mcp-gateway.mjs"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.15",

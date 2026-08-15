@@ -11,7 +11,13 @@ export default function ControlSignIn() {
   const [busy, setBusy] = useState(false);
   const authRedirectUrl = new URL(import.meta.env.BASE_URL, window.location.origin).toString();
 
-  useEffect(() => { if (user && staff) navigate("/", { replace: true }); }, [user, staff, navigate]);
+  useEffect(() => {
+    if (!user || !staff) return;
+    const stored = window.sessionStorage.getItem("offerpsp_post_auth_redirect") || "/";
+    window.sessionStorage.removeItem("offerpsp_post_auth_redirect");
+    const destination = stored.startsWith("/") && !stored.startsWith("//") ? stored : "/";
+    navigate(destination, { replace: true });
+  }, [user, staff, navigate]);
 
   async function googleLogin() {
     setBusy(true); setStatus("");

@@ -6,6 +6,7 @@ import StaffGate from "./features/auth/StaffGate";
 import AppLayout from "./layout/AppLayout";
 import NotFound from "./pages/OtherPage/NotFound";
 import ControlSignIn from "./pages/AuthPages/ControlSignIn";
+import OAuthConsent from "./pages/AuthPages/OAuthConsent";
 const MerchantWorkspace = lazy(() => import("./pages/MerchantWorkspace"));
 const ProviderWorkspace = lazy(() => import("./pages/ProviderWorkspace"));
 const AgentWorkspace = lazy(() => import("./pages/AgentWorkspace"));
@@ -37,6 +38,7 @@ export default function App() {
   const basename = import.meta.env.BASE_URL === "/" ? undefined : import.meta.env.BASE_URL.replace(/\/$/, "");
   return <BrowserRouter basename={basename}><ControlBridgeProvider><ScrollToTop/><Suspense fallback={<RouteFallback/>}><Routes>
     <Route path="/signin" element={<ControlSignIn/>}/>
+    <Route path="/oauth/consent" element={<OAuthConsent/>}/>
     <Route element={<StaffGate><AppLayout/></StaffGate>}>
       <Route index element={<CommandCenter/>}/>
       <Route path="/inbox" element={<InboxPage/>}/>
