@@ -222,7 +222,7 @@ export async function executeOfferPspTool(name, args, { request, context, callId
     if (query.length < 2) throw new HttpError(400, "query must contain at least 2 characters");
     const limit = Math.min(Math.max(Number(input.limit || 20), 1), 50);
     const selected = new Set(Array.isArray(input.types) ? input.types : []);
-    const snapshot = await rpc(context, "get_offerpsp_search_index_snapshot");
+    const snapshot = await rpc(context, "get_offerpsp_staff_search_index_snapshot");
     const matches = recordItems(snapshot).filter((item) => {
       if (selected.size && !selected.has(item.type)) return false;
       if (!input.include_archived && item.data?.record_state === "archived") return false;
@@ -232,7 +232,7 @@ export async function executeOfferPspTool(name, args, { request, context, callId
   }
   if (name === "fetch") {
     const id = clamp(input.id, 240);
-    const snapshot = await rpc(context, "get_offerpsp_search_index_snapshot");
+    const snapshot = await rpc(context, "get_offerpsp_staff_search_index_snapshot");
     const item = recordItems(snapshot).find((candidate) => candidate.id === id);
     if (!item) throw new HttpError(404, "OfferPSP record not found");
     const base = publicRecord(item, originFor(request));
@@ -251,13 +251,13 @@ export async function executeOfferPspTool(name, args, { request, context, callId
     }
     if (type === "offer") {
       const routeId = requireUuid(id, "entity_id");
-      const snapshot = await rpc(context, "get_offerpsp_search_index_snapshot");
+      const snapshot = await rpc(context, "get_offerpsp_staff_search_index_snapshot");
       const route = (snapshot?.coverage?.routes || []).find((row) => row.route_id === routeId);
       if (!route) throw new HttpError(404, "Offer route not found");
       return { route, impact: await rpc(context, "get_offerpsp_route_impact", { p_route_id: routeId }) };
     }
     if (type === "organization") {
-      const snapshot = await rpc(context, "get_offerpsp_search_index_snapshot");
+      const snapshot = await rpc(context, "get_offerpsp_staff_search_index_snapshot");
       const organization = (snapshot?.management?.organizations || []).find((row) => String(row.id) === id);
       if (!organization) throw new HttpError(404, "Organization not found");
       return { organization };

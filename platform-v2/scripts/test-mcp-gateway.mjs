@@ -42,7 +42,7 @@ global.fetch = async (url, init = {}) => {
   }]);
   if (String(url).endsWith("/auth/v1/user")) return Response.json({ id: staffUserId, email: "staff@example.test" });
   if (String(url).endsWith("/rpc/is_offerpsp_staff")) return Response.json(true);
-  if (String(url).endsWith("/rpc/get_offerpsp_search_index_snapshot")) return Response.json({
+  if (String(url).endsWith("/rpc/get_offerpsp_staff_search_index_snapshot")) return Response.json({
     leads: [{ lead_id: "22222222-2222-4222-8222-222222222222", company: "Example Merchant", work_email: "ops@example.test", record_state: "active" }],
     management: { providers: [], organizations: [] }, coverage: { routes: [] },
     captains_bridge: { casino_leads: [], psp_providers: [] },
