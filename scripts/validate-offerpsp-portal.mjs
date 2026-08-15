@@ -87,10 +87,15 @@ assert.doesNotMatch(htmlSource, /Управляйте подключениями
 assert.match(htmlSource, /id="newRequestDialog"/);
 assert.match(htmlSource, /id="newRequestForm"/);
 assert.match(htmlSource, /data-open-new-request/);
-for (const vertical of ["iGaming", "Forex", "Crypto", "Adult", "Nutra", "CBD"]) {
+for (const vertical of ["iGaming", "Forex"]) {
   const option = `<option value="${vertical}">${vertical}</option>`;
   assert.ok(htmlSource.includes(option), `Portal intake must include ${vertical}`);
   assert.ok(publicHtmlSource.includes(option), `Public intake must include ${vertical}`);
+}
+for (const vertical of ["Crypto", "Adult", "Nutra", "CBD"]) {
+  const option = `<option value="${vertical}">${vertical}</option>`;
+  assert.ok(!htmlSource.includes(option), `Portal intake must group ${vertical} under Other`);
+  assert.ok(!publicHtmlSource.includes(option), `Public intake must group ${vertical} under Other`);
 }
 assert.doesNotMatch(htmlSource, /href="\/#request"/);
 assert.match(appSource, /source_platform: "offerpsp-portal"/);

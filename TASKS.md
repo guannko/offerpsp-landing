@@ -20,9 +20,9 @@ full production E2E remains the next real client request or a separately authori
   created task.
 - [x] Added RU/EN copy, required-field handling, a stable submission identifier, company/profile
   prefilling and a success toast without navigating away from `/portal/`.
-- [x] Restored the explicit high-risk vertical set — `iGaming`, `Forex`, `Crypto`, `Adult`, `Nutra`
-  and `CBD` — in both portal-native and public intake forms. Regression guards require the same
-  canonical values in both entry points.
+- [x] Restored `iGaming` and `Forex` as explicit verticals in both portal-native and public intake
+  forms. Product decision: `Crypto`, `Adult`, `Nutra` and `CBD` remain grouped under `Other` and
+  are forbidden as standalone select options by regression guards.
 - [x] Desktop and 390 px mobile dialog layouts were visually checked. The mobile dialog scrolls
   internally (`826px` viewport / `1148px` content) and introduces no horizontal page overflow.
 - [x] Root production build, portal guards, notification contract and Captain's Bridge control
