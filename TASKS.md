@@ -31,6 +31,9 @@ full production E2E remains the next real client request or a separately authori
   `dpl_2PkgVmXB23ShvBcKGAu2q74JYXpU` is `READY` and aliased to `https://offerpsp.com`.
   Live HTML/JS returned the internal dialog, session-bound email, post-intake claim/reload and no
   redirect link; `/portal/` returned HTTP 200 with `private, no-store`.
+- [x] High-risk vertical completion is published from commits `d3f39f3` and `c9d9d38` in deployment
+  `dpl_688SGYdmXonhprG4USdE4B9nwVK3` (`READY`). Live portal and public HTML both contain all six
+  guarded canonical values.
 
 ## Merchant portal workspace redesign — 2026-08-15
 
