@@ -1,9 +1,37 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-08-14
+Updated: 2026-08-15
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
+
+## OfferPSP Operator MCP and owned OAuth — 2026-08-15
+
+Status: `VERIFIED` for production OAuth, staff authorization, read tools, SEO/GEO and the shared
+AIBot safe-mode path. A fresh Telegram natural-language smoke after the MCP update remains pending
+because it is an external message and requires explicit operator confirmation.
+
+- [x] Installed the personal Codex plugin `OfferPSP Operator`; it remains visible in Connections so
+  future OfferPSP MCP connections can be added without involving Brain Index Admin.
+- [x] Added OfferPSP-owned OAuth 2.1 with dynamic client registration, PKCE S256, resource/scopes,
+  hashed opaque tokens, refresh rotation/replay revocation and an AES-GCM encrypted dedicated staff
+  session. Codex never receives `service_role`.
+- [x] Applied the production OAuth tables/indexes and the staff-checked search-snapshot wrapper.
+  The wrapper is authenticated-only, security-definer with an empty search path and an explicit
+  `is_offerpsp_staff()` guard; the underlying service-only function remains private.
+- [x] Completed live Codex OAuth and verified MCP health, exact search/fetch, current SiteOne plus
+  SEO/GEO agent analytics and shared `BIXOFFPSP` memory against production data.
+- [x] Corrected the production AIBot webhook URL, isolated its credential as
+  `AIBOT_COMMAND_WEBHOOK_SECRET`, rotated the single Captain Bridge credential and left existing
+  Telegram/email gateway credentials unchanged.
+- [x] Fixed the literal escaped newline in the live `Prepare Web Response` Code node, published the
+  resulting workflow version and restored active state. MCP safe mode returned a full answer with
+  `confirmation_required=false`; n8n execution `364125` finished `success`.
+- [x] Local `test:mcp`, bridge contract tests, lint, TypeScript and Vite production build pass.
+  Commits `3978e6c`, `d59b48c`, `db7c45d` and `a510c5c` are pushed. Production deployment
+  `dpl_G5C91rzmjzdTtREuCi6Vr9gJWFEV` is `READY` and aliased to the Captain's Bridge URL.
+- [ ] Send one controlled Telegram prompt asking for MCP health/modes without mutations, then verify
+  the Telegram reply and corresponding successful n8n execution.
 
 ## Emergency recovery and sale-ready package — 2026-08-13
 

@@ -159,12 +159,19 @@ These addresses are routing information, not proof that the latest deployment is
 - Product decision: do not configure or enable PostHog. Keep first-party acquisition/SEO telemetry;
   do not proxy merchant payment traffic merely to collect analytics. Processing volume and realized
   margin may be obtained from partner reports or PSP APIs when supported.
-- A dedicated OfferPSP MCP/Codex operator is a proposed next architecture step, not an implemented
-  module. It must expose the existing protected staff operations and shared `BIXOFFPSP` core rather
-  than create a second independent AIBot, prompt, memory or source of truth. Never expose
-  `service_role` to the client/plugin. Reads may be directly authorized; mutations must use the
-  existing audited RPC/tool paths, and external sends or mass changes must retain server-issued
-  confirmation tokens.
+- The personal Codex plugin `OfferPSP Operator` and the production OfferPSP MCP Gateway are live.
+  Codex authenticates through OfferPSP-owned OAuth 2.1 with PKCE and a dedicated encrypted staff
+  session; `service_role` remains server-only. The operator is visible in Codex Connections and
+  uses the existing protected RPCs, n8n workflow `IRB53X5NAS4wTuyU`, action journal and shared
+  `BIXOFFPSP` memory instead of a second AIBot or source of truth.
+- MCP reads are immediately staff-authorized. Agent investigation is safe/read-only, external
+  messages are draft-only, and bulk changes still require an immutable preview plus a server-issued
+  one-time confirmation token. Do not weaken these boundaries when adding future MCP connections.
+- Production MCP OAuth, search/fetch, SEO/GEO analytics, memory and AIBot delegation were verified
+  on 2026-08-15. Commit `a510c5c` isolates the interactive AIBot credential from email/Telegram;
+  deployment `dpl_G5C91rzmjzdTtREuCi6Vr9gJWFEV` is `READY` and aliased to the staff URL. n8n
+  execution `364125` completed successfully through the MCP safe-mode path. A fresh Telegram
+  natural-language smoke after these changes remains an explicit operator-confirmed external test.
 
 Important n8n workflows to verify by live ID and active version:
 
