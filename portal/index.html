@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#080a13">
   <title>OfferPSP Payment Workspace</title>
   <link rel="icon" href="/favicon.svg?v=20260814-3" type="image/svg+xml">
-  <link rel="stylesheet" href="/portal/styles.css?v=20260814-3">
+  <link rel="stylesheet" href="/portal/styles.css?v=20260815-1">
 </head>
 <body>
   <div class="ambient" aria-hidden="true"></div>
@@ -50,27 +50,68 @@
 
     <div class="portal-main">
       <section class="workspace-head">
-        <div>
+        <div class="workspace-identity">
           <p class="eyebrow" data-i18n="workspace">Платёжный кабинет</p>
-          <h2 data-i18n="workspaceTitle">Управляйте подключениями, а не перепиской по кругу.</h2>
-          <p data-i18n="workspaceCopy">Новые рынки, маршруты, знакомства и действующие подключения собраны в одном процессе.</p>
+          <h2 data-i18n="workspaceTitle">Платёжные подключения</h2>
+          <p data-i18n="workspaceCopy">Заявки, документы, варианты и связь с OfferPSP — в одном защищённом кабинете.</p>
         </div>
-        <a class="button primary" href="/#request" data-i18n="newRequest">Новая платёжная задача</a>
+        <div class="workspace-actions">
+          <a class="button secondary" href="mailto:bizdev@offerpsp.com" data-i18n="getSupport">Связаться с командой</a>
+          <a class="button primary" href="/#request" data-i18n="newRequest">Новая платёжная задача</a>
+        </div>
       </section>
 
       <section id="workspaceStats" class="stats-grid">
-        <article><span id="activeRequestCount">0</span><small data-i18n="activeRequests">Активные задачи</small></article>
-        <article><span id="availableOptionCount">0</span><small data-i18n="availableOptions">Варианты к выбору</small></article>
-        <article><span id="liveConnectionCount">0</span><small data-i18n="liveConnections">Подключения и знакомства</small></article>
+        <article><div class="stat-icon">01</div><div><span id="activeRequestCount">0</span><small data-i18n="activeRequests">Активные задачи</small><em data-i18n="activeRequestsHint">В работе у команды</em></div></article>
+        <article><div class="stat-icon">02</div><div><span id="availableOptionCount">0</span><small data-i18n="availableOptions">Варианты к выбору</small><em data-i18n="availableOptionsHint">Готовы к вашему решению</em></div></article>
+        <article><div class="stat-icon">03</div><div><span id="liveConnectionCount">0</span><small data-i18n="liveConnections">Подключения и знакомства</small><em data-i18n="liveConnectionsHint">Активные этапы с PSP</em></div></article>
       </section>
 
       <div id="agentBanner" class="agent-banner is-hidden"></div>
 
-      <section id="noRequestState" class="empty-card is-hidden">
-        <span class="empty-mark">◇</span>
-        <h2 data-i18n="noRequestTitle">Пока нет платёжных задач.</h2>
-        <p data-i18n="noRequestCopy">Создайте первую задачу — мы сохраним её здесь и проведём до результата.</p>
-        <a class="button primary" href="/#request" data-i18n="newRequest">Новая платёжная задача</a>
+      <section id="noRequestState" class="empty-dashboard is-hidden">
+        <article class="empty-primary">
+          <div class="empty-primary-copy">
+            <span class="workspace-badge" data-i18n="startHere">Начните здесь</span>
+            <h2 data-i18n="noRequestTitle">Создайте первую платёжную задачу</h2>
+            <p data-i18n="noRequestCopy">Укажите GEO, методы, валюты и объём. Команда проверит профиль, подготовит подходящие маршруты и будет вести процесс в этом кабинете.</p>
+          </div>
+          <div class="empty-primary-actions">
+            <a class="button primary" href="/#request" data-i18n="createRequest">Создать задачу</a>
+            <span data-i18n="requestTimeHint">Обычно занимает 3–5 минут</span>
+          </div>
+        </article>
+
+        <div class="empty-support-grid">
+          <article class="onboarding-card">
+            <p class="eyebrow" data-i18n="processTitle">Как проходит работа</p>
+            <ol class="process-list">
+              <li><span>1</span><div><strong data-i18n="processStepOne">Запрос и профиль</strong><small data-i18n="processStepOneCopy">Фиксируем задачу и недостающие данные.</small></div></li>
+              <li><span>2</span><div><strong data-i18n="processStepTwo">Проверка и подбор</strong><small data-i18n="processStepTwoCopy">Сравниваем только подходящие маршруты.</small></div></li>
+              <li><span>3</span><div><strong data-i18n="processStepThree">Решение и знакомство</strong><small data-i18n="processStepThreeCopy">Передаём досье PSP после вашего выбора.</small></div></li>
+            </ol>
+          </article>
+
+          <article class="onboarding-card">
+            <p class="eyebrow" data-i18n="prepareTitle">Что подготовить</p>
+            <ul class="prepare-list">
+              <li data-i18n="prepareCompany">Сайт и юридическое лицо</li>
+              <li data-i18n="prepareCoverage">Целевые GEO, валюты и методы</li>
+              <li data-i18n="prepareVolume">Ожидаемый оборот и лимиты</li>
+              <li data-i18n="prepareLicense">Статус лицензии и документы</li>
+            </ul>
+          </article>
+
+          <article id="workspaceSupport" class="onboarding-card support-card">
+            <p class="eyebrow" data-i18n="supportTitle">Поддержка</p>
+            <h3 data-i18n="supportHeading">Нужна помощь с формулировкой запроса?</h3>
+            <p data-i18n="supportCopy">Напишите команде OfferPSP. Поможем собрать требования до отправки задачи.</p>
+            <div class="support-actions">
+              <a href="https://t.me/Brain_Index" target="_blank" rel="noopener noreferrer">Telegram ↗</a>
+              <a href="mailto:bizdev@offerpsp.com">bizdev@offerpsp.com</a>
+            </div>
+          </article>
+        </div>
       </section>
 
       <div id="workspaceView" class="workspace-grid is-hidden">
@@ -85,6 +126,13 @@
         </aside>
 
         <div id="requestView" class="request-content">
+          <nav class="request-nav" aria-label="Разделы платёжной задачи">
+            <a href="#companyPersistentSection" data-i18n="navCompany">Компания</a>
+            <a href="#dossierSection" data-i18n="navDossier">Досье</a>
+            <a href="#shortlistSection" data-i18n="navOptions">Варианты</a>
+            <a href="#conversationSection" data-i18n="navMessages">Сообщения</a>
+          </nav>
+
           <section class="hero-card">
             <div>
               <p class="eyebrow" data-i18n="selectedRequest">Выбранная задача</p>
@@ -188,7 +236,7 @@
             <div id="dealList" class="deal-list"></div>
           </section>
 
-          <section class="section-block">
+          <section id="shortlistSection" class="section-block">
             <div class="section-head">
               <div><p class="eyebrow" data-i18n="comparison">Сравнение</p><h2 data-i18n="yourOptions">Подобранные маршруты</h2></div>
               <span id="shortlistUpdated" class="muted"></span>
@@ -202,7 +250,7 @@
             <p id="optionStatus" class="status" role="status" aria-live="polite"></p>
           </section>
 
-          <section class="section-block conversation-block">
+          <section id="conversationSection" class="section-block conversation-block">
             <div class="section-head"><div><p class="eyebrow" data-i18n="directLine">Прямая связь</p><h2 data-i18n="conversation">Рабочий чат с OfferPSP</h2></div></div>
             <div id="messageList" class="message-list"></div>
             <form id="messageForm" class="message-form">
@@ -216,6 +264,6 @@
     </div>
   </main>
 
-  <script type="module" src="/portal/app.js?v=20260814-3"></script>
+  <script type="module" src="/portal/app.js?v=20260815-1"></script>
 </body>
 </html>

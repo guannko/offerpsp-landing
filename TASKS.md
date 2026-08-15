@@ -5,6 +5,22 @@ Updated: 2026-08-15
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## Merchant portal workspace redesign — 2026-08-15
+
+Status: `VERIFIED` locally for the production build and desktop/mobile visual layout. Production
+remains unchanged until the reviewed commit is deployed.
+
+- [x] Removed the oversized marketing slogan and replaced it with a compact payment-workspace
+  header, direct support and new-request actions.
+- [x] Rebuilt the empty account as an operational onboarding dashboard: next action, process,
+  preparation checklist and working Telegram/email support links.
+- [x] Added compact status context and in-page navigation for company, dossier, options and
+  messages without changing the existing client-safe data boundaries or request lifecycle.
+- [x] Visually checked the empty state and an active-request state at 1440 px and 390 px. The layout
+  remains readable and has no horizontal overflow at the tested mobile width.
+- [x] Full root production build and portal/control regression guards pass. Added guards against
+  restoring the retired slogan or removing the new operational shell.
+
 ## OfferPSP Operator MCP and owned OAuth — 2026-08-15
 
 Status: `VERIFIED` for production OAuth, staff authorization, read tools, SEO/GEO, the shared
