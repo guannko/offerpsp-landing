@@ -9,7 +9,7 @@
   <link rel="icon" href="/brand/offerpsp-favicon-32.png?v=20260816-1" type="image/png" sizes="32x32">
   <link rel="icon" href="/brand/offerpsp-favicon-48.png?v=20260816-1" type="image/png" sizes="48x48">
   <link rel="apple-touch-icon" href="/brand/offerpsp-apple-touch-icon-180.png?v=20260816-1" sizes="180x180">
-  <link rel="stylesheet" href="/portal/styles.css?v=20260815-3">
+  <link rel="stylesheet" href="/portal/styles.css?v=20260816-1">
 </head>
 <body>
   <div class="ambient" aria-hidden="true"></div>
@@ -38,20 +38,40 @@
   </main>
 
   <main id="portalView" class="portal is-hidden">
-    <header class="portal-header">
-      <a class="brand" href="/" aria-label="OfferPSP"><img class="brand-logo" src="/brand/offerpsp-logo-horizontal-transparent.png" alt="OfferPSP"></a>
-      <div class="header-actions">
-        <div class="language-switch" aria-label="Language">
-          <button type="button" data-language="ru">RU</button>
-          <button type="button" data-language="en">EN</button>
+    <div class="portal-shell">
+      <aside class="portal-sidebar" aria-label="OfferPSP workspace navigation">
+        <a class="brand portal-sidebar-brand" href="/" aria-label="OfferPSP"><img class="brand-logo" src="/brand/offerpsp-logo-horizontal-transparent.png" alt="OfferPSP"></a>
+        <nav class="portal-sidebar-nav">
+          <a class="active" href="#workspaceTop"><span aria-hidden="true">⌂</span><strong data-i18n="navOverview">Обзор</strong></a>
+          <a href="#workspaceView"><span aria-hidden="true">▤</span><strong data-i18n="navRequests">Платёжные задачи</strong></a>
+          <a href="#companyPersistentSection"><span aria-hidden="true">◇</span><strong data-i18n="navDocuments">Документы</strong></a>
+          <a href="#shortlistSection"><span aria-hidden="true">⇄</span><strong data-i18n="navRoutes">Маршруты</strong></a>
+          <a href="#conversationSection"><span aria-hidden="true">◌</span><strong data-i18n="navConversations">Диалоги</strong></a>
+        </nav>
+        <div class="portal-sidebar-foot">
+          <button type="button" data-open-support><span aria-hidden="true">?</span><strong data-i18n="getSupport">Связаться с командой</strong></button>
+          <p><i aria-hidden="true"></i><span data-i18n="secureWorkspace">Защищённый кабинет</span></p>
         </div>
-        <span id="userEmail"></span>
-        <button id="signOutButton" class="text-button" type="button" data-i18n="signOut">Выйти</button>
-      </div>
-    </header>
+      </aside>
 
-    <div class="portal-main">
-      <section class="workspace-head">
+      <div class="portal-stage">
+        <header class="portal-header">
+          <div class="portal-context">
+            <strong data-i18n="workspaceTitle">Платёжные подключения</strong>
+            <span data-i18n="workspace">Платёжный кабинет</span>
+          </div>
+          <div class="header-actions">
+            <div class="language-switch" aria-label="Language">
+              <button type="button" data-language="ru">RU</button>
+              <button type="button" data-language="en">EN</button>
+            </div>
+            <span id="userEmail"></span>
+            <button id="signOutButton" class="text-button" type="button" data-i18n="signOut">Выйти</button>
+          </div>
+        </header>
+
+        <div id="workspaceTop" class="portal-main">
+          <section class="workspace-head">
         <div class="workspace-identity">
           <p class="eyebrow" data-i18n="workspace">Платёжный кабинет</p>
           <h2 data-i18n="workspaceTitle">Платёжные подключения</h2>
@@ -61,17 +81,17 @@
           <button class="button secondary" type="button" data-open-support data-i18n="getSupport">Связаться с командой</button>
           <button class="button primary" type="button" data-open-new-request data-i18n="newRequest">Новая платёжная задача</button>
         </div>
-      </section>
+          </section>
 
-      <section id="workspaceStats" class="stats-grid">
+          <section id="workspaceStats" class="stats-grid">
         <article><div class="stat-icon">01</div><div><span id="activeRequestCount">0</span><small data-i18n="activeRequests">Активные задачи</small><em data-i18n="activeRequestsHint">В работе у команды</em></div></article>
         <article><div class="stat-icon">02</div><div><span id="availableOptionCount">0</span><small data-i18n="availableOptions">Варианты к выбору</small><em data-i18n="availableOptionsHint">Готовы к вашему решению</em></div></article>
         <article><div class="stat-icon">03</div><div><span id="liveConnectionCount">0</span><small data-i18n="liveConnections">Подключения и знакомства</small><em data-i18n="liveConnectionsHint">Активные этапы с PSP</em></div></article>
-      </section>
+          </section>
 
-      <div id="agentBanner" class="agent-banner is-hidden"></div>
+          <div id="agentBanner" class="agent-banner is-hidden"></div>
 
-      <section id="noRequestState" class="empty-dashboard is-hidden">
+          <section id="noRequestState" class="empty-dashboard is-hidden">
         <article class="empty-primary">
           <div class="empty-primary-copy">
             <span class="workspace-badge" data-i18n="startHere">Начните здесь</span>
@@ -114,9 +134,9 @@
             </div>
           </article>
         </div>
-      </section>
+          </section>
 
-      <div id="workspaceView" class="workspace-grid is-hidden">
+          <div id="workspaceView" class="workspace-grid is-hidden">
         <aside class="request-rail">
           <div class="rail-head">
             <div><p class="eyebrow" data-i18n="requests">Задачи</p><h2 data-i18n="yourRequests">Ваши запросы</h2></div>
@@ -262,6 +282,8 @@
             <p id="messageStatus" class="status" role="status" aria-live="polite"></p>
           </section>
         </div>
+          </div>
+        </div>
       </div>
     </div>
   </main>
@@ -325,6 +347,6 @@
 
   <div id="portalToast" class="portal-toast is-hidden" role="status" aria-live="polite"></div>
 
-  <script type="module" src="/portal/app.js?v=20260815-4"></script>
+  <script type="module" src="/portal/app.js?v=20260816-1"></script>
 </body>
 </html>
