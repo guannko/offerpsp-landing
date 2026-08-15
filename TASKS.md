@@ -88,8 +88,9 @@ Status: `VERIFIED` at the production database, published n8n graph and migration
 
 ## Durable AIBot memory — 2026-08-12
 
-Status: `VERIFIED` at the production database, published n8n graph and migration-regression levels.
-Natural-language recall through a fresh real Telegram/web conversation remains the final UX smoke.
+Status: `VERIFIED` at the production database, published n8n graph, migration-regression and live
+surface levels. Natural-language recall passed through both real Telegram and Captain's Bridge on
+2026-08-15.
 
 - [x] The shared memory profile is `BIXOFFPSP`; it is used by Telegram and Captain's Bridge rather
   than being tied to a personal Boris profile.
@@ -106,8 +107,13 @@ Natural-language recall through a fresh real Telegram/web conversation remains t
   errors; the only warning is the pre-existing intentionally dynamic `Fetch URL` tool.
 - [x] All local migration regressions pass, including cross-channel history, remember/recall,
   archive search, replacement by stable key, cleanup and service-role isolation.
-- [ ] Run one natural-language Telegram command (`Как называется общий профиль памяти?`) and one
-  fresh Captain's Bridge session to visually confirm that both surfaces recall `BIXOFFPSP`.
+- [x] Production staff MCP memory search and the shared AIBot safe-mode path both recalled
+  `BIXOFFPSP` on 2026-08-15. The returned context also contained preserved Telegram and web
+  conversation history under the same profile.
+- [x] The exact natural-language command (`Как называется общий профиль памяти? Ничего не изменяй.`)
+  returned `BIXOFFPSP` in real Telegram and in a fresh Captain's Bridge chat on 2026-08-15. A
+  subsequent staff MCP memory read found both exchanges in shared history with distinct
+  `telegram` and `web` channel/session identifiers.
 
 ## Legacy automation cleanup — 2026-08-12
 
@@ -209,7 +215,10 @@ desktop/mobile visual pass is UX acceptance, not an untested permission or stora
 - [x] A controlled production client uploaded a private PDF through Storage, registered it through
   the public RPC, staff reviewed it, the same client saw the verified status without internal user
   IDs and archived it. The exact test document remains private and archived for auditability.
-- [ ] Visually confirm the document panels on desktop/mobile during the next normal product UX pass.
+- [x] Visually confirmed the document panels on 2026-08-15 at desktop (1440 px) and mobile
+  (390 px). Captain's Bridge shows the empty state and document-link form without overflow; the
+  client portal exposes the private-vault form and stacks it correctly on mobile. No files were
+  uploaded and no records were changed during this read-only pass.
 
 ## AIBot Operating Desk pagination — 2026-08-09
 
@@ -1187,9 +1196,14 @@ stay isolated behind feature modes until their own verification is complete.
 
 - [ ] `Become an OfferPSP partner` funnel.
 - [ ] Reviewed PSP-research source list, starting with AboutPayments and PaymentProviders.io.
-- [ ] Sanitized SEO pages by GEO, method and vertical.
+- [x] Sanitized SEO pages by GEO, method and vertical. Production serves the iGaming, higher-risk,
+  cross-border, SaaS, marketplace, payment-method-by-GEO and matching-process pages. A fresh live
+  read of `payment-methods-by-geo.html` on 2026-08-15 confirmed its page title, H1, index/follow
+  directive, self-canonical URL and JSON-LD block.
 - [ ] Public content generated from active routes without provider identity.
-- [ ] Sitemap, schema and canonical strategy.
+- [x] Sitemap, schema and canonical strategy. The live production sitemap returned all seven
+  acquisition pages plus the homepage and legal pages on 2026-08-15; the live acquisition page
+  exposes its self-canonical and structured data.
 
 ## Production safety rules
 
