@@ -16,6 +16,8 @@ remains unchanged until the reviewed commit is deployed.
   preparation checklist and working Telegram/email support links.
 - [x] Added compact status context and in-page navigation for company, dossier, options and
   messages without changing the existing client-safe data boundaries or request lifecycle.
+- [x] Removed the year-long immutable cache policy from the authenticated portal shell; portal
+  resources now use `private, no-store` so clients do not remain on a stale workspace release.
 - [x] Visually checked the empty state and an active-request state at 1440 px and 390 px. The layout
   remains readable and has no horizontal overflow at the tested mobile width.
 - [x] Full root production build and portal/control regression guards pass. Added guards against

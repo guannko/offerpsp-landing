@@ -51,6 +51,7 @@ assert.equal(
 
 const appSource = await readFile(new URL("../portal/app.js", import.meta.url), "utf8");
 const htmlSource = await readFile(new URL("../portal/index.html", import.meta.url), "utf8");
+const vercelConfig = JSON.parse(await readFile(new URL("../vercel.json", import.meta.url), "utf8"));
 const adminSource = await readFile(new URL("../admin/app.js", import.meta.url), "utf8");
 const adminHtmlSource = await readFile(new URL("../admin/index.html", import.meta.url), "utf8");
 assert.match(appSource, /rpc\("list_offerpsp_workspace_requests"\)/);
@@ -82,6 +83,10 @@ assert.match(htmlSource, /data-i18n="prepareTitle"/);
 assert.match(htmlSource, /href="mailto:bizdev@offerpsp\.com" data-i18n="getSupport"/);
 assert.match(htmlSource, /class="request-nav"/);
 assert.doesNotMatch(htmlSource, /Управляйте подключениями, а не перепиской по кругу/);
+const portalCacheHeader = vercelConfig.headers.find((entry) => entry.source === "/portal/(.*)");
+assert.deepEqual(portalCacheHeader?.headers, [
+  { key: "Cache-Control", value: "private, no-store, max-age=0" },
+]);
 assert.match(htmlSource, /id="dealSection"/);
 assert.match(htmlSource, /id="clientDossierForm"/);
 assert.match(adminSource, /function isShareableShortlist\(shortlist\)/);
