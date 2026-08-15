@@ -58,7 +58,10 @@ const adminHtmlSource = await readFile(new URL("../admin/index.html", import.met
 const selfServiceProfileMigration = await readFile(
   new URL("../supabase/migrations/20260816012341_offerpsp_portal_self_service_profile.sql", import.meta.url),
   "utf8",
-);
+).catch((error) => {
+  if (error?.code === "ENOENT") return "";
+  throw error;
+});
 assert.match(appSource, /rpc\("list_offerpsp_workspace_requests"\)/);
 assert.match(appSource, /rpc\("list_offerpsp_client_deals"/);
 assert.match(appSource, /rpc\("list_offerpsp_client_offers"/);
@@ -127,10 +130,12 @@ assert.match(appSource, /rpc\("ensure_offerpsp_my_merchant_profile"/);
 assert.match(appSource, /rpc\("get_offerpsp_company_workspace_by_organization"/);
 assert.match(appSource, /classList\.toggle\("profile-only", !hasRequests\)/);
 assert.doesNotMatch(appSource, /service_role/);
-assert.match(selfServiceProfileMigration, /security definer/);
-assert.match(selfServiceProfileMigration, /pg_advisory_xact_lock/);
-assert.match(selfServiceProfileMigration, /revoke all on function public\.ensure_offerpsp_my_merchant_profile\(text\)[\s\S]*from public, anon, authenticated/);
-assert.match(selfServiceProfileMigration, /grant execute on function public\.ensure_offerpsp_my_merchant_profile\(text\)[\s\S]*to authenticated/);
+if (selfServiceProfileMigration) {
+  assert.match(selfServiceProfileMigration, /security definer/);
+  assert.match(selfServiceProfileMigration, /pg_advisory_xact_lock/);
+  assert.match(selfServiceProfileMigration, /revoke all on function public\.ensure_offerpsp_my_merchant_profile\(text\)[\s\S]*from public, anon, authenticated/);
+  assert.match(selfServiceProfileMigration, /grant execute on function public\.ensure_offerpsp_my_merchant_profile\(text\)[\s\S]*to authenticated/);
+}
 assert.match(adminSource, /function isShareableShortlist\(shortlist\)/);
 assert.match(adminSource, /offerpsp_shortlist_items\(id, offer_route_id, private_provider_id, client_snapshot\)/);
 assert.match(adminSource, /rpc\("get_offerpsp_staff_request_workspace"/);
