@@ -51,6 +51,7 @@ assert.equal(
 
 const appSource = await readFile(new URL("../portal/app.js", import.meta.url), "utf8");
 const htmlSource = await readFile(new URL("../portal/index.html", import.meta.url), "utf8");
+const publicHtmlSource = await readFile(new URL("../index.html", import.meta.url), "utf8");
 const vercelConfig = JSON.parse(await readFile(new URL("../vercel.json", import.meta.url), "utf8"));
 const adminSource = await readFile(new URL("../admin/app.js", import.meta.url), "utf8");
 const adminHtmlSource = await readFile(new URL("../admin/index.html", import.meta.url), "utf8");
@@ -86,6 +87,8 @@ assert.doesNotMatch(htmlSource, /Управляйте подключениями
 assert.match(htmlSource, /id="newRequestDialog"/);
 assert.match(htmlSource, /id="newRequestForm"/);
 assert.match(htmlSource, /data-open-new-request/);
+assert.match(htmlSource, /<option value="iGaming">iGaming<\/option>/);
+assert.match(publicHtmlSource, /<option value="iGaming">iGaming<\/option>/);
 assert.doesNotMatch(htmlSource, /href="\/#request"/);
 assert.match(appSource, /source_platform: "offerpsp-portal"/);
 assert.match(appSource, /work_email: state\.user\.email/);
