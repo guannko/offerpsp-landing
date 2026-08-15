@@ -7,8 +7,9 @@ Code or a passing local test is not evidence that production has been updated.
 
 ## Portal-native payment request creation — 2026-08-15
 
-Status: `VERIFIED` locally for UI, responsive layout, build and regression contracts. Production
-remains unchanged until the reviewed commit is deployed.
+Status: `PARTIAL` in production. UI, responsive layout, build, contracts and live asset delivery
+are `VERIFIED`; the portal-native intake has not created a synthetic production lead, so its first
+full production E2E remains the next real client request or a separately authorized controlled test.
 
 - [x] Replaced every client-portal redirect to the public landing form with one authenticated
   in-workspace request dialog: header action, empty state and request-list add button.
@@ -23,6 +24,10 @@ remains unchanged until the reviewed commit is deployed.
   internally (`826px` viewport / `1148px` content) and introduces no horizontal page overflow.
 - [x] Root production build, portal guards, notification contract and Captain's Bridge control
   regression all pass. Guards reject a future return of `href="/#request"` in the client portal.
+- [x] Commit `4b6bbec` is pushed. Production deployment
+  `dpl_2PkgVmXB23ShvBcKGAu2q74JYXpU` is `READY` and aliased to `https://offerpsp.com`.
+  Live HTML/JS returned the internal dialog, session-bound email, post-intake claim/reload and no
+  redirect link; `/portal/` returned HTTP 200 with `private, no-store`.
 
 ## Merchant portal workspace redesign — 2026-08-15
 
