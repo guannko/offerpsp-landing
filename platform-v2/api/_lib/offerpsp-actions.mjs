@@ -11,6 +11,43 @@ function json(response, status, body) {
   response.end(JSON.stringify(body));
 }
 
+const actionResponseSchema = {
+  type: "object",
+  properties: {
+    status: {
+      type: "string",
+      enum: ["VERIFIED", "PARTIAL", "BLOCKED"],
+      description: "Verification status for the action result.",
+    },
+    action: {
+      type: "string",
+      description: "The OfferPSP action that was executed.",
+    },
+    result: {
+      description: "Action-specific JSON result returned by the OfferPSP MCP Gateway.",
+    },
+  },
+  required: ["status", "action", "result"],
+  additionalProperties: false,
+};
+
+const errorResponseSchema = {
+  type: "object",
+  properties: {
+    status: {
+      type: "string",
+      enum: ["BLOCKED"],
+      description: "The action could not be completed.",
+    },
+    error: {
+      type: "string",
+      description: "A safe explanation of why the action was blocked.",
+    },
+  },
+  required: ["status", "error"],
+  additionalProperties: false,
+};
+
 function operationFor(definition) {
   const readOnly = Boolean(definition.annotations?.readOnlyHint);
   const schema = definition.inputSchema || { type: "object", properties: {} };
@@ -30,11 +67,20 @@ function operationFor(definition) {
     responses: {
       200: {
         description: "OfferPSP operation result",
-        content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+        content: { "application/json": { schema: { $ref: "#/components/schemas/ActionResponse" } } },
       },
-      400: { description: "Invalid request" },
-      401: { description: "OfferPSP staff authorization required" },
-      403: { description: "OAuth scope is insufficient" },
+      400: {
+        description: "Invalid request",
+        content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+      },
+      401: {
+        description: "OfferPSP staff authorization required",
+        content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+      },
+      403: {
+        description: "OAuth scope is insufficient",
+        content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+      },
     },
   };
 }
@@ -54,6 +100,10 @@ export function offerPspActionsOpenApi() {
       { post: operationFor(definition) },
     ])),
     components: {
+      schemas: {
+        ActionResponse: actionResponseSchema,
+        ErrorResponse: errorResponseSchema,
+      },
       securitySchemes: {
         offerPspOAuth: {
           type: "oauth2",

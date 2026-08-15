@@ -111,6 +111,12 @@ assert.equal(source.includes("send-telegram"), false);
 
 const actionsSchema = offerPspActionsOpenApi();
 assert.equal(actionsSchema.openapi, "3.1.0");
+assert.equal(typeof actionsSchema.components.schemas, "object");
+assert.ok(Object.keys(actionsSchema.components.schemas.ActionResponse.properties).length > 0);
+for (const path of Object.values(actionsSchema.paths)) {
+  const responseSchema = path.post.responses[200].content["application/json"].schema;
+  assert.equal(responseSchema.$ref, "#/components/schemas/ActionResponse");
+}
 assert.equal(actionsSchema.paths["/actions/system_health"].post["x-openai-isConsequential"], false);
 assert.equal(actionsSchema.paths["/actions/create_task"].post["x-openai-isConsequential"], true);
 assert.ok(actionsSchema.paths["/actions/prepare_telegram_reply"]);
