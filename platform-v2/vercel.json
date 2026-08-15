@@ -39,6 +39,34 @@
       "destination": "/api/platform-modules?module=mcp-resource-metadata"
     },
     {
+      "source": "/.well-known/oauth-authorization-server",
+      "destination": "/api/platform-modules?module=oauth-metadata"
+    },
+    {
+      "source": "/.well-known/openid-configuration",
+      "destination": "/api/platform-modules?module=oauth-metadata"
+    },
+    {
+      "source": "/oauth/register",
+      "destination": "/api/platform-modules?module=oauth-register"
+    },
+    {
+      "source": "/oauth/authorize",
+      "destination": "/api/platform-modules?module=oauth-authorize"
+    },
+    {
+      "source": "/oauth/token",
+      "destination": "/api/platform-modules?module=oauth-token"
+    },
+    {
+      "source": "/api/oauth/request",
+      "destination": "/api/platform-modules?module=oauth-request"
+    },
+    {
+      "source": "/api/oauth/decision",
+      "destination": "/api/platform-modules?module=oauth-decision"
+    },
+    {
       "source": "/api/evaluate-rules",
       "destination": "/api/platform-modules?module=evaluate-rules"
     },

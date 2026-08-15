@@ -8,6 +8,14 @@ import {
 } from "./_lib/staff-auth.mjs";
 import { collectGeoSignals, normalizeSiteOneAudit } from "./_lib/siteone-audit.mjs";
 import { mcpResourceMetadataHandler, offerPspMcpHandler } from "./_lib/offerpsp-mcp-http.mjs";
+import {
+  oauthAuthorizeHandler,
+  oauthDecisionHandler,
+  oauthMetadataHandler,
+  oauthRegisterHandler,
+  oauthRequestHandler,
+  oauthTokenHandler,
+} from "./_lib/offerpsp-oauth.mjs";
 import { runSiteOneAudit } from "./_lib/siteone-runner.mjs";
 import { runSeoGeoAgent } from "./_lib/seo-geo-agent.mjs";
 import { probeDocling } from "./_lib/modules/docling.mjs";
@@ -230,6 +238,12 @@ const handlers = {
   "module-health": moduleHealth,
   "mcp": offerPspMcpHandler,
   "mcp-resource-metadata": mcpResourceMetadataHandler,
+  "oauth-metadata": oauthMetadataHandler,
+  "oauth-register": oauthRegisterHandler,
+  "oauth-authorize": oauthAuthorizeHandler,
+  "oauth-token": oauthTokenHandler,
+  "oauth-request": oauthRequestHandler,
+  "oauth-decision": oauthDecisionHandler,
   "seo-audit": seoAudit,
   "seo-audit-scheduled": seoAuditScheduled,
   "semantic-memory": semanticMemory,
@@ -240,7 +254,7 @@ export default async function handler(request, response) {
     const moduleName = String(request.query?.module || "");
     const moduleHandler = handlers[moduleName];
     if (!moduleHandler) throw new HttpError(404, "Unknown platform module endpoint");
-    if (moduleName === "mcp" || moduleName === "mcp-resource-metadata") {
+    if (["mcp", "mcp-resource-metadata", "oauth-metadata", "oauth-register", "oauth-authorize", "oauth-token"].includes(moduleName)) {
       return await moduleHandler(request, response);
     }
     if (moduleName === "seo-audit-scheduled") {

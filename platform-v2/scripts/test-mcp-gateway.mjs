@@ -1,16 +1,46 @@
 import assert from "node:assert/strict";
+import { createCipheriv } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { offerPspMcpHandler as mcpHandler, resourceMetadata } from "../api/_lib/offerpsp-mcp-http.mjs";
 import { offerPspTools } from "../api/_lib/offerpsp-mcp.mjs";
 
 process.env.SUPABASE_URL = "https://supabase.test";
 process.env.SUPABASE_PUBLISHABLE_KEY = "publishable-test-key";
+process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-test-key";
 process.env.OFFERPSP_MCP_ORIGIN = "https://ops.test";
+const encryptionKey = Buffer.alloc(32, 7);
+process.env.OFFERPSP_OAUTH_ENCRYPTION_KEY = encryptionKey.toString("base64");
+
+function encrypt(value) {
+  const iv = Buffer.alloc(12, 3);
+  const cipher = createCipheriv("aes-256-gcm", encryptionKey, iv);
+  const ciphertext = Buffer.concat([cipher.update(JSON.stringify(value), "utf8"), cipher.final()]);
+  return ["v1", iv.toString("base64url"), cipher.getAuthTag().toString("base64url"), ciphertext.toString("base64url")].join(".");
+}
+
+const staffUserId = "11111111-1111-4111-8111-111111111111";
+const oauthSession = encrypt({
+  access_token: "supabase-user-token",
+  refresh_token: "supabase-refresh-token",
+  expires_at: Math.floor(Date.now() / 1000) + 3600,
+  user_id: staffUserId,
+});
 
 const calls = [];
 global.fetch = async (url, init = {}) => {
   calls.push({ url: String(url), init });
-  if (String(url).endsWith("/auth/v1/user")) return Response.json({ id: "11111111-1111-4111-8111-111111111111", email: "staff@example.test" });
+  if (String(url).includes("/rest/v1/offerpsp_mcp_oauth_access_tokens?")) return Response.json([{
+    token_hash: "mocked-by-query",
+    family_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    client_id: "op_client_test",
+    actor_user_id: staffUserId,
+    scope: "offerpsp:read offerpsp:write offline_access",
+    resource: "https://ops.test/mcp",
+    session_ciphertext: oauthSession,
+    expires_at: new Date(Date.now() + 900_000).toISOString(),
+    revoked_at: null,
+  }]);
+  if (String(url).endsWith("/auth/v1/user")) return Response.json({ id: staffUserId, email: "staff@example.test" });
   if (String(url).endsWith("/rpc/is_offerpsp_staff")) return Response.json(true);
   if (String(url).endsWith("/rpc/get_offerpsp_search_index_snapshot")) return Response.json({
     leads: [{ lead_id: "22222222-2222-4222-8222-222222222222", company: "Example Merchant", work_email: "ops@example.test", record_state: "active" }],
@@ -39,7 +69,8 @@ function request(body, authorization = "Bearer staff-token") {
 
 const metadata = resourceMetadata({ SUPABASE_URL: "https://supabase.test", OFFERPSP_MCP_ORIGIN: "https://ops.test" });
 assert.equal(metadata.resource, "https://ops.test/mcp");
-assert.deepEqual(metadata.authorization_servers, ["https://supabase.test/auth/v1"]);
+assert.deepEqual(metadata.authorization_servers, ["https://ops.test"]);
+assert.deepEqual(metadata.scopes_supported, ["offerpsp:read", "offerpsp:write", "offline_access"]);
 
 const unauthorized = responseMock();
 await mcpHandler(request({ jsonrpc: "2.0", id: 1, method: "initialize", params: {} }, ""), unauthorized);
@@ -56,6 +87,8 @@ const listed = responseMock();
 await mcpHandler(request({ jsonrpc: "2.0", id: 3, method: "tools/list" }), listed);
 assert.equal(listed.payload.result.tools.length, offerPspTools.length);
 assert.ok(listed.payload.result.tools.every((item) => item.securitySchemes?.[0]?.type === "oauth2"));
+assert.deepEqual(listed.payload.result.tools.find((item) => item.name === "search").securitySchemes[0].scopes, ["offerpsp:read"]);
+assert.deepEqual(listed.payload.result.tools.find((item) => item.name === "create_task").securitySchemes[0].scopes, ["offerpsp:read", "offerpsp:write"]);
 assert.equal(listed.payload.result.tools.find((item) => item.name === "search").annotations.readOnlyHint, true);
 assert.equal(listed.payload.result.tools.find((item) => item.name === "confirm_bulk_operation").annotations.destructiveHint, true);
 

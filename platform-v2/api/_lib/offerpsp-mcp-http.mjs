@@ -1,4 +1,5 @@
-import { HttpError, requireOfferPspStaff } from "./staff-auth.mjs";
+import { HttpError } from "./staff-auth.mjs";
+import { offerPspOAuthOrigin, requireOfferPspMcpStaff } from "./offerpsp-oauth.mjs";
 import { executeOfferPspTool, offerPspTools, toToolResult } from "./offerpsp-mcp.mjs";
 
 const protocolVersion = "2025-06-18";
@@ -15,11 +16,10 @@ function cleanOrigin(value) {
 
 export function resourceMetadata(env = process.env) {
   const origin = cleanOrigin(env.OFFERPSP_MCP_ORIGIN || fallbackOrigin);
-  const supabaseUrl = String(env.SUPABASE_URL || env.VITE_SUPABASE_URL || "").replace(/\/$/, "");
   return {
     resource: `${origin}/mcp`,
-    authorization_servers: [`${supabaseUrl}/auth/v1`],
-    scopes_supported: ["email", "profile"],
+    authorization_servers: [origin],
+    scopes_supported: ["offerpsp:read", "offerpsp:write", "offline_access"],
     resource_documentation: `${origin}/integrations`,
   };
 }
@@ -30,16 +30,13 @@ export function mcpResourceMetadataHandler(request, response) {
     return response.status(405).json({ error: "Method not allowed" });
   }
   const metadata = resourceMetadata();
-  if (metadata.authorization_servers[0] === "/auth/v1") {
-    return response.status(503).json({ error: "Supabase OAuth is not configured" });
-  }
   response.setHeader("Cache-Control", "public, max-age=300");
   response.setHeader("Access-Control-Allow-Origin", "*");
   return response.status(200).json(metadata);
 }
 
 function resourceUrl() {
-  return `${String(process.env.OFFERPSP_MCP_ORIGIN || fallbackOrigin).replace(/\/$/, "")}/.well-known/oauth-protected-resource`;
+  return `${offerPspOAuthOrigin()}/.well-known/oauth-protected-resource`;
 }
 
 function jsonRpc(response, status, body) {
@@ -87,7 +84,7 @@ export async function offerPspMcpHandler(request, response) {
   const id = body?.id ?? null;
 
   let context;
-  try { context = await requireOfferPspStaff(request); }
+  try { context = await requireOfferPspMcpStaff(request); }
   catch (error) { return errorResponse(response, id, error); }
 
   try {
@@ -110,6 +107,11 @@ export async function offerPspMcpHandler(request, response) {
     if (body.method === "tools/call") {
       const name = String(body.params?.name || "");
       try {
+        const definition = offerPspTools.find((item) => item.name === name);
+        const requiredScope = definition?.annotations?.readOnlyHint ? "offerpsp:read" : "offerpsp:write";
+        if (!context.oauth?.scopes?.has(requiredScope)) {
+          throw new HttpError(403, `OAuth scope ${requiredScope} is required`);
+        }
         const result = await executeOfferPspTool(name, body.params?.arguments || {}, { request, context, callId: id });
         return jsonRpc(response, 200, { jsonrpc: "2.0", id, result: toToolResult(result) });
       } catch (error) {

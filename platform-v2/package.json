@@ -16,7 +16,7 @@
     "test:pwa": "node scripts/test-pwa.mjs",
     "test:siteone-audit": "node scripts/test-siteone-audit.mjs",
     "test:bridges": "node scripts/test-integration-bridges.mjs",
-    "test:mcp": "node scripts/test-mcp-gateway.mjs"
+    "test:mcp": "node scripts/test-mcp-gateway.mjs && node scripts/test-offerpsp-oauth.mjs"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.15",

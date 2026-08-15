@@ -1,15 +1,16 @@
 import { HttpError, staffSupabaseRequest } from "./staff-auth.mjs";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const oauthSecurity = [{ type: "oauth2", scopes: ["email", "profile"] }];
+const oauthReadSecurity = [{ type: "oauth2", scopes: ["offerpsp:read"] }];
+const oauthWriteSecurity = [{ type: "oauth2", scopes: ["offerpsp:read", "offerpsp:write"] }];
 
 const stringSchema = (description, maxLength = 500) => ({ type: "string", description, minLength: 1, maxLength });
 const tool = (name, title, description, inputSchema, annotations) => ({
   name, title, description,
   inputSchema: { type: "object", additionalProperties: false, ...inputSchema },
   annotations,
-  securitySchemes: oauthSecurity,
-  _meta: { securitySchemes: oauthSecurity },
+  securitySchemes: annotations?.readOnlyHint ? oauthReadSecurity : oauthWriteSecurity,
+  _meta: { securitySchemes: annotations?.readOnlyHint ? oauthReadSecurity : oauthWriteSecurity },
 });
 
 const readOnly = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
