@@ -7,6 +7,7 @@ import {
   oauthRegisterHandler,
   oauthRequestHandler,
   oauthTokenHandler,
+  offerPspActionsResource,
   requireOfferPspMcpStaff,
 } from "../api/_lib/offerpsp-oauth.mjs";
 
@@ -123,7 +124,7 @@ const metadata = authorizationServerMetadata();
 assert.equal(metadata.issuer, "https://ops.test");
 assert.equal(metadata.registration_endpoint, "https://ops.test/oauth/register");
 assert.deepEqual(metadata.code_challenge_methods_supported, ["S256"]);
-assert.deepEqual(metadata.token_endpoint_auth_methods_supported, ["none"]);
+assert.deepEqual(metadata.token_endpoint_auth_methods_supported, ["none", "client_secret_post", "client_secret_basic"]);
 
 const callback = "http://127.0.0.1:43123/callback/test";
 const registerResponse = responseMock();
@@ -196,7 +197,7 @@ assert.equal(refreshResponse.statusCode, 200);
 assert.notEqual(refreshResponse.payload.access_token, firstAccessToken);
 await assert.rejects(
   () => requireOfferPspMcpStaff({ headers: { authorization: `Bearer ${firstAccessToken}` } }),
-  /invalid or expired/,
+  /invalid, expired/,
 );
 
 const replayResponse = responseMock();
@@ -208,7 +209,66 @@ assert.equal(replayResponse.statusCode, 400);
 assert.equal(replayResponse.payload.error, "invalid_grant");
 await assert.rejects(
   () => requireOfferPspMcpStaff({ headers: { authorization: `Bearer ${refreshResponse.payload.access_token}` } }),
-  /invalid or expired/,
+  /invalid, expired/,
+);
+
+const actionsCallback = "https://chatgpt.com/aip/g-test/oauth/callback";
+const actionsRegisterResponse = responseMock();
+await oauthRegisterHandler({
+  method: "POST",
+  body: {
+    client_name: "OfferPSP GPT Actions test",
+    redirect_uris: [actionsCallback],
+    token_endpoint_auth_method: "client_secret_post",
+    resource: offerPspActionsResource(),
+  },
+}, actionsRegisterResponse);
+assert.equal(actionsRegisterResponse.statusCode, 201);
+assert.match(actionsRegisterResponse.payload.client_secret, /^op_secret_/);
+const actionsClientId = actionsRegisterResponse.payload.client_id;
+const actionsClientSecret = actionsRegisterResponse.payload.client_secret;
+
+const actionsAuthorizeResponse = responseMock();
+await oauthAuthorizeHandler({
+  method: "GET",
+  query: {
+    client_id: actionsClientId,
+    redirect_uri: actionsCallback,
+    response_type: "code",
+    scope: "offerpsp:read offerpsp:write offline_access",
+    state: "gpt-actions-state",
+  },
+}, actionsAuthorizeResponse);
+assert.equal(actionsAuthorizeResponse.statusCode, 302);
+const actionsAuthorizationId = new URL(actionsAuthorizeResponse.headers.location).searchParams.get("authorization_id");
+
+const actionsDecisionResponse = responseMock();
+await oauthDecisionHandler({ method: "POST", body: { authorization_id: actionsAuthorizationId, decision: "approve" } }, actionsDecisionResponse, { user: staffUser });
+const actionsCallbackUrl = new URL(actionsDecisionResponse.payload.redirect_url);
+const actionsCode = actionsCallbackUrl.searchParams.get("code");
+assert.equal(actionsCallbackUrl.searchParams.get("state"), "gpt-actions-state");
+
+const actionsTokenResponse = responseMock();
+await oauthTokenHandler({
+  method: "POST",
+  headers: {},
+  body: {
+    grant_type: "authorization_code", code: actionsCode, redirect_uri: actionsCallback,
+    client_id: actionsClientId, client_secret: actionsClientSecret,
+  },
+}, actionsTokenResponse);
+assert.equal(actionsTokenResponse.statusCode, 200);
+const actionsContext = await requireOfferPspMcpStaff(
+  { headers: { authorization: `Bearer ${actionsTokenResponse.payload.access_token}` } },
+  offerPspActionsResource(),
+);
+assert.equal(actionsContext.user.id, staffUser.id);
+await assert.rejects(
+  () => requireOfferPspMcpStaff(
+    { headers: { authorization: `Bearer ${actionsTokenResponse.payload.access_token}` } },
+    "https://ops.test/mcp",
+  ),
+  /bound to another resource/,
 );
 
 console.log("OfferPSP OAuth 2.1 tests passed");

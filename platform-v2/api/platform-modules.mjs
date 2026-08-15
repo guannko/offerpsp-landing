@@ -8,6 +8,7 @@ import {
 } from "./_lib/staff-auth.mjs";
 import { collectGeoSignals, normalizeSiteOneAudit } from "./_lib/siteone-audit.mjs";
 import { mcpResourceMetadataHandler, offerPspMcpHandler } from "./_lib/offerpsp-mcp-http.mjs";
+import { offerPspActionHandler, offerPspActionsSchemaHandler } from "./_lib/offerpsp-actions.mjs";
 import {
   oauthAuthorizeHandler,
   oauthDecisionHandler,
@@ -238,6 +239,8 @@ const handlers = {
   "module-health": moduleHealth,
   "mcp": offerPspMcpHandler,
   "mcp-resource-metadata": mcpResourceMetadataHandler,
+  "gpt-actions": offerPspActionHandler,
+  "gpt-actions-schema": offerPspActionsSchemaHandler,
   "oauth-metadata": oauthMetadataHandler,
   "oauth-register": oauthRegisterHandler,
   "oauth-authorize": oauthAuthorizeHandler,
@@ -254,7 +257,7 @@ export default async function handler(request, response) {
     const moduleName = String(request.query?.module || "");
     const moduleHandler = handlers[moduleName];
     if (!moduleHandler) throw new HttpError(404, "Unknown platform module endpoint");
-    if (["mcp", "mcp-resource-metadata", "oauth-metadata", "oauth-register", "oauth-authorize", "oauth-token"].includes(moduleName)) {
+    if (["mcp", "mcp-resource-metadata", "gpt-actions", "gpt-actions-schema", "oauth-metadata", "oauth-register", "oauth-authorize", "oauth-token"].includes(moduleName)) {
       return await moduleHandler(request, response);
     }
     if (moduleName === "seo-audit-scheduled") {

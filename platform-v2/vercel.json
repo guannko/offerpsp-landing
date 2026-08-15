@@ -31,6 +31,14 @@
       "destination": "/api/platform-modules?module=mcp"
     },
     {
+      "source": "/offerpsp-actions-openapi.json",
+      "destination": "/api/platform-modules?module=gpt-actions-schema"
+    },
+    {
+      "source": "/actions/:action",
+      "destination": "/api/platform-modules?module=gpt-actions&action=:action"
+    },
+    {
       "source": "/.well-known/oauth-protected-resource",
       "destination": "/api/platform-modules?module=mcp-resource-metadata"
     },

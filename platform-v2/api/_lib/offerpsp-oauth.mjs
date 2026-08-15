@@ -45,6 +45,14 @@ export function offerPspMcpResource() {
   return `${offerPspOAuthOrigin()}/mcp`;
 }
 
+export function offerPspActionsResource() {
+  return `${offerPspOAuthOrigin()}/actions`;
+}
+
+function supportedResource(value) {
+  return value === offerPspMcpResource() || value === offerPspActionsResource();
+}
+
 export function authorizationServerMetadata() {
   const origin = offerPspOAuthOrigin();
   return {
@@ -55,7 +63,7 @@ export function authorizationServerMetadata() {
     response_types_supported: ["code"],
     grant_types_supported: ["authorization_code", "refresh_token"],
     code_challenge_methods_supported: ["S256"],
-    token_endpoint_auth_methods_supported: ["none"],
+    token_endpoint_auth_methods_supported: ["none", "client_secret_post", "client_secret_basic"],
     scopes_supported: [...allowedScopes],
     resource_indicators_supported: true,
   };
@@ -295,7 +303,9 @@ export async function oauthRegisterHandler(request, response) {
     return oauthError(response, 400, "invalid_client_metadata", "Duplicate redirect URIs are not allowed");
   }
   const authMethod = String(body.token_endpoint_auth_method || "none");
-  if (authMethod !== "none") return oauthError(response, 400, "invalid_client_metadata", "Only public PKCE clients are supported");
+  if (!["none", "client_secret_post", "client_secret_basic"].includes(authMethod)) {
+    return oauthError(response, 400, "invalid_client_metadata", "Unsupported token endpoint authentication method");
+  }
   const grantTypes = asArray(body.grant_types || ["authorization_code", "refresh_token"]);
   const responseTypes = asArray(body.response_types || ["code"]);
   if (grantTypes.some((value) => !["authorization_code", "refresh_token"].includes(value)) || responseTypes.some((value) => value !== "code")) {
@@ -303,7 +313,10 @@ export async function oauthRegisterHandler(request, response) {
   }
   const clientName = String(body.client_name || "Codex / ChatGPT").trim().slice(0, 120);
   if (!clientName) return oauthError(response, 400, "invalid_client_metadata", "client_name is required");
+  const resource = String(body.resource || offerPspMcpResource()).trim();
+  if (!supportedResource(resource)) return oauthError(response, 400, "invalid_client_metadata", "Unsupported OfferPSP resource");
   const clientId = opaqueToken("op_client_");
+  const clientSecret = authMethod === "none" ? null : opaqueToken("op_secret_");
   await serviceSupabaseRequest("offerpsp_mcp_oauth_clients", {
     method: "POST",
     headers: { Prefer: "return=minimal" },
@@ -311,10 +324,12 @@ export async function oauthRegisterHandler(request, response) {
       client_id: clientId,
       client_name: clientName,
       redirect_uris: redirectUris,
-      token_endpoint_auth_method: "none",
+      token_endpoint_auth_method: authMethod,
       metadata: {
         application_type: String(body.application_type || "native").slice(0, 40),
         software_id: body.software_id ? String(body.software_id).slice(0, 200) : null,
+        resource,
+        client_secret_hash: clientSecret ? sha256(clientSecret) : null,
       },
     }),
   });
@@ -324,7 +339,8 @@ export async function oauthRegisterHandler(request, response) {
     client_id_issued_at: Math.floor(Date.now() / 1000),
     client_name: clientName,
     redirect_uris: redirectUris,
-    token_endpoint_auth_method: "none",
+    token_endpoint_auth_method: authMethod,
+    ...(clientSecret ? { client_secret: clientSecret, client_secret_expires_at: 0 } : {}),
     grant_types: ["authorization_code", "refresh_token"],
     response_types: ["code"],
   });
@@ -342,11 +358,16 @@ export async function oauthAuthorizeHandler(request, response) {
   if (!client) throw new HttpError(400, "Unknown or revoked OAuth client");
   if (!client.redirect_uris.includes(redirectUri)) throw new HttpError(400, "redirect_uri is not registered for this client");
   if (single(query.response_type) !== "code") throw new HttpError(400, "Only response_type=code is supported");
-  if (single(query.code_challenge_method) !== "S256") throw new HttpError(400, "PKCE S256 is required");
-  const codeChallenge = single(query.code_challenge);
-  if (!/^[A-Za-z0-9_-]{43,128}$/.test(codeChallenge)) throw new HttpError(400, "Invalid PKCE code_challenge");
-  const resource = single(query.resource);
-  if (resource !== offerPspMcpResource()) throw new HttpError(400, "OAuth resource must be the OfferPSP MCP endpoint");
+  const publicClient = client.token_endpoint_auth_method === "none";
+  const challengeMethod = single(query.code_challenge_method);
+  const requestedChallenge = single(query.code_challenge);
+  if (publicClient && challengeMethod !== "S256") throw new HttpError(400, "PKCE S256 is required");
+  if (requestedChallenge && challengeMethod !== "S256") throw new HttpError(400, "Only PKCE S256 is supported");
+  if (requestedChallenge && !/^[A-Za-z0-9_-]{43,128}$/.test(requestedChallenge)) throw new HttpError(400, "Invalid PKCE code_challenge");
+  const codeChallenge = requestedChallenge || "confidential-client-secret-bound-code-challenge";
+  const resource = single(query.resource) || String(client.metadata?.resource || offerPspMcpResource());
+  if (!supportedResource(resource)) throw new HttpError(400, "Unsupported OfferPSP OAuth resource");
+  if (client.metadata?.resource && client.metadata.resource !== resource) throw new HttpError(400, "OAuth resource is not registered for this client");
   const scope = parseScopes(single(query.scope));
   const state = single(query.state);
   if (state.length > 2000) throw new HttpError(400, "OAuth state is too long");
@@ -474,20 +495,54 @@ function formBody(request) {
   return Object.fromEntries(new URLSearchParams(String(request.body || "")));
 }
 
-async function authorizationCodeGrant(body) {
+function basicCredentials(request) {
+  const header = String(request.headers?.authorization || "");
+  if (!header.toLowerCase().startsWith("basic ")) return null;
+  try {
+    const decoded = Buffer.from(header.slice(6).trim(), "base64").toString("utf8");
+    const separator = decoded.indexOf(":");
+    if (separator < 1) return null;
+    return { clientId: decodeURIComponent(decoded.slice(0, separator)), clientSecret: decodeURIComponent(decoded.slice(separator + 1)) };
+  } catch {
+    return null;
+  }
+}
+
+async function authenticateTokenClient(request, body) {
+  const basic = basicCredentials(request);
+  const clientId = String(basic?.clientId || body.client_id || "");
+  if (!clientId) throw new HttpError(401, "Missing OAuth client_id");
+  const client = await findClient(clientId);
+  if (!client) throw new HttpError(401, "Unknown or revoked OAuth client");
+  const method = String(client.token_endpoint_auth_method || "none");
+  if (method === "none") return client;
+  if (method === "client_secret_basic" && !basic) throw new HttpError(401, "HTTP Basic client authentication is required");
+  if (method === "client_secret_post" && basic) throw new HttpError(401, "POST body client authentication is required");
+  const supplied = String(basic?.clientSecret || body.client_secret || "");
+  const expectedHash = String(client.metadata?.client_secret_hash || "");
+  if (!supplied || !expectedHash || !constantTimeEqual(sha256(supplied), expectedHash)) {
+    throw new HttpError(401, "Invalid OAuth client secret");
+  }
+  return client;
+}
+
+async function authorizationCodeGrant(body, client) {
   const code = String(body.code || "");
-  const clientId = String(body.client_id || "");
+  const clientId = String(client.client_id);
   const redirectUri = String(body.redirect_uri || "");
   const verifier = String(body.code_verifier || "");
-  const resource = String(body.resource || offerPspMcpResource());
-  if (!code || !clientId || !redirectUri || !verifier || !body.resource) throw new HttpError(400, "Missing authorization_code grant parameter");
-  if (!/^[A-Za-z0-9._~-]{43,128}$/.test(verifier)) throw new HttpError(400, "Invalid PKCE code_verifier");
+  if (!code || !redirectUri) throw new HttpError(400, "Missing authorization_code grant parameter");
   const result = await serviceSupabaseRequest(`offerpsp_mcp_oauth_codes?select=*&code_hash=eq.${sha256(code)}&limit=1`);
   const record = rows(result)[0];
   if (!record || record.consumed_at || new Date(record.expires_at).getTime() <= Date.now()) throw new HttpError(400, "Authorization code is invalid or expired");
+  const resource = String(body.resource || record.resource);
   if (record.client_id !== clientId || record.redirect_uri !== redirectUri || record.resource !== resource) throw new HttpError(400, "Authorization code binding mismatch");
-  const challenge = createHash("sha256").update(verifier).digest("base64url");
-  if (!constantTimeEqual(challenge, record.code_challenge)) throw new HttpError(400, "PKCE verification failed");
+  const hasPkce = record.code_challenge !== "confidential-client-secret-bound-code-challenge";
+  if (hasPkce) {
+    if (!/^[A-Za-z0-9._~-]{43,128}$/.test(verifier)) throw new HttpError(400, "Invalid PKCE code_verifier");
+    const challenge = createHash("sha256").update(verifier).digest("base64url");
+    if (!constantTimeEqual(challenge, record.code_challenge)) throw new HttpError(400, "PKCE verification failed");
+  }
   const consumed = await serviceSupabaseRequest(`offerpsp_mcp_oauth_codes?code_hash=eq.${record.code_hash}&consumed_at=is.null&expires_at=gt.${encodeURIComponent(new Date().toISOString())}`, {
     method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify({ consumed_at: new Date().toISOString() }),
   });
@@ -508,14 +563,14 @@ async function revokeFamily(familyId) {
   ]);
 }
 
-async function refreshTokenGrant(body) {
+async function refreshTokenGrant(body, client) {
   const refreshToken = String(body.refresh_token || "");
-  const clientId = String(body.client_id || "");
-  const resource = String(body.resource || "");
-  if (!refreshToken || !clientId || !resource) throw new HttpError(400, "Missing refresh_token grant parameter");
+  const clientId = String(client.client_id);
+  if (!refreshToken) throw new HttpError(400, "Missing refresh_token grant parameter");
   const result = await serviceSupabaseRequest(`offerpsp_mcp_oauth_refresh_tokens?select=*&token_hash=eq.${sha256(refreshToken)}&limit=1`);
   const record = rows(result)[0];
   if (!record) throw new HttpError(400, "Refresh token is invalid");
+  const resource = String(body.resource || record.resource);
   if (record.client_id !== clientId) throw new HttpError(400, "Refresh token client mismatch");
   if (record.resource !== resource) throw new HttpError(400, "Refresh token resource mismatch");
   if (record.consumed_at || record.revoked_at || new Date(record.expires_at).getTime() <= Date.now()) {
@@ -559,11 +614,12 @@ export async function oauthTokenHandler(request, response) {
   response.setHeader("Cache-Control", "no-store");
   try {
     const body = formBody(request);
+    const client = await authenticateTokenClient(request, body);
     const grantType = String(body.grant_type || "");
     const result = grantType === "authorization_code"
-      ? await authorizationCodeGrant(body)
+      ? await authorizationCodeGrant(body, client)
       : grantType === "refresh_token"
-        ? await refreshTokenGrant(body)
+        ? await refreshTokenGrant(body, client)
         : null;
     if (!result) return oauthError(response, 400, "unsupported_grant_type", "Only authorization_code and refresh_token are supported");
     return response.status(200).json(result);
@@ -573,7 +629,7 @@ export async function oauthTokenHandler(request, response) {
   }
 }
 
-export async function requireOfferPspMcpStaff(request) {
+export async function requireOfferPspMcpStaff(request, expectedResource = null) {
   const value = String(request.headers.authorization || "");
   if (!value.toLowerCase().startsWith("bearer ")) throw new HttpError(401, "Missing OfferPSP OAuth access token");
   const accessToken = value.slice(7).trim();
@@ -581,7 +637,9 @@ export async function requireOfferPspMcpStaff(request) {
     `offerpsp_mcp_oauth_access_tokens?select=*&token_hash=eq.${sha256(accessToken)}&revoked_at=is.null&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&limit=1`,
   );
   const record = rows(result)[0];
-  if (!record || record.resource !== offerPspMcpResource()) throw new HttpError(401, "OfferPSP OAuth access token is invalid or expired");
+  if (!record || !supportedResource(record.resource) || (expectedResource && record.resource !== expectedResource)) {
+    throw new HttpError(401, "OfferPSP OAuth access token is invalid, expired or bound to another resource");
+  }
   const session = decryptPayload(record.session_ciphertext);
   if (session.user_id !== record.actor_user_id || !session.access_token) throw new HttpError(401, "OfferPSP OAuth session binding mismatch");
   const context = await requireOfferPspStaff({ headers: { authorization: `Bearer ${session.access_token}` } });

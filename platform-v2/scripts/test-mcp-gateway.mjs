@@ -3,6 +3,7 @@ import { createCipheriv } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { offerPspMcpHandler as mcpHandler, resourceMetadata } from "../api/_lib/offerpsp-mcp-http.mjs";
 import { offerPspTools } from "../api/_lib/offerpsp-mcp.mjs";
+import { offerPspActionsOpenApi } from "../api/_lib/offerpsp-actions.mjs";
 
 process.env.SUPABASE_URL = "https://supabase.test";
 process.env.SUPABASE_PUBLISHABLE_KEY = "publishable-test-key";
@@ -107,5 +108,12 @@ const source = await readFile(new URL("../api/_lib/offerpsp-mcp.mjs", import.met
 assert.equal(source.includes("SUPABASE_SERVICE_ROLE_KEY"), false);
 assert.equal(source.includes("send-email"), false);
 assert.equal(source.includes("send-telegram"), false);
+
+const actionsSchema = offerPspActionsOpenApi();
+assert.equal(actionsSchema.openapi, "3.1.0");
+assert.equal(actionsSchema.paths["/actions/system_health"].post["x-openai-isConsequential"], false);
+assert.equal(actionsSchema.paths["/actions/create_task"].post["x-openai-isConsequential"], true);
+assert.ok(actionsSchema.paths["/actions/prepare_telegram_reply"]);
+assert.ok(actionsSchema.paths["/actions/get_entity_workspace"].post.requestBody.content["application/json"].schema.properties.entity_type.enum.includes("deal"));
 
 console.log("OfferPSP MCP gateway tests passed");
