@@ -1053,6 +1053,47 @@ textarea::placeholder { color: #646a78; }
   font-weight: 800;
 }
 
+.dossier-editor > summary.company-profile-toggle {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  min-height: 104px;
+  padding: 20px 22px;
+  list-style: none;
+}
+.dossier-editor > summary.company-profile-toggle::-webkit-details-marker { display: none; }
+.company-profile-toggle-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 1px solid rgba(255, 77, 122, .28);
+  border-radius: 12px;
+  color: var(--accent);
+  background: rgba(255, 77, 122, .08);
+  font-size: 20px;
+}
+.company-profile-toggle-copy { display: grid; gap: 4px; }
+.company-profile-toggle-copy .eyebrow { margin: 0; }
+.company-profile-toggle-copy strong { color: var(--paper); font-size: 18px; line-height: 1.25; }
+.company-profile-toggle-copy small { max-width: 720px; color: var(--muted); font-size: 11px; font-weight: 600; line-height: 1.55; }
+.company-profile-toggle-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 77, 122, .24);
+  border-radius: 10px;
+  color: var(--paper);
+  background: rgba(255, 77, 122, .08);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.company-profile-toggle-action > span:last-child { transition: transform .2s ease; }
+.dossier-editor[open] .company-profile-toggle-action > span:last-child { transform: rotate(180deg); }
+
 .client-dossier-form {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1952,6 +1993,10 @@ textarea::placeholder { color: #646a78; }
 
 .portal .dossier-editor { border-color: rgba(17, 22, 35, .09); background: #f8f9fa; }
 .portal .dossier-editor summary { color: #313641; }
+.portal .company-profile-toggle-icon { border-color: rgba(255, 77, 122, .22); background: #fff0f4; }
+.portal .company-profile-toggle-copy strong { color: #202530; }
+.portal .company-profile-toggle-copy small { color: #747b87; }
+.portal .company-profile-toggle-action { border-color: rgba(255, 77, 122, .22); color: #a62f52; background: #fff0f4; }
 .portal .client-dossier-form label,
 .portal .document-upload-form label { color: #626976; }
 .portal input,
@@ -2001,6 +2046,14 @@ textarea::placeholder { color: #646a78; }
 }
 
 @media (max-width: 720px) {
+  .dossier-editor > summary.company-profile-toggle {
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 12px;
+    padding: 17px;
+  }
+  .company-profile-toggle-icon { width: 42px; height: 42px; }
+  .company-profile-toggle-copy strong { font-size: 16px; }
+  .company-profile-toggle-action { grid-column: 1 / -1; justify-content: space-between; }
   .portal-shell { display: block; padding-bottom: 68px; }
   .portal-sidebar {
     position: fixed;
