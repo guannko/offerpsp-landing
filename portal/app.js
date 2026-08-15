@@ -16,6 +16,7 @@ const supabase = createClient(
 const MESSAGE_NOTIFICATION_ENDPOINT = "/api/portal-notification";
 const LEAD_ENDPOINT = "https://annoris--n8n-make--xjvz9xynmzwk.code.run/webhook/offerpsp-lead-v1";
 const LANGUAGE_STORAGE_KEY = "offerpsp-portal-language";
+const MESSAGE_REFRESH_INTERVAL_MS = 3000;
 
 const COPY = {
   ru: {
@@ -246,7 +247,8 @@ const STATUS_KEYS = {
 const state = {
   user: null, requests: [], lead: null, allOptions: [], options: [], allDeals: [], deals: [], organizations: [],
   agentBrand: null, profile: null, companyWorkspace: null, conversationId: null, messages: [],
-  supportConversationId: null, supportMessages: [], language: "ru", portfolioQuery: "",
+  supportConversationId: null, supportMessages: [], conversationRefreshTimer: null, supportRefreshTimer: null,
+  language: "ru", portfolioQuery: "",
 };
 const ids = [
   "authView", "portalView", "loginForm", "emailInput", "passwordInput", "googleLoginButton", "magicLinkButton",
@@ -714,14 +716,63 @@ function renderSupportMessages() {
   elements.supportMessageList.scrollTop = elements.supportMessageList.scrollHeight;
 }
 
+function messagesChanged(current, next) {
+  if (current.length !== next.length) return true;
+  return current.some((message, index) => message.id !== next[index]?.id || message.body !== next[index]?.body);
+}
+
+async function fetchConversationMessages(conversationId) {
+  const messages = await supabase.from("offerpsp_messages").select("id, sender_type, direction, body, sent_at")
+    .eq("conversation_id", conversationId).order("sent_at", { ascending: true });
+  if (messages.error) throw messages.error;
+  return messages.data || [];
+}
+
+async function refreshSupportMessages() {
+  if (!state.supportConversationId || !state.user) return;
+  const nextMessages = await fetchConversationMessages(state.supportConversationId);
+  if (!messagesChanged(state.supportMessages, nextMessages)) return;
+  state.supportMessages = nextMessages;
+  renderSupportMessages();
+}
+
+function stopSupportUpdates() {
+  window.clearInterval(state.supportRefreshTimer);
+  state.supportRefreshTimer = null;
+}
+
+function startSupportUpdates() {
+  stopSupportUpdates();
+  state.supportRefreshTimer = window.setInterval(() => {
+    if (elements.supportDialog.open && document.visibilityState === "visible") {
+      refreshSupportMessages().catch(() => {});
+    }
+  }, MESSAGE_REFRESH_INTERVAL_MS);
+}
+
+function stopConversationUpdates() {
+  window.clearInterval(state.conversationRefreshTimer);
+  state.conversationRefreshTimer = null;
+}
+
+function startConversationUpdates() {
+  stopConversationUpdates();
+  state.conversationRefreshTimer = window.setInterval(async () => {
+    if (!state.conversationId || !state.user || document.visibilityState !== "visible") return;
+    try {
+      const nextMessages = await fetchConversationMessages(state.conversationId);
+      if (!messagesChanged(state.messages, nextMessages)) return;
+      state.messages = nextMessages;
+      renderMessages();
+    } catch { /* Keep the current conversation visible and retry later. */ }
+  }, MESSAGE_REFRESH_INTERVAL_MS);
+}
+
 async function loadSupportConversation() {
   const ensured = await supabase.rpc("ensure_offerpsp_portal_support_conversation");
   if (ensured.error) throw ensured.error;
   state.supportConversationId = ensured.data;
-  const messages = await supabase.from("offerpsp_messages").select("id, sender_type, direction, body, sent_at")
-    .eq("conversation_id", ensured.data).order("sent_at", { ascending: true });
-  if (messages.error) throw messages.error;
-  state.supportMessages = messages.data || [];
+  state.supportMessages = await fetchConversationMessages(ensured.data);
 }
 
 async function openSupportDialog() {
@@ -732,6 +783,7 @@ async function openSupportDialog() {
     await loadSupportConversation();
     setStatus(elements.supportMessageStatus);
     renderSupportMessages();
+    startSupportUpdates();
     elements.supportMessageInput.focus();
   } catch (error) {
     setStatus(elements.supportMessageStatus, friendlyError(error, state.language === "ru" ? "Чат поддержки пока недоступен." : "Support chat is currently unavailable."), "error");
@@ -740,7 +792,10 @@ async function openSupportDialog() {
 
 function closeSupportDialog() {
   const button = elements.supportMessageForm.querySelector("button");
-  if (!button.disabled && elements.supportDialog.open) elements.supportDialog.close();
+  if (!button.disabled && elements.supportDialog.open) {
+    stopSupportUpdates();
+    elements.supportDialog.close();
+  }
 }
 
 async function sendPortalMessage(conversationId, body, button, statusElement) {
@@ -769,6 +824,8 @@ async function sendPortalMessage(conversationId, body, button, statusElement) {
 
 async function enterPortal(session) {
   if (!session?.user) {
+    stopSupportUpdates();
+    stopConversationUpdates();
     state.user = null; state.requests = []; state.lead = null;
     elements.portalView.classList.add("is-hidden");
     elements.authView.classList.remove("is-hidden");
@@ -806,6 +863,7 @@ async function loadWorkspace(preferredLeadId = state.lead?.lead_id) {
 }
 
 async function selectRequest(leadId) {
+  stopConversationUpdates();
   state.lead = state.requests.find((request) => request.lead_id === leadId) || null;
   state.options = state.allOptions.filter((option) => option.lead_id === leadId);
   state.deals = state.allDeals.filter((deal) => deal.lead_id === leadId);
@@ -829,10 +887,12 @@ async function loadConversation(leadId) {
   const { data, error } = await supabase.rpc("ensure_offerpsp_portal_conversation", { p_lead_id: leadId });
   if (error) { setStatus(elements.messageStatus, friendlyError(error, state.language === "ru" ? "Рабочий чат пока недоступен." : "The workspace chat is currently unavailable."), "error"); return; }
   state.conversationId = data;
-  const messages = await supabase.from("offerpsp_messages").select("id, sender_type, direction, body, sent_at")
-    .eq("conversation_id", data).order("sent_at", { ascending: true });
-  if (messages.error) { setStatus(elements.messageStatus, state.language === "ru" ? "Не удалось загрузить сообщения." : "Could not load messages.", "error"); return; }
-  state.messages = messages.data || [];
+  try {
+    state.messages = await fetchConversationMessages(data);
+    startConversationUpdates();
+  } catch {
+    setStatus(elements.messageStatus, state.language === "ru" ? "Не удалось загрузить сообщения." : "Could not load messages.", "error");
+  }
 }
 
 function showPortalToast(message, type = "success") {
@@ -1186,8 +1246,7 @@ elements.supportMessageForm.addEventListener("submit", async (event) => {
   const button = elements.supportMessageForm.querySelector("button");
   if (!await sendPortalMessage(state.supportConversationId, body, button, elements.supportMessageStatus)) return;
   elements.supportMessageInput.value = "";
-  await loadSupportConversation();
-  renderSupportMessages();
+  await refreshSupportMessages();
 });
 
 elements.signOutButton.addEventListener("click", async () => { await supabase.auth.signOut(); await enterPortal(null); });
