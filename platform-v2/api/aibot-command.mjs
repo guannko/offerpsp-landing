@@ -32,7 +32,9 @@ export default async function handler(request, response) {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   const webhookUrl = process.env.AIBOT_WEBHOOK_URL;
-  const webhookSecret = process.env.AIBOT_WEBHOOK_SECRET;
+  // Keep the interactive AIBot credential isolated from the email/Telegram
+  // gateways. The fallback preserves existing deployments during rotation.
+  const webhookSecret = process.env.AIBOT_COMMAND_WEBHOOK_SECRET || process.env.AIBOT_WEBHOOK_SECRET;
   const authorization = request.headers.authorization || "";
   if (!supabaseUrl || !supabaseKey || !webhookUrl || !webhookSecret) return json(response, 503, { success: false, error: "AIBot bridge is not configured" });
   if (!authorization.startsWith("Bearer ")) return json(response, 401, { success: false, error: "Authentication required" });

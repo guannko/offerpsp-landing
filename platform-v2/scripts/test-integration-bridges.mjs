@@ -21,6 +21,7 @@ function configure() {
   process.env.SUPABASE_URL = "https://supabase.test";
   process.env.SUPABASE_PUBLISHABLE_KEY = "public-test-key";
   process.env.AIBOT_WEBHOOK_SECRET = "bridge-secret";
+  process.env.AIBOT_COMMAND_WEBHOOK_SECRET = "command-secret";
   process.env.AIBOT_WEBHOOK_URL = "https://n8n.test/webhook/aibot";
   process.env.N8N_EMAIL_WEBHOOK_URL = "https://n8n.test/webhook/email";
   process.env.N8N_TELEGRAM_WEBHOOK_URL = "https://n8n.test/webhook/telegram";
@@ -89,7 +90,9 @@ try {
     p_error: null,
   });
 
-  globalThis.fetch = async (url) => {
+  calls = [];
+  globalThis.fetch = async (url, init = {}) => {
+    calls.push({ url: String(url), init });
     if (String(url).endsWith("/auth/v1/user")) return Response.json({ id: "staff-id" });
     if (String(url).endsWith("/rpc/is_offerpsp_staff")) return Response.json(true);
     if (String(url).endsWith("/webhook/aibot")) return Response.json({ success: true });
@@ -99,6 +102,7 @@ try {
   await aibotHandler(request({ message: "Do the task", session_id: "session_12345" }), aibotResponse);
   assert.equal(aibotResponse.statusCode, 502);
   assert.match(aibotResponse.body.error, /empty answer/i);
+  assert.equal(calls.find((call) => call.url.endsWith("/webhook/aibot")).init.headers["x-captain-secret"], "command-secret");
 
   console.log("Integration bridge contract tests passed");
 } finally {
