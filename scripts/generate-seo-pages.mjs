@@ -304,7 +304,9 @@ const renderPage = (page) => {
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="theme-color" content="#080a13">
   <link rel="canonical" href="${canonical}">
-  <link rel="icon" href="/favicon.svg?v=20260815-1" type="image/svg+xml">
+  <link rel="icon" href="/brand/offerpsp-favicon-32.png?v=20260816-1" type="image/png" sizes="32x32">
+  <link rel="icon" href="/brand/offerpsp-favicon-48.png?v=20260816-1" type="image/png" sizes="48x48">
+  <link rel="apple-touch-icon" href="/brand/offerpsp-apple-touch-icon-180.png?v=20260816-1" sizes="180x180">
   <link rel="stylesheet" href="/service-pages.css?v=20260815-1">
   <meta property="og:type" content="website">
   <meta property="og:url" content="${canonical}">

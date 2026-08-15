@@ -27,6 +27,7 @@ for (const file of publicFiles) {
 
 await writeSeoPages(output);
 
+await cp(resolve(root, "platform-v2/public/brand"), resolve(output, "brand"), { recursive: true });
 await cp(resolve(root, "portal"), resolve(output, "portal"), { recursive: true });
 
 process.stdout.write("PASS assembled public landing, SEO/GEO pages and client portal without staff surfaces\n");

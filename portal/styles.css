@@ -71,6 +71,13 @@ a { color: inherit; }
   letter-spacing: -.06em;
 }
 
+.brand-logo {
+  display: block;
+  width: auto;
+  height: 38px;
+  object-fit: contain;
+}
+
 .eyebrow {
   margin: 0 0 7px;
   color: var(--coral-soft);
