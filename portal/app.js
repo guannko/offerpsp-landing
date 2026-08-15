@@ -14,6 +14,7 @@ const supabase = createClient(
 );
 
 const MESSAGE_NOTIFICATION_ENDPOINT = "/api/portal-notification";
+const LEAD_ENDPOINT = "https://annoris--n8n-make--xjvz9xynmzwk.code.run/webhook/offerpsp-lead-v1";
 const LANGUAGE_STORAGE_KEY = "offerpsp-portal-language";
 
 const COPY = {
@@ -36,6 +37,15 @@ const COPY = {
     prepareVolume: "Ожидаемый оборот и лимиты", prepareLicense: "Статус лицензии и документы",
     supportTitle: "Поддержка", supportHeading: "Нужна помощь с формулировкой запроса?",
     supportCopy: "Напишите команде OfferPSP. Поможем собрать требования до отправки задачи.",
+    newRequestEyebrow: "Новая задача", newRequestTitle: "Создать платёжную задачу",
+    newRequestIntro: "Опишите новое GEO, метод или проблему с действующим подключением. Профиль компании останется связан с этой задачей.",
+    selectVertical: "Выберите вертикаль", monthlyVolumeRange: "Ожидаемый оборот в месяц", selectRange: "Выберите диапазон",
+    requestDetails: "Что должна решить новая задача?", requestDetailsPlaceholder: "Текущий процессинг, ограничения, сроки или конкретная проблема…",
+    newRequestConsent: "Разрешаю OfferPSP использовать эти данные для оценки запроса и связи по подходящим PSP.",
+    privacyNotice: "Политика конфиденциальности", cancel: "Отмена", submitRequest: "Создать задачу",
+    creatingRequest: "Создаём задачу…", requestCreated: "Задача создана и добавлена в кабинет.",
+    requestCreateError: "Не удалось подтвердить создание задачи. Повторите попытку или напишите команде.",
+    requestRequired: "Заполните обязательные поля.",
     navCompany: "Компания", navDossier: "Досье", navOptions: "Варианты", navMessages: "Сообщения", requests: "Задачи",
     yourRequests: "Ваши запросы", searchPortfolio: "Мерч, GEO, статус…", selectedRequest: "Выбранная задача", nextStep: "Следующее действие",
     connections: "Знакомства и подключения", dealProgress: "Ход сделки", comparison: "Сравнение",
@@ -132,6 +142,15 @@ const COPY = {
     prepareVolume: "Expected volume and limits", prepareLicense: "Licence status and documents",
     supportTitle: "Support", supportHeading: "Need help defining the request?",
     supportCopy: "Contact the OfferPSP team. We will help structure the requirements before submission.",
+    newRequestEyebrow: "New request", newRequestTitle: "Create a payment request",
+    newRequestIntro: "Describe a new GEO, method or issue with an existing connection. Your company profile will remain linked to this request.",
+    selectVertical: "Select vertical", monthlyVolumeRange: "Expected monthly volume", selectRange: "Select range",
+    requestDetails: "What should this request solve?", requestDetailsPlaceholder: "Current processing setup, constraints, timing or a specific issue…",
+    newRequestConsent: "I allow OfferPSP to use this information to assess the request and contact me about relevant PSPs.",
+    privacyNotice: "Privacy Notice", cancel: "Cancel", submitRequest: "Create request",
+    creatingRequest: "Creating request…", requestCreated: "The request was created and added to your workspace.",
+    requestCreateError: "We could not confirm the request. Try again or contact the team.",
+    requestRequired: "Complete the required fields.",
     navCompany: "Company", navDossier: "Dossier", navOptions: "Options", navMessages: "Messages", requests: "Requests",
     yourRequests: "Your requests", searchPortfolio: "Merchant, GEO, status…", selectedRequest: "Selected request", nextStep: "Next action",
     connections: "Introductions and connections", dealProgress: "Deal progress", comparison: "Comparison",
@@ -240,6 +259,9 @@ const ids = [
   "companyLicenseJurisdiction", "companyLicenseNumber", "companyDescription", "companyProfileStatus",
   "companyDocumentForm", "companyDocumentType", "companyDocumentTitle", "companyDocumentExpiry", "companyDocumentFile",
   "companyDocumentNote", "companyDocumentStatus", "companyDocumentList",
+  "newRequestDialog", "newRequestForm", "newRequestName", "newRequestEmail", "newRequestCompany", "newRequestCompanyUrl",
+  "newRequestVertical", "newRequestVolume", "newRequestGeos", "newRequestMethods", "newRequestTelegram", "newRequestDetails",
+  "newRequestConsent", "newRequestWebsiteUrl", "newRequestStatus", "newRequestSubmit", "portalToast",
 ];
 const elements = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
 
@@ -745,9 +767,43 @@ async function loadConversation(leadId) {
   state.messages = messages.data || [];
 }
 
+function showPortalToast(message, type = "success") {
+  elements.portalToast.textContent = message;
+  elements.portalToast.className = `portal-toast ${type}`;
+  window.clearTimeout(showPortalToast.timer);
+  showPortalToast.timer = window.setTimeout(() => elements.portalToast.classList.add("is-hidden"), 6000);
+}
+
+function openNewRequestDialog() {
+  if (!state.user || elements.newRequestDialog.open) return;
+  const companyProfile = state.companyWorkspace?.organization;
+  const merchantOrganization = state.organizations.find((organization) => organization.organization_type === "merchant");
+  const userName = state.user.user_metadata?.full_name || state.user.user_metadata?.name || "";
+  elements.newRequestForm.reset();
+  delete elements.newRequestForm.dataset.submissionId;
+  elements.newRequestName.value = state.profile?.contact_name || userName;
+  elements.newRequestEmail.value = state.user.email || "";
+  elements.newRequestCompany.value = state.lead?.company || companyProfile?.name || merchantOrganization?.name || "";
+  elements.newRequestCompanyUrl.value = companyProfile?.website_url || state.profile?.company_url || "";
+  elements.newRequestTelegram.value = state.profile?.telegram || "";
+  const currentVertical = state.lead?.vertical || state.profile?.vertical || "";
+  if ([...elements.newRequestVertical.options].some((option) => option.value === currentVertical)) {
+    elements.newRequestVertical.value = currentVertical;
+  }
+  setStatus(elements.newRequestStatus);
+  elements.newRequestDialog.showModal();
+  elements.newRequestName.focus();
+}
+
+function closeNewRequestDialog() {
+  if (!elements.newRequestSubmit.disabled && elements.newRequestDialog.open) elements.newRequestDialog.close();
+}
+
 document.addEventListener("click", async (event) => {
   const languageButton = event.target.closest("[data-language]");
   if (languageButton) { setLanguage(languageButton.dataset.language); return; }
+  if (event.target.closest("[data-open-new-request]")) { openNewRequestDialog(); return; }
+  if (event.target.closest("[data-close-new-request]")) { closeNewRequestDialog(); return; }
   const requestButton = event.target.closest("[data-request-id]");
   if (requestButton) { await selectRequest(requestButton.dataset.requestId); return; }
   const openDocumentButton = event.target.closest("[data-company-document-open]");
@@ -798,6 +854,73 @@ document.addEventListener("click", async (event) => {
       elements.clientDossierEditor.open = true;
       elements.dossierSection.scrollIntoView({ behavior: "smooth", block: "start" });
     }
+  }
+});
+
+elements.newRequestDialog.addEventListener("click", (event) => {
+  if (event.target === elements.newRequestDialog) closeNewRequestDialog();
+});
+elements.newRequestDialog.addEventListener("cancel", (event) => {
+  if (elements.newRequestSubmit.disabled) event.preventDefault();
+});
+
+elements.newRequestForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setStatus(elements.newRequestStatus);
+  if (!elements.newRequestForm.checkValidity()) {
+    elements.newRequestForm.reportValidity();
+    setStatus(elements.newRequestStatus, t("requestRequired"), "error");
+    return;
+  }
+
+  const submissionId = elements.newRequestForm.dataset.submissionId || crypto.randomUUID();
+  elements.newRequestForm.dataset.submissionId = submissionId;
+  const payload = {
+    name: elements.newRequestName.value.trim(),
+    work_email: state.user.email,
+    company: elements.newRequestCompany.value.trim(),
+    company_url: elements.newRequestCompanyUrl.value.trim(),
+    vertical: elements.newRequestVertical.value,
+    monthly_volume: elements.newRequestVolume.value,
+    geos: elements.newRequestGeos.value.trim(),
+    methods: elements.newRequestMethods.value.trim(),
+    telegram: elements.newRequestTelegram.value.trim(),
+    details: elements.newRequestDetails.value.trim(),
+    website_url: elements.newRequestWebsiteUrl.value,
+    consent: elements.newRequestConsent.checked,
+    source_category: "portal",
+    source_platform: "offerpsp-portal",
+    source_referrer: "",
+    landing_path: "/portal/",
+    submission_id: submissionId,
+    attribution: {
+      version: 1,
+      first_touch: { source_category: "portal", source_platform: "offerpsp-portal", landing_path: "/portal/" },
+      last_touch: { source_category: "portal", source_platform: "offerpsp-portal", landing_path: "/portal/" },
+      session_id: submissionId,
+    },
+  };
+
+  setLoading(elements.newRequestSubmit, true, t("creatingRequest"));
+  setStatus(elements.newRequestStatus, t("creatingRequest"));
+  try {
+    const response = await fetch(LEAD_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=UTF-8" },
+      body: JSON.stringify(payload),
+    });
+    let result = null;
+    try { result = await response.json(); } catch { result = null; }
+    if (!response.ok || !result || result.success !== true) throw new Error("Submission was not confirmed");
+
+    setLoading(elements.newRequestSubmit, false);
+    elements.newRequestDialog.close();
+    showPortalToast(t("requestCreated"));
+    const claimResult = await supabase.rpc("claim_offerpsp_leads");
+    if (!claimResult.error) await loadWorkspace(result.lead_id || null);
+  } catch {
+    setLoading(elements.newRequestSubmit, false);
+    setStatus(elements.newRequestStatus, t("requestCreateError"), "error");
   }
 });
 

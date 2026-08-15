@@ -83,6 +83,14 @@ assert.match(htmlSource, /data-i18n="prepareTitle"/);
 assert.match(htmlSource, /href="mailto:bizdev@offerpsp\.com" data-i18n="getSupport"/);
 assert.match(htmlSource, /class="request-nav"/);
 assert.doesNotMatch(htmlSource, /Управляйте подключениями, а не перепиской по кругу/);
+assert.match(htmlSource, /id="newRequestDialog"/);
+assert.match(htmlSource, /id="newRequestForm"/);
+assert.match(htmlSource, /data-open-new-request/);
+assert.doesNotMatch(htmlSource, /href="\/#request"/);
+assert.match(appSource, /source_platform: "offerpsp-portal"/);
+assert.match(appSource, /work_email: state\.user\.email/);
+assert.match(appSource, /await supabase\.rpc\("claim_offerpsp_leads"\)/);
+assert.match(appSource, /await loadWorkspace\(result\.lead_id \|\| null\)/);
 const portalCacheHeader = vercelConfig.headers.find((entry) => entry.source === "/portal/(.*)");
 assert.deepEqual(portalCacheHeader?.headers, [
   { key: "Cache-Control", value: "private, no-store, max-age=0" },

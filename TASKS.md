@@ -5,6 +5,25 @@ Updated: 2026-08-15
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## Portal-native payment request creation — 2026-08-15
+
+Status: `VERIFIED` locally for UI, responsive layout, build and regression contracts. Production
+remains unchanged until the reviewed commit is deployed.
+
+- [x] Replaced every client-portal redirect to the public landing form with one authenticated
+  in-workspace request dialog: header action, empty state and request-list add button.
+- [x] Reused the existing production n8n intake rather than creating a second lead pipeline. The
+  signed-in email is taken from the Supabase session, not from editable browser input.
+- [x] After confirmed intake, the portal re-runs the existing lead claim and reloads the workspace
+  around the returned lead ID. Failed submission remains in the dialog and cannot masquerade as a
+  created task.
+- [x] Added RU/EN copy, required-field handling, a stable submission identifier, company/profile
+  prefilling and a success toast without navigating away from `/portal/`.
+- [x] Desktop and 390 px mobile dialog layouts were visually checked. The mobile dialog scrolls
+  internally (`826px` viewport / `1148px` content) and introduces no horizontal page overflow.
+- [x] Root production build, portal guards, notification contract and Captain's Bridge control
+  regression all pass. Guards reject a future return of `href="/#request"` in the client portal.
+
 ## Merchant portal workspace redesign — 2026-08-15
 
 Status: `VERIFIED` for the production build, desktop/mobile layout and live release delivery.
