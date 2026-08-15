@@ -69,7 +69,13 @@ function matches(row, params) {
 global.fetch = async (input, init = {}) => {
   const url = new URL(String(input));
   if (url.pathname === "/auth/v1/admin/generate_link") {
-    return Response.json({ properties: { hashed_token: "generated-magic-link-hash" } });
+    return Response.json({
+      hashed_token: "generated-magic-link-hash",
+      verification_type: "magiclink",
+      action_link: "https://supabase.test/auth/v1/verify?type=magiclink&token=generated-magic-link-hash",
+      id: staffUser.id,
+      email: staffUser.email,
+    });
   }
   if (url.pathname === "/auth/v1/verify") {
     return Response.json({

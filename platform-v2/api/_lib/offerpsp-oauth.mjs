@@ -187,11 +187,15 @@ async function createDedicatedStaffSession(user) {
     apiKey: serviceRole,
     body: { type: "magiclink", email: user.email },
   });
-  const tokenHash = generated?.properties?.hashed_token;
+  // Raw GoTrue REST returns link properties at the top level. The Supabase JS
+  // client transforms that payload into `data.properties`, so accept both
+  // shapes and keep this server independent from the client SDK.
+  const tokenHash = generated?.hashed_token || generated?.properties?.hashed_token;
+  const verificationType = generated?.verification_type || generated?.properties?.verification_type || "magiclink";
   if (!tokenHash) throw new HttpError(502, "Supabase did not create a dedicated staff session link");
   const session = await supabaseAuthRequest("verify", {
     apiKey: publishable,
-    body: { type: "magiclink", token_hash: tokenHash },
+    body: { type: verificationType, token_hash: tokenHash },
   });
   if (session?.user?.id !== user.id || !session?.access_token || !session?.refresh_token) {
     throw new HttpError(502, "Dedicated staff session identity mismatch");
