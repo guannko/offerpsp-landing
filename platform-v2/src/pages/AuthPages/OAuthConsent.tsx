@@ -78,7 +78,7 @@ export default function OAuthConsent() {
   return <div className="flex min-h-screen items-center justify-center bg-gray-950 p-6 text-white">
     <PageMeta title="Подключение OfferPSP Operator" description="Защищённое OAuth-подключение MCP."/>
     <div className="w-full max-w-xl rounded-3xl border border-white/10 bg-gray-900 p-8 shadow-2xl">
-      <div className="flex items-center gap-4"><span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-theme-purple-500 text-xl font-black">OP</span><div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-theme-pink-500">OfferPSP MCP</p><h1 className="mt-1 text-2xl font-semibold">Подключить Operator</h1></div></div>
+      <div className="flex items-center gap-4"><img src="/brand/offerpsp-logo-square-dark.png" alt="OfferPSP" className="h-14 w-14 rounded-2xl object-cover"/><div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-theme-pink-500">OfferPSP MCP</p><h1 className="mt-1 text-2xl font-semibold">Подключить Operator</h1></div></div>
       {!details && !error && <p className="mt-8 text-sm text-white/60">Проверяю аккаунт и запрос подключения…</p>}
       {error && <p className="mt-8 rounded-xl border border-error-500/30 bg-error-500/10 p-4 text-sm text-error-200">{error}</p>}
       {details && <><p className="mt-8 text-sm leading-6 text-white/65"><strong className="text-white">{details.client?.name || "Codex / ChatGPT"}</strong> запрашивает доступ к закрытым инструментам OfferPSP от имени <strong className="text-white">{details.staff?.email || "текущего сотрудника"}</strong>.</p>

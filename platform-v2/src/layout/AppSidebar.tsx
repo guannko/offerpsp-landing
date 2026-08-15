@@ -23,9 +23,15 @@ export default function AppSidebar() {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className={`flex items-center py-7 ${showLabels ? "justify-start" : "justify-center"}`}>
-        <Link to="/" className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-theme-purple-500 text-sm font-black text-white shadow-theme-sm">OP</span>
-          {showLabels && <span><strong className="block text-lg text-gray-900 dark:text-white">OfferPSP</strong><small className="text-[10px] font-semibold uppercase tracking-[0.22em] text-gray-400">Control Bridge</small></span>}
+        <Link to="/" className="flex items-center gap-3" aria-label="OfferPSP Control Bridge">
+          {showLabels ? (
+            <span>
+              <img src="/brand/offerpsp-logo-horizontal-transparent.png" alt="OfferPSP" className="h-10 w-auto max-w-[190px] object-contain" />
+              <small className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.24em] text-gray-400">Control Bridge</small>
+            </span>
+          ) : (
+            <img src="/brand/offerpsp-logo-square-dark.png" alt="OfferPSP" className="h-11 w-11 rounded-xl object-cover shadow-theme-sm" />
+          )}
         </Link>
       </div>
       <div className="flex flex-1 flex-col overflow-y-auto pb-24 no-scrollbar">

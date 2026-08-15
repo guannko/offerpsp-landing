@@ -302,8 +302,14 @@ export default function AIBotAssistant() {
           <footer className="px-4 pb-3 text-[11px] text-gray-400">{staff?.display_name || user?.email} · защищённый staff-доступ</footer>
         </section>
       ) : (
-        <button type="button" onClick={() => setOpen(true)} className="fixed bottom-5 right-5 z-[90] flex h-14 items-center gap-2 rounded-2xl bg-brand-500 px-4 text-sm font-semibold text-white shadow-2xl hover:bg-brand-600" aria-label="Открыть AIBot">
-          <ChatIcon className="size-6" /> <span className="hidden sm:inline">AIBot</span>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="fixed bottom-5 right-5 z-[90] flex h-11 w-11 items-center justify-center rounded-full bg-brand-500 text-xl shadow-lg transition hover:scale-105 hover:bg-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-950"
+          aria-label="Открыть ИИ-агента"
+          title="ИИ-агент"
+        >
+          <span aria-hidden="true">🤖</span>
         </button>
       )}
     </>
