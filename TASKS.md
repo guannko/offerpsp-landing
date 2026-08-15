@@ -7,8 +7,9 @@ Code or a passing local test is not evidence that production has been updated.
 
 ## Merchant portal workspace redesign — 2026-08-15
 
-Status: `VERIFIED` locally for the production build and desktop/mobile visual layout. Production
-remains unchanged until the reviewed commit is deployed.
+Status: `VERIFIED` for the production build, desktop/mobile layout and live release delivery.
+Authenticated production visual acceptance remains manual because Codex did not have macOS
+Computer Use permission for Boris's existing Brave session.
 
 - [x] Removed the oversized marketing slogan and replaced it with a compact payment-workspace
   header, direct support and new-request actions.
@@ -22,6 +23,9 @@ remains unchanged until the reviewed commit is deployed.
   remains readable and has no horizontal overflow at the tested mobile width.
 - [x] Full root production build and portal/control regression guards pass. Added guards against
   restoring the retired slogan or removing the new operational shell.
+- [x] Commits `b1957bc` and `8caeebc` are pushed. Production deployment
+  `dpl_EpMbnD8J9g7hYhbbiwgFp6UXLcHp` is `READY` and aliased to `https://offerpsp.com`.
+  Live `/portal/` returned HTTP 200 with the new HTML/assets and `private, no-store`.
 
 ## OfferPSP Operator MCP and owned OAuth — 2026-08-15
 
