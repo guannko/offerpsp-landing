@@ -1103,6 +1103,33 @@ textarea::placeholder { color: #646a78; }
   font-size: 18px;
   text-align: right;
 }
+
+.account-profile-card {
+  margin: 18px 16px;
+  padding: 16px 0 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .025);
+}
+.account-profile-card > .document-vault-head { padding: 0 16px 12px; }
+.user-profile-form { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.user-profile-form .button { min-height: 42px; }
+.account-profile-card > .status { margin: 0 16px 16px; }
+
+.workspace-grid.profile-only {
+  display: block;
+}
+.workspace-grid.profile-only .request-rail,
+.workspace-grid.profile-only .request-nav,
+.workspace-grid.profile-only .request-content > .hero-card,
+.workspace-grid.profile-only .next-action-card,
+.workspace-grid.profile-only #dossierSection,
+.workspace-grid.profile-only #dealSection,
+.workspace-grid.profile-only #shortlistSection,
+.workspace-grid.profile-only #conversationSection {
+  display: none;
+}
+.workspace-grid.profile-only .company-profile-section { margin-top: 18px; }
 .company-verification.status-unverified,
 .company-verification.status-in_review { border-color: rgba(255, 194, 125, .25); color: #ffc27d; background: rgba(255, 194, 125, .06); }
 .company-verification.status-needs_information,
@@ -1179,6 +1206,7 @@ textarea::placeholder { color: #646a78; }
   .next-action-card { grid-template-columns: 1fr; }
   .next-action-card > .button { width: 100%; margin-left: 0; }
   .client-dossier-form { grid-template-columns: 1fr; }
+  .user-profile-form { grid-template-columns: 1fr; }
   .client-dossier-form .span-2 { grid-column: auto; }
   .company-profile-meta { align-items: flex-end; flex-direction: column-reverse; }
   .document-vault-head,
@@ -1936,11 +1964,13 @@ textarea::placeholder { color: #646a78; }
 .portal input::placeholder,
 .portal textarea::placeholder { color: #a3a8b1; }
 .portal .document-vault,
+.portal .account-profile-card,
 .portal .company-document-card,
 .portal .pending-card,
 .portal .deal-card,
 .portal .option-card { border-color: rgba(17, 22, 35, .08); background: #f9fafb; }
 .portal .company-document-main strong,
+.portal .account-profile-card h3,
 .portal .pending-card strong,
 .portal .deal-card strong,
 .portal .option-card h3 { color: #252a35; }

@@ -20,44 +20,44 @@ const MESSAGE_REFRESH_INTERVAL_MS = 3000;
 
 const COPY = {
   ru: {
-    workspace: "Платёжный кабинет", authTitle: "Ваши платёжные задачи — в одном месте.",
-    authCopy: "Войдите с рабочим email из заявки OfferPSP.", workEmail: "Рабочий email", password: "Пароль",
+    workspace: "Платёжный кабинет", authTitle: "Ваши платёжные офферы — в одном месте.",
+    authCopy: "Войдите с рабочим email вашего аккаунта OfferPSP.", workEmail: "Рабочий email", password: "Пароль",
     signIn: "Войти", continueGoogle: "Продолжить с Google", sendLoginLink: "Отправить безопасную ссылку", signOut: "Выйти",
     workspaceTitle: "Платёжные подключения",
-    navOverview: "Обзор", navRequests: "Платёжные задачи", navDocuments: "Документы",
+    navOverview: "Обзор", navRequests: "Офферы", navDocuments: "Профиль",
     navRoutes: "Маршруты", navConversations: "Диалоги", secureWorkspace: "Защищённый кабинет",
-    workspaceCopy: "Заявки, документы, варианты и связь с OfferPSP — в одном защищённом кабинете.",
-    getSupport: "Связаться с командой", newRequest: "Новая платёжная задача", activeRequests: "Активные задачи",
+    workspaceCopy: "Офферы, документы, варианты и связь с OfferPSP — в одном защищённом кабинете.",
+    getSupport: "Связаться с командой", newRequest: "Сформировать оффер", activeRequests: "Активные офферы",
     activeRequestsHint: "В работе у команды", availableOptions: "Варианты к выбору", availableOptionsHint: "Готовы к вашему решению",
     liveConnections: "Подключения и знакомства", liveConnectionsHint: "Активные этапы с PSP",
-    noRequestTitle: "Создайте первую платёжную задачу",
+    noRequestTitle: "Сформируйте первый платёжный оффер",
     noRequestCopy: "Укажите GEO, методы, валюты и объём. Команда проверит профиль, подготовит подходящие маршруты и будет вести процесс в этом кабинете.",
-    startHere: "Начните здесь", createRequest: "Создать задачу", requestTimeHint: "Обычно занимает 3–5 минут",
-    processTitle: "Как проходит работа", processStepOne: "Запрос и профиль", processStepOneCopy: "Фиксируем задачу и недостающие данные.",
+    startHere: "Начните здесь", createRequest: "Сформировать оффер", requestTimeHint: "Обычно занимает 3–5 минут",
+    processTitle: "Как проходит работа", processStepOne: "Оффер и профиль", processStepOneCopy: "Фиксируем требования и недостающие данные.",
     processStepTwo: "Проверка и подбор", processStepTwoCopy: "Сравниваем только подходящие маршруты.",
     processStepThree: "Решение и знакомство", processStepThreeCopy: "Передаём досье PSP после вашего выбора.",
     prepareTitle: "Что подготовить", prepareCompany: "Сайт и юридическое лицо", prepareCoverage: "Целевые GEO, валюты и методы",
     prepareVolume: "Ожидаемый оборот и лимиты", prepareLicense: "Статус лицензии и документы",
     supportTitle: "Поддержка", supportHeading: "Нужна помощь с формулировкой запроса?",
-    supportCopy: "Напишите команде OfferPSP. Поможем собрать требования до отправки задачи.",
+    supportCopy: "Напишите команде OfferPSP. Поможем собрать требования до формирования оффера.",
     supportDialogEyebrow: "Прямая связь", supportDialogTitle: "Связаться с командой OfferPSP",
     supportDialogIntro: "Напишите прямо из кабинета. Переписка сохранится здесь, а команда получит уведомление.",
     supportMessagePlaceholder: "Чем мы можем помочь?", supportFallback: "Если вопрос срочный:",
-    newRequestEyebrow: "Новая задача", newRequestTitle: "Создать платёжную задачу",
-    newRequestIntro: "Опишите новое GEO, метод или проблему с действующим подключением. Профиль компании останется связан с этой задачей.",
+    newRequestEyebrow: "Новый оффер", newRequestTitle: "Сформировать платёжный оффер",
+    newRequestIntro: "Опишите нужные GEO, методы и условия. Профиль компании будет связан с этим оффером.",
     selectVertical: "Выберите вертикаль", monthlyVolumeRange: "Ожидаемый оборот в месяц", selectRange: "Выберите диапазон",
-    requestDetails: "Что должна решить новая задача?", requestDetailsPlaceholder: "Текущий процессинг, ограничения, сроки или конкретная проблема…",
-    newRequestConsent: "Разрешаю OfferPSP использовать эти данные для оценки запроса и связи по подходящим PSP.",
-    privacyNotice: "Политика конфиденциальности", cancel: "Отмена", submitRequest: "Создать задачу",
-    creatingRequest: "Создаём задачу…", requestCreated: "Задача создана и добавлена в кабинет.",
-    requestCreateError: "Не удалось подтвердить создание задачи. Повторите попытку или напишите команде.",
+    requestDetails: "Дополнительные требования к офферу", requestDetailsPlaceholder: "Текущий процессинг, ограничения, сроки или конкретная проблема…",
+    newRequestConsent: "Разрешаю OfferPSP использовать эти данные для формирования оффера и связи по подходящим PSP.",
+    privacyNotice: "Политика конфиденциальности", cancel: "Отмена", submitRequest: "Сформировать оффер",
+    creatingRequest: "Формируем оффер…", requestCreated: "Оффер сформирован и добавлен в кабинет.",
+    requestCreateError: "Не удалось подтвердить формирование оффера. Повторите попытку или напишите команде.",
     requestRequired: "Заполните обязательные поля.",
-    navCompany: "Компания", navDossier: "Досье", navOptions: "Варианты", navMessages: "Сообщения", requests: "Задачи",
-    yourRequests: "Ваши запросы", searchPortfolio: "Мерч, GEO, статус…", selectedRequest: "Выбранная задача", nextStep: "Следующее действие",
+    navCompany: "Компания", navDossier: "Досье", navOptions: "Варианты", navMessages: "Сообщения", requests: "Офферы",
+    yourRequests: "Ваши офферы", searchPortfolio: "Компания, GEO, статус…", selectedRequest: "Выбранный оффер", nextStep: "Следующее действие",
     connections: "Знакомства и подключения", dealProgress: "Ход сделки", comparison: "Сравнение",
     yourOptions: "Подобранные маршруты", directLine: "Прямая связь", conversation: "Рабочий чат с OfferPSP",
     messagePlaceholder: "Задайте вопрос или сообщите об изменении…", sendMessage: "Отправить",
-    requestReceived: "Заявка получена", qualification: "Уточняем профиль", matching: "Идёт подбор",
+    requestReceived: "Оффер принят в работу", qualification: "Уточняем профиль", matching: "Идёт подбор",
     shortlistReady: "Варианты готовы", shared: "Ожидаем ваш выбор", optionSelected: "Вариант выбран",
     dossierReady: "Готовим досье", providerReviewing: "PSP рассматривает", providerNeedsInfo: "Нужны данные",
     providerAccepted: "PSP согласовал знакомство", providerDeclined: "Подбираем замену", telegramCreated: "Telegram создан",
@@ -70,14 +70,14 @@ const COPY = {
     nextCompareCopy: "Сравнивайте GEO, валюту, метод, лимиты и финальную ставку. Название PSP раскроем после его согласия.",
     nextRequest: "Запросите знакомство по выбранному маршруту.",
     nextRequestCopy: "OfferPSP соберёт досье и передаст его PSP на предварительное рассмотрение.",
-    nextReview: "Следите за PSP review.", nextReviewCopy: "Мы ведём рассмотрение. Если PSP запросит данные, задача появится здесь.",
-    nextInfo: "Ответьте на запрос PSP в рабочем чате.", nextInfoCopy: "После уточнения мы продолжим review без новой заявки.",
+    nextReview: "Следите за PSP review.", nextReviewCopy: "Мы ведём рассмотрение. Если PSP запросит данные, уведомление появится здесь.",
+    nextInfo: "Ответьте на запрос PSP в рабочем чате.", nextInfoCopy: "После уточнения мы продолжим review без нового оффера.",
     nextConnect: "Перейдите к знакомству и встрече.", nextConnectCopy: "Ссылки на Telegram и Zoom находятся в блоке сделки.",
-    nextWon: "Маршрут сохранён. Создавайте следующую задачу при расширении.",
+    nextWon: "Маршрут сохранён. Формируйте следующий оффер при расширении.",
     nextWonCopy: "Используйте кабинет для нового GEO, метода, резервного PSP или проблемы с действующим маршрутом.",
-    nextLost: "Создайте новую задачу или попросите альтернативу.", nextLostCopy: "История сохранена — повторно описывать весь контекст не нужно.",
+    nextLost: "Сформируйте новый оффер или попросите альтернативу.", nextLostCopy: "История сохранена — повторно описывать весь контекст не нужно.",
     matchingProgress: "Мы готовим нормализованные варианты", matchingCopy: "В кабинете появятся только маршруты с понятными условиями.",
-    matchingComplete: "По этой задаче нет активных вариантов", matchingCompleteCopy: "Результат сохранён. Можно создать новую задачу.",
+    matchingComplete: "По этому офферу нет активных вариантов", matchingCompleteCopy: "Результат сохранён. Можно сформировать новый оффер.",
     option: "Оффер", clientRate: "Итоговая ставка", methods: "Методы", limits: "Лимиты", settlement: "Расчёты",
     integration: "Интеграция", whyMatched: "Почему подходит", interested: "Интересно", needDetails: "Нужны детали",
     notSuitable: "Не подходит", selectedOptions: "Выбрано", requestIntroduction: "Запросить знакомство с PSP",
@@ -88,7 +88,7 @@ const COPY = {
     sent: "Сообщение отправлено.", notificationDelayed: "Сообщение сохранено, но уведомление менеджеру задерживается.", loginPassword: "Введите пароль или используйте безопасную ссылку.",
     loginEmail: "Сначала введите рабочий email.", linkSent: "Ссылка отправлена. Проверьте почту.",
     signingIn: "Входим…", sending: "Отправляем…", openingGoogle: "Открываем Google…", saving: "Сохраняем…",
-    dossierReadyMessage: "Запрос принят. Мы проверим досье перед отправкой PSP.", missingPrefix: "Нужно дополнить:",
+    dossierReadyMessage: "Оффер принят. Мы проверим досье перед отправкой PSP.", missingPrefix: "Нужно дополнить:",
     telegram: "Открыть Telegram", zoom: "Открыть Zoom", managedByAgent: "Агентский кабинет",
     managedClients: "мерчей под управлением", global: "Все GEO", validThrough: "Актуально до",
     completeProfile: "Дополнить профиль", pspReviewProfile: "Профиль для PSP review", companyDossier: "Досье компании",
@@ -114,8 +114,10 @@ const COPY = {
     selectedForReview: "Выбрано специалистом OfferPSP для вашего рассмотрения.",
     firstRefundRule: "Первый возврат по плательщику проводится без дополнительных вопросов; последующие возвраты по этому плательщику проверяет служба поддержки.",
     offerExplanation: "Условия одного платёжного решения без скрытых догадок.",
-    companyCenter: "Компания", companyCenterTitle: "Постоянный профиль компании",
-    companyCenterExplanation: "Эти реквизиты и документы используются во всех платёжных задачах. Обновите их один раз — повторно заполнять анкету не придётся.",
+    companyCenter: "Профиль мерча", companyCenterTitle: "Пользователь и компания",
+    companyCenterExplanation: "Контактные данные, реквизиты и документы используются во всех офферах. Обновите их здесь один раз.",
+    userProfileEyebrow: "Ваши данные", userProfileTitle: "Профиль пользователя", userProfileHint: "Для связи с командой OfferPSP",
+    roleTitle: "Должность", phone: "Телефон", saveUserProfile: "Сохранить мои данные", userProfileSaved: "Данные пользователя сохранены.",
     openPersistentProfile: "Открыть профиль и документы компании", brandName: "Название бренда", legalName: "Юридическое название",
     registrationNumber: "Регистрационный номер", registrationJurisdiction: "Страна регистрации", registeredAddress: "Юридический адрес",
     operatingAddress: "Рабочий адрес", companyWebsite: "Сайт компании", companyDescription: "Кратко о компании",
@@ -130,20 +132,20 @@ const COPY = {
     verificationVerified: "Проверен", verificationNeedsInformation: "Нужны данные", verificationRejected: "Отклонён",
   },
   en: {
-    workspace: "Payment workspace", authTitle: "All your payment work, in one place.",
+    workspace: "Payment workspace", authTitle: "All your payment offers, in one place.",
     authCopy: "Sign in with the work email used for your OfferPSP request.", workEmail: "Work email", password: "Password",
     signIn: "Sign in", continueGoogle: "Continue with Google", sendLoginLink: "Send secure login link", signOut: "Sign out",
     workspaceTitle: "Payment connections",
-    navOverview: "Overview", navRequests: "Payment requests", navDocuments: "Documents",
+    navOverview: "Overview", navRequests: "Offers", navDocuments: "Profile",
     navRoutes: "Matched routes", navConversations: "Conversations", secureWorkspace: "Secure workspace",
-    workspaceCopy: "Requests, documents, options and communication with OfferPSP in one secure workspace.",
-    getSupport: "Contact the team", newRequest: "New payment request", activeRequests: "Active requests",
+    workspaceCopy: "Offers, documents, options and communication with OfferPSP in one secure workspace.",
+    getSupport: "Contact the team", newRequest: "Build an offer", activeRequests: "Active offers",
     activeRequestsHint: "In progress with the team", availableOptions: "Options to review", availableOptionsHint: "Ready for your decision",
     liveConnections: "Connections and introductions", liveConnectionsHint: "Active PSP stages",
-    noRequestTitle: "Create your first payment request",
+    noRequestTitle: "Build your first payment offer",
     noRequestCopy: "Share the GEOs, methods, currencies and expected volume. The team will review the profile, prepare relevant routes and manage the process here.",
-    startHere: "Start here", createRequest: "Create request", requestTimeHint: "Usually takes 3–5 minutes",
-    processTitle: "How the process works", processStepOne: "Request and profile", processStepOneCopy: "We capture the task and any missing information.",
+    startHere: "Start here", createRequest: "Build an offer", requestTimeHint: "Usually takes 3–5 minutes",
+    processTitle: "How the process works", processStepOne: "Offer and profile", processStepOneCopy: "We capture the requirements and any missing information.",
     processStepTwo: "Review and matching", processStepTwoCopy: "We compare only relevant routes.",
     processStepThree: "Decision and introduction", processStepThreeCopy: "We send the dossier to the PSP after your choice.",
     prepareTitle: "What to prepare", prepareCompany: "Website and legal entity", prepareCoverage: "Target GEOs, currencies and methods",
@@ -153,17 +155,17 @@ const COPY = {
     supportDialogEyebrow: "Direct line", supportDialogTitle: "Contact the OfferPSP team",
     supportDialogIntro: "Write directly from your workspace. The conversation stays here and the team is notified.",
     supportMessagePlaceholder: "How can we help?", supportFallback: "For urgent matters:",
-    newRequestEyebrow: "New request", newRequestTitle: "Create a payment request",
-    newRequestIntro: "Describe a new GEO, method or issue with an existing connection. Your company profile will remain linked to this request.",
+    newRequestEyebrow: "New offer", newRequestTitle: "Build a payment offer",
+    newRequestIntro: "Describe the required GEOs, methods and conditions. Your company profile will remain linked to this offer.",
     selectVertical: "Select vertical", monthlyVolumeRange: "Expected monthly volume", selectRange: "Select range",
-    requestDetails: "What should this request solve?", requestDetailsPlaceholder: "Current processing setup, constraints, timing or a specific issue…",
+    requestDetails: "Additional offer requirements", requestDetailsPlaceholder: "Current processing setup, constraints, timing or a specific issue…",
     newRequestConsent: "I allow OfferPSP to use this information to assess the request and contact me about relevant PSPs.",
-    privacyNotice: "Privacy Notice", cancel: "Cancel", submitRequest: "Create request",
-    creatingRequest: "Creating request…", requestCreated: "The request was created and added to your workspace.",
-    requestCreateError: "We could not confirm the request. Try again or contact the team.",
+    privacyNotice: "Privacy Notice", cancel: "Cancel", submitRequest: "Build offer",
+    creatingRequest: "Building offer…", requestCreated: "The offer was created and added to your workspace.",
+    requestCreateError: "We could not confirm the offer. Try again or contact the team.",
     requestRequired: "Complete the required fields.",
-    navCompany: "Company", navDossier: "Dossier", navOptions: "Options", navMessages: "Messages", requests: "Requests",
-    yourRequests: "Your requests", searchPortfolio: "Merchant, GEO, status…", selectedRequest: "Selected request", nextStep: "Next action",
+    navCompany: "Company", navDossier: "Dossier", navOptions: "Options", navMessages: "Messages", requests: "Offers",
+    yourRequests: "Your offers", searchPortfolio: "Company, GEO, status…", selectedRequest: "Selected offer", nextStep: "Next action",
     connections: "Introductions and connections", dealProgress: "Deal progress", comparison: "Comparison",
     yourOptions: "Matched routes", directLine: "Direct line", conversation: "OfferPSP workspace chat",
     messagePlaceholder: "Ask a question or share an update…", sendMessage: "Send",
@@ -183,11 +185,11 @@ const COPY = {
     nextReview: "Follow the PSP review.", nextReviewCopy: "We manage the review. Any required action will appear here.",
     nextInfo: "Answer the PSP request in the workspace chat.", nextInfoCopy: "We will continue the same review after clarification.",
     nextConnect: "Continue to the introduction and meeting.", nextConnectCopy: "Telegram and Zoom links are available in the deal section.",
-    nextWon: "Route saved. Create the next request when you expand.",
+    nextWon: "Route saved. Build the next offer when you expand.",
     nextWonCopy: "Use this workspace for a new GEO, method, backup PSP or an issue with a live route.",
-    nextLost: "Create a new request or ask for an alternative.", nextLostCopy: "The history is saved, so you do not need to repeat the full context.",
+    nextLost: "Build a new offer or ask for an alternative.", nextLostCopy: "The history is saved, so you do not need to repeat the full context.",
     matchingProgress: "We are preparing normalized options", matchingCopy: "Only routes with clear comparable terms will appear here.",
-    matchingComplete: "No active options for this request", matchingCompleteCopy: "The result is saved. You can create a new request.",
+    matchingComplete: "No active options for this offer", matchingCompleteCopy: "The result is saved. You can build a new offer.",
     option: "Offer", clientRate: "Final rate", methods: "Methods", limits: "Limits", settlement: "Settlement",
     integration: "Integration", whyMatched: "Why it fits", interested: "Interested", needDetails: "Need details",
     notSuitable: "Not suitable", selectedOptions: "Selected", requestIntroduction: "Request PSP introduction",
@@ -223,8 +225,10 @@ const COPY = {
     selectedForReview: "Selected by an OfferPSP specialist for your review.",
     firstRefundRule: "The first refund for a payer is processed without additional questions; subsequent refunds for the same payer are investigated by support.",
     offerExplanation: "One payment solution with explicit commercial terms.",
-    companyCenter: "Company", companyCenterTitle: "Persistent company profile",
-    companyCenterExplanation: "These details and documents are reused across all payment requests. Update them once instead of completing the same form again.",
+    companyCenter: "Merchant profile", companyCenterTitle: "User and company",
+    companyCenterExplanation: "Your contact details, company information and documents are reused across all offers. Update them here once.",
+    userProfileEyebrow: "Your details", userProfileTitle: "User profile", userProfileHint: "Used by the OfferPSP team to contact you",
+    roleTitle: "Job title", phone: "Phone", saveUserProfile: "Save my details", userProfileSaved: "User details saved.",
     openPersistentProfile: "Open company profile and documents", brandName: "Brand name", legalName: "Legal name",
     registrationNumber: "Registration number", registrationJurisdiction: "Registration country", registeredAddress: "Registered address",
     operatingAddress: "Operating address", companyWebsite: "Company website", companyDescription: "Company summary",
@@ -270,7 +274,8 @@ const ids = [
   "companyProfileName", "companyProfileLegalName", "companyRegistrationNumber", "companyRegistrationJurisdiction",
   "companyRegisteredAddress", "companyOperatingAddress", "companyWebsiteUrl", "companyLicenseStatus",
   "companyLicenseJurisdiction", "companyLicenseNumber", "companyDescription", "companyProfileStatus",
-  "companyDocumentForm", "companyDocumentType", "companyDocumentTitle", "companyDocumentExpiry", "companyDocumentFile",
+  "userProfileForm", "userProfileName", "userProfileRole", "userProfileEmail", "userProfileTelegram", "userProfilePhone", "userProfileStatus",
+  "companyDocumentVault", "companyDocumentForm", "companyDocumentType", "companyDocumentTitle", "companyDocumentExpiry", "companyDocumentFile",
   "companyDocumentNote", "companyDocumentStatus", "companyDocumentList",
   "newRequestDialog", "newRequestForm", "newRequestName", "newRequestEmail", "newRequestCompany", "newRequestCompanyUrl",
   "newRequestVertical", "newRequestVolume", "newRequestGeos", "newRequestMethods", "newRequestTelegram", "newRequestDetails",
@@ -502,10 +507,9 @@ function formatFileSize(value) {
 }
 
 function renderCompanyWorkspace() {
-  const workspace = state.companyWorkspace;
-  const profile = workspace?.organization;
-  elements.companyPersistentSection.classList.toggle("is-hidden", !profile);
-  if (!profile) return;
+  const workspace = state.companyWorkspace || { organization: null, documents: [], profile_completion: 0 };
+  const profile = workspace.organization || { verification_status: "unverified", license_status: "unknown" };
+  elements.companyPersistentSection.classList.remove("is-hidden");
   const verificationKey = COMPANY_VERIFICATION_KEYS[profile.verification_status] || "verificationUnverified";
   elements.companyVerification.textContent = t(verificationKey);
   elements.companyVerification.className = `status-pill company-verification status-${profile.verification_status || "unverified"}`;
@@ -521,6 +525,7 @@ function renderCompanyWorkspace() {
   elements.companyLicenseJurisdiction.value = profile.license_jurisdiction || "";
   elements.companyLicenseNumber.value = profile.license_number || "";
   elements.companyDescription.value = profile.description || "";
+  elements.companyDocumentVault.classList.toggle("is-hidden", !profile.id);
   const documents = list(workspace.documents).filter((document) => document.status !== "archived");
   elements.companyDocumentList.innerHTML = documents.length ? documents.map((document) => `
     <article class="company-document-card">
@@ -536,6 +541,15 @@ function renderCompanyWorkspace() {
         <button type="button" class="text-button danger" data-company-document-archive="${escapeHtml(document.id)}">${escapeHtml(t("archiveDocument"))}</button>
       </div>
     </article>`).join("") : `<p class="status">${escapeHtml(t("noCompanyDocuments"))}</p>`;
+}
+
+function renderUserProfile() {
+  const metadata = state.user?.user_metadata || {};
+  elements.userProfileName.value = metadata.full_name || metadata.name || state.profile?.contact_name || "";
+  elements.userProfileRole.value = metadata.role_title || "";
+  elements.userProfileEmail.value = state.user?.email || "";
+  elements.userProfileTelegram.value = metadata.telegram || state.profile?.telegram || "";
+  elements.userProfilePhone.value = metadata.phone || "";
 }
 
 function setLanguage(language) {
@@ -579,9 +593,13 @@ function renderWorkspace() {
     elements.agentBanner.removeAttribute("style");
   }
 
-  elements.noRequestState.classList.toggle("is-hidden", state.requests.length > 0);
-  elements.workspaceView.classList.toggle("is-hidden", state.requests.length === 0);
-  if (!state.requests.length) return;
+  const hasRequests = state.requests.length > 0;
+  elements.noRequestState.classList.toggle("is-hidden", hasRequests);
+  elements.workspaceView.classList.remove("is-hidden");
+  elements.workspaceView.classList.toggle("profile-only", !hasRequests);
+  renderUserProfile();
+  renderCompanyWorkspace();
+  if (!hasRequests) return;
 
   const portfolioNeedle = state.portfolioQuery.trim().toLowerCase();
   const visibleRequests = state.requests.filter((request) => !portfolioNeedle || [
@@ -883,6 +901,16 @@ async function selectRequest(leadId) {
     ]);
     state.profile = profileResult.error ? null : profileResult.data;
     state.companyWorkspace = companyResult.error ? null : companyResult.data;
+  } else {
+    const merchant = state.organizations.find((organization) => organization.organization_type === "merchant");
+    if (merchant) {
+      const companyResult = await supabase.rpc("get_offerpsp_company_workspace_by_organization", {
+        p_organization_id: merchant.organization_id,
+      });
+      state.companyWorkspace = companyResult.error ? null : companyResult.data;
+    } else {
+      state.companyWorkspace = { organization: null, documents: [], profile_completion: 0 };
+    }
   }
   renderWorkspace();
 }
@@ -917,7 +945,7 @@ function openNewRequestDialog() {
   elements.newRequestEmail.value = state.user.email || "";
   elements.newRequestCompany.value = state.lead?.company || companyProfile?.name || merchantOrganization?.name || "";
   elements.newRequestCompanyUrl.value = companyProfile?.website_url || state.profile?.company_url || "";
-  elements.newRequestTelegram.value = state.profile?.telegram || "";
+  elements.newRequestTelegram.value = state.profile?.telegram || state.user.user_metadata?.telegram || "";
   const currentVertical = state.lead?.vertical || state.profile?.vertical || "";
   if ([...elements.newRequestVertical.options].some((option) => option.value === currentVertical)) {
     elements.newRequestVertical.value = currentVertical;
@@ -1083,13 +1111,48 @@ elements.companyDocumentFile.addEventListener("change", () => {
   }
 });
 
+elements.userProfileForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!elements.userProfileForm.reportValidity()) return;
+  const button = elements.userProfileForm.querySelector('button[type="submit"]');
+  setLoading(button, true, t("saving"));
+  setStatus(elements.userProfileStatus);
+  const { data, error } = await supabase.auth.updateUser({
+    data: {
+      full_name: elements.userProfileName.value.trim(),
+      role_title: elements.userProfileRole.value.trim() || null,
+      telegram: elements.userProfileTelegram.value.trim() || null,
+      phone: elements.userProfilePhone.value.trim() || null,
+    },
+  });
+  setLoading(button, false);
+  if (error || !data.user) {
+    setStatus(elements.userProfileStatus, friendlyError(error, state.language === "ru" ? "Не удалось сохранить данные пользователя." : "Could not save the user profile."), "error");
+    return;
+  }
+  state.user = data.user;
+  renderUserProfile();
+  setStatus(elements.userProfileStatus, t("userProfileSaved"), "success");
+});
+
 elements.companyProfileForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const organizationId = state.companyWorkspace?.organization?.id;
-  if (!organizationId || !state.lead) return;
+  if (!elements.companyProfileForm.reportValidity()) return;
+  let organizationId = state.companyWorkspace?.organization?.id;
   const button = elements.companyProfileForm.querySelector('button[type="submit"]');
   setLoading(button, true, t("saving"));
   setStatus(elements.companyProfileStatus);
+  if (!organizationId) {
+    const initialized = await supabase.rpc("ensure_offerpsp_my_merchant_profile", {
+      p_name: elements.companyProfileName.value.trim(),
+    });
+    if (initialized.error || !initialized.data) {
+      setLoading(button, false);
+      setStatus(elements.companyProfileStatus, friendlyError(initialized.error, state.language === "ru" ? "Не удалось создать профиль компании." : "Could not create the company profile."), "error");
+      return;
+    }
+    organizationId = initialized.data;
+  }
   const payload = {
     name: elements.companyProfileName.value.trim(),
     legal_name: elements.companyProfileLegalName.value.trim(),
@@ -1106,7 +1169,8 @@ elements.companyProfileForm.addEventListener("submit", async (event) => {
   const { error } = await supabase.rpc("save_offerpsp_company_profile", { p_organization_id: organizationId, p_payload: payload });
   setLoading(button, false);
   if (error) { setStatus(elements.companyProfileStatus, friendlyError(error, state.language === "ru" ? "Не удалось сохранить профиль компании." : "Could not save the company profile."), "error"); return; }
-  await selectRequest(state.lead.lead_id);
+  await loadWorkspace(state.lead?.lead_id || null);
+  elements.companyProfileEditor.open = true;
   setStatus(elements.companyProfileStatus, t("companyProfileSaved"), "success");
 });
 
@@ -1114,7 +1178,7 @@ elements.companyDocumentForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const organizationId = state.companyWorkspace?.organization?.id;
   const file = elements.companyDocumentFile.files?.[0];
-  if (!organizationId || !file || !state.lead) return;
+  if (!organizationId || !file) return;
   if (file.size > 10 * 1024 * 1024) {
     setStatus(elements.companyDocumentStatus, state.language === "ru" ? "Файл превышает лимит 10 МБ." : "The file exceeds the 10 MB limit.", "error");
     return;
@@ -1158,7 +1222,7 @@ elements.companyDocumentForm.addEventListener("submit", async (event) => {
   delete elements.companyDocumentForm.dataset.pendingDocumentId;
   delete elements.companyDocumentForm.dataset.pendingStoragePath;
   elements.companyDocumentForm.reset();
-  await selectRequest(state.lead.lead_id);
+  await loadWorkspace(state.lead?.lead_id || null);
   elements.companyProfileEditor.open = true;
   setStatus(elements.companyDocumentStatus, t("documentUploaded"), "success");
 });

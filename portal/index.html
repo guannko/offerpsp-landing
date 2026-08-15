@@ -9,7 +9,7 @@
   <link rel="icon" href="/brand/offerpsp-favicon-32.png?v=20260816-1" type="image/png" sizes="32x32">
   <link rel="icon" href="/brand/offerpsp-favicon-48.png?v=20260816-1" type="image/png" sizes="48x48">
   <link rel="apple-touch-icon" href="/brand/offerpsp-apple-touch-icon-180.png?v=20260816-1" sizes="180x180">
-  <link rel="stylesheet" href="/portal/styles.css?v=20260816-1">
+  <link rel="stylesheet" href="/portal/styles.css?v=20260816-2">
 </head>
 <body>
   <div class="ambient" aria-hidden="true"></div>
@@ -24,8 +24,8 @@
         </div>
       </div>
       <p class="eyebrow" data-i18n="workspace">Платёжный кабинет</p>
-      <h1 data-i18n="authTitle">Ваши платёжные задачи — в одном месте.</h1>
-      <p class="auth-copy" data-i18n="authCopy">Войдите с рабочим email из заявки OfferPSP.</p>
+      <h1 data-i18n="authTitle">Ваши платёжные офферы — в одном месте.</h1>
+      <p class="auth-copy" data-i18n="authCopy">Войдите с рабочим email вашего аккаунта OfferPSP.</p>
       <form id="loginForm">
         <label><span data-i18n="workEmail">Рабочий email</span><input id="emailInput" type="email" autocomplete="email" required placeholder="you@company.com"></label>
         <label><span data-i18n="password">Пароль</span><input id="passwordInput" type="password" autocomplete="current-password" placeholder="••••••••"></label>
@@ -43,8 +43,8 @@
         <a class="brand portal-sidebar-brand" href="/" aria-label="OfferPSP"><img class="brand-logo" src="/brand/offerpsp-logo-horizontal-transparent.png" alt="OfferPSP"></a>
         <nav class="portal-sidebar-nav">
           <a class="active" href="#workspaceTop"><span aria-hidden="true">⌂</span><strong data-i18n="navOverview">Обзор</strong></a>
-          <a href="#workspaceView"><span aria-hidden="true">▤</span><strong data-i18n="navRequests">Платёжные задачи</strong></a>
-          <a href="#companyPersistentSection"><span aria-hidden="true">◇</span><strong data-i18n="navDocuments">Документы</strong></a>
+          <a href="#workspaceView"><span aria-hidden="true">▤</span><strong data-i18n="navRequests">Офферы</strong></a>
+          <a href="#companyPersistentSection"><span aria-hidden="true">◇</span><strong data-i18n="navDocuments">Профиль</strong></a>
           <a href="#shortlistSection"><span aria-hidden="true">⇄</span><strong data-i18n="navRoutes">Маршруты</strong></a>
           <a href="#conversationSection"><span aria-hidden="true">◌</span><strong data-i18n="navConversations">Диалоги</strong></a>
         </nav>
@@ -75,16 +75,16 @@
         <div class="workspace-identity">
           <p class="eyebrow" data-i18n="workspace">Платёжный кабинет</p>
           <h2 data-i18n="workspaceTitle">Платёжные подключения</h2>
-          <p data-i18n="workspaceCopy">Заявки, документы, варианты и связь с OfferPSP — в одном защищённом кабинете.</p>
+          <p data-i18n="workspaceCopy">Офферы, документы, варианты и связь с OfferPSP — в одном защищённом кабинете.</p>
         </div>
         <div class="workspace-actions">
           <button class="button secondary" type="button" data-open-support data-i18n="getSupport">Связаться с командой</button>
-          <button class="button primary" type="button" data-open-new-request data-i18n="newRequest">Новая платёжная задача</button>
+          <button class="button primary" type="button" data-open-new-request data-i18n="newRequest">Сформировать оффер</button>
         </div>
           </section>
 
           <section id="workspaceStats" class="stats-grid">
-        <article><div class="stat-icon">01</div><div><span id="activeRequestCount">0</span><small data-i18n="activeRequests">Активные задачи</small><em data-i18n="activeRequestsHint">В работе у команды</em></div></article>
+        <article><div class="stat-icon">01</div><div><span id="activeRequestCount">0</span><small data-i18n="activeRequests">Активные офферы</small><em data-i18n="activeRequestsHint">В работе у команды</em></div></article>
         <article><div class="stat-icon">02</div><div><span id="availableOptionCount">0</span><small data-i18n="availableOptions">Варианты к выбору</small><em data-i18n="availableOptionsHint">Готовы к вашему решению</em></div></article>
         <article><div class="stat-icon">03</div><div><span id="liveConnectionCount">0</span><small data-i18n="liveConnections">Подключения и знакомства</small><em data-i18n="liveConnectionsHint">Активные этапы с PSP</em></div></article>
           </section>
@@ -95,11 +95,11 @@
         <article class="empty-primary">
           <div class="empty-primary-copy">
             <span class="workspace-badge" data-i18n="startHere">Начните здесь</span>
-            <h2 data-i18n="noRequestTitle">Создайте первую платёжную задачу</h2>
+            <h2 data-i18n="noRequestTitle">Сформируйте первый платёжный оффер</h2>
             <p data-i18n="noRequestCopy">Укажите GEO, методы, валюты и объём. Команда проверит профиль, подготовит подходящие маршруты и будет вести процесс в этом кабинете.</p>
           </div>
           <div class="empty-primary-actions">
-            <button class="button primary" type="button" data-open-new-request data-i18n="createRequest">Создать задачу</button>
+            <button class="button primary" type="button" data-open-new-request data-i18n="createRequest">Сформировать оффер</button>
             <span data-i18n="requestTimeHint">Обычно занимает 3–5 минут</span>
           </div>
         </article>
@@ -108,7 +108,7 @@
           <article class="onboarding-card">
             <p class="eyebrow" data-i18n="processTitle">Как проходит работа</p>
             <ol class="process-list">
-              <li><span>1</span><div><strong data-i18n="processStepOne">Запрос и профиль</strong><small data-i18n="processStepOneCopy">Фиксируем задачу и недостающие данные.</small></div></li>
+              <li><span>1</span><div><strong data-i18n="processStepOne">Оффер и профиль</strong><small data-i18n="processStepOneCopy">Фиксируем требования и недостающие данные.</small></div></li>
               <li><span>2</span><div><strong data-i18n="processStepTwo">Проверка и подбор</strong><small data-i18n="processStepTwoCopy">Сравниваем только подходящие маршруты.</small></div></li>
               <li><span>3</span><div><strong data-i18n="processStepThree">Решение и знакомство</strong><small data-i18n="processStepThreeCopy">Передаём досье PSP после вашего выбора.</small></div></li>
             </ol>
@@ -127,7 +127,7 @@
           <article id="workspaceSupport" class="onboarding-card support-card">
             <p class="eyebrow" data-i18n="supportTitle">Поддержка</p>
             <h3 data-i18n="supportHeading">Нужна помощь с формулировкой запроса?</h3>
-            <p data-i18n="supportCopy">Напишите команде OfferPSP. Поможем собрать требования до отправки задачи.</p>
+            <p data-i18n="supportCopy">Напишите команде OfferPSP. Поможем собрать требования до формирования оффера.</p>
             <div class="support-actions">
               <a href="https://t.me/Brain_Index" target="_blank" rel="noopener noreferrer">Telegram ↗</a>
               <a href="mailto:bizdev@offerpsp.com">bizdev@offerpsp.com</a>
@@ -139,16 +139,16 @@
           <div id="workspaceView" class="workspace-grid is-hidden">
         <aside class="request-rail">
           <div class="rail-head">
-            <div><p class="eyebrow" data-i18n="requests">Задачи</p><h2 data-i18n="yourRequests">Ваши запросы</h2></div>
+            <div><p class="eyebrow" data-i18n="requests">Офферы</p><h2 data-i18n="yourRequests">Ваши офферы</h2></div>
             <button type="button" class="rail-add" data-open-new-request aria-label="New request">+</button>
           </div>
-          <input id="portfolioSearch" class="portfolio-search" type="search" data-i18n-placeholder="searchPortfolio" placeholder="Мерч, GEO, статус…" autocomplete="off" aria-label="Поиск по платёжным задачам">
+          <input id="portfolioSearch" class="portfolio-search" type="search" data-i18n-placeholder="searchPortfolio" placeholder="Мерч, GEO, статус…" autocomplete="off" aria-label="Поиск по платёжным офферам">
           <p id="portfolioResult" class="portfolio-result"></p>
           <div id="requestList" class="request-list"></div>
         </aside>
 
         <div id="requestView" class="request-content">
-          <nav class="request-nav" aria-label="Разделы платёжной задачи">
+          <nav class="request-nav" aria-label="Разделы платёжного оффера">
             <a href="#companyPersistentSection" data-i18n="navCompany">Компания</a>
             <a href="#dossierSection" data-i18n="navDossier">Досье</a>
             <a href="#shortlistSection" data-i18n="navOptions">Варианты</a>
@@ -157,7 +157,7 @@
 
           <section class="hero-card">
             <div>
-              <p class="eyebrow" data-i18n="selectedRequest">Выбранная задача</p>
+              <p class="eyebrow" data-i18n="selectedRequest">Выбранный оффер</p>
               <h2 id="companyName">Payment request</h2>
               <p id="requestMeta" class="hero-copy"></p>
             </div>
@@ -176,10 +176,22 @@
 
           <section id="companyPersistentSection" class="section-block company-profile-section">
             <div class="section-head">
-              <div><p class="eyebrow" data-i18n="companyCenter">Компания</p><h2 data-i18n="companyCenterTitle">Постоянный профиль компании</h2></div>
+              <div><p class="eyebrow" data-i18n="companyCenter">Профиль мерча</p><h2 data-i18n="companyCenterTitle">Пользователь и компания</h2></div>
               <div class="company-profile-meta"><span id="companyVerification" class="status-pill"></span><strong id="companyProfileProgress">0%</strong></div>
             </div>
-            <p class="section-intro" data-i18n="companyCenterExplanation">Эти реквизиты и документы используются во всех платёжных задачах. Обновите их один раз — повторно заполнять анкету не придётся.</p>
+            <p class="section-intro" data-i18n="companyCenterExplanation">Контактные данные, реквизиты и документы используются во всех офферах. Обновите их здесь один раз.</p>
+            <div class="account-profile-card">
+              <div class="document-vault-head"><div><p class="eyebrow" data-i18n="userProfileEyebrow">Ваши данные</p><h3 data-i18n="userProfileTitle">Профиль пользователя</h3></div><small data-i18n="userProfileHint">Для связи с командой OfferPSP</small></div>
+              <form id="userProfileForm" class="client-dossier-form user-profile-form">
+                <label><span data-i18n="contactName">Контактное лицо</span><input id="userProfileName" type="text" autocomplete="name" required></label>
+                <label><span data-i18n="roleTitle">Должность</span><input id="userProfileRole" type="text" autocomplete="organization-title"></label>
+                <label><span data-i18n="workEmail">Рабочий email</span><input id="userProfileEmail" type="email" autocomplete="email" readonly></label>
+                <label><span>Telegram</span><input id="userProfileTelegram" type="text" placeholder="@username"></label>
+                <label><span data-i18n="phone">Телефон</span><input id="userProfilePhone" type="tel" autocomplete="tel"></label>
+                <button class="button secondary" type="submit" data-i18n="saveUserProfile">Сохранить мои данные</button>
+              </form>
+              <p id="userProfileStatus" class="status" role="status" aria-live="polite"></p>
+            </div>
             <details id="companyProfileEditor" class="dossier-editor">
               <summary data-i18n="openPersistentProfile">Открыть профиль и документы компании</summary>
               <form id="companyProfileForm" class="client-dossier-form company-profile-form">
@@ -198,7 +210,7 @@
               </form>
               <p id="companyProfileStatus" class="status" role="status" aria-live="polite"></p>
 
-              <div class="document-vault">
+              <div id="companyDocumentVault" class="document-vault">
                 <div class="document-vault-head"><div><p class="eyebrow" data-i18n="documentVault">Документы</p><h3 data-i18n="documentVaultTitle">Приватное хранилище</h3></div><small data-i18n="documentVaultLimit">PDF, изображения, Word или Excel · до 10 МБ</small></div>
                 <form id="companyDocumentForm" class="document-upload-form">
                   <label><span data-i18n="documentType">Тип документа</span><select id="companyDocumentType"><option value="license" data-i18n="documentLicense">Лицензия</option><option value="corporate" data-i18n="documentCorporate">Корпоративный документ</option><option value="ownership" data-i18n="documentOwnership">Структура владения</option><option value="kyb">KYB</option><option value="compliance">Compliance</option><option value="financial" data-i18n="documentFinancial">Финансовый документ</option><option value="processing_statement" data-i18n="documentProcessing">Processing statement</option><option value="contract" data-i18n="documentContract">Договор</option><option value="other" data-i18n="documentOther">Другое</option></select></label>
@@ -292,9 +304,9 @@
     <div class="dialog-shell">
       <header class="dialog-head">
         <div>
-          <p class="eyebrow" data-i18n="newRequestEyebrow">Новая задача</p>
-          <h2 id="newRequestTitle" data-i18n="newRequestTitle">Создать платёжную задачу</h2>
-          <p data-i18n="newRequestIntro">Опишите новое GEO, метод или проблему с действующим подключением. Профиль компании останется связан с этой задачей.</p>
+          <p class="eyebrow" data-i18n="newRequestEyebrow">Новый оффер</p>
+          <h2 id="newRequestTitle" data-i18n="newRequestTitle">Сформировать платёжный оффер</h2>
+          <p data-i18n="newRequestIntro">Опишите нужные GEO, методы и условия. Профиль компании будет связан с этим оффером.</p>
         </div>
         <button class="dialog-close" type="button" data-close-new-request aria-label="Close">×</button>
       </header>
@@ -309,13 +321,13 @@
         <label class="dialog-wide"><span data-i18n="targetGeos">Целевые GEO</span><input id="newRequestGeos" type="text" maxlength="2000" placeholder="IN, BR, MX" required></label>
         <label><span data-i18n="paymentMethods">Платёжные методы</span><input id="newRequestMethods" type="text" maxlength="1000" placeholder="Cards, UPI, bank transfer"></label>
         <label><span>Telegram</span><input id="newRequestTelegram" type="text" maxlength="100" placeholder="@username"></label>
-        <label class="dialog-wide"><span data-i18n="requestDetails">Что должна решить новая задача?</span><textarea id="newRequestDetails" rows="4" maxlength="4000" data-i18n-placeholder="requestDetailsPlaceholder" placeholder="Текущий процессинг, ограничения, сроки или конкретная проблема…"></textarea></label>
-        <label class="request-consent dialog-wide"><input id="newRequestConsent" type="checkbox" required><span><span data-i18n="newRequestConsent">Разрешаю OfferPSP использовать эти данные для оценки запроса и связи по подходящим PSP.</span> <a href="/privacy.html" target="_blank" rel="noopener noreferrer" data-i18n="privacyNotice">Политика конфиденциальности</a>.</span></label>
+        <label class="dialog-wide"><span data-i18n="requestDetails">Дополнительные требования к офферу</span><textarea id="newRequestDetails" rows="4" maxlength="4000" data-i18n-placeholder="requestDetailsPlaceholder" placeholder="Текущий процессинг, ограничения, сроки или конкретная проблема…"></textarea></label>
+        <label class="request-consent dialog-wide"><input id="newRequestConsent" type="checkbox" required><span><span data-i18n="newRequestConsent">Разрешаю OfferPSP использовать эти данные для формирования оффера и связи по подходящим PSP.</span> <a href="/privacy.html" target="_blank" rel="noopener noreferrer" data-i18n="privacyNotice">Политика конфиденциальности</a>.</span></label>
         <input id="newRequestWebsiteUrl" class="honeypot-field" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
         <footer class="dialog-actions dialog-wide">
           <p id="newRequestStatus" class="status" role="status" aria-live="polite"></p>
           <button class="button secondary" type="button" data-close-new-request data-i18n="cancel">Отмена</button>
-          <button id="newRequestSubmit" class="button primary" type="submit" data-i18n="submitRequest">Создать задачу</button>
+          <button id="newRequestSubmit" class="button primary" type="submit" data-i18n="submitRequest">Сформировать оффер</button>
         </footer>
       </form>
     </div>
@@ -347,6 +359,6 @@
 
   <div id="portalToast" class="portal-toast is-hidden" role="status" aria-live="polite"></div>
 
-  <script type="module" src="/portal/app.js?v=20260816-1"></script>
+  <script type="module" src="/portal/app.js?v=20260816-2"></script>
 </body>
 </html>
