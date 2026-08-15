@@ -1244,6 +1244,17 @@ stay isolated behind feature modes until their own verification is complete.
 - [ ] Partner-reported or PSP-API processing volume and realized OfferPSP margin by PSP and route;
   OfferPSP must not proxy merchant payment traffic merely to collect analytics.
 
+### Client portal support dialog — verified 2026-08-15
+
+- [x] Restore `Связаться с командой` as an authenticated in-portal dialog instead of redirecting to
+  the user's mail client.
+- [x] Add one general support conversation per portal account, independent of payment requests, with
+  owner-scoped RLS and the existing verified Telegram notification/reply bridge.
+- [x] Verify the empty-account production state with `yandoodle2@gmail.com`: the dialog opens, loads
+  its history and exposes the message composer. Cross-account RLS returned zero visible messages.
+- [x] Deploy production release `dpl_AsyvopJuuMcQZrFfNTxfSVipH7y1` and retain email/Telegram only as
+  fallback channels inside the dialog.
+
 ### P2 — Search and PSP acquisition
 
 - [ ] `Become an OfferPSP partner` funnel.
