@@ -145,17 +145,50 @@ export default function SeoGeoPage() {
   const [startingAudit, setStartingAudit] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshNotice, setRefreshNotice] = useState<string | null>(null);
+  const [liveStatus, setLiveStatus] = useState<"connecting" | "live" | "fallback">("connecting");
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
 
   const load = useCallback(async (background = false) => {
     if (!background) setLoading(true);
     setError(null);
     const { data, error: loadError } = await supabase.rpc("get_offerpsp_seo_geo_analytics");
     if (loadError) setError(loadError.message);
-    else setPayload((data || {}) as AnalyticsPayload);
+    else {
+      setPayload((data || {}) as AnalyticsPayload);
+      setLastSyncedAt(new Date().toISOString());
+    }
     setLoading(false);
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    const refresh = () => { void load(true); };
+    const channel = supabase
+      .channel("offerpsp-seo-geo-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "offerpsp_seo_audit_runs" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "offerpsp_technical_audits" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "offerpsp_growth_analytics_snapshots" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "offerpsp_leads" }, refresh)
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") setLiveStatus("live");
+        else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") setLiveStatus("fallback");
+      });
+
+    const fallbackInterval = window.setInterval(refresh, 30_000);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+
+    return () => {
+      window.clearInterval(fallbackInterval);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      void supabase.removeChannel(channel);
+    };
+  }, [load]);
 
   const auditRun = payload?.audit_run || {};
   const auditActive = auditRun.status === "queued" || auditRun.status === "running";
@@ -219,7 +252,7 @@ export default function SeoGeoPage() {
       eyebrow="Growth intelligence"
       title="SEO / GEO и источники лидов"
       description="Трафик и атрибуция собраны из production-данных. Каждый аудит заново запускает SiteOne, после чего наш read-only AI-агент анализирует страницы и расставляет приоритеты."
-      action={<button onClick={() => void startAudit()} disabled={startingAudit || auditActive} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50">{startingAudit ? "Запускаю…" : auditActive ? "Аудит выполняется…" : "Запустить полный аудит"}</button>}
+      action={<div className="flex flex-col items-end gap-2"><button onClick={() => void startAudit()} disabled={startingAudit || auditActive} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50">{startingAudit ? "Запускаю…" : auditActive ? "Аудит выполняется…" : "Запустить полный аудит"}</button><span className={`text-xs font-medium ${liveStatus === "live" ? "text-success-600 dark:text-success-400" : "text-gray-400"}`}>{liveStatus === "live" ? "● Live" : liveStatus === "fallback" ? "Автообновление · 30 сек" : "Подключаю live…"}{lastSyncedAt ? ` · ${dateTime(lastSyncedAt)}` : ""}</span></div>}
     />
     {refreshNotice && <div className="mb-5 rounded-xl border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-700 dark:border-success-500/20 dark:bg-success-500/10 dark:text-success-300">{refreshNotice}</div>}
 
