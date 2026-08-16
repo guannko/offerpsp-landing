@@ -1084,29 +1084,52 @@
     }
 
     .contact {
-      padding-top: 80px;
-      background:
-        linear-gradient(180deg, transparent, rgba(255,77,122,.035));
+      padding-block: 72px;
+      background: linear-gradient(180deg, transparent, rgba(255,77,122,.035));
     }
 
-    .contact-layout {
+    .request-strip {
+      padding: clamp(30px, 5vw, 58px);
       display: grid;
-      grid-template-columns: .7fr 1.3fr;
-      gap: clamp(50px, 8vw, 110px);
-      align-items: start;
+      grid-template-columns: 1fr auto;
+      gap: 36px;
+      align-items: center;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-lg);
+      background:
+        linear-gradient(115deg, rgba(255,77,122,.11), transparent 48%),
+        var(--panel);
+      box-shadow: var(--shadow);
     }
 
-    .contact-copy {
-      position: sticky;
-      top: 118px;
+    .request-strip h2 {
+      max-width: 780px;
+      margin: 8px 0 12px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(36px, 5vw, 62px);
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: -.055em;
     }
 
-    .contact-side-note {
-      margin-top: 28px;
-      padding-top: 24px;
-      border-top: 1px solid var(--line);
-      color: #818694;
-      font-size: 13px;
+    .request-strip p {
+      max-width: 720px;
+      margin: 0;
+      color: var(--paper-muted);
+    }
+
+    .request-strip-actions {
+      min-width: 240px;
+      display: grid;
+      gap: 14px;
+      justify-items: stretch;
+    }
+
+    .request-strip-note {
+      margin: 0;
+      color: #777d8b;
+      font-size: 11px;
+      text-align: center;
     }
 
     .telegram-link {
@@ -1125,15 +1148,65 @@
       text-underline-offset: 4px;
     }
 
-    .lead-form {
-      padding: clamp(24px, 5vw, 46px);
+    .lead-dialog {
+      width: min(760px, calc(100% - 32px));
+      max-height: min(880px, calc(100dvh - 32px));
+      margin: auto;
+      padding: 0;
+      overflow: auto;
       border: 1px solid var(--line-strong);
       border-radius: var(--radius-lg);
+      color: var(--paper);
+      background: transparent;
+      box-shadow: 0 30px 90px rgba(0,0,0,.7);
+    }
+
+    .lead-dialog::backdrop {
+      background: rgba(3,5,11,.82);
+      backdrop-filter: blur(10px);
+    }
+
+    .lead-dialog[open] {
+      animation: dialog-in .2s ease-out;
+    }
+
+    @keyframes dialog-in {
+      from { opacity: 0; transform: translateY(14px) scale(.985); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .dialog-close {
+      width: 40px;
+      height: 40px;
+      position: absolute;
+      z-index: 2;
+      top: 18px;
+      right: 18px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line-strong);
+      border-radius: 50%;
+      color: var(--paper-muted);
+      background: #111521;
+      cursor: pointer;
+      font-size: 22px;
+    }
+
+    .dialog-close:hover {
+      color: var(--paper);
+      border-color: rgba(255,77,122,.55);
+    }
+
+    .lead-form {
+      position: relative;
+      padding: clamp(24px, 5vw, 46px);
+      border: 0;
+      border-radius: inherit;
       background: var(--panel);
-      box-shadow: var(--shadow);
     }
 
     .form-head {
+      padding-right: 42px;
       margin-bottom: 30px;
       display: flex;
       align-items: flex-start;
@@ -1298,7 +1371,7 @@
     }
 
     .success-panel {
-      min-height: 430px;
+      min-height: 480px;
       display: none;
       place-items: center;
       text-align: center;
@@ -1333,6 +1406,10 @@
       max-width: 470px;
       margin: 0 auto;
       color: var(--paper-muted);
+    }
+
+    .success-panel .button {
+      margin-top: 28px;
     }
 
     .site-footer {
@@ -1402,8 +1479,7 @@
     @media (max-width: 1020px) {
       .hero-grid,
       .matching-layout,
-      .faq-layout,
-      .contact-layout {
+      .faq-layout {
         grid-template-columns: 1fr;
       }
 
@@ -1435,8 +1511,7 @@
         grid-template-columns: 1fr 1fr;
       }
 
-      .sticky-copy,
-      .contact-copy {
+      .sticky-copy {
         position: static;
       }
 
@@ -1450,6 +1525,14 @@
 
       .fit-card {
         grid-template-columns: 1fr;
+      }
+
+      .request-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .request-strip-actions {
+        width: min(100%, 340px);
       }
     }
 
@@ -1588,6 +1671,21 @@
         width: 100%;
       }
 
+      .lead-dialog {
+        width: calc(100% - 16px);
+        max-height: calc(100dvh - 16px);
+        border-radius: 18px;
+      }
+
+      .dialog-close {
+        top: 12px;
+        right: 12px;
+      }
+
+      .request-strip-actions {
+        width: 100%;
+      }
+
       .footer-top,
       .footer-bottom {
         grid-template-columns: 1fr;
@@ -1634,7 +1732,7 @@
         <li><a href="/portal/">Client login</a></li>
       </ul>
 
-      <a class="nav-cta" href="#request">Request a match</a>
+      <a class="nav-cta" href="#request" data-open-lead-modal>Request a match</a>
       <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false" aria-controls="navLinks" aria-label="Open navigation">
         <span></span>
       </button>
@@ -1651,7 +1749,7 @@
             We turn your operating profile into a focused shortlist of relevant payment partners — aligned to your GEOs, vertical, methods, volumes and risk model.
           </p>
           <div class="hero-actions">
-            <a class="button button-arrow" href="#request">Request a private match</a>
+            <a class="button button-arrow" href="#request" data-open-lead-modal>Request a private match</a>
             <a class="button button-secondary" href="#process">See how matching works</a>
           </div>
           <p class="hero-note">Your operating profile stays private and is reviewed by a specialist.</p>
@@ -1900,30 +1998,29 @@
     </section>
 
     <section class="contact" id="request">
-      <div class="container contact-layout">
-        <div class="contact-copy">
-          <div class="section-kicker reveal">Private request</div>
-          <h2 class="section-title reveal">Tell us what must work.</h2>
-          <p class="section-lead reveal">
-            Start with the operating facts. We will review the profile and contact you only when we understand the next useful step.
-          </p>
-          <div class="contact-side-note reveal">
-            Prefer a direct conversation?
-            <br>
-            <a class="telegram-link" href="https://t.me/Brain_Index" target="_blank" rel="noopener noreferrer">Open Telegram ↗</a>
-            <br><br>
-            Partnerships &amp; cooperation:
-            <br>
-            <a class="telegram-link" href="mailto:bizdev@offerpsp.com">bizdev@offerpsp.com</a>
+      <div class="container">
+        <div class="request-strip reveal">
+          <div>
+            <div class="section-kicker">Private request</div>
+            <h2>Start with a short merchant profile.</h2>
+            <p>Five operating facts are enough to begin. We will email you a secure link to confirm your address and open your private workspace.</p>
+          </div>
+          <div class="request-strip-actions">
+            <button class="button button-arrow" type="button" data-open-lead-modal>Request a private match</button>
+            <p class="request-strip-note">No password. About 2 minutes.</p>
           </div>
         </div>
+      </div>
+    </section>
 
-        <div class="lead-form reveal">
+    <dialog class="lead-dialog" id="leadDialog" aria-labelledby="leadDialogTitle">
+      <div class="lead-form">
+          <button class="dialog-close" id="closeLeadDialog" type="button" aria-label="Close request form">×</button>
           <form id="leadForm" novalidate>
             <div class="form-head">
               <div>
-                <h3>Merchant profile</h3>
-                <p>Required fields are marked with an asterisk.</p>
+                <h3 id="leadDialogTitle">Request a private match</h3>
+                <p>Complete the short profile. We will send your workspace link by email.</p>
               </div>
               <div class="form-badge">Private intake</div>
             </div>
@@ -1961,33 +2058,13 @@
                 </select>
               </div>
               <div class="field">
-                <label for="monthly_volume">Expected monthly volume <span>(optional)</span></label>
-                <select id="monthly_volume" name="monthly_volume">
-                  <option value="">Select range</option>
-                  <option value="Pre-launch">Pre-launch</option>
-                  <option value="Under €100k">Under €100k</option>
-                  <option value="€100k–€500k">€100k–€500k</option>
-                  <option value="€500k–€2m">€500k–€2m</option>
-                  <option value="€2m–€10m">€2m–€10m</option>
-                  <option value="€10m+">€10m+</option>
-                </select>
-              </div>
-              <div class="field field-full">
                 <label for="geos">Target GEOs *</label>
                 <input id="geos" name="geos" type="text" maxlength="2000" required placeholder="Countries or regions you need to cover">
               </div>
-              <div class="field">
-                <label for="methods">Required methods <span>(optional)</span></label>
-                <input id="methods" name="methods" type="text" maxlength="1000" placeholder="Cards, bank transfer, APMs, payouts…">
-              </div>
-              <div class="field">
-                <label for="telegram">Telegram <span>(optional)</span></label>
-                <input id="telegram" name="telegram" type="text" maxlength="100" placeholder="@username">
-              </div>
-              <div class="field field-full">
-                <label for="details">What must the new payment route solve? <span>(optional)</span></label>
-                <textarea id="details" name="details" maxlength="4000" placeholder="Current setup, licensing, constraints, timing or a specific problem…"></textarea>
-              </div>
+              <input name="monthly_volume" type="hidden" value="">
+              <input name="methods" type="hidden" value="">
+              <input name="telegram" type="hidden" value="">
+              <input name="details" type="hidden" value="">
               <div class="honeypot" aria-hidden="true">
                 <label for="website_url">Leave this field empty</label>
                 <input id="website_url" name="website_url" type="text" tabindex="-1" autocomplete="off">
@@ -2000,7 +2077,7 @@
             </label>
 
             <div class="form-footer">
-              <button class="button submit-button" id="submitButton" type="submit">Submit private request</button>
+              <button class="button submit-button" id="submitButton" type="submit">Submit and email my access link</button>
               <p class="form-status" id="formStatus" role="status" aria-live="polite"></p>
             </div>
           </form>
@@ -2008,13 +2085,13 @@
           <div class="success-panel" id="successPanel">
             <div>
               <div class="success-icon" aria-hidden="true">✓</div>
-              <h3>Request received.</h3>
-              <p>Your merchant profile has been stored for private review. We will use the contact details you provided if there is a clear next step.</p>
+              <h3 id="successTitle">Check your email.</h3>
+              <p id="successCopy">Your request is stored. Use the secure link we sent to confirm your email and open your private workspace.</p>
+              <a class="button" id="portalFallbackLink" href="/portal/" hidden>Open client login</a>
             </div>
           </div>
-        </div>
       </div>
-    </section>
+    </dialog>
   </main>
 
   <footer class="site-footer">
@@ -2044,8 +2121,15 @@
     </div>
   </footer>
 
-  <script>
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
     const LEAD_ENDPOINT = "https://annoris--n8n-make--xjvz9xynmzwk.code.run/webhook/offerpsp-lead-v1";
+    const supabase = createClient(
+      "https://xcizofpejsomjiflesbx.supabase.co",
+      "sb_publishable_8VDTb7EC6ZGATqgMZZgghA_95pAushW",
+      { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }
+    );
 
     const header = document.getElementById("siteHeader");
     const menuToggle = document.getElementById("menuToggle");
@@ -2054,6 +2138,12 @@
     const submitButton = document.getElementById("submitButton");
     const formStatus = document.getElementById("formStatus");
     const successPanel = document.getElementById("successPanel");
+    const successTitle = document.getElementById("successTitle");
+    const successCopy = document.getElementById("successCopy");
+    const portalFallbackLink = document.getElementById("portalFallbackLink");
+    const leadDialog = document.getElementById("leadDialog");
+    const closeLeadDialog = document.getElementById("closeLeadDialog");
+    let leadDialogTrigger = null;
 
     document.getElementById("year").textContent = new Date().getFullYear();
 
@@ -2077,6 +2167,41 @@
     });
 
     navLinks.querySelectorAll("a").forEach((link) => link.addEventListener("click", closeMenu));
+
+    const openLeadDialog = (trigger = null) => {
+      leadDialogTrigger = trigger;
+      closeMenu();
+      if (!leadDialog.open) leadDialog.showModal();
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#request`);
+      requestAnimationFrame(() => document.getElementById("name").focus());
+    };
+
+    const dismissLeadDialog = () => {
+      if (!leadDialog.open) return;
+      leadDialog.close();
+      if (window.location.hash === "#request") {
+        window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+      }
+      leadDialogTrigger?.focus();
+    };
+
+    document.querySelectorAll("[data-open-lead-modal]").forEach((trigger) => {
+      trigger.addEventListener("click", (event) => {
+        event.preventDefault();
+        openLeadDialog(trigger);
+      });
+    });
+
+    closeLeadDialog.addEventListener("click", dismissLeadDialog);
+    leadDialog.addEventListener("cancel", (event) => {
+      event.preventDefault();
+      dismissLeadDialog();
+    });
+    leadDialog.addEventListener("click", (event) => {
+      if (event.target === leadDialog) dismissLeadDialog();
+    });
+
+    if (window.location.hash === "#request") openLeadDialog();
 
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") closeMenu();
@@ -2244,7 +2369,7 @@
       };
 
       submitButton.disabled = true;
-      submitButton.textContent = "Sending…";
+      submitButton.textContent = "Submitting…";
       formStatus.textContent = "Securely submitting your profile…";
 
       try {
@@ -2265,13 +2390,39 @@
           throw new Error("Submission was not confirmed");
         }
 
+        formStatus.textContent = "Request received. Sending your secure access link…";
+
+        let accessLinkError = null;
+        try {
+          const { error } = await supabase.auth.signInWithOtp({
+            email: String(payload.work_email || "").trim(),
+            options: {
+              emailRedirectTo: `${window.location.origin}/portal/`,
+              shouldCreateUser: true,
+              data: {
+                full_name: String(payload.name || "").trim(),
+                company: String(payload.company || "").trim()
+              }
+            }
+          });
+          accessLinkError = error;
+        } catch (error) {
+          accessLinkError = error;
+        }
+
         leadForm.hidden = true;
         successPanel.classList.add("visible");
+
+        if (accessLinkError) {
+          successTitle.textContent = "Request received.";
+          successCopy.textContent = "Your request is stored, but we could not send the access link. Open client login and request a secure link with the same email.";
+          portalFallbackLink.hidden = false;
+        }
       } catch (error) {
         formStatus.classList.add("error");
         formStatus.textContent = "We could not confirm delivery. Please try again or contact us on Telegram.";
         submitButton.disabled = false;
-        submitButton.textContent = "Submit private request";
+        submitButton.textContent = "Submit and email my access link";
       }
     });
   </script>

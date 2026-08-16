@@ -21,8 +21,8 @@ const MESSAGE_REFRESH_INTERVAL_MS = 3000;
 const COPY = {
   ru: {
     workspace: "Платёжный кабинет", authTitle: "Ваши платёжные офферы — в одном месте.",
-    authCopy: "Войдите с рабочим email вашего аккаунта OfferPSP.", workEmail: "Рабочий email", password: "Пароль",
-    signIn: "Войти", continueGoogle: "Продолжить с Google", sendLoginLink: "Отправить безопасную ссылку", signOut: "Выйти",
+    authCopy: "Введите рабочий email. Мы отправим одноразовую ссылку в ваш существующий кабинет.", workEmail: "Рабочий email",
+    sendLoginLink: "Получить ссылку для входа", noAccount: "Ещё нет кабинета?", createFirstRequest: "Перейти к первому запросу", signOut: "Выйти",
     workspaceTitle: "Платёжные подключения",
     navOverview: "Обзор", navRequests: "Офферы", navDocuments: "Профиль",
     navRoutes: "Маршруты", navConversations: "Диалоги", secureWorkspace: "Защищённый кабинет",
@@ -85,9 +85,9 @@ const COPY = {
     stalenessUnavailable: "оффер больше недоступен", stalenessExpired: "срок действия истёк",
     stalenessNote: "Этот вариант изменился. Менеджер OfferPSP подготовит актуальную версию.",
     sharedAt: "Обновлено", noMessages: "Сообщений пока нет. Здесь сохраняется весь рабочий контекст.",
-    sent: "Сообщение отправлено.", notificationDelayed: "Сообщение сохранено, но уведомление менеджеру задерживается.", loginPassword: "Введите пароль или используйте безопасную ссылку.",
-    loginEmail: "Сначала введите рабочий email.", linkSent: "Ссылка отправлена. Проверьте почту.",
-    signingIn: "Входим…", sending: "Отправляем…", openingGoogle: "Открываем Google…", saving: "Сохраняем…",
+    sent: "Сообщение отправлено.", notificationDelayed: "Сообщение сохранено, но уведомление менеджеру задерживается.",
+    loginEmail: "Сначала введите рабочий email.", linkSent: "Ссылка отправлена. Проверьте почту — она откроет тот же кабинет.",
+    sending: "Отправляем…", saving: "Сохраняем…",
     dossierReadyMessage: "Оффер принят. Мы проверим досье перед отправкой PSP.", missingPrefix: "Нужно дополнить:",
     telegram: "Открыть Telegram", zoom: "Открыть Zoom", managedByAgent: "Агентский кабинет",
     managedClients: "мерчей под управлением", global: "Все GEO", validThrough: "Актуально до",
@@ -136,8 +136,8 @@ const COPY = {
   },
   en: {
     workspace: "Payment workspace", authTitle: "All your payment offers, in one place.",
-    authCopy: "Sign in with the work email used for your OfferPSP request.", workEmail: "Work email", password: "Password",
-    signIn: "Sign in", continueGoogle: "Continue with Google", sendLoginLink: "Send secure login link", signOut: "Sign out",
+    authCopy: "Enter your work email. We will send a one-time link to your existing workspace.", workEmail: "Work email",
+    sendLoginLink: "Email my sign-in link", noAccount: "No workspace yet?", createFirstRequest: "Submit your first request", signOut: "Sign out",
     workspaceTitle: "Payment connections",
     navOverview: "Overview", navRequests: "Offers", navDocuments: "Profile",
     navRoutes: "Matched routes", navConversations: "Conversations", secureWorkspace: "Secure workspace",
@@ -200,9 +200,9 @@ const COPY = {
     stalenessUnavailable: "offer no longer available", stalenessExpired: "offer expired",
     stalenessNote: "This option has changed. Your OfferPSP manager will prepare an updated version.",
     sharedAt: "Updated", noMessages: "No messages yet. The full working context stays here.", sent: "Message sent.", notificationDelayed: "Message saved, but the manager notification is delayed.",
-    loginPassword: "Enter a password or use a secure link.", loginEmail: "Enter your work email first.",
-    linkSent: "Secure link sent. Check your inbox.", signingIn: "Signing in…", sending: "Sending…",
-    openingGoogle: "Opening Google…", saving: "Saving…", dossierReadyMessage: "Request accepted. We will verify the dossier before PSP review.",
+    loginEmail: "Enter your work email first.",
+    linkSent: "Link sent. Check your inbox — it will open the same workspace.", sending: "Sending…",
+    saving: "Saving…", dossierReadyMessage: "Request accepted. We will verify the dossier before PSP review.",
     missingPrefix: "Please complete:", telegram: "Open Telegram", zoom: "Open Zoom", managedByAgent: "Agent workspace",
     managedClients: "managed merchants", global: "All GEOs", validThrough: "Valid through",
     completeProfile: "Complete profile", pspReviewProfile: "PSP review profile", companyDossier: "Company dossier",
@@ -265,7 +265,7 @@ const state = {
   language: "ru", portfolioQuery: "",
 };
 const ids = [
-  "authView", "portalView", "loginForm", "emailInput", "passwordInput", "googleLoginButton", "magicLinkButton",
+  "authView", "portalView", "loginForm", "emailInput", "magicLinkButton",
   "authStatus", "signOutButton", "userEmail", "noRequestState", "workspaceView", "requestList", "requestView", "portfolioSearch", "portfolioResult",
   "activeRequestCount", "availableOptionCount", "liveConnectionCount", "agentBanner", "companyName", "requestMeta",
   "statusPill", "nextActionTitle", "nextActionText", "dealSection", "dealList", "shortlistPending", "pendingTitle",
@@ -1277,29 +1277,12 @@ elements.clientDossierForm.addEventListener("submit", async (event) => {
 
 elements.loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const password = elements.passwordInput.value;
-  if (!password) { setStatus(elements.authStatus, t("loginPassword"), "error"); return; }
-  const button = elements.loginForm.querySelector('button[type="submit"]');
-  setLoading(button, true, t("signingIn"));
-  const { data, error } = await supabase.auth.signInWithPassword({ email: elements.emailInput.value.trim(), password });
-  setLoading(button, false);
-  if (error) { setStatus(elements.authStatus, friendlyAuthError(error), "error"); return; }
-  await enterPortal(data.session);
-});
-
-elements.magicLinkButton.addEventListener("click", async () => {
   const email = elements.emailInput.value.trim();
   if (!email) { setStatus(elements.authStatus, t("loginEmail"), "error"); return; }
   setLoading(elements.magicLinkButton, true, t("sending"));
-  const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: `${window.location.origin}/portal/`, shouldCreateUser: true } });
+  const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: `${window.location.origin}/portal/`, shouldCreateUser: false } });
   setLoading(elements.magicLinkButton, false);
   setStatus(elements.authStatus, error ? friendlyAuthError(error) : t("linkSent"), error ? "error" : "success");
-});
-
-elements.googleLoginButton.addEventListener("click", async () => {
-  setLoading(elements.googleLoginButton, true, t("openingGoogle"));
-  const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/portal/` } });
-  if (error) { setLoading(elements.googleLoginButton, false); setStatus(elements.authStatus, friendlyAuthError(error), "error"); }
 });
 
 elements.messageForm.addEventListener("submit", async (event) => {

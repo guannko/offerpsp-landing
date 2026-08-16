@@ -153,6 +153,19 @@ a { color: inherit; }
   line-height: 1.55;
 }
 
+.auth-request-note {
+  margin: 22px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.auth-request-note a {
+  color: var(--coral-soft);
+  font-weight: 750;
+  text-underline-offset: 3px;
+}
+
 form { display: grid; gap: 13px; }
 
 label {
