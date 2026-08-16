@@ -103,6 +103,10 @@ assert.match(htmlSource, /data-open-new-request/);
 for (const vertical of ["iGaming", "Forex"]) {
   const option = `<option value="${vertical}">${vertical}</option>`;
   assert.ok(htmlSource.includes(option), `Portal intake must include ${vertical}`);
+  assert.ok(!publicHtmlSource.includes(option), `Public intake must not expose ${vertical} by name`);
+}
+for (const vertical of ["Regulated digital platform", "Regulated financial platform"]) {
+  const option = `<option value="${vertical}">${vertical}</option>`;
   assert.ok(publicHtmlSource.includes(option), `Public intake must include ${vertical}`);
 }
 for (const vertical of ["Crypto", "Adult", "Nutra", "CBD"]) {
