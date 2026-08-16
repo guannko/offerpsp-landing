@@ -452,6 +452,10 @@ const renderPage = (page) => {
   const alternateLinks = (page.alternates || [])
     .map(([lang, href]) => `  <link rel="alternate" hreflang="${lang}" href="${href}">`)
     .join("\n");
+  const visibleAlternate = (page.alternates || []).find(([lang]) => lang !== language && lang !== "x-default");
+  const languageSwitch = visibleAlternate
+    ? `<a class="language-switch" href="${visibleAlternate[1]}" lang="${visibleAlternate[0]}" hreflang="${visibleAlternate[0]}" aria-label="${language === "ru" ? "Open English version" : "Открыть русскую версию"}">${visibleAlternate[0].toUpperCase()}</a>`
+    : "";
   const structuredData = JSON.stringify(buildStructuredData(page), null, 2).replaceAll("</", "<\\/");
   const points = page.points.map(([title, text], index) => `
             <article class="point" id="step-${index + 1}">
@@ -500,7 +504,7 @@ ${structuredData}
   <header class="site-header">
     <nav class="container nav" aria-label="${ui.primary}">
       <a class="brand" href="/" aria-label="${ui.homeLabel}"><span class="brand-mark" aria-hidden="true">OP</span><span>Offer<strong>PSP</strong></span></a>
-      <div class="nav-links"><a href="/psp-matching-process.html">${ui.how}</a><a href="/#request">${ui.privateRequest}</a><a class="button" href="/#request">${ui.requestMatch}</a></div>
+      <div class="nav-links"><a href="/psp-matching-process.html">${ui.how}</a><a href="/#request">${ui.privateRequest}</a>${languageSwitch}<a class="button" href="/#request">${ui.requestMatch}</a></div>
     </nav>
   </header>
   <main id="main">

@@ -95,6 +95,27 @@ a { color: inherit; }
 .nav-links a { text-decoration: none; }
 .nav-links a:hover, .nav-links a:focus-visible { color: var(--paper); }
 
+.nav-links .language-switch {
+  min-width: 42px;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--paper);
+  background: rgba(255,255,255,.04);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.nav-links .language-switch:hover,
+.nav-links .language-switch:focus-visible {
+  border-color: var(--coral);
+  background: rgba(255,75,119,.12);
+}
+
 .button {
   min-height: 48px;
   display: inline-flex;
@@ -276,6 +297,7 @@ details p { max-width: 760px; margin: -4px 40px 24px 0; color: var(--muted); }
   .hero-grid, .section-grid, .cta { grid-template-columns: 1fr; }
   .related-grid { grid-template-columns: 1fr 1fr; }
   .nav-links a:not(.button) { display: none; }
+  .nav-links a.language-switch { display: inline-flex; }
 }
 
 @media (max-width: 620px) {
@@ -285,4 +307,3 @@ details p { max-width: 760px; margin: -4px 40px 24px 0; color: var(--muted); }
   .checklist, .related-grid { grid-template-columns: 1fr; }
   .footer-grid { flex-direction: column; }
 }
-
