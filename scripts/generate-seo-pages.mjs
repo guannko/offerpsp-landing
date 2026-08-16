@@ -159,6 +159,125 @@ export const seoPages = [
     related: ["cross-border-payment-matching", "psp-for-marketplaces", "psp-matching-process"]
   },
   {
+    slug: "psp-for-forex",
+    title: "PSP Matching for Forex and Trading Platforms | OfferPSP",
+    description: "Private PSP matching for licensed forex brokers and trading platforms across cards, bank rails, local methods, payouts and multi-GEO operations.",
+    kicker: "Forex payment infrastructure",
+    heading: "PSP matching for licensed forex and trading platforms.",
+    lead: "Payment-provider appetite for trading businesses depends on the licence, entity, client GEOs, acquisition model, deposit and withdrawal flows and the controls around financial promotions. OfferPSP qualifies those facts before arranging a relevant provider introduction.",
+    boundary: "OfferPSP is a matching and introduction service, not a payment processor or investment firm. Provider availability, underwriting and commercial terms remain subject to independent review.",
+    sectionTitle: "What changes a forex PSP match",
+    sectionIntro: "A credible route starts with the regulated operating model and the complete customer funds flow, not only a processing-volume target.",
+    points: [
+      ["Licence and operating entity", "Regulator, authorised activities, contracting entity, trading brands and the markets where clients are accepted."],
+      ["Deposits and withdrawals", "Required cards, bank rails and local methods, withdrawal controls, currencies, payout timing and source-of-funds procedures."],
+      ["Client acquisition and risk", "Target client GEOs, financial-promotion controls, affiliates, expected disputes, fraud prevention and transaction monitoring."],
+      ["Commercial and technical fit", "Expected volume, average ticket, reserves, settlement, integration model, reconciliation and launch sequence."]
+    ],
+    checklistTitle: "Prepare the forex payment brief",
+    checklist: ["Licence and regulated entities", "Trading brands and product URLs", "Client and entity GEOs", "Deposit, withdrawal and currency flows", "Acquisition model and risk controls", "Volume, ticket size and launch timing"],
+    faqs: [
+      ["Can OfferPSP guarantee onboarding for a forex broker?", "No. We reduce avoidable mismatches, but each provider makes its own compliance, underwriting and commercial decision."],
+      ["Does one provider cover every forex market?", "Usually not. Coverage depends on the regulated entity, client location, method and currency, so multi-GEO businesses may need several compatible routes."],
+      ["Can an unlicensed trading business be matched?", "Provider availability is materially constrained where licensing or the lawful basis for offering the product is missing or unclear."],
+      ["Can the brief include both deposits and withdrawals?", "Yes. They are mapped as separate flows because a provider that accepts deposits may not support every required payout route."]
+    ],
+    areaServed: ["Europe", "United Kingdom", "CIS", "Central Asia", "Middle East"],
+    related: ["payment-provider-europe", "payment-provider-cis-central-asia", "high-risk-payment-provider"]
+  },
+  {
+    slug: "payment-provider-europe",
+    title: "Payment Provider Matching in Europe | OfferPSP",
+    description: "Payment provider matching for European merchants: EEA and UK coverage, cards, open banking, SEPA, local methods, currencies and settlement.",
+    kicker: "European payment coverage",
+    heading: "Match payment providers to your European operating model.",
+    lead: "Europe is not one payment market. Entity location, customer country, vertical, licensing, cards, open banking, SEPA and local payment behaviour determine which route is practical. OfferPSP compares those requirements before a qualified introduction.",
+    boundary: "Country coverage and method availability are profile-specific and can change. A provider listing Europe does not guarantee onboarding, local acquiring or commercial terms.",
+    sectionTitle: "Build the European route country by country",
+    sectionIntro: "The useful comparison is entity × customer GEO × method × currency × vertical—not a generic list of European PSPs.",
+    points: [
+      ["EEA, UK and entity structure", "Separate the contracting entity, place of establishment, regulated markets and customer countries that each route must support."],
+      ["Cards and authentication", "Confirm local or cross-border acquiring, schemes, 3-D Secure, recurring flows, descriptors, disputes and expected acceptance constraints."],
+      ["SEPA, open banking and local methods", "Map bank transfer, direct debit, account-to-account payments and country-specific wallets or methods against customer demand."],
+      ["Currencies and settlement", "Presentment, settlement, FX, reserves, payout timing and reconciliation must fit the merchant's treasury and finance workflow."]
+    ],
+    checklistTitle: "Prepare the Europe matching matrix",
+    checklist: ["Merchant entity and licence status", "Priority EEA and UK customer GEOs", "Cards, bank and local methods", "Presentment and settlement currencies", "Volume, ticket size and disputes", "Integration and launch order"],
+    faqs: [
+      ["Is one PSP enough for all of Europe?", "Sometimes, but not automatically. A broad provider may simplify operations while local specialists can fill important method or market gaps."],
+      ["Do European merchants need open banking?", "It depends on the market, customer segment and flow. It should be assessed where bank-based payment behaviour or economics make it relevant."],
+      ["Does OfferPSP provide payment processing?", "No. We qualify the operating brief and introduce relevant independent providers; funds and contracts remain between merchant and provider."],
+      ["Can UK and EEA coverage use the same route?", "Potentially, but entity, regulatory, acquiring and settlement conditions should be confirmed separately after the UK's exit from the EU framework."]
+    ],
+    areaServed: ["European Union", "European Economic Area", "United Kingdom", "Switzerland"],
+    related: ["psp-for-forex", "cross-border-payment-matching", "payment-methods-by-geo"]
+  },
+  {
+    slug: "payment-provider-cis-central-asia",
+    title: "Payment Provider Matching for CIS and Central Asia | OfferPSP",
+    description: "Payment provider matching for CIS and Central Asia: local rails, cards, currencies, cross-border settlement and profile-specific compliance screening.",
+    kicker: "CIS and Central Asia payment coverage",
+    heading: "Map viable payment routes for CIS and Central Asia.",
+    lead: "The region combines different currencies, banking systems, local methods and compliance constraints. OfferPSP maps the entity, customer countries, vertical and funds flow before assessing current provider routes.",
+    boundary: "Coverage is country-, entity- and profile-specific. OfferPSP does not circumvent sanctions, licensing, KYC, AML or provider restrictions, and cannot promise availability in every market.",
+    sectionTitle: "Regional matching needs precise country data",
+    sectionIntro: "CIS and Central Asia should not be treated as one homogeneous payment market. Every priority country must be evaluated independently.",
+    points: [
+      ["Entity and lawful market access", "Clarify the merchant entity, beneficial ownership, licences and the legal basis for serving customers in each target country."],
+      ["Local and international rails", "Map cards, bank transfers, wallets, mobile methods, pay-ins and payouts without assuming the same provider supports every flow."],
+      ["Currencies and settlement", "Define customer currency, settlement currency, FX, reserve expectations, banking location and reconciliation requirements."],
+      ["Compliance and operational resilience", "Sanctions screening, transaction monitoring, source of funds, dispute controls and backup routes are assessed as operating requirements."]
+    ],
+    checklistTitle: "Prepare the regional payment brief",
+    checklist: ["Merchant entity and ownership", "Priority countries listed separately", "Licence and product status", "Required pay-in and payout methods", "Currencies, volume and ticket size", "Settlement bank and compliance controls"],
+    faqs: [
+      ["Can one payment provider cover the whole CIS region?", "Usually not. Availability differs by country, entity, vertical, method, currency and current compliance appetite."],
+      ["Do you support sanctioned activity or prohibited markets?", "No. Matching never bypasses sanctions, laws, licensing or provider compliance requirements."],
+      ["Can local methods be combined with international cards?", "Potentially. The route may combine broad card coverage with local specialists, provided the structure is lawful and operationally manageable."],
+      ["Is provider availability published publicly?", "No. Current routes are shared through controlled qualification and introduction after the merchant profile has been reviewed."]
+    ],
+    alternates: [
+      ["en", "https://offerpsp.com/payment-provider-cis-central-asia.html"],
+      ["ru", "https://offerpsp.com/payment-provider-cis-central-asia-ru.html"],
+      ["x-default", "https://offerpsp.com/payment-provider-cis-central-asia.html"]
+    ],
+    areaServed: ["Kazakhstan", "Uzbekistan", "Georgia", "Armenia", "Kyrgyzstan", "Azerbaijan", "Moldova"],
+    related: ["payment-provider-cis-central-asia-ru", "psp-for-forex", "cross-border-payment-matching"]
+  },
+  {
+    slug: "payment-provider-cis-central-asia-ru",
+    lang: "ru",
+    title: "Подбор платёжного провайдера для СНГ и Центральной Азии | OfferPSP",
+    description: "Подбор платёжных провайдеров для СНГ и Центральной Азии: карты, локальные методы, валюты, выплаты, расчёты и проверка соответствия профилю бизнеса.",
+    kicker: "Платежи в СНГ и Центральной Азии",
+    heading: "Подберём платёжные маршруты для СНГ и Центральной Азии.",
+    lead: "В регионе различаются валюты, банковская инфраструктура, локальные методы и требования комплаенса. OfferPSP сначала фиксирует юридическое лицо, страны клиентов, вертикаль и движение средств, а затем проверяет актуальные варианты.",
+    boundary: "Доступность зависит от страны, юридического лица и профиля бизнеса. OfferPSP не обходит санкции, лицензирование, KYC, AML и ограничения провайдеров и не гарантирует подключение.",
+    sectionTitle: "Каждая страна оценивается отдельно",
+    sectionIntro: "СНГ и Центральная Азия — не единый платёжный рынок. Для полезного подбора нужна конкретика по каждой приоритетной стране.",
+    points: [
+      ["Юридическое лицо и право работать", "Указываются компания, владельцы, лицензии и законные основания обслуживать клиентов в каждой целевой стране."],
+      ["Локальные и международные методы", "Отдельно фиксируются карты, банковские переводы, кошельки, мобильные методы, приём платежей и выплаты."],
+      ["Валюты и расчёты", "Нужны валюты оплаты и расчётов, FX, банк для получения средств, резервы и требования к сверке."],
+      ["Комплаенс и устойчивость", "Санкционный контроль, мониторинг операций, источник средств, споры и резервные маршруты рассматриваются как часть схемы."]
+    ],
+    checklistTitle: "Подготовьте региональный платёжный бриф",
+    checklist: ["Юридическое лицо и владельцы", "Приоритетные страны по отдельности", "Лицензии и статус продукта", "Методы приёма и выплат", "Валюты, оборот и средний чек", "Банк расчётов и комплаенс-контроли"],
+    faqs: [
+      ["Можно ли одним провайдером закрыть весь регион?", "Чаще всего нет. Доступность различается по стране, компании, вертикали, методу, валюте и текущему риск-аппетиту провайдера."],
+      ["Вы работаете с запрещёнными или санкционными схемами?", "Нет. Подбор не обходит санкции, законы, лицензирование и требования комплаенса."],
+      ["Можно совместить локальные методы и международные карты?", "Иногда да. Схема может объединять широкое карточное покрытие и локальных специалистов, если она законна и управляема."],
+      ["Где посмотреть список ваших провайдеров?", "Сеть не публикуется. Актуальный маршрут раскрывается через контролируемый подбор после проверки профиля мерча."]
+    ],
+    alternates: [
+      ["en", "https://offerpsp.com/payment-provider-cis-central-asia.html"],
+      ["ru", "https://offerpsp.com/payment-provider-cis-central-asia-ru.html"],
+      ["x-default", "https://offerpsp.com/payment-provider-cis-central-asia.html"]
+    ],
+    areaServed: ["Казахстан", "Узбекистан", "Грузия", "Армения", "Кыргызстан", "Азербайджан", "Молдова"],
+    related: ["payment-provider-cis-central-asia", "psp-for-forex", "cross-border-payment-matching"]
+  },
+  {
     slug: "psp-matching-process",
     title: "How PSP Matching Works | OfferPSP",
     description: "A practical four-step PSP matching process: prepare the merchant brief, screen provider fit, review a focused shortlist and arrange qualified introductions.",
@@ -197,6 +316,7 @@ const escapeHtml = (value) => String(value)
 
 const buildStructuredData = (page) => {
   const url = `https://offerpsp.com/${page.slug}.html`;
+  const language = page.lang || "en";
   const graph = [
     {
       "@type": "Organization",
@@ -213,7 +333,7 @@ const buildStructuredData = (page) => {
       url: "https://offerpsp.com/",
       name: "OfferPSP",
       publisher: { "@id": "https://offerpsp.com/#organization" },
-      inLanguage: "en"
+      inLanguage: ["en", "ru"]
     },
     {
       "@type": "WebPage",
@@ -224,7 +344,7 @@ const buildStructuredData = (page) => {
       isPartOf: { "@id": "https://offerpsp.com/#website" },
       about: { "@id": `${url}#service` },
       breadcrumb: { "@id": `${url}#breadcrumb` },
-      inLanguage: "en"
+      inLanguage: language
     },
     {
       "@type": "Service",
@@ -234,7 +354,7 @@ const buildStructuredData = (page) => {
       description: page.lead,
       url,
       provider: { "@id": "https://offerpsp.com/#organization" },
-      areaServed: ["Europe", "CIS", "Middle East", "Latin America", "Asia-Pacific"],
+      areaServed: page.areaServed || ["Europe", "CIS", "Middle East", "Latin America", "Asia-Pacific"],
       audience: { "@type": "BusinessAudience", audienceType: "B2B merchants and digital businesses" }
     },
     {
@@ -277,6 +397,61 @@ const buildStructuredData = (page) => {
 
 const renderPage = (page) => {
   const canonical = `https://offerpsp.com/${page.slug}.html`;
+  const language = page.lang || "en";
+  const ui = language === "ru" ? {
+    skip: "Перейти к содержанию",
+    primary: "Основная навигация",
+    homeLabel: "Главная OfferPSP",
+    how: "Как это работает",
+    privateRequest: "Частный запрос",
+    requestMatch: "Запросить подбор",
+    sendBrief: "Отправить платёжный бриф",
+    scope: "Рамки и ограничения",
+    evaluate: "Что мы оцениваем",
+    inputs: "Данные для подбора",
+    inputHelp: "Точные и актуальные данные повышают качество каждого разговора с провайдером.",
+    questions: "Вопросы",
+    commonQuestions: "Что обычно спрашивают компании",
+    related: "Связанные платёжные задачи",
+    continueResearch: "Продолжить изучение",
+    explore: "Открыть",
+    qualification: "Частная квалификация",
+    describe: "Опишите платёжный маршрут, который должен работать.",
+    ctaCopy: "Укажите компанию, целевые страны, вертикаль, методы, оборот и текущее ограничение. Мы оценим следующий полезный шаг без публикации вашего поиска.",
+    home: "Главная",
+    privacy: "Конфиденциальность",
+    terms: "Условия",
+    contact: "Связаться",
+    footerNav: "Навигация в подвале"
+  } : {
+    skip: "Skip to content",
+    primary: "Primary navigation",
+    homeLabel: "OfferPSP home",
+    how: "How it works",
+    privateRequest: "Private request",
+    requestMatch: "Request a match",
+    sendBrief: "Send a private payment brief",
+    scope: "Scope and limitations",
+    evaluate: "What we evaluate",
+    inputs: "Matching inputs",
+    inputHelp: "Specific, current information improves the quality of every provider conversation.",
+    questions: "Questions",
+    commonQuestions: "What businesses usually ask",
+    related: "Related payment briefs",
+    continueResearch: "Continue the research",
+    explore: "Explore",
+    qualification: "Private qualification",
+    describe: "Describe the route that must work.",
+    ctaCopy: "Share the company, target GEOs, vertical, methods, volume and current constraint. We will assess the next useful step without publishing your provider search.",
+    home: "Home",
+    privacy: "Privacy",
+    terms: "Terms",
+    contact: "Contact",
+    footerNav: "Footer navigation"
+  };
+  const alternateLinks = (page.alternates || [])
+    .map(([lang, href]) => `  <link rel="alternate" hreflang="${lang}" href="${href}">`)
+    .join("\n");
   const structuredData = JSON.stringify(buildStructuredData(page), null, 2).replaceAll("</", "<\\/");
   const points = page.points.map(([title, text], index) => `
             <article class="point" id="step-${index + 1}">
@@ -291,11 +466,11 @@ const renderPage = (page) => {
             </details>`).join("");
   const related = page.related.map((slug) => {
     const linkedPage = pageBySlug.get(slug);
-    return `<a class="related-card" href="/${linkedPage.slug}.html"><span>Explore</span><strong>${escapeHtml(linkedPage.heading)}</strong></a>`;
+    return `<a class="related-card" href="/${linkedPage.slug}.html"><span>${ui.explore}</span><strong>${escapeHtml(linkedPage.heading)}</strong></a>`;
   }).join("\n");
 
   return `<!doctype html>
-<html lang="en">
+<html lang="${language}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -304,6 +479,7 @@ const renderPage = (page) => {
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="theme-color" content="#080a13">
   <link rel="canonical" href="${canonical}">
+${alternateLinks}
   <link rel="icon" href="/brand/offerpsp-favicon-32.png?v=20260816-1" type="image/png" sizes="32x32">
   <link rel="icon" href="/brand/offerpsp-favicon-48.png?v=20260816-1" type="image/png" sizes="48x48">
   <link rel="apple-touch-icon" href="/brand/offerpsp-apple-touch-icon-180.png?v=20260816-1" sizes="180x180">
@@ -320,11 +496,11 @@ ${structuredData}
   </script>
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to content</a>
+  <a class="skip-link" href="#main">${ui.skip}</a>
   <header class="site-header">
-    <nav class="container nav" aria-label="Primary navigation">
-      <a class="brand" href="/" aria-label="OfferPSP home"><span class="brand-mark" aria-hidden="true">OP</span><span>Offer<strong>PSP</strong></span></a>
-      <div class="nav-links"><a href="/psp-matching-process.html">How it works</a><a href="/#request">Private request</a><a class="button" href="/#request">Request a match</a></div>
+    <nav class="container nav" aria-label="${ui.primary}">
+      <a class="brand" href="/" aria-label="${ui.homeLabel}"><span class="brand-mark" aria-hidden="true">OP</span><span>Offer<strong>PSP</strong></span></a>
+      <div class="nav-links"><a href="/psp-matching-process.html">${ui.how}</a><a href="/#request">${ui.privateRequest}</a><a class="button" href="/#request">${ui.requestMatch}</a></div>
     </nav>
   </header>
   <main id="main">
@@ -335,47 +511,47 @@ ${structuredData}
           <div class="kicker">${escapeHtml(page.kicker)}</div>
           <h1>${escapeHtml(page.heading)}</h1>
           <p class="hero-lead">${escapeHtml(page.lead)}</p>
-          <a class="button" href="/#request">Send a private payment brief</a>
+          <a class="button" href="/#request">${ui.sendBrief}</a>
         </div>
-        <aside class="boundary"><strong>Scope and limitations</strong><p>${escapeHtml(page.boundary)}</p></aside>
+        <aside class="boundary"><strong>${ui.scope}</strong><p>${escapeHtml(page.boundary)}</p></aside>
       </div>
     </section>
     <section class="content-section alt">
       <div class="container section-grid">
-        <div><div class="kicker">What we evaluate</div><h2>${escapeHtml(page.sectionTitle)}</h2><p class="section-intro">${escapeHtml(page.sectionIntro)}</p></div>
+        <div><div class="kicker">${ui.evaluate}</div><h2>${escapeHtml(page.sectionTitle)}</h2><p class="section-intro">${escapeHtml(page.sectionIntro)}</p></div>
         <div class="points">${points}
         </div>
       </div>
     </section>
     <section class="content-section">
       <div class="container section-grid">
-        <div><div class="kicker">Matching inputs</div><h2>${escapeHtml(page.checklistTitle)}</h2><p class="section-intro">Specific, current information improves the quality of every provider conversation.</p></div>
+        <div><div class="kicker">${ui.inputs}</div><h2>${escapeHtml(page.checklistTitle)}</h2><p class="section-intro">${ui.inputHelp}</p></div>
         <div class="checklist">${checklist}</div>
       </div>
     </section>
     <section class="content-section alt" id="faq">
       <div class="container section-grid">
-        <div><div class="kicker">Questions</div><h2>What businesses usually ask</h2></div>
+        <div><div class="kicker">${ui.questions}</div><h2>${ui.commonQuestions}</h2></div>
         <div class="faq-list">${faqs}
         </div>
       </div>
     </section>
     <section class="content-section">
       <div class="container">
-        <div class="kicker">Related payment briefs</div>
-        <h2>Continue the research</h2>
+        <div class="kicker">${ui.related}</div>
+        <h2>${ui.continueResearch}</h2>
         <div class="related-grid">${related}</div>
       </div>
     </section>
     <section class="container cta">
-      <div><div class="kicker">Private qualification</div><h2>Describe the route that must work.</h2><p>Share the company, target GEOs, vertical, methods, volume and current constraint. We will assess the next useful step without publishing your provider search.</p></div>
-      <a class="button" href="/#request">Request a private match</a>
+      <div><div class="kicker">${ui.qualification}</div><h2>${ui.describe}</h2><p>${ui.ctaCopy}</p></div>
+      <a class="button" href="/#request">${ui.requestMatch}</a>
     </section>
   </main>
   <footer class="site-footer">
     <div class="container footer-grid">
       <div>© 2026 OfferPSP · A Brain Index product</div>
-      <nav class="footer-links" aria-label="Footer navigation"><a href="/">Home</a><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="mailto:bizdev@offerpsp.com">Contact</a></nav>
+      <nav class="footer-links" aria-label="${ui.footerNav}"><a href="/">${ui.home}</a><a href="/privacy.html">${ui.privacy}</a><a href="/terms.html">${ui.terms}</a><a href="mailto:bizdev@offerpsp.com">${ui.contact}</a></nav>
     </div>
   </footer>
 </body>
