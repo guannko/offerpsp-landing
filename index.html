@@ -277,6 +277,28 @@
       object-fit: contain;
     }
 
+    .back-to-top {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      z-index: 90;
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line-strong);
+      border-radius: 999px;
+      color: var(--ink);
+      background: var(--coral);
+      box-shadow: 0 14px 32px rgba(0,0,0,.3);
+      text-decoration: none;
+      font-size: 22px;
+      font-weight: 900;
+    }
+
+    .back-to-top:hover,
+    .back-to-top:focus-visible { background: #ff7899; transform: translateY(-2px); }
+
     .nav-links {
       margin: 0 0 0 auto;
       padding: 0;
@@ -1715,7 +1737,7 @@
   </style>
 </head>
 
-<body>
+<body id="top">
   <a class="skip-link" href="#main">Skip to content</a>
 
   <header class="site-header" id="siteHeader">
@@ -2129,6 +2151,8 @@
       </div>
     </div>
   </footer>
+
+  <a class="back-to-top" href="#top" aria-label="Back to top" title="Back to top">↑</a>
 
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";

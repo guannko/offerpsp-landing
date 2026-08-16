@@ -26,8 +26,9 @@
     header { border-bottom:1px solid var(--line); }
     nav, main, footer { width:min(calc(100% - 40px),860px); margin:0 auto; }
     nav { min-height:76px; display:flex; align-items:center; justify-content:space-between; gap:24px; }
-    .brand { color:var(--paper); text-decoration:none; font-size:21px; font-weight:800; letter-spacing:-.04em; }
-    .brand strong { color:var(--coral); }
+    .brand { display:inline-flex; align-items:center; color:var(--paper); text-decoration:none; }
+    .brand-logo { display:block; width:auto; height:52px; object-fit:contain; }
+    .back-to-top { position:fixed; right:24px; bottom:24px; z-index:30; width:48px; height:48px; display:grid; place-items:center; border:1px solid var(--line); border-radius:999px; color:var(--ink); background:var(--coral); box-shadow:0 14px 32px rgba(0,0,0,.3); text-decoration:none; font-size:22px; font-weight:900; }
     main { padding:90px 0 110px; }
     .kicker { color:var(--coral); font-size:12px; font-weight:800; letter-spacing:.15em; text-transform:uppercase; }
     h1 { max-width:720px; margin:16px 0 26px; font-family:Georgia,"Times New Roman",serif; font-size:clamp(46px,8vw,72px); font-weight:500; letter-spacing:-.055em; line-height:1; }
@@ -38,10 +39,10 @@
     footer { padding:28px 0 44px; border-top:1px solid var(--line); color:#6f7480; font-size:12px; }
   </style>
 </head>
-<body>
+<body id="top">
   <header>
     <nav>
-      <a class="brand" href="/">Offer<strong>PSP</strong></a>
+      <a class="brand" href="/" aria-label="OfferPSP home"><picture><source srcset="/brand/offerpsp-logo-horizontal-transparent.avif?v=20260816" type="image/avif"><img class="brand-logo" src="/brand/offerpsp-logo-horizontal-transparent.png?v=20260816" alt="OfferPSP"></picture></a>
       <a href="/">Back to website</a>
     </nav>
   </header>
@@ -85,5 +86,6 @@
     </article>
   </main>
   <footer>© 2026 OfferPSP. A Brain Index product.</footer>
+  <a class="back-to-top" href="#top" aria-label="Back to top" title="Back to top">↑</a>
 </body>
 </html>

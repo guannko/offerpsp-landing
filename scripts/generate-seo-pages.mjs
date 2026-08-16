@@ -422,7 +422,8 @@ const renderPage = (page) => {
     privacy: "Конфиденциальность",
     terms: "Условия",
     contact: "Связаться",
-    footerNav: "Навигация в подвале"
+    footerNav: "Навигация в подвале",
+    backToTop: "Наверх"
   } : {
     skip: "Skip to content",
     primary: "Primary navigation",
@@ -447,7 +448,8 @@ const renderPage = (page) => {
     privacy: "Privacy",
     terms: "Terms",
     contact: "Contact",
-    footerNav: "Footer navigation"
+    footerNav: "Footer navigation",
+    backToTop: "Back to top"
   };
   const alternateLinks = (page.alternates || [])
     .map(([lang, href]) => `  <link rel="alternate" hreflang="${lang}" href="${href}">`)
@@ -499,11 +501,11 @@ ${alternateLinks}
 ${structuredData}
   </script>
 </head>
-<body>
+<body id="top">
   <a class="skip-link" href="#main">${ui.skip}</a>
   <header class="site-header">
     <nav class="container nav" aria-label="${ui.primary}">
-      <a class="brand" href="/" aria-label="${ui.homeLabel}"><span class="brand-mark" aria-hidden="true">OP</span><span>Offer<strong>PSP</strong></span></a>
+      <a class="brand" href="/" aria-label="${ui.homeLabel}"><picture><source srcset="/brand/offerpsp-logo-horizontal-transparent.avif?v=20260816" type="image/avif"><img class="brand-logo" src="/brand/offerpsp-logo-horizontal-transparent.png?v=20260816" alt="OfferPSP"></picture></a>
       <div class="nav-links"><a href="/psp-matching-process.html">${ui.how}</a><a href="/#request">${ui.privateRequest}</a>${languageSwitch}<a class="button" href="/#request">${ui.requestMatch}</a></div>
     </nav>
   </header>
@@ -558,6 +560,7 @@ ${structuredData}
       <nav class="footer-links" aria-label="${ui.footerNav}"><a href="/">${ui.home}</a><a href="/privacy.html">${ui.privacy}</a><a href="/terms.html">${ui.terms}</a><a href="mailto:bizdev@offerpsp.com">${ui.contact}</a></nav>
     </div>
   </footer>
+  <a class="back-to-top" href="#top" aria-label="${ui.backToTop}" title="${ui.backToTop}">↑</a>
 </body>
 </html>
 `;
