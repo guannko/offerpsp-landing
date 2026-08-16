@@ -35,8 +35,8 @@
       {
         "@type": "Organization",
         "@id": "https://offerpsp.com/#organization",
-        "name": "Brain Index",
-        "legalName": "BRAININDEX OÜ",
+        "name": "offerpsp.com",
+        "alternateName": "OfferPSP",
         "url": "https://offerpsp.com/",
         "email": "bizdev@offerpsp.com",
         "brand": {
@@ -2128,7 +2128,7 @@
               <img class="brand-logo" src="/brand/offerpsp-logo-horizontal-transparent.png?v=20260816" alt="OfferPSP">
             </picture>
           </a>
-          <p class="footer-statement">Private payment-partner matching for complex merchant profiles. A Brain Index product.</p>
+          <p class="footer-statement">Private payment-partner matching for complex merchant profiles.</p>
         </div>
         <nav class="footer-links" aria-label="Footer navigation">
           <a href="#process">Process</a>
@@ -2140,11 +2140,11 @@
           <a href="/portal/">Client login</a>
           <a href="/privacy.html">Privacy</a>
           <a href="/terms.html">Terms</a>
-          <a href="https://t.me/Brain_Index" target="_blank" rel="noopener noreferrer">Telegram ↗</a>
+          <a href="mailto:bizdev@offerpsp.com">Contact</a>
         </nav>
       </div>
       <div class="footer-bottom">
-        <p>OfferPSP is an introduction service, not a payment institution, acquirer or financial adviser. Provider availability, onboarding decisions and terms remain subject to independent due diligence.</p>
+        <p>OfferPSP provides B2B research, qualification, matching and introduction services. Commercial services are provided under separate agreements, and OfferPSP does not receive, hold, transfer or settle third-party funds.</p>
         <span>© <span id="year">2026</span> OfferPSP</span>
       </div>
     </div>
@@ -2255,8 +2255,6 @@
     }
 
     const params = new URLSearchParams(window.location.search);
-    const ATTRIBUTION_STORAGE_KEY = "offerpsp:first-touch:v1";
-    const SESSION_STORAGE_KEY = "offerpsp:session:v1";
     const knownMarketingParams = [
       "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
       "gclid", "msclkid", "fbclid", "li_fat_id", "ttclid"
@@ -2351,22 +2349,10 @@
     };
 
     const lastTouch = buildTouch();
-    let firstTouch = lastTouch;
-    try {
-      const stored = JSON.parse(localStorage.getItem(ATTRIBUTION_STORAGE_KEY) || "null");
-      if (stored && typeof stored === "object") firstTouch = stored;
-      else localStorage.setItem(ATTRIBUTION_STORAGE_KEY, JSON.stringify(lastTouch));
-    } catch {
-      firstTouch = lastTouch;
-    }
-
-    let sessionId = "";
-    try {
-      sessionId = sessionStorage.getItem(SESSION_STORAGE_KEY) || crypto.randomUUID();
-      sessionStorage.setItem(SESSION_STORAGE_KEY, sessionId);
-    } catch {
-      sessionId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    }
+    const firstTouch = lastTouch;
+    const sessionId = typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
     leadForm.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -2455,7 +2441,7 @@
         }
       } catch (error) {
         formStatus.classList.add("error");
-        formStatus.textContent = "We could not confirm delivery. Please try again or contact us on Telegram.";
+        formStatus.textContent = "We could not confirm delivery. Please try again or email bizdev@offerpsp.com.";
         submitButton.disabled = false;
         submitButton.textContent = "Submit and email my access link";
       }

@@ -321,8 +321,8 @@ const buildStructuredData = (page) => {
     {
       "@type": "Organization",
       "@id": "https://offerpsp.com/#organization",
-      name: "Brain Index",
-      legalName: "BRAININDEX OÜ",
+      name: "offerpsp.com",
+      alternateName: "OfferPSP",
       url: "https://offerpsp.com/",
       email: "bizdev@offerpsp.com",
       brand: { "@type": "Brand", name: "OfferPSP" }
@@ -556,7 +556,7 @@ ${structuredData}
   </main>
   <footer class="site-footer">
     <div class="container footer-grid">
-      <div>© 2026 OfferPSP · A Brain Index product</div>
+      <div>© 2026 OfferPSP · operated by offerpsp.com</div>
       <nav class="footer-links" aria-label="${ui.footerNav}"><a href="/">${ui.home}</a><a href="/privacy.html">${ui.privacy}</a><a href="/terms.html">${ui.terms}</a><a href="mailto:bizdev@offerpsp.com">${ui.contact}</a></nav>
     </div>
   </footer>

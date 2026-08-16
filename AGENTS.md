@@ -2,7 +2,7 @@
 
 Updated: 2026-08-15
 
-Owner: Boris Kononenko / Brain Index
+Owner and operator: offerpsp.com (Individual Entrepreneur, Georgia), trading as OfferPSP
 
 Scope: `/Users/borisboris/diskD/N8N/AIBot/offerpsp-landing`
 
@@ -34,7 +34,8 @@ Never report documentation, a checked task or a local test as proof of productio
 ## Product and commercial goal
 
 OfferPSP is a confidential B2B payment-matching, qualification and introduction platform
-operated by Brain Index.
+operated by offerpsp.com. Brain Index may provide IT development support but is not the
+operator of the OfferPSP business.
 
 Its end-to-end job is to:
 

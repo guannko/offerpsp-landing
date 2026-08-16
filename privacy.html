@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Privacy Notice — OfferPSP</title>
-  <meta name="description" content="How OfferPSP handles information submitted through its private PSP matching request form.">
+  <meta name="description" content="How OfferPSP collects, uses, shares and protects business contact and merchant-profile information.">
   <meta name="robots" content="index, follow">
   <link rel="icon" href="/favicon.svg?v=20260814-3" type="image/svg+xml">
   <link rel="canonical" href="https://offerpsp.com/privacy.html">
@@ -15,28 +15,39 @@
     "name": "Privacy Notice — OfferPSP",
     "url": "https://offerpsp.com/privacy.html",
     "isPartOf": { "@type": "WebSite", "name": "OfferPSP", "url": "https://offerpsp.com/" },
-    "about": { "@type": "Organization", "name": "BRAININDEX OÜ", "url": "https://offerpsp.com/" }
+    "about": { "@type": "Organization", "name": "offerpsp.com", "alternateName": "OfferPSP", "url": "https://offerpsp.com/", "email": "bizdev@offerpsp.com" }
   }
   </script>
   <style>
-    :root { color-scheme: dark; --ink:#080a13; --panel:#111522; --line:rgba(255,255,255,.12); --paper:#f6f3ec; --muted:#a7abb6; --coral:#ff4d7a; --mint:#a7f3d0; }
+    :root { color-scheme:dark; --ink:#080a13; --panel:#111522; --line:rgba(255,255,255,.12); --paper:#f6f3ec; --muted:#a7abb6; --coral:#ff4d7a; --mint:#a7f3d0; }
     * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
     body { margin:0; background:var(--ink); color:var(--paper); font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; line-height:1.7; }
     a { color:var(--mint); text-underline-offset:3px; }
     header { border-bottom:1px solid var(--line); }
-    nav, main, footer { width:min(calc(100% - 40px),860px); margin:0 auto; }
+    nav, main, footer { width:min(calc(100% - 40px),900px); margin:0 auto; }
     nav { min-height:76px; display:flex; align-items:center; justify-content:space-between; gap:24px; }
     .brand { display:inline-flex; align-items:center; color:var(--paper); text-decoration:none; }
     .brand-logo { display:block; width:auto; height:52px; object-fit:contain; }
     .back-to-top { position:fixed; right:24px; bottom:24px; z-index:30; width:48px; height:48px; display:grid; place-items:center; border:1px solid var(--line); border-radius:999px; color:var(--ink); background:var(--coral); box-shadow:0 14px 32px rgba(0,0,0,.3); text-decoration:none; font-size:22px; font-weight:900; }
     main { padding:90px 0 110px; }
     .kicker { color:var(--coral); font-size:12px; font-weight:800; letter-spacing:.15em; text-transform:uppercase; }
-    h1 { max-width:720px; margin:16px 0 26px; font-family:Georgia,"Times New Roman",serif; font-size:clamp(46px,8vw,72px); font-weight:500; letter-spacing:-.055em; line-height:1; }
-    .updated { margin-bottom:50px; color:var(--muted); }
+    h1 { max-width:760px; margin:16px 0 26px; font-family:Georgia,"Times New Roman",serif; font-size:clamp(46px,8vw,72px); font-weight:500; letter-spacing:-.055em; line-height:1; }
+    .updated { margin-bottom:34px; color:var(--muted); }
+    .summary { margin:0 0 50px; padding:22px 24px; border:1px solid var(--line); border-left:3px solid var(--coral); border-radius:12px; background:var(--panel); }
     article { padding:34px 0; border-top:1px solid var(--line); }
-    h2 { margin-bottom:12px; font-size:22px; letter-spacing:-.03em; }
+    h2 { margin:0 0 12px; font-size:24px; letter-spacing:-.03em; }
+    h3 { margin:26px 0 8px; font-size:17px; }
     p, li { color:var(--muted); }
+    li + li { margin-top:8px; }
+    .table-wrap { margin-top:20px; overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; min-width:680px; }
+    th, td { padding:14px 16px; border:1px solid var(--line); text-align:left; vertical-align:top; }
+    th { color:var(--paper); background:var(--panel); }
+    td { color:var(--muted); }
+    strong { color:var(--paper); }
     footer { padding:28px 0 44px; border-top:1px solid var(--line); color:#6f7480; font-size:12px; }
+    @media (max-width:640px) { main { padding-top:60px; } .brand-logo { height:42px; } }
   </style>
 </head>
 <body id="top">
@@ -49,43 +60,133 @@
   <main>
     <div class="kicker">Legal</div>
     <h1>Privacy Notice</h1>
-    <p class="updated">Effective date: 30 July 2026</p>
+    <p class="updated">Effective date: 16 August 2026</p>
+    <p class="summary">This notice explains how <strong>offerpsp.com</strong>, an individual entrepreneur registered in Georgia and trading under the <strong>OfferPSP</strong> brand, handles personal data in its B2B matching, introduction and client-workspace service.</p>
 
     <article>
-      <h2>Who we are</h2>
-      <p>OfferPSP is a B2B payment-partner matching and introduction service operated as a Brain Index product. This notice covers information submitted through offerpsp.com.</p>
+      <h2>1. Controller and contact</h2>
+      <p>The data controller is <strong>offerpsp.com (Individual Entrepreneur, Georgia), trading as OfferPSP</strong>.</p>
+      <p>Privacy requests may be sent to <a href="mailto:bizdev@offerpsp.com?subject=Privacy%20request">bizdev@offerpsp.com</a> with the subject “Privacy request”.</p>
     </article>
+
     <article>
-      <h2>Information we collect</h2>
-      <p>When you submit a matching request, we collect the contact and business information you provide, including your name, work email, company, website, Telegram username, vertical, target markets, expected volume, required payment methods and request details.</p>
+      <h2>2. Scope</h2>
+      <p>OfferPSP provides business-to-business research, matching and introduction support between merchants and independent payment service providers. This notice applies to offerpsp.com, the OfferPSP client workspace, business communications, matching workflows and related operational systems.</p>
+      <p>It does not govern a payment provider’s separate due-diligence process or services. Each provider is responsible for its own privacy notice and compliance.</p>
     </article>
+
     <article>
-      <h2>How we use it</h2>
+      <h2>3. Information we collect</h2>
+      <h3>Information you or your organisation provide</h3>
       <ul>
-        <li>To assess whether OfferPSP can assist with your request.</li>
-        <li>To contact you about relevant payment-provider introductions.</li>
-        <li>To maintain a record of the request and prevent duplicate or abusive submissions.</li>
-        <li>To comply with applicable legal obligations.</li>
+        <li><strong>Business contact data:</strong> name, role, work email, telephone number and Telegram username.</li>
+        <li><strong>Company and merchant-profile data:</strong> company and trading names, websites, registration and operating details, business model, vertical, target markets, currencies, traffic profile, expected volumes, payment methods, current setup and requested routes.</li>
+        <li><strong>Licensing and verification data:</strong> licence status, jurisdiction, licence number, supporting evidence and business documents uploaded for review.</li>
+        <li><strong>Request and relationship data:</strong> matching requests, shortlists, selections, introduction status, notes, tasks and decisions made within the workspace.</li>
+        <li><strong>Communications:</strong> messages, emails, Telegram correspondence where used, attachments, participants, delivery status and related timestamps.</li>
       </ul>
+      <h3>Information collected when you use the service</h3>
+      <ul>
+        <li><strong>Authentication and security data:</strong> account identifiers, secure sign-in records, authorisation data, access events and abuse-prevention signals.</li>
+        <li><strong>Technical and operational data:</strong> browser and device information made available through standard web requests, IP-derived country, timestamps, requested pages, system events and error logs.</li>
+        <li><strong>Current-visit attribution:</strong> landing page, referring website and campaign parameters included in the page URL. The public website does not use this information for cross-site behavioural advertising.</li>
+      </ul>
+      <h3>Information from other sources</h3>
+      <p>For relevant B2B research and outreach, we may receive business contact information from referrals, existing professional relationships, company websites, professional profiles, public registers or the organisation a person represents. Where personal data was not collected directly from you, this notice is provided at the first communication or within the period required by applicable law.</p>
+      <p>Fields marked as required are needed to identify the requesting business, contact its representative and assess the request. Providing them is not a statutory requirement, but without them we cannot accept or evaluate the request. Optional profile information can be added later in the client workspace.</p>
+      <p>Please do not submit payment-card data, bank credentials, passwords, special-category personal data or personal documents that are not reasonably required for a business review.</p>
     </article>
+
     <article>
-      <h2>Sharing</h2>
-      <p>We do not publish merchant profiles. Information is shared with an independent payment provider only when it is relevant to a potential introduction. We may use infrastructure providers required to host the website, automate the intake process and securely store submissions.</p>
+      <h2>4. Purposes and legal bases</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Purpose</th><th>Legal basis</th></tr></thead>
+          <tbody>
+            <tr><td>Receive a request, create an account, maintain the client workspace, assess fit, prepare matching results and arrange requested introductions.</td><td>Steps requested before entering a service relationship and performance of that relationship; where the user acts for an organisation, our legitimate interest in providing the requested B2B service.</td></tr>
+            <tr><td>Verify company and licensing information, prevent fraud or misuse, maintain security, troubleshoot the service and keep an audit trail.</td><td>Our legitimate interests in operating a secure, reliable and accountable B2B service; compliance with legal obligations where applicable.</td></tr>
+            <tr><td>Manage messages, follow-ups, support and the business relationship.</td><td>Performance of the requested service and our legitimate interest in responding to and managing business communications.</td></tr>
+            <tr><td>Send relevant one-to-one B2B outreach to a professional contact.</td><td>Our legitimate interest in developing relevant business relationships, only where permitted by applicable direct-marketing and electronic-communications law. You may object at any time.</td></tr>
+            <tr><td>Send optional newsletters or other consent-based marketing.</td><td>Your consent, where consent is required. Consent may be withdrawn at any time without affecting earlier lawful processing.</td></tr>
+            <tr><td>Establish, exercise or defend legal claims and meet accounting, regulatory or lawful authority requirements.</td><td>Legal obligation and our legitimate interests in protecting our rights.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Where we rely on legitimate interests, we consider the professional context, relevance, reasonable expectations, sensitivity of the data and impact on the individual. We do not use legitimate interests where those interests are overridden by the individual’s rights and freedoms.</p>
     </article>
+
     <article>
-      <h2>Retention and security</h2>
-      <p>We retain a request only for as long as reasonably necessary to evaluate it, manage introductions and meet legal or operational requirements. Access to submitted profiles is restricted to the business workflow used for private review.</p>
+      <h2>5. Matching and AI assistance</h2>
+      <p>OfferPSP may use rules and AI-assisted tools to organise merchant information, compare it with provider criteria, draft internal summaries or communications and highlight possible matches. These tools support human review. They do not make a solely automated decision that produces legal or similarly significant effects for a merchant or contact.</p>
+      <p>Provider onboarding, pricing, risk acceptance and contractual decisions are made independently by the relevant provider.</p>
     </article>
+
     <article>
-      <h2>Your choices</h2>
-      <p>You may ask us to correct or delete your submitted information, subject to applicable legal retention requirements. Contact us through <a href="https://t.me/Brain_Index" target="_blank" rel="noopener noreferrer">Telegram</a> and identify the email address used in the request.</p>
+      <h2>6. Who receives information</h2>
+      <ul>
+        <li><strong>Authorised OfferPSP personnel and contractors</strong> who need access for matching, support, security or administration and are subject to confidentiality obligations.</li>
+        <li><strong>Selected payment providers</strong> where a potential introduction is relevant. We do not publish merchant profiles or distribute them as an open lead list. A provider acts under its own responsibilities when it receives information for independent due diligence.</li>
+        <li><strong>Infrastructure and service providers</strong> supporting database, authentication, storage, hosting, automation, email delivery, communications, monitoring and AI-assisted workflows. Current core infrastructure includes Supabase-hosted data services in the European Union and Vercel-hosted web services. Other providers are used only as needed for the selected communication or workflow.</li>
+        <li><strong>Professional advisers, courts or authorities</strong> where disclosure is reasonably necessary to comply with law, protect rights or respond to a valid legal request.</li>
+      </ul>
+      <p>We do not sell personal data or merchant profiles.</p>
     </article>
+
     <article>
-      <h2>Updates</h2>
-      <p>We may update this notice as the service evolves. The current effective date will always appear at the top of this page.</p>
+      <h2>7. International transfers</h2>
+      <p>Some service providers or recipients may process data outside the European Economic Area, the United Kingdom or your country. Where applicable law requires a transfer safeguard, we use an adequacy decision, approved standard contractual clauses or another lawful mechanism and apply appropriate technical and organisational measures. You may request information about the relevant safeguard by contacting us.</p>
+    </article>
+
+    <article>
+      <h2>8. Retention</h2>
+      <p>We keep personal data only for as long as needed for the purpose for which it was collected. Retention is determined by the status and duration of the request or account, the need to manage introductions and follow-ups, security and duplicate-prevention requirements, applicable limitation periods and legal or accounting obligations.</p>
+      <ul>
+        <li>Active account, request, matching and communication records are retained while the relationship is active and for a reasonable follow-up period.</li>
+        <li>Uploaded business documents are removed when they are no longer reasonably required for review, introduction, a legal obligation or a dispute.</li>
+        <li>Security and operational logs are kept according to limited operational cycles unless an incident requires longer preservation.</li>
+        <li>After an objection to B2B outreach, we may retain a minimal suppression record so that the objection continues to be honoured.</li>
+      </ul>
+      <p>Data may be deleted, anonymised or restricted earlier when it is no longer necessary or when a valid deletion request applies.</p>
+    </article>
+
+    <article>
+      <h2>9. Security</h2>
+      <p>We use access controls, authenticated client workspaces, row-level database permissions, private document storage, encrypted connections, restricted administrative access and operational logging. No online service can guarantee absolute security. If you believe information has been exposed or an account has been misused, contact us promptly.</p>
+    </article>
+
+    <article>
+      <h2>10. Cookies and local storage</h2>
+      <p>The public website does not use third-party advertising cookies or cross-site behavioural tracking. It may read campaign parameters and the referring page during the current visit. The client workspace uses strictly necessary authentication and session storage so that secure sign-in and account access work. Browser or device controls can remove this storage, but doing so may sign you out.</p>
+    </article>
+
+    <article>
+      <h2>11. Your rights</h2>
+      <p>Depending on the law that applies to you, you may request access, correction, deletion, restriction, portability or a copy of your personal data. You may object to processing based on legitimate interests and may withdraw consent where processing is based on consent.</p>
+      <p><strong>You have an unconditional right to object at any time to the use of your personal data for direct marketing.</strong> We will stop that use and retain only the minimum information needed to honour the objection.</p>
+      <p>We may need to verify your identity before acting on a request. We normally respond within the period required by applicable law. You may also complain to the data-protection authority in your habitual residence, place of work or the place of the alleged infringement. The <a href="https://www.edpb.europa.eu/about-edpb/about-edpb/members_en" target="_blank" rel="noopener noreferrer">European Data Protection Board lists EEA supervisory authorities</a>.</p>
+    </article>
+
+    <article>
+      <h2>12. B2B outreach</h2>
+      <p>When OfferPSP contacts a professional representative first, the message must identify OfferPSP, explain the business reason for the contact and provide a simple way to decline further messages. We do not conceal the sender or continue personal-data-based outreach after an objection. Country-specific rules may require consent for particular electronic communications; we apply those rules where they govern the contact.</p>
+    </article>
+
+    <article>
+      <h2>13. Children and sensitive data</h2>
+      <p>OfferPSP is a B2B service and is not intended for children. We do not knowingly collect children’s personal data or special-category personal data through the public intake form.</p>
+    </article>
+
+    <article>
+      <h2>14. Changes to this notice</h2>
+      <p>We may update this notice when the service, providers or legal requirements change. Material changes will be shown on this page and, where appropriate, communicated through the client workspace or email. The effective date at the top identifies the current version.</p>
+    </article>
+
+    <article>
+      <h2>15. Contact</h2>
+      <p>Email <a href="mailto:bizdev@offerpsp.com?subject=Privacy%20request">bizdev@offerpsp.com</a> and include “Privacy request” in the subject line. Please do not send identity documents unless we specifically request them through a secure channel.</p>
     </article>
   </main>
-  <footer>© 2026 OfferPSP. A Brain Index product.</footer>
+  <footer>© 2026 OfferPSP · operated by offerpsp.com (Individual Entrepreneur, Georgia)</footer>
   <a class="back-to-top" href="#top" aria-label="Back to top" title="Back to top">↑</a>
 </body>
 </html>
