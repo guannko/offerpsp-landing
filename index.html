@@ -2064,10 +2064,6 @@
                 <label for="geos">Target GEOs *</label>
                 <input id="geos" name="geos" type="text" maxlength="2000" required placeholder="Countries or regions you need to cover">
               </div>
-              <input name="monthly_volume" type="hidden" value="" aria-hidden="true">
-              <input name="methods" type="hidden" value="" aria-hidden="true">
-              <input name="telegram" type="hidden" value="" aria-hidden="true">
-              <input name="details" type="hidden" value="" aria-hidden="true">
               <div class="honeypot" aria-hidden="true">
                 <label for="website_url">Leave this field empty</label>
                 <input id="website_url" name="website_url" type="text" tabindex="-1" autocomplete="off">
@@ -2357,6 +2353,10 @@
 
       const formData = new FormData(leadForm);
       const payload = Object.fromEntries(formData.entries());
+      payload.monthly_volume = "";
+      payload.methods = "";
+      payload.telegram = "";
+      payload.details = "";
       payload.consent = formData.get("consent") === "on";
       payload.source_category = lastTouch.source_category;
       payload.source_platform = lastTouch.source_platform;
