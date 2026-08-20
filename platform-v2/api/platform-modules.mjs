@@ -6,6 +6,7 @@ import {
   serviceSupabaseRequest,
   staffSupabaseRequest,
 } from "./_lib/staff-auth.mjs";
+import { waitUntil } from "@vercel/functions";
 import { collectGeoSignals, normalizeSiteOneAudit } from "./_lib/siteone-audit.mjs";
 import { mcpResourceMetadataHandler, offerPspMcpHandler } from "./_lib/offerpsp-mcp-http.mjs";
 import { offerPspActionHandler, offerPspActionsSchemaHandler } from "./_lib/offerpsp-actions.mjs";
@@ -144,13 +145,12 @@ async function seoAudit(request, response, staffContext) {
     return sendJson(response, 202, { accepted: true, reused: true, run_id: run.id, status: run.status });
   }
 
-  const audit = await executeAuditRun(run.id);
-  return sendJson(response, 201, {
+  waitUntil(executeAuditRun(run.id));
+  return sendJson(response, 202, {
     accepted: true,
     reused: false,
     run_id: run.id,
-    status: "completed",
-    audit_id: audit.id,
+    status: "queued",
   });
 }
 

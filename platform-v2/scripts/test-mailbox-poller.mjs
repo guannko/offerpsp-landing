@@ -76,7 +76,7 @@ const summary = await pollOfferPspMailbox(
   },
 );
 
-assert.deepEqual(summary, { scanned: 1, ingested: 1, duplicates: 0, failed: 0 });
+assert.deepEqual(summary, { scanned: 1, ingested: 1, duplicates: 0, failed: 0, deferred: 0 });
 assert.deepEqual(searches, [{ not: { keyword: "$OfferPSPIngested" } }]);
 assert.deepEqual(marked, [[7, ["$OfferPSPIngested"]]]);
 console.log("OfferPSP mailbox poller tests passed");

@@ -27,7 +27,8 @@ export default async function handler(request, response) {
       imapPassword: process.env.OFFERPSP_IMAP_PASSWORD,
       ingestUrl: process.env.OFFERPSP_MAIL_INGEST_URL,
       ingestToken: process.env.OFFERPSP_MAIL_INGEST_TOKEN,
-      batchLimit: process.env.OFFERPSP_MAILBOX_BATCH_LIMIT || "25",
+      batchLimit: process.env.OFFERPSP_MAILBOX_BATCH_LIMIT || "10",
+      runtimeBudgetMs: "45000",
     });
     return json(response, summary.failed ? 207 : 200, { success: summary.failed === 0, ...summary });
   } catch (error) {

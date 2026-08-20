@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { ReactNode } from "react";
@@ -102,6 +103,7 @@ function writeCoreCache(userId: string, snapshot: CoreSnapshot) {
 
 export function ControlBridgeProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ControlBridgeData>(emptyData);
+  const backgroundRefreshActive = useRef(false);
   const { pathname } = useLocation();
 
   const load = useCallback(async (userOverride?: User | null, force = false) => {
@@ -240,6 +242,41 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
   }, [load]);
 
   const refresh = useCallback(async () => load(state.user, true), [load, state.user]);
+
+  useEffect(() => {
+    if (!state.ready || !state.user) return;
+    const user = state.user;
+
+    const refreshInBackground = async () => {
+      if (backgroundRefreshActive.current) return;
+      backgroundRefreshActive.current = true;
+      try {
+        await load(user, true);
+      } finally {
+        backgroundRefreshActive.current = false;
+      }
+    };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void refreshInBackground();
+    };
+    const channel = supabase
+      .channel(`control-bridge-leads-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "offerpsp_leads" }, () => {
+        coreCache.delete(user.id);
+        void refreshInBackground();
+      })
+      .subscribe();
+    const timer = window.setInterval(() => void refreshInBackground(), 30_000);
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      void supabase.removeChannel(channel);
+    };
+  }, [load, state.ready, state.user]);
   const signOut = useCallback(async () => {
     if (state.user) coreCache.delete(state.user.id);
     await supabase.auth.signOut();

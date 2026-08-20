@@ -94,6 +94,7 @@ export async function pollOfferPspMailbox(config, dependencies = {}) {
   const parseMessage = dependencies.parseMessage || parseMailboxMessage;
   const ingestPayload = dependencies.ingestPayload || ingestMailboxPayload;
   const limit = Math.max(1, Math.min(Number(config.batchLimit) || DEFAULT_BATCH_LIMIT, MAX_BATCH_LIMIT));
+  const deadline = Date.now() + Math.max(5_000, Number(config.runtimeBudgetMs) || 45_000);
   const client = new ImapClient({
     host: config.imapHost || "imap.secureserver.net",
     port: Number(config.imapPort) || 993,
@@ -106,7 +107,7 @@ export async function pollOfferPspMailbox(config, dependencies = {}) {
     socketTimeout: 45_000,
     greetingTimeout: 20_000,
   });
-  const summary = { scanned: 0, ingested: 0, duplicates: 0, failed: 0 };
+  const summary = { scanned: 0, ingested: 0, duplicates: 0, failed: 0, deferred: 0 };
 
   try {
     await client.connect();
@@ -118,6 +119,10 @@ export async function pollOfferPspMailbox(config, dependencies = {}) {
       summary.scanned = pendingUids.length;
 
       for (const uid of pendingUids) {
+        if (Date.now() >= deadline) {
+          summary.deferred = pendingUids.length - summary.ingested - summary.duplicates - summary.failed;
+          break;
+        }
         try {
           const message = await client.fetchOne(uid, { source: true }, { uid: true });
           if (!message?.source) throw new Error("IMAP message source is empty");

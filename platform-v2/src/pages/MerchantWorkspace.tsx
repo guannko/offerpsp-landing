@@ -593,6 +593,14 @@ function toggle(values: string[], value: string) {
   return values.includes(value) ? values.filter((candidate) => candidate !== value) : [...values, value];
 }
 
+function toggleAllVisible(values: string[], visibleValues: string[]) {
+  const visible = new Set(visibleValues);
+  const allSelected = visibleValues.length > 0 && visibleValues.every((value) => values.includes(value));
+  return allSelected
+    ? values.filter((value) => !visible.has(value))
+    : Array.from(new Set([...values, ...visibleValues]));
+}
+
 function MatchingPanel({ matches, selectedMatches, setSelectedMatches, publishedRoutes, selectedRoutes, setSelectedRoutes, search, setSearch, busy, runMatching, createMatched, createManual, complianceReady }: {
   matches: Match[];
   selectedMatches: string[];
@@ -608,6 +616,10 @@ function MatchingPanel({ matches, selectedMatches, setSelectedMatches, published
   createManual: () => void;
   complianceReady: boolean;
 }) {
+  const matchIds = matches.map((match) => match.match_id);
+  const routeIds = publishedRoutes.map((route) => route.route_id);
+  const allMatchesSelected = matchIds.length > 0 && matchIds.every((id) => selectedMatches.includes(id));
+  const allRoutesSelected = routeIds.length > 0 && routeIds.every((id) => selectedRoutes.includes(id));
   return <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
     <Panel>
       {!complianceReady && <div className="mb-5 rounded-xl border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-700">Matching заблокирован: сначала откройте вкладку «Проверка» и примите решение по заявке.</div>}
@@ -615,7 +627,8 @@ function MatchingPanel({ matches, selectedMatches, setSelectedMatches, published
         <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Автоподбор</p><h2 className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">Офферы по запросу мерча</h2><p className="mt-1 text-sm text-gray-500">Matching — подсказка. Финальное решение всегда за нами.</p></div>
         <button onClick={runMatching} disabled={Boolean(busy) || !complianceReady} className="shrink-0 rounded-lg border border-brand-200 px-3 py-2 text-sm font-medium text-brand-600 hover:bg-brand-50 disabled:opacity-50 dark:border-brand-800 dark:text-brand-300">{busy === "matching" ? "Подбираю…" : "Запустить подбор"}</button>
       </div>
-      <div className="mt-5 space-y-3">{matches.length ? matches.map((match) => <SelectionCard key={match.match_id} selected={selectedMatches.includes(match.match_id)} onChange={() => setSelectedMatches(toggle(selectedMatches, match.match_id))} title={`${match.provider_name || "PSP"} · ${match.client_title || match.route_code || "Маршрут"}`} meta={`${textList(match.geos)} · ${textList(match.currencies)} · ${textList(match.methods)} · ${String(match.flow || "—").toUpperCase()}`} aside={`${match.score ?? "—"}`} detail={(match.client_pricing || []).map((fee) => `${fee.flow || "fee"}: ${feeText(fee)}`).join(" · ") || "Ставка требует проверки"}/>) : <EmptyState title="Кандидатов пока нет" description="Запустите matching или выберите любой опубликованный оффер справа."/>}</div>
+      {matches.length > 0 && <button type="button" onClick={() => setSelectedMatches(toggleAllVisible(selectedMatches, matchIds))} className="mt-5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 hover:border-brand-300 hover:text-brand-500 dark:border-gray-700 dark:text-gray-300">{allMatchesSelected ? "Снять выбор со всех" : `Выбрать все (${matches.length})`}</button>}
+      <div className="mt-3 space-y-3">{matches.length ? matches.map((match) => <SelectionCard key={match.match_id} selected={selectedMatches.includes(match.match_id)} onChange={() => setSelectedMatches(toggle(selectedMatches, match.match_id))} title={`${match.provider_name || "PSP"} · ${match.client_title || match.route_code || "Маршрут"}`} meta={`${textList(match.geos)} · ${textList(match.currencies)} · ${textList(match.methods)} · ${String(match.flow || "—").toUpperCase()}`} aside={`${match.score ?? "—"}`} detail={(match.client_pricing || []).map((fee) => `${fee.flow || "fee"}: ${feeText(fee)}`).join(" · ") || "Ставка требует проверки"}/>) : <EmptyState title="Кандидатов пока нет" description="Запустите matching или выберите любой опубликованный оффер справа."/>}</div>
       {matches.length > 0 && <button onClick={createMatched} disabled={!selectedMatches.length || Boolean(busy) || !complianceReady} className="mt-5 w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-40">{busy === "matched-shortlist" ? "Создаю…" : `Создать shortlist из выбранных (${selectedMatches.length})`}</button>}
     </Panel>
 
@@ -623,7 +636,8 @@ function MatchingPanel({ matches, selectedMatches, setSelectedMatches, published
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Ручной выбор</p><h2 className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">Любой актуальный оффер</h2>
       <p className="mt-1 text-sm text-gray-500">Можно отправить решение вне исходного запроса. Клиент увидит анонимный Telegram‑формат, а настоящий PSP останется внутри системы.</p>
       <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Поиск: GEO, валюта, метод, PSP…" className="mt-5 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:text-white"/>
-      <div className="mt-4 max-h-[520px] space-y-3 overflow-y-auto pr-1">{publishedRoutes.length ? publishedRoutes.map((route) => <SelectionCard key={route.route_id} selected={selectedRoutes.includes(route.route_id)} onChange={() => setSelectedRoutes(toggle(selectedRoutes, route.route_id))} title={route.client_title || route.route_code || "Оффер"} meta={`${textList(route.geos)} · ${textList(route.currencies)} · ${textList(route.methods)} · ${String(route.flow || "—").toUpperCase()}`} detail={`${route.provider_name || "PSP"} · ${route.provider_code || ""}`} aside="готов"/>) : <EmptyState title="Подходящих опубликованных офферов нет" description="Проверьте фильтр и статус публикации."/>}</div>
+      {publishedRoutes.length > 0 && <button type="button" onClick={() => setSelectedRoutes(toggleAllVisible(selectedRoutes, routeIds))} className="mt-3 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 hover:border-brand-300 hover:text-brand-500 dark:border-gray-700 dark:text-gray-300">{allRoutesSelected ? "Снять выбор со всех видимых" : `Выбрать все видимые (${publishedRoutes.length})`}</button>}
+      <div className="mt-3 max-h-[520px] space-y-3 overflow-y-auto pr-1">{publishedRoutes.length ? publishedRoutes.map((route) => <SelectionCard key={route.route_id} selected={selectedRoutes.includes(route.route_id)} onChange={() => setSelectedRoutes(toggle(selectedRoutes, route.route_id))} title={route.client_title || route.route_code || "Оффер"} meta={`${textList(route.geos)} · ${textList(route.currencies)} · ${textList(route.methods)} · ${String(route.flow || "—").toUpperCase()}`} detail={`${route.provider_name || "PSP"} · ${route.provider_code || ""}`} aside="готов"/>) : <EmptyState title="Подходящих опубликованных офферов нет" description="Проверьте фильтр и статус публикации."/>}</div>
       <button onClick={createManual} disabled={!selectedRoutes.length || Boolean(busy) || !complianceReady} className="mt-5 w-full rounded-lg bg-gray-900 px-4 py-3 text-sm font-semibold text-white hover:bg-black disabled:opacity-40 dark:bg-white dark:text-gray-900">{busy === "manual-shortlist" ? "Создаю…" : `Создать ручной shortlist (${selectedRoutes.length})`}</button>
     </Panel>
   </div>;
