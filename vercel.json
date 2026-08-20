@@ -8,6 +8,32 @@
       "maxDuration": 20
     }
   },
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        { "type": "host", "value": "offerspsp.com" }
+      ],
+      "destination": "https://offerpsp.com/:path*",
+      "statusCode": 301
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        { "type": "host", "value": "www.offerspsp.com" }
+      ],
+      "destination": "https://offerpsp.com/:path*",
+      "statusCode": 301
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        { "type": "host", "value": "www.offerpsp.com" }
+      ],
+      "destination": "https://offerpsp.com/:path*",
+      "statusCode": 301
+    }
+  ],
   "headers": [
     {
       "source": "/portal/(.*)",
