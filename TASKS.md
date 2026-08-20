@@ -1293,6 +1293,28 @@ stay isolated behind feature modes until their own verification is complete.
   acquisition pages plus the homepage and legal pages on 2026-08-15; the live acquisition page
   exposes its self-canonical and structured data.
 
+### Captain's Bridge restart remediation — verified 2026-08-20
+
+- [x] Deploy commit `f531e27` as production deployment
+  `dpl_EsdFfJb28sPgGmuMcMmgvSNxnPbP` and verify the production alias.
+- [x] Restore live data freshness with Supabase lead events, focus/visibility refresh and a
+  30-second safety refresh.
+- [x] Make SEO/GEO audits asynchronous; verify a new SiteOne crawl reaches a stored terminal result
+  from the live UI without blocking the request.
+- [x] Remove the cleared Oura Ring Store request from Inbox while preserving its record and history.
+- [x] Close the completed PAYOK import review job. Preserve its 22 published routes and 22 archived
+  routes because catalogue publication is separate from review-queue state.
+- [x] Add select/clear all for matching candidates and select/clear all visible for filtered routes;
+  verify the eight live candidates can be selected and cleared without creating a shortlist.
+- [x] Increase AIBot context windows from 16/8 to 30/12 and validate the active n8n workflow with
+  zero errors.
+- [ ] Replace `deepseek-chat` with `gpt-5.4-mini` after an OpenAI API credential is available in n8n;
+  keep BIXOFFPSP memory regardless of model.
+- [ ] Observe scheduled mailbox polling after the 10-message batch and 45-second work-budget fix;
+  unprocessed messages must remain deferred rather than cause a 60-second Vercel timeout.
+- [ ] Run a separate shared-Supabase security review for RLS-disabled tables and authenticated
+  security-definer RPCs before making any broad policy change.
+
 ## Production safety rules
 
 - Never treat local tests or documentation as proof of production state.
