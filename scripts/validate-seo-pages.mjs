@@ -6,11 +6,15 @@ import { resolve } from "node:path";
 import { seoPages } from "./generate-seo-pages.mjs";
 
 const root = resolve(import.meta.dirname, "..");
-const [sitemap, llms, home] = await Promise.all([
+const [sitemap, llms, home, generatorSource, vercelConfigSource] = await Promise.all([
   readFile(resolve(root, "sitemap.xml"), "utf8"),
   readFile(resolve(root, "llms.txt"), "utf8"),
   readFile(resolve(root, "index.html"), "utf8"),
+  readFile(resolve(root, "scripts/generate-seo-pages.mjs"), "utf8"),
+  readFile(resolve(root, "vercel.json"), "utf8"),
 ]);
+
+const vercelConfig = JSON.parse(vercelConfigSource);
 
 const slugs = seoPages.map((page) => page.slug);
 const knownSlugs = new Set(slugs);
@@ -40,5 +44,18 @@ for (const slug of [
 ]) {
   assert.ok(home.includes(`href="/${slug}.html"`), `${slug} must be linked from the home page`);
 }
+
+const attributionAsset = "/acquisition-attribution.js?v=20260827-1";
+assert.ok(home.includes(attributionAsset), "home page must use a versioned acquisition attribution asset");
+assert.ok(generatorSource.includes(attributionAsset), "SEO pages must use a versioned acquisition attribution asset");
+
+const attributionCacheRule = vercelConfig.headers.find((rule) => rule.source === "/acquisition-attribution.js");
+assert.ok(attributionCacheRule, "acquisition attribution asset must have an explicit cache rule");
+const browserCacheHeader = attributionCacheRule.headers.find((header) => header.key === "Cache-Control");
+assert.match(
+  browserCacheHeader?.value ?? "",
+  /max-age=31536000.*immutable/,
+  "versioned acquisition attribution asset must be cached immutably for one year",
+);
 
 process.stdout.write(`PASS ${seoPages.length} SEO pages are complete, internally valid and discoverable\n`);

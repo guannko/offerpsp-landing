@@ -566,7 +566,7 @@ ${structuredData}
     window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
   </script>
   <script defer src="/_vercel/insights/script.js"></script>
-  <script type="module" src="/acquisition-attribution.js"></script>
+  <script type="module" src="/acquisition-attribution.js?v=20260827-1"></script>
 </head>
 <body id="top">
   <a class="skip-link" href="#main">${ui.skip}</a>
