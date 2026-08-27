@@ -16,7 +16,7 @@ const [dialogScript, buildScript, vercelSource] = await Promise.all([
 for (const [index, page] of pages.entries()) {
   assert.ok(!page.includes("mailto:"), `${files[index]} must not launch a local mail application`);
   assert.ok(page.includes("/contact-dialog.css?v=20260828-1"), `${files[index]} must load contact dialog styles`);
-  assert.ok(page.includes("/contact-dialog.js?v=20260828-1"), `${files[index]} must load the contact dialog`);
+  assert.ok(page.includes("/contact-dialog.js?v=20260828-2"), `${files[index]} must load the contact dialog`);
   assert.ok(page.includes("data-contact-dialog"), `${files[index]} must expose a contact dialog trigger`);
 }
 

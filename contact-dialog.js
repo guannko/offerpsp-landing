@@ -7,8 +7,8 @@ contactDialog.innerHTML = `
   <section class="contact-dialog-card">
     <button class="contact-dialog-close" type="button" aria-label="Close contact window">×</button>
     <p class="contact-dialog-kicker">OfferPSP contact</p>
-    <h2 id="contactDialogTitle">Write from the email service you already use.</h2>
-    <p class="contact-dialog-copy">Copy the address or open a browser-based inbox. We will not launch a mail application on your device.</p>
+    <h2 id="contactDialogTitle">Let’s discuss working together.</h2>
+    <p class="contact-dialog-copy">For partnership enquiries, contact the OfferPSP team at the email address below.</p>
     <p class="contact-dialog-address"><span>Email</span><strong>${OFFERPSP_CONTACT_EMAIL}</strong></p>
     <p class="contact-dialog-subject">Suggested subject: <span></span></p>
     <div class="contact-dialog-actions">
