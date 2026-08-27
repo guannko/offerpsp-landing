@@ -4,8 +4,9 @@ import { resolve } from "node:path";
 export const seoPages = [
   {
     slug: "psp-for-igaming",
+    modified: "2026-08-28",
     title: "PSP Matching for iGaming Businesses | OfferPSP",
-    description: "Private PSP matching for licensed iGaming operators: payment coverage, deposits, payouts, risk profile and qualified provider introductions.",
+    description: "Private PSP matching for licensed iGaming operators: deposits, payouts, GEOs and risk controls. Get qualified introductions without a public provider list.",
     kicker: "iGaming payment infrastructure",
     heading: "PSP matching for licensed iGaming businesses.",
     lead: "A provider that accepts gaming traffic is not automatically the right operating partner. OfferPSP qualifies the entity, licences, markets, payment flows and risk profile before arranging a relevant introduction.",
@@ -30,9 +31,9 @@ export const seoPages = [
   },
   {
     slug: "high-risk-payment-provider",
-    modified: "2026-08-27",
+    modified: "2026-08-28",
     title: "High-Risk PSP and Payment Provider Matching | OfferPSP",
-    description: "High-risk PSP and payment provider matching for regulated or complex online businesses: underwriting evidence, routes, reserves and qualified introductions.",
+    description: "Private high-risk PSP matching for complex online businesses: underwriting, routes and reserves. Get qualified introductions without a public provider list.",
     kicker: "Complex and higher-risk profiles",
     heading: "Find a high-risk PSP that fits the actual business profile.",
     lead: "A high-risk PSP is not a universal provider category. Underwriting depends on the vertical, licence, entity, acquisition model, customer GEOs, transaction behaviour and operational controls. We map those facts before opening a provider conversation.",
@@ -163,9 +164,9 @@ export const seoPages = [
   },
   {
     slug: "psp-for-video-games",
-    modified: "2026-08-27",
+    modified: "2026-08-28",
     title: "PSP Matching for Video Game Businesses | OfferPSP",
-    description: "PSP matching for video game studios, publishers and platforms: global player payments, virtual goods, subscriptions, fraud, refunds and multi-GEO settlement.",
+    description: "Private PSP matching for video game companies: player payments, virtual goods and subscriptions. Get qualified introductions without a public provider list.",
     kicker: "Video game payment infrastructure",
     heading: "Match a PSP to video game payments, virtual goods and global players.",
     lead: "Video game payments combine global audiences, digital fulfilment, small-ticket purchases, subscriptions, virtual goods and fraud pressure. OfferPSP structures the commercial and risk profile before arranging a relevant provider introduction.",
@@ -217,9 +218,9 @@ export const seoPages = [
   },
   {
     slug: "psp-for-forex",
-    modified: "2026-08-26",
+    modified: "2026-08-28",
     title: "Forex PSP Matching for Licensed Brokers | OfferPSP",
-    description: "Forex PSP matching for licensed brokers: underwriting evidence, deposits, withdrawals, cards, bank rails, local methods and multi-GEO payment operations.",
+    description: "Private PSP matching for licensed forex brokers: deposits, withdrawals and multi-GEO coverage. Get qualified introductions without a public provider list.",
     kicker: "Forex payment infrastructure",
     heading: "Forex PSP matching for licensed brokers and trading platforms.",
     lead: "A forex PSP reviews much more than volume. Provider appetite depends on the licence, operating entity, client GEOs, acquisition model, deposit-to-withdrawal controls, dispute history and evidence around financial promotions. OfferPSP structures those facts before arranging a relevant provider introduction.",
@@ -248,8 +249,9 @@ export const seoPages = [
   },
   {
     slug: "payment-provider-europe",
+    modified: "2026-08-28",
     title: "Payment Provider Matching in Europe | OfferPSP",
-    description: "Payment provider matching for European merchants: EEA and UK coverage, cards, open banking, SEPA, local methods, currencies and settlement.",
+    description: "Private PSP matching for European merchants: EEA and UK cards, SEPA, open banking and local methods. Get qualified introductions without a public provider list.",
     kicker: "European payment coverage",
     heading: "Match payment providers to your European operating model.",
     lead: "Europe is not one payment market. Entity location, customer country, vertical, licensing, cards, open banking, SEPA and local payment behaviour determine which route is practical. OfferPSP compares those requirements before a qualified introduction.",

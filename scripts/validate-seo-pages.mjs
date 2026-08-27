@@ -74,6 +74,26 @@ for (const slug of [
   assert.ok(home.includes(`href="/${slug}.html"`), `${slug} must be linked from the home page`);
 }
 
+for (const slug of [
+  "payment-provider-europe",
+  "high-risk-payment-provider",
+  "psp-for-forex",
+  "psp-for-igaming",
+  "psp-for-video-games",
+]) {
+  const page = seoPages.find((candidate) => candidate.slug === slug);
+  assert.ok(page, `${slug} must exist`);
+  assert.match(page.description, /^Private\b/i, `${slug} must lead with the private matching proposition`);
+  assert.match(page.description, /qualified introductions/i, `${slug} must describe the qualified outcome`);
+  assert.match(page.description, /without a public provider list/i, `${slug} must explain the non-directory model`);
+  assert.ok(page.description.length <= 160, `${slug} meta description must remain snippet-sized`);
+  assert.equal(page.modified, "2026-08-28", `${slug} structured data must record the content update`);
+  assert.ok(
+    sitemap.includes(`<loc>https://offerpsp.com/${slug}.html</loc>\n    <lastmod>2026-08-28</lastmod>`),
+    `${slug} sitemap lastmod must reflect the content update`,
+  );
+}
+
 const attributionAsset = "/acquisition-attribution.js?v=20260827-1";
 assert.ok(home.includes(attributionAsset), "home page must use a versioned acquisition attribution asset");
 assert.ok(generatorSource.includes(attributionAsset), "SEO pages must use a versioned acquisition attribution asset");
