@@ -376,9 +376,43 @@ function targetsOnlyNoindexPages(item, noindexUrls) {
   return urls.length > 0 && urls.every((url) => noindexUrls.has(url));
 }
 
+function allNoindexPagesAreIntentionalPortal(noindexUrls) {
+  return noindexUrls.size > 0 && [...noindexUrls].every((url) => {
+    try {
+      return new URL(url).pathname === "/portal/";
+    } catch {
+      return false;
+    }
+  });
+}
+
 function claimsNoindexReview(item) {
   const text = [item?.title, item?.evidence, item?.recommendation].join(" ");
   return /noindex/i.test(text) && /(check|verify|ensure|review|провер|убед)/i.test(text);
+}
+
+function claimsIntentionalNoindexReview(item, noindexUrls) {
+  if (!claimsNoindexReview(item)) return false;
+  const urls = Array.isArray(item?.affected_urls)
+    ? item.affected_urls
+    : (item?.url ? [item.url] : []);
+  if (targetsOnlyNoindexPages(item, noindexUrls)) return true;
+  return urls.length === 0 && allNoindexPagesAreIntentionalPortal(noindexUrls);
+}
+
+function recommendsActualMetadataChange(item, evidence) {
+  const suggestedTitle = String(item?.suggested_title || "").trim();
+  const suggestedDescription = String(item?.suggested_meta_description || "").trim();
+  if (!suggestedTitle && !suggestedDescription) return false;
+
+  const pages = Array.isArray(evidence?.pages) ? evidence.pages : [];
+  const page = pages.find((candidate) => candidate.url === item?.url);
+  if (!page) return true;
+
+  const titleChanged = suggestedTitle && suggestedTitle !== String(page.title || "").trim();
+  const descriptionChanged = suggestedDescription
+    && suggestedDescription !== String(page.meta_description || "").trim();
+  return Boolean(titleChanged || descriptionChanged);
 }
 
 function claimsCreationOfExistingPage(item, evidence) {
@@ -589,7 +623,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     claimsImplementedHreflangChange(item, evidence));
   const removedExistingPageCreation = normalizedPriorities.some((item) => claimsCreationOfExistingPage(item, evidence));
   const removedNoindexReview = normalizedPriorities.some((item) =>
-    claimsNoindexReview(item) && targetsOnlyNoindexPages(item, noindexUrls));
+    claimsIntentionalNoindexReview(item, noindexUrls));
   const priorities = normalizedPriorities.filter((item) => {
     if (removedUnsupportedSecurity && claimsSecurityHeaderAction(item)) return false;
     if (removedUnsupportedBrotli && claimsMissingBrotli(item)) return false;
@@ -598,7 +632,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     if (claimsMetadataChange(item) && targetsOnlySearchMetadataExcludedPages(item, noindexUrls)) return false;
     if (removedUnsupportedLlms && claimsLlmsReview(item)) return false;
     if (claimsCreationOfExistingPage(item, evidence)) return false;
-    if (claimsNoindexReview(item) && targetsOnlyNoindexPages(item, noindexUrls)) return false;
+    if (claimsIntentionalNoindexReview(item, noindexUrls)) return false;
     if (claimsUnverifiableAggregateReview(item)) return false;
     if (claimsHreflangWithoutDiscoveredTranslations(item, evidence)) return false;
     if (claimsImplementedHreflangChange(item, evidence)) return false;
@@ -677,7 +711,8 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
       return true;
     }),
     content_recommendations: normalizedContentRecommendations.filter((item) =>
-      !(claimsMetadataChange(item) && targetsOnlySearchMetadataExcludedPages(item, noindexUrls))),
+      !(claimsMetadataChange(item) && targetsOnlySearchMetadataExcludedPages(item, noindexUrls))
+      && recommendsActualMetadataChange(item, evidence)),
     geo_recommendations: Array.isArray(source.geo_recommendations)
       ? source.geo_recommendations.slice(0, 8).map((item) => clampText(item, 600)).filter((item) =>
         item

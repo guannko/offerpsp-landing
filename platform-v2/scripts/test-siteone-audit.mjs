@@ -327,6 +327,42 @@ assert.equal(unsupportedExistingPageCreation.priorities.length, 0);
 assert.match(unsupportedExistingPageCreation.limitations.join(" "), /successfully loaded/i);
 assert.match(unsupportedExistingPageCreation.limitations.join(" "), /noindex directive is intentional/i);
 
+const unsupportedAggregateNoindexReview = normalizeSeoAgentAnalysis({ analysis: {
+  ...rawAgentAnalysis,
+  priorities: [{
+    priority: "P2",
+    area: "Technical",
+    title: "Исправить страницу с noindex",
+    evidence: "SiteOne reports one unknown noindex page.",
+    recommendation: "Проверить полный отчёт и убедиться, что noindex установлен намеренно.",
+    affected_urls: [],
+  }],
+} }, evidence);
+assert.equal(unsupportedAggregateNoindexReview.priorities.length, 0);
+assert.match(unsupportedAggregateNoindexReview.limitations.join(" "), /noindex directive is intentional/i);
+
+const filteredContentRecommendations = normalizeSeoAgentAnalysis({ analysis: {
+  ...rawAgentAnalysis,
+  content_recommendations: [{
+    url: "https://offerpsp.com/",
+    suggested_title: "",
+    suggested_meta_description: "",
+    rationale: "Improve the homepage metadata.",
+  }, {
+    url: "https://offerpsp.com/",
+    suggested_title: "OfferPSP",
+    suggested_meta_description: "Confidential payment matching",
+    rationale: "Use the current metadata.",
+  }, {
+    url: "https://offerpsp.com/",
+    suggested_title: "OfferPSP — Private PSP matching",
+    suggested_meta_description: "Confidential payment matching",
+    rationale: "Make the title more specific.",
+  }],
+} }, evidence);
+assert.equal(filteredContentRecommendations.content_recommendations.length, 1);
+assert.equal(filteredContentRecommendations.content_recommendations[0].suggested_title, "OfferPSP — Private PSP matching");
+
 const unsupportedHreflangExpansion = normalizeSeoAgentAnalysis({ analysis: {
   ...rawAgentAnalysis,
   priorities: [{
