@@ -178,7 +178,7 @@ const unsupportedSecurity = normalizeSeoAgentAnalysis({ analysis: {
 } }, evidence);
 assert.equal(unsupportedSecurity.priorities.length, 0);
 assert.equal(unsupportedSecurity.confidence, "medium");
-assert.match(unsupportedSecurity.limitations[0], /already contain/i);
+assert.match(unsupportedSecurity.limitations.join(" "), /already contain/i);
 
 const unsupportedAggregates = normalizeSeoAgentAnalysis({ analysis: {
   ...rawAgentAnalysis,
@@ -307,6 +307,13 @@ const unsupportedExistingPageCreation = normalizeSeoAgentAnalysis({ analysis: {
     evidence: "The portal is noindex.",
     recommendation: "Verify that noindex is intentional.",
     affected_urls: ["https://offerpsp.com/portal/"],
+  }, {
+    priority: "P2",
+    area: "Technical",
+    title: "Check skipped and external URLs",
+    evidence: "The aggregate lists 3 skipped URLs and 3 external URLs without their addresses.",
+    recommendation: "Check the full report.",
+    affected_urls: [],
   }],
 } }, evidenceWithVerticals);
 assert.equal(unsupportedExistingPageCreation.priorities.length, 0);
@@ -315,7 +322,7 @@ assert.match(unsupportedExistingPageCreation.limitations.join(" "), /noindex dir
 
 const unsupportedSecurityReview = normalizeSeoAgentAnalysis({ analysis: {
   ...rawAgentAnalysis,
-  quick_wins: ["Verify security headers on every page", "Check https://offerpsp.com/portal/ canonical for SEO"],
+  quick_wins: ["Verify security headers on every page", "Check https://offerpsp.com/portal/ canonical for SEO", "Check robots.txt content"],
   limitations: ["Security warnings require additional verification", "Brotli results contradict live headers and require checking"],
   geo_recommendations: ["Check robots.txt and add GPTBot access"],
   priorities: [{
@@ -345,10 +352,12 @@ const unsupportedLlmsReview = normalizeSeoAgentAnalysis({ analysis: {
   }],
   quick_wins: ["Check and update llms.txt"],
   geo_recommendations: ["Ensure llms.txt links every key page"],
+  limitations: ["No data about llms.txt content was provided."],
 } }, evidence);
 assert.equal(unsupportedLlmsReview.priorities.length, 0);
 assert.equal(unsupportedLlmsReview.quick_wins.length, 0);
 assert.equal(unsupportedLlmsReview.geo_recommendations.length, 0);
+assert.doesNotMatch(unsupportedLlmsReview.limitations.join(" "), /No data about llms/i);
 assert.match(unsupportedLlmsReview.limitations.join(" "), /links every crawled indexable page/i);
 
 let agentRequest = null;

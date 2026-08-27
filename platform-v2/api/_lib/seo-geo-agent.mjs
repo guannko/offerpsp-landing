@@ -434,7 +434,15 @@ function hasVerifiedLlmsCoverage(evidence) {
 function claimsLlmsReview(item) {
   const text = [item?.title, item?.evidence, item?.recommendation].join(" ");
   return /llms\.txt/i.test(text)
-    && /(check|verify|review|update|include|expand|missing|провер|обнов|включ|расшир|отсутств)/i.test(text);
+    && /(check|verify|review|update|include|expand|missing|провер|обнов|включ|расшир|отсутств|содерж)/i.test(text);
+}
+
+function claimsUnverifiableAggregateReview(item) {
+  const text = [item?.title, item?.evidence, item?.recommendation].join(" ");
+  const urls = Array.isArray(item?.affected_urls) ? item.affected_urls : [];
+  return urls.length === 0
+    && /(skipped|external URLs?|пропущенн|внешн.*URL)/i.test(text)
+    && /(check|verify|review|full report|провер|полном отч[её]те)/i.test(text);
 }
 
 function stripUnsupportedSummarySentences(summary, { modernImages, brotli, metadata }) {
@@ -483,7 +491,15 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     || normalizedContentRecommendations.some((item) =>
       claimsMetadataChange(item) && targetsOnlySearchMetadataExcludedPages(item, noindexUrls));
   const removedUnsupportedLlms = verifiedLlmsCoverage
-    && (normalizedPriorities.some(claimsLlmsReview) || claimsLlmsReview(summaryItem));
+    && (normalizedPriorities.some(claimsLlmsReview)
+      || claimsLlmsReview(summaryItem)
+      || [
+        ...(Array.isArray(source.quick_wins) ? source.quick_wins : []),
+        ...(Array.isArray(source.geo_recommendations) ? source.geo_recommendations : []),
+        ...(Array.isArray(source.limitations) ? source.limitations : []),
+      ]
+        .some((item) => /llms\.txt/i.test(String(item || ""))));
+  const removedUnverifiableAggregate = normalizedPriorities.some(claimsUnverifiableAggregateReview);
   const removedExistingPageCreation = normalizedPriorities.some((item) => claimsCreationOfExistingPage(item, evidence));
   const removedNoindexReview = normalizedPriorities.some((item) =>
     claimsNoindexReview(item) && targetsOnlyNoindexPages(item, noindexUrls));
@@ -496,6 +512,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     if (removedUnsupportedLlms && claimsLlmsReview(item)) return false;
     if (claimsCreationOfExistingPage(item, evidence)) return false;
     if (claimsNoindexReview(item) && targetsOnlyNoindexPages(item, noindexUrls)) return false;
+    if (claimsUnverifiableAggregateReview(item)) return false;
     return true;
   });
   const limitations = Array.isArray(source.limitations)
@@ -503,6 +520,9 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
       if (!item) return false;
       if (verifiedSecurity && /(security|CSP|заголов)/i.test(item) && /(verify|check|require|провер|треб)/i.test(item)) return false;
       if (verifiedBrotli && /brotli/i.test(item) && /(verify|check|require|contradict|провер|треб|противореч)/i.test(item)) return false;
+      if (verifiedLlmsCoverage && /llms\.txt/i.test(item) && /(no data|not provided|unavailable|нет данных|не предостав|недоступ)/i.test(item)) return false;
+      if (evidence?.geo_signals?.robots_txt?.ai_crawlers_allowed && /robots\.txt/i.test(item) && /(no data|not provided|unavailable|нет данных|не предостав|недоступ)/i.test(item)) return false;
+      if (removedUnverifiableAggregate && /(skipped|external URLs?|пропущенн|внешн.*URL)/i.test(item)) return false;
       return true;
     })
     : [];
@@ -544,7 +564,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     model: clampText(value?.model || source.model || "deepseek-chat", 120),
     generated_at: new Date().toISOString(),
     executive_summary: executiveSummary,
-    confidence: removedUnsupportedSecurity || removedUnsupportedBrotli || removedUnsupportedImages || removedUnsupportedStructuredData || removedNoindexMetadata || removedUnsupportedLlms || removedExistingPageCreation || removedNoindexReview
+    confidence: removedUnsupportedSecurity || removedUnsupportedBrotli || removedUnsupportedImages || removedUnsupportedStructuredData || removedNoindexMetadata || removedUnsupportedLlms || removedExistingPageCreation || removedNoindexReview || removedUnverifiableAggregate
       ? "medium"
       : (["high", "medium", "low"].includes(source.confidence) ? source.confidence : "medium"),
     priorities,
@@ -554,6 +574,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
       if (indexedMetadataComplete && /(meta[- _]?description|мета-описан)/i.test(item)) return false;
       if (removedUnsupportedSecurity && /(security|CSP|заголов)/i.test(item)) return false;
       if (removedUnsupportedLlms && /llms\.txt/i.test(item)) return false;
+      if (evidence?.geo_signals?.robots_txt?.ai_crawlers_allowed && /robots\.txt/i.test(item)) return false;
       if (mentionsNoindexPage(item, noindexUrls) && /(canonical|meta|SEO|index|hreflang)/i.test(item)) return false;
       if (mentionsExcludedSearchPage(item, noindexUrls) && /(meta[- _]?description|мета-описан|SEO|CTR|поиск|индекс)/i.test(item)) return false;
       return true;
