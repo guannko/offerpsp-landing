@@ -1412,7 +1412,13 @@ stay isolated behind feature modes until their own verification is complete.
   pass through the active inbound n8n workflow and are stored on the lead. Private lifecycle events
   cover submitted, qualified, PSP accepted, introduction, won and processing-live milestones. The
   staff SEO/GEO screen reads the source/campaign funnel without inventing spend or ROAS. Google
-  export remains consent-gated and no advertising tag, campaign or spend was enabled.
+  export remains consent-gated and no advertising tag, campaign or spend was enabled. Production
+  Supabase contains 17 historical `lead_submitted` events and zero export-eligible events; the
+  staff-only funnel returns 3 active business leads, 2 qualified, 0 paid, 0 won and 0 live. Active
+  n8n workflow `ealRZcZzCLKAv6S5` validates with 13 enabled nodes, 12 valid connections and no
+  errors/warnings. Public deployment `dpl_8PKVG7Uc8TZppjm9U3zZ9Ktq1rrQ` and Ops deployment
+  `dpl_BLTw8yaxEH6NvrURev94noVd1Jj2` are `READY`; their production assets were read back from the
+  canonical domains.
 - [ ] Connect live Google Ads cost data and consented offline-conversion export after the immutable
   billing country, currency and time zone are approved and the first search campaign is funded.
 - [ ] Lead quality by source, GEO and vertical.
