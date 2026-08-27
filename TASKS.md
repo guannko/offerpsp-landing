@@ -1479,6 +1479,17 @@ stay isolated behind feature modes until their own verification is complete.
   aliased to `https://offerpsp.com`. Fresh audit `2907a774-a0a4-4948-b169-23a38798d4e8`
   completed with 31/31 successful URLs, zero broken URLs and no
   `static-assets-short-cache` issue.
+- [x] Hardened the production CSP on 2026-08-27 by replacing arbitrary `'unsafe-inline'` script
+  and style execution with exact SHA-256 allow-list hashes and automatic build validation. All 17
+  crawled HTML pages retain HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy and
+  Permissions-Policy; the public lead dialog was exercised in a real browser without CSP errors.
+  The English and Russian CIS/Central Asia pages were also verified to declare reciprocal `en`,
+  `ru` and `x-default` hreflang links; no fictitious Russian alternatives are emitted for English
+  pages without translations. Public deployment `dpl_Dw7iN7LVwUKMD1HZDe6H4U9TvYGy` and staff
+  deployment `dpl_5MvLp2dVNPa4WbwKFTSxsNDycQoX` are `READY`. Fresh audit
+  `23422911-c7d2-40eb-a7c4-e9be6adce847` scored 9.9 with 31/31 successful URLs, zero broken URLs,
+  no security warnings or critical findings and no agent priorities. Remaining SiteOne security
+  entries are notices for optional or compatibility-oriented headers, not a P1 defect.
 
 ### Captain's Bridge restart remediation — verified 2026-08-20
 
