@@ -34,7 +34,9 @@ OfferPSP does not publish its provider network, private routes, rates or custome
 - PSP matching process: https://offerpsp.com/psp-matching-process.html
 - PSP matching for licensed iGaming businesses: https://offerpsp.com/psp-for-igaming.html
 - PSP matching for licensed forex and trading platforms: https://offerpsp.com/psp-for-forex.html
-- Higher-risk payment provider matching: https://offerpsp.com/high-risk-payment-provider.html
+- High-risk PSP and payment provider matching: https://offerpsp.com/high-risk-payment-provider.html
+- E-commerce PSP and payment provider matching: https://offerpsp.com/payment-provider-for-ecommerce.html
+- PSP matching for video game studios, publishers and platforms: https://offerpsp.com/psp-for-video-games.html
 - Cross-border payment provider matching: https://offerpsp.com/cross-border-payment-matching.html
 - Payment provider matching in Europe: https://offerpsp.com/payment-provider-europe.html
 - Payment provider matching for CIS and Central Asia: https://offerpsp.com/payment-provider-cis-central-asia.html

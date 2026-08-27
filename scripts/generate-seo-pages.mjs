@@ -30,13 +30,14 @@ export const seoPages = [
   },
   {
     slug: "high-risk-payment-provider",
-    title: "High-Risk Payment Provider Matching | OfferPSP",
-    description: "Find relevant payment provider routes for regulated or higher-risk online business models through private qualification and provider matching.",
+    modified: "2026-08-27",
+    title: "High-Risk PSP and Payment Provider Matching | OfferPSP",
+    description: "High-risk PSP and payment provider matching for regulated or complex online businesses: underwriting evidence, routes, reserves and qualified introductions.",
     kicker: "Complex and higher-risk profiles",
-    heading: "Find a payment provider for a complex risk profile.",
-    lead: "“High risk” is not a single provider category. Underwriting depends on the vertical, licence, entity, acquisition model, customer GEOs, transaction behaviour and operational controls. We map those facts before opening a provider conversation.",
+    heading: "Find a high-risk PSP that fits the actual business profile.",
+    lead: "A high-risk PSP is not a universal provider category. Underwriting depends on the vertical, licence, entity, acquisition model, customer GEOs, transaction behaviour and operational controls. We map those facts before opening a provider conversation.",
     boundary: "OfferPSP is a matching and introduction service, not a high-risk payment processor. We do not bypass compliance, underwriting or provider restrictions.",
-    sectionTitle: "Why risk-specific matching matters",
+    sectionTitle: "What changes a high-risk PSP match",
     sectionIntro: "A provider may accept one version of a vertical and reject another. The details determine whether a route is credible.",
     points: [
       ["Risk is profile-specific", "The same vertical can produce very different outcomes depending on licences, entity location, fulfilment, traffic acquisition and customer geography."],
@@ -52,7 +53,7 @@ export const seoPages = [
       ["Will every matched provider offer the same terms?", "No. Pricing, reserves, limits, settlement, required documents and permitted markets are provider-specific and remain subject to final review."],
       ["Can a declined merchant try another route?", "Potentially, if another provider has a genuinely different appetite or coverage. A previous decline should be disclosed where relevant, and the underlying reason must be understood rather than hidden."]
     ],
-    related: ["psp-for-igaming", "cross-border-payment-matching", "psp-matching-process"]
+    related: ["psp-for-igaming", "psp-for-forex", "payment-provider-for-ecommerce"]
   },
   {
     slug: "cross-border-payment-matching",
@@ -130,7 +131,63 @@ export const seoPages = [
       ["Can sellers be paid in different currencies?", "Potentially, depending on provider coverage, seller location, settlement rules and the platform model. Currency availability should be confirmed for each payout route."],
       ["Can the matching cover both buyer acceptance and seller payouts?", "Yes. We treat collection and payout as distinct flows so that a provider is not assumed to support both merely because one side is available."]
     ],
-    related: ["cross-border-payment-matching", "payment-methods-by-geo", "psp-for-saas"]
+    related: ["payment-provider-for-ecommerce", "cross-border-payment-matching", "psp-for-saas"]
+  },
+  {
+    slug: "payment-provider-for-ecommerce",
+    modified: "2026-08-27",
+    title: "E-commerce PSP and Payment Provider Matching | OfferPSP",
+    description: "E-commerce PSP and payment provider matching for cards, local methods, subscriptions, refunds, disputes, multi-currency settlement and new GEOs.",
+    kicker: "E-commerce payment infrastructure",
+    heading: "Match an e-commerce PSP to the complete checkout and settlement flow.",
+    lead: "An e-commerce payment route has to work beyond the first checkout. OfferPSP maps the entity, products, customer GEOs, payment methods, recurring flows, refunds, disputes and settlement needs before arranging a qualified provider introduction.",
+    boundary: "OfferPSP is a matching and introduction service, not a payment processor or merchant of record. Acceptance, onboarding, processing and final terms remain with independent providers.",
+    sectionTitle: "What changes an e-commerce PSP match",
+    sectionIntro: "The useful comparison covers conversion, risk and operations together instead of ranking providers by logo count.",
+    points: [
+      ["Entity, products and fulfilment", "The contracting entity, product categories, delivery model, customer terms and fulfilment evidence shape underwriting and permitted market coverage."],
+      ["Checkout and payment methods", "Cards, wallets, bank methods, local payment methods, mobile journeys and authentication should be prioritised by real customer GEO and device behaviour."],
+      ["Recurring, refunds and disputes", "Card-on-file flows, subscriptions, partial refunds, returns, descriptors, dispute evidence and chargeback controls affect both approval and ongoing performance."],
+      ["Currency, settlement and reporting", "Presentment currencies, settlement currency, FX, reserves, payout timing, reconciliation and transaction exports must fit the finance workflow."],
+      ["Launch sequence and resilience", "Primary and backup routes, integration dependencies, expected volume, average ticket and the order of target markets determine a practical rollout."]
+    ],
+    checklistTitle: "Prepare the e-commerce payment brief",
+    checklist: ["Entity, store URLs and product categories", "Customer countries and launch order", "Cards, wallets, bank and local methods", "One-off, recurring and refund flows", "Volume, ticket size and dispute history", "Currencies, settlement and reconciliation", "Current provider constraints and backup needs"],
+    faqs: [
+      ["What is an e-commerce PSP?", "It is a payment service provider that can support the merchant's online collection flow. Actual availability depends on the entity, products, customer countries, methods, currencies and risk profile."],
+      ["Can one payment provider cover every e-commerce market?", "Sometimes, but not automatically. Broad coverage can simplify operations, while local specialists may be useful for important methods or markets where the primary route has gaps."],
+      ["Can OfferPSP improve checkout conversion?", "We can help define method and provider requirements and arrange relevant introductions. Conversion results depend on the final provider, integration, customer journey, traffic quality and operating controls."],
+      ["Does OfferPSP hold customer or merchant funds?", "No. Funds, processing and settlement remain under the merchant's direct agreement with the selected independent provider."]
+    ],
+    related: ["payment-methods-by-geo", "cross-border-payment-matching", "psp-for-marketplaces"]
+  },
+  {
+    slug: "psp-for-video-games",
+    modified: "2026-08-27",
+    title: "PSP Matching for Video Game Businesses | OfferPSP",
+    description: "PSP matching for video game studios, publishers and platforms: global player payments, virtual goods, subscriptions, fraud, refunds and multi-GEO settlement.",
+    kicker: "Video game payment infrastructure",
+    heading: "Match a PSP to video game payments, virtual goods and global players.",
+    lead: "Video game payments combine global audiences, digital fulfilment, small-ticket purchases, subscriptions, virtual goods and fraud pressure. OfferPSP structures the commercial and risk profile before arranging a relevant provider introduction.",
+    boundary: "This page covers video games and digital entertainment, not gambling. OfferPSP does not process payments, operate storefronts or guarantee provider onboarding.",
+    sectionTitle: "What a video game PSP needs to understand",
+    sectionIntro: "The route depends on where the game is sold, who the merchant is and how players purchase and receive digital value.",
+    points: [
+      ["Studio, publisher and storefront model", "Clarify whether payments are collected by the studio, publisher, platform, console store or another merchant-of-record structure."],
+      ["Player GEOs and purchase patterns", "Target countries, devices, platforms, currencies, average ticket, in-game purchases, subscriptions and seasonal peaks influence method and provider fit."],
+      ["Virtual goods, age and refund controls", "Digital delivery evidence, parental controls, refund policy, account security and the treatment of virtual items support credible underwriting."],
+      ["Fraud, disputes and account abuse", "Card testing, stolen accounts, friendly fraud, bonus abuse and transaction monitoring need controls that match the game's purchase journey."],
+      ["Integration and live operations", "SDK or API requirements, webhooks, entitlement delivery, reconciliation, incident response and backup routing should be mapped before launch."]
+    ],
+    checklistTitle: "Prepare the video game payment brief",
+    checklist: ["Company, game and storefront URLs", "Merchant and publishing model", "Player GEOs, platforms and devices", "Virtual goods, subscriptions and ticket sizes", "Methods, currencies and settlement", "Fraud, refunds and dispute history", "Integration stack and launch schedule"],
+    faqs: [
+      ["Is video game payment processing the same as iGaming payments?", "No. Video games and gambling have different products, regulations and underwriting concerns. This page addresses video games, digital entertainment and virtual goods."],
+      ["Can a PSP support both one-off virtual goods and subscriptions?", "Potentially, but each flow should be confirmed by country, platform, mandate model and merchant entity rather than assumed from basic card acceptance."],
+      ["Do game publishers need local payment methods?", "It depends on player geography and purchase behaviour. Local bank, wallet or mobile methods can matter in specific markets, but only where demand and operational support justify them."],
+      ["Can OfferPSP guarantee lower fraud or more approvals?", "No. We can match the operating profile to relevant provider capabilities, while actual performance depends on traffic, integration, risk controls and the provider's live decisions."]
+    ],
+    related: ["payment-provider-for-ecommerce", "payment-methods-by-geo", "cross-border-payment-matching"]
   },
   {
     slug: "payment-methods-by-geo",

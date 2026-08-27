@@ -1,0 +1,44 @@
+#!/usr/bin/env node
+
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { seoPages } from "./generate-seo-pages.mjs";
+
+const root = resolve(import.meta.dirname, "..");
+const [sitemap, llms, home] = await Promise.all([
+  readFile(resolve(root, "sitemap.xml"), "utf8"),
+  readFile(resolve(root, "llms.txt"), "utf8"),
+  readFile(resolve(root, "index.html"), "utf8"),
+]);
+
+const slugs = seoPages.map((page) => page.slug);
+const knownSlugs = new Set(slugs);
+
+assert.equal(knownSlugs.size, slugs.length, "SEO page slugs must be unique");
+
+for (const page of seoPages) {
+  const url = `https://offerpsp.com/${page.slug}.html`;
+  assert.match(page.title, /OfferPSP$/, `${page.slug} title must identify OfferPSP`);
+  assert.ok(page.description.length >= 80 && page.description.length <= 170, `${page.slug} meta description must be useful and concise`);
+  assert.ok(page.points.length >= 4, `${page.slug} must explain the operating requirements`);
+  assert.ok(page.faqs.length >= 4, `${page.slug} must answer concrete merchant questions`);
+  assert.ok(sitemap.includes(`<loc>${url}</loc>`), `${page.slug} is missing from sitemap.xml`);
+  assert.ok(llms.includes(url), `${page.slug} is missing from llms.txt`);
+
+  for (const relatedSlug of page.related) {
+    assert.ok(knownSlugs.has(relatedSlug), `${page.slug} links to unknown SEO page ${relatedSlug}`);
+  }
+}
+
+for (const slug of [
+  "high-risk-payment-provider",
+  "payment-provider-for-ecommerce",
+  "psp-for-video-games",
+  "psp-for-igaming",
+  "psp-for-forex",
+]) {
+  assert.ok(home.includes(`href="/${slug}.html"`), `${slug} must be linked from the home page`);
+}
+
+process.stdout.write(`PASS ${seoPages.length} SEO pages are complete, internally valid and discoverable\n`);
