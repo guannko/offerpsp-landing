@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Вход в OfferPSP</title>
+  </head>
+  <body style="margin:0;padding:0;background:#f4f5f7;color:#12151f;font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;background:#f4f5f7;">
+      <tr>
+        <td align="center" style="padding:40px 16px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:720px;border-collapse:separate;border-spacing:0;background:#ffffff;border:1px solid #e4e6ec;border-radius:18px;overflow:hidden;">
+            <tr>
+              <td style="padding:36px 40px;background:#111522;">
+                <p style="margin:0 0 20px;color:#ff648f;font-size:14px;font-weight:700;letter-spacing:2px;line-height:1.4;text-transform:uppercase;">OFFERPSP ЧАСТНОЕ РАБОЧЕЕ ПРОСТРАНСТВО</p>
+                <h1 style="margin:0;color:#fffaf4;font-size:36px;font-weight:800;line-height:1.18;">Ваша ссылка для входа готова.</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:42px 40px 36px;background:#ffffff;">
+                <p style="margin:0 0 20px;color:#20232d;font-size:17px;line-height:1.6;">Используйте защищённую одноразовую ссылку, чтобы открыть своё рабочее пространство OfferPSP.</p>
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:28px 0 30px;">
+                  <tr>
+                    <td align="center" bgcolor="#ff4778" style="border-radius:12px;">
+                      <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:18px 30px;color:#111522;font-size:17px;font-weight:800;line-height:1;text-decoration:none;">Открыть моё рабочее пространство</a>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:0;color:#747987;font-size:14px;line-height:1.6;">Ссылка одноразовая. Если вы не запрашивали вход, просто проигнорируйте это письмо.</p>
+                <p style="margin:24px 0 0;color:#747987;font-size:12px;line-height:1.6;word-break:break-all;">Если кнопка не работает, откройте ссылку:<br><a href="{{ .ConfirmationURL }}" style="color:#d92f64;text-decoration:underline;">{{ .ConfirmationURL }}</a></p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:20px 40px;background:#fafafd;border-top:1px solid #eceef3;color:#8a8f9c;font-size:12px;line-height:1.5;">OfferPSP · BRAININDEX OÜ · bizdev@offerpsp.com</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

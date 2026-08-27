@@ -1,9 +1,95 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-08-15
+Updated: 2026-08-26
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
+
+## Canonical business model and development stages — decision 2026-08-26
+
+Status: `VERIFIED` as a documented founder decision; product delivery remains `PARTIAL`.
+
+- [x] Added `docs/OFFERPSP-BUSINESS-MODEL.md` as the canonical commercial direction and guardrail
+  against unrelated feature drift.
+- [x] Defined PSP as supplier, OfferPSP as managed catalogue/qualification/application operator and
+  merchant as buyer.
+- [x] Kept PSP identity confidential during the current supply-building and closed-matching stages.
+- [x] Defined transparent named PSP comparison as a later stage after verified critical mass,
+  freshness, successful connections and lead-attribution agreements.
+- [x] Defined six development stages: private PSP supply, closed matching, critical-mass build,
+  transparent catalogue, scalable paid service and future payment operations/orchestration.
+- [x] Made technical and logical integrity a mandatory zero gate before growth or PSP disclosure:
+  complete role-based E2E, access isolation, honest live state, consistent lifecycles, observability,
+  recovery and a stable production period without open P0/P1 defects.
+- [x] Prioritized PSP and merchant journeys; subagent expansion remains a later layer.
+- [x] Build the invite-only PSP cabinet and verify its text, spreadsheet and PDF offer lifecycle;
+  real external PSP onboarding remains the next business rollout step before any catalogue opening.
+
+### Invite-only PSP cabinet — production foundation 2026-08-26
+
+Status: `VERIFIED` for the production foundation and authenticated Telegram-text, XLSX and PDF offer
+lifecycles through automated parsing and staff review. Real external PSP onboarding remains the next
+business rollout step.
+
+- [x] Added a separate `/psp/` cabinet using invite-only email authentication; self-registration is
+  disabled and the existing merchant `/portal/` remains a separate surface.
+- [x] Added provider memberships with owner/admin/editor/viewer roles and RPC-only data access.
+  PSP users cannot read private tables, foreign PSP workspaces, merchants or OfferPSP margin rules.
+- [x] PSP can maintain its company profile, save offer drafts, submit an offer for staff review,
+  confirm freshness and immediately pause a published route. PSP cannot publish an offer.
+- [x] Replaced the primary manual-offer UX with a Telegram-style source composer. One message may
+  contain multiple offers; PSP can also upload private PDF, XLS/XLSX, CSV, DOC/DOCX, text and image
+  sources for extraction, queue parsing and staff review. The manual form remains a fallback.
+- [x] Added provider-maintained future-catalogue data: detailed company profile, licences, GEOs,
+  currencies, methods, integrations, verticals, onboarding/compliance, team contacts and a
+  versioned news/update stream. Provider submissions remain private and cannot self-publish.
+- [x] The representative mixed RU/EN Telegram source supplied by Boris is a parser fixture. It
+  produces six distinct routes, decodes numeric HTML entities, preserves source blocks and never
+  enables automatic publication.
+- [x] Documented that the later expanded windows/cards belong to the main OfferPSP interface. The
+  PSP cabinet is the compact input surface; the future main page must read a separately approved
+  public projection rather than private provider tables.
+- [x] Added a staff-side `Доступ PSP` tab and extended the staff invite function for provider users.
+- [x] Replayed every project migration on a clean PGlite database. The role test verified foreign
+  isolation, viewer read-only behaviour, mandatory active owner and `review`-only submission.
+- [x] Root validation, staff lint/build, public build and desktop/390 px unauthenticated visual
+  checks pass without console errors or horizontal mobile overflow.
+- [x] Applied `offerpsp_provider_portal_foundation` and `offerpsp_provider_workspace_content` to the
+  production Supabase project. Direct authenticated table access remains denied and provider RPCs
+  never publish an offer.
+- [x] Deployed `offerpsp-invite-member` version 3 (`ACTIVE`, JWT verification enabled).
+- [x] Deployed the consolidated Captain's Bridge production release
+  `ops-7q4m2x9k8v3n-3aygjr8ki-annoris.vercel.app` (`READY`) and verified the live provider-source API.
+- [x] Deployed public production release `dpl_m1A3Ta4b9aCaCyXjdSTxkJE3H62c` (`READY`) and aliased it
+  to `https://offerpsp.com`. Live `/psp/` returns HTTP 200, serves the new source queue client,
+  declares `noindex, nofollow`, has no console errors and does not overflow at 390 px.
+- [x] Completed an authenticated production E2E with the existing controlled account and a temporary
+  isolated PSP. The account received owner-only workspace access, submitted one clearly marked KZT
+  test offer through the live Telegram-style form, and the production worker reached `review` on its
+  first attempt with one draft route and zero blocking anomalies. Parsed output preserved the raw
+  block and produced KZ/KZT, P2P/KASPI, FTD/TRUSTED, IGAMING, API/H2H, PayIn 8.2%, PayOut 2.5%,
+  separate PayIn/PayOut limits and USDT T+0 settlement. `publication_allowed=false` and the provider
+  had zero published routes throughout the test.
+- [x] Removed the exact E2E job, batch, route, membership and temporary provider in one guarded
+  transaction after verification. Fresh database counts were zero for every test object, the
+  controlled auth user remained intact, and the live cabinet returned to `Доступ не назначен` with
+  no browser console errors.
+- [x] Created the persistent isolated production workspace `PAYOK E2E TEST 20260826` (`PSP-000014`)
+  without changing the real `PAYOK` (`PSP-000012`). Filled its private future-catalogue profile from
+  PAYOK public pages, plus one clearly synthetic contact and one private coverage-update draft.
+- [x] Completed production XLSX and PDF intake through `/psp/`. The server extracted a real workbook
+  and PDF, the five-minute worker processed both on its first attempt, and the final private workspace
+  contains three review-only routes: BD/BDT BKASH+NAGAD, ID/IDR QRIS and BR/BRL PIX. Every route keeps
+  separate PayIn, PayOut and settlement fees; the workspace has zero published routes.
+- [x] Fixed two production defects found by this E2E: `read-excel-file` v9 workbook objects were
+  treated as row arrays, and an adjacent spreadsheet note containing `PayIn / PayOut` could relabel a
+  leading `PayIn` row as payout. Added the real styled XLSX as a regression fixture and deployed
+  Captain release `dpl_8G8VMN6CZa6yrZbhvQyY1cgNbZwS` (`READY`).
+- [x] Fixed provider-portal import semantics so a later file/message updates only matching unpublished
+  route families and does not archive unrelated PSP GEOs. Staff full-snapshot imports preserve their
+  existing whole-card replacement behaviour. Migration `offerpsp_incremental_provider_imports` is
+  applied in production, the complete PGlite migration suite passes, and the live PAYOK E2E account
+  retains Bangladesh, Brazil and Indonesia simultaneously.
 
 ## Portal-native payment request creation — 2026-08-15
 
@@ -1288,6 +1374,13 @@ stay isolated behind feature modes until their own verification is complete.
   cross-border, SaaS, marketplace, payment-method-by-GEO and matching-process pages. A fresh live
   read of `payment-methods-by-geo.html` on 2026-08-15 confirmed its page title, H1, index/follow
   directive, self-canonical URL and JSON-LD block.
+- [x] Connect the staff SEO/GEO screen directly to Google Search Console with read-only service
+  account access. Production now shows 7/28/90-day clicks, impressions, CTR, position, top queries,
+  pages, countries and URL Inspection status without substituting internal snapshots. `VERIFIED`
+  2026-08-26: API data through 2026-08-23 reports 2 clicks, 230 impressions, 0.9% CTR and average
+  position 52.8; all 14 sitemap URLs pass URL Inspection after the improved Forex page was submitted
+  to Google's priority crawl queue. Staff deployment `dpl_ECX4eZD8MKjPuoYXTuERQuRjbPMT` and public
+  deployment `dpl_B3QUZZW4frZqDDRsep6yf2iAWpCx` are `READY`.
 - [ ] Public content generated from active routes without provider identity.
 - [x] Sitemap, schema and canonical strategy. The live production sitemap returned all seven
   acquisition pages plus the homepage and legal pages on 2026-08-15; the live acquisition page
@@ -1314,6 +1407,69 @@ stay isolated behind feature modes until their own verification is complete.
   unprocessed messages must remain deferred rather than cause a 60-second Vercel timeout.
 - [ ] Run a separate shared-Supabase security review for RLS-disabled tables and authenticated
   security-definer RPCs before making any broad policy change.
+
+### Project boundary and domain policy — decision 2026-08-21
+
+- [x] Reserve this Codex task/chat for OfferPSP work and durable `BIXOFFPSP` context only.
+- [x] Move Studio ONE, FitBot/FatBotSlim and other products to separate tasks/chats, including their
+  Stripe products, n8n billing flows and product-specific implementation.
+- [x] Record that BRAININDEX OÜ is the Estonian IT development company and may receive revenue for
+  its own products to its own operating account; this does not make it the OfferPSP operator or
+  default OfferPSP payee.
+- [x] Keep `offerpsp.com` canonical. Allow only `offerspsp.com` to act as an OfferPSP mirror/clone,
+  with canonicalization or redirects that preserve one search identity.
+- [x] Keep all other owned domains independent; do not apply blanket OfferPSP cloning, redirects or
+  shared SEO/GEO merely because the domains have the same owner.
+- [ ] Continue Studio ONE/FitBot Stripe and n8n payment setup only in their dedicated tasks. No
+  production billing change was authorized or completed in this OfferPSP task.
+- [ ] Plan and verify any future cross-domain SEO/traffic work separately for each real product.
+
+### Independent GCP reserve — project gate verified 2026-08-22
+
+- [x] Create the separate Google Cloud project `OfferPSP Reserve Production` with project ID
+  `offerpsp-reserve-prod` and project number `821675076620` under `No organization`.
+- [x] Verify the project dashboard and verify that the project is not linked to a billing account.
+- [x] Prepare ignored Terraform variables for `europe-west1`, PostgreSQL 17 regional HA and a
+  scale-to-zero Cloud Run standby worker.
+- [ ] Link a billing account only after explicit Boris confirmation of the estimated baseline cost:
+  approximately EUR 205.65/month before VAT, exchange-rate changes and extra usage.
+- [ ] After billing approval, run a reviewed Terraform plan, apply the reserve infrastructure,
+  load secrets through Secret Manager, deploy an immutable worker image and verify reconciliation
+  before declaring the reserve operational.
+
+### Shared n8n recovery and route isolation — 2026-08-22
+
+- [x] Re-enable `FitBot Reminders` (`qP2YR0aOJDsDfMir`) on its direct FitBot route, change its
+  poll interval from 5 to 15 minutes and cap Supabase requests at two 30-second attempts.
+- [x] Re-enable `⚙️ iGaming | Task Runner` (`s39doCFwQIKbN7sf`) on a 15-minute interval and route
+  it to the new active `⚙️ iGaming | Dedicated Scheduled Agent` (`X0x0Y9XaO1FvUIFQ`) instead of
+  the shared AIBot webhook. The exact authenticated Runner-to-dedicated route returned HTTP 200;
+  dedicated execution `405443` finished successfully.
+- [x] Disable only the legacy `Scheduler Trigger` in the shared AIBot
+  (`IRB53X5NAS4wTuyU`). Its Telegram and Captain's Bridge triggers remain active.
+- [x] Stop the actual execution storm: `Offer Parser Worker` (`MLDnePB4WW3jzX4S`) previously
+  started every minute while each failed run lasted more than six minutes. It now runs every five
+  minutes and fails within about 65 seconds when Supabase is unavailable. `Pre-Compliance PRO`
+  (`wiEFFDaHd3uaJoJi`) now runs every 15 minutes with bounded retries.
+- [ ] Keep the outage incident `PARTIAL` until Supabase is stable and the next normal FitBot and
+  iGaming scheduled executions succeed. The n8n routes validate with zero errors, but Supabase SQL
+  still intermittently terminates with a connection timeout and Auth refreshes still return 504.
+  First bounded production runs `405456` (FitBot) and `405463` (iGaming) both stopped after about
+  65 seconds at their initial Supabase reads instead of accumulating overlapping executions.
+- [ ] Incident update 2026-08-23: exact executions `409263`, `409298`, `409305`, `409340` and
+  `409346` again stopped at their first Supabase request after about 65 seconds, before either
+  scheduled route reached AIBot or the dedicated iGaming agent. Independent Supabase Auth and
+  heartbeat traffic returned 503/504, and a direct SQL health query terminated on connection
+  timeout. To remove background pressure and alert churn, temporarily deactivated `FitBot
+  Reminders`, `iGaming | Task Runner`, `Offer Parser Worker`, `Pre-Compliance PRO`, `FitBot —
+  Cleanup Pending Food Logs` and `PSP Freshness Reminders`. Interactive Telegram/webhook workflows
+  remain active. Do not reactivate the six pollers until SQL and REST health checks pass.
+- [x] Recovery update 2026-08-24: restarted Supabase from the project dashboard after explicit
+  Boris confirmation. Project returned to `ACTIVE_HEALTHY`; direct SQL succeeded with 15 total
+  connections, 3 active and no idle-in-transaction sessions, and the newest API health requests
+  returned HTTP 200. Reactivated all six temporary-disabled pollers. First post-restart iGaming
+  Task Runner execution `409454` completed successfully in 0.39 seconds. FitBot's next scheduled
+  production run remains the final route-specific confirmation.
 
 ## Production safety rules
 

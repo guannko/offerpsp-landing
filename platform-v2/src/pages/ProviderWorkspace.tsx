@@ -37,7 +37,9 @@ type ReplacementReview = {
 type Workspace = { provider: Provider; contacts: Contact[]; margin_policies: Margin[]; routes: Route[]; batches: JsonRow[]; activity: JsonRow[] };
 type MarginDraft = { route_id:string; flow:string; mode:string; percent_value:string; fixed_value:string; fixed_currency:string; notes:string };
 type DefaultMarkupDraft = { payin: string; payout: string; notes: string };
-type ProviderTab = "overview" | "edit" | "contacts" | "offers" | "pricing" | "documents" | "activity";
+type ProviderMember = { id: string; provider_id: string; user_id: string; email: string; role: "owner" | "admin" | "editor" | "viewer"; active: boolean; updated_at?: string };
+type ProviderMemberDraft = { id?: string; email: string; role: ProviderMember["role"]; active: boolean };
+type ProviderTab = "overview" | "edit" | "contacts" | "offers" | "pricing" | "access" | "documents" | "activity";
 
 const providerTabs: Array<{ id: ProviderTab; label: string }> = [
   { id: "overview", label: "Карточка" },
@@ -45,6 +47,7 @@ const providerTabs: Array<{ id: ProviderTab; label: string }> = [
   { id: "contacts", label: "Контакты" },
   { id: "offers", label: "Офферы" },
   { id: "pricing", label: "Маржа" },
+  { id: "access", label: "Доступ PSP" },
   { id: "documents", label: "Документы" },
   { id: "activity", label: "История" },
 ];
@@ -69,6 +72,7 @@ const providerDefaultMarkup = (policies: Margin[], flow: "payin" | "payout") => 
   return policy?.mode === "percentage_points" ? Number(policy.percent_value || 0) : 0;
 };
 const formatMarkup = (value: number) => `${value.toLocaleString("ru-RU", { maximumFractionDigits: 4 })} п.п.`;
+const emptyProviderMember: ProviderMemberDraft = { email: "", role: "owner", active: true };
 
 export default function ProviderWorkspace() {
   const { providerId } = useParams();
@@ -85,6 +89,8 @@ export default function ProviderWorkspace() {
   const [contactDraft, setContactDraft] = useState<Partial<Contact>>({ active: true, preferred_channel: "telegram" });
   const [marginDraft, setMarginDraft] = useState({ route_id: "", flow: "all", mode: "percentage_points", percent_value: "", fixed_value: "", fixed_currency: "", notes: "" });
   const [defaultMarkupDraft, setDefaultMarkupDraft] = useState<DefaultMarkupDraft>({ payin: "0", payout: "0", notes: "" });
+  const [members, setMembers] = useState<ProviderMember[]>([]);
+  const [memberDraft, setMemberDraft] = useState<ProviderMemberDraft>(emptyProviderMember);
   const entityWorkspace = useEntityWorkspace("provider", isNew ? undefined : providerId);
 
   const load = useCallback(async () => {
@@ -111,6 +117,16 @@ export default function ProviderWorkspace() {
   }, [isNew, params, providerId, setParams]);
 
   useEffect(() => { void load(); }, [load]);
+  const loadMembers = useCallback(async () => {
+    if (!providerId || isNew) return;
+    const result = await supabase.rpc("get_offerpsp_provider_members", { p_provider_id: providerId });
+    if (result.error) {
+      setMessage({ tone: "error", text: result.error.message });
+      return;
+    }
+    setMembers(Array.isArray(result.data) ? result.data as ProviderMember[] : []);
+  }, [isNew, providerId]);
+  useEffect(() => { void loadMembers(); }, [loadMembers]);
   useEffect(() => {
     const requested = params.get("tab");
     const nextTab = normalizeProviderTab(requested);
@@ -205,6 +221,41 @@ export default function ProviderWorkspace() {
     await execute("freshness", async () => { const result = await supabase.rpc("confirm_offerpsp_provider_freshness", { p_provider_id: providerId }); return { data: result.data, error: result.error }; }, "Актуальность условий подтверждена.");
   }
 
+  async function saveMember() {
+    if (!providerId || isNew || !memberDraft.email.trim()) return;
+    setBusy("member"); setMessage(null);
+    const result = await supabase.rpc("save_offerpsp_provider_member", {
+      p_provider_id: providerId,
+      p_member_id: memberDraft.id || null,
+      p_email: memberDraft.email.trim().toLowerCase(),
+      p_role: memberDraft.role,
+      p_active: memberDraft.active,
+    });
+    if (result.error) setMessage({ tone: "error", text: result.error.message });
+    else {
+      setMemberDraft(emptyProviderMember);
+      await loadMembers();
+      setMessage({ tone: "success", text: "Роль и доступ PSP обновлены." });
+    }
+    setBusy(null);
+  }
+
+  async function inviteMember() {
+    if (!providerId || isNew || !memberDraft.email.trim() || memberDraft.id) return;
+    setBusy("invite"); setMessage(null);
+    const result = await supabase.functions.invoke("offerpsp-invite-member", {
+      body: { provider_id: providerId, email: memberDraft.email.trim().toLowerCase(), role: memberDraft.role },
+    });
+    if (result.error || result.data?.success === false) {
+      setMessage({ tone: "error", text: result.data?.error || result.error?.message || "Не удалось отправить приглашение PSP." });
+    } else {
+      setMemberDraft(emptyProviderMember);
+      await loadMembers();
+      setMessage({ tone: "success", text: result.data?.invited ? "Приглашение отправлено, доступ PSP назначен." : "Пользователь уже зарегистрирован, доступ PSP назначен." });
+    }
+    setBusy(null);
+  }
+
   if (loading) return <SkeletonPage/>;
   return <>
     <PageMeta title={`${isNew ? "Новый PSP" : workspace?.provider.brand_name || "PSP"} | OfferPSP`} description="Private PSP workspace"/>
@@ -228,6 +279,8 @@ export default function ProviderWorkspace() {
                 ? <RouteWorkspace workspace={workspace} route={selectedRoute} select={(id) => { const nextParams = new URLSearchParams(params); nextParams.set("route", id); nextParams.set("tab", "offers"); setParams(nextParams); setTab("offers"); }} reload={load} execute={execute}/>
               : tab === "pricing"
                 ? <MarginPanel routes={workspace.routes} policies={workspace.margin_policies || []} draft={marginDraft} setDraft={setMarginDraft} save={() => void saveMargin()} busy={busy}/>
+              : tab === "access"
+                ? <ProviderAccessPanel members={members} draft={memberDraft} setDraft={setMemberDraft} save={() => void saveMember()} invite={() => void inviteMember()} busy={busy}/>
               : tab === "documents"
                 ? (entityWorkspace.loading ? <SkeletonPage/> : <DocumentsPanel documents={entityWorkspace.data.documents} busy={entityWorkspace.busy} onSave={entityWorkspace.saveDocument} onArchive={entityWorkspace.archiveDocument}/>)
                 : (entityWorkspace.loading ? <SkeletonPage/> : <ActivityPanel activities={entityWorkspace.data.activities}/>)}
@@ -337,6 +390,39 @@ function DefaultMarkupPanel({ draft, setDraft, save, busy }: { draft: DefaultMar
     <div className="mt-4 rounded-xl bg-gray-50 p-4 text-xs leading-5 text-gray-500 dark:bg-white/[0.03]">Исходные ставки не меняются. Индивидуальная наценка конкретного оффера или мерча имеет приоритет. Уже отправленные клиенту условия остаются историческим снимком и не переписываются молча.</div>
     <button onClick={save} disabled={Boolean(busy) || draft.payin.trim() === "" || draft.payout.trim() === ""} className="mt-5 w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy === "default-markups" ? "Сохраняю…" : "Сохранить PayIn и PayOut"}</button>
   </Panel>;
+}
+
+function ProviderAccessPanel({ members, draft, setDraft, save, invite, busy }: { members: ProviderMember[]; draft: ProviderMemberDraft; setDraft: (value: ProviderMemberDraft) => void; save: () => void; invite: () => void; busy: string | null }) {
+  const roles: Array<{ value: ProviderMember["role"]; label: string }> = [
+    { value: "owner", label: "Владелец" },
+    { value: "admin", label: "Администратор" },
+    { value: "editor", label: "Редактор офферов" },
+    { value: "viewer", label: "Только просмотр" },
+  ];
+  return <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+    <Panel>
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Закрытый кабинет PSP</p>
+      <h2 className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">Кто может войти от имени этого PSP</h2>
+      <p className="mt-2 text-sm leading-6 text-gray-500">PSP видит только свой профиль, свои офферы и статусы проверки. Внутренняя маржа OfferPSP, чужие PSP и данные мерчей ему недоступны.</p>
+      <div className="mt-5 space-y-3">
+        {members.map((item) => <button key={item.id} type="button" onClick={() => setDraft({ id: item.id, email: item.email, role: item.role, active: item.active })} className="flex w-full flex-col gap-2 rounded-xl border border-gray-200 p-4 text-left hover:border-brand-300 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between">
+          <div><strong className="text-sm text-gray-900 dark:text-white">{item.email}</strong><span className="mt-1 block text-xs text-gray-500">{roles.find((role) => role.value === item.role)?.label || item.role}</span></div>
+          <StatusPill status={item.active ? "active" : "paused"}/>
+        </button>)}
+        {!members.length && <EmptyState title="Доступ ещё никому не выдан" description="Пригласите владельца или редактора PSP по email."/>}
+      </div>
+    </Panel>
+    <Panel>
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{draft.id ? "Изменить доступ" : "Пригласить представителя"}</h2>
+      <div className="mt-5 space-y-4">
+        <Field label="Email"><input type="email" disabled={Boolean(draft.id)} className={fieldClass} value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} placeholder="name@psp.com"/></Field>
+        <Field label="Роль"><select className={fieldClass} value={draft.role} onChange={(event) => setDraft({ ...draft, role: event.target.value as ProviderMember["role"] })}>{roles.map((role) => <option key={role.value} value={role.value}>{role.label}</option>)}</select></Field>
+        {draft.id && <label className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" checked={draft.active} onChange={(event) => setDraft({ ...draft, active: event.target.checked })} className="h-4 w-4 accent-[#ff477d]"/>Доступ активен</label>}
+        <button type="button" disabled={!draft.email.trim() || Boolean(busy)} onClick={draft.id ? save : invite} className="w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy === "invite" ? "Отправляю…" : busy === "member" ? "Сохраняю…" : draft.id ? "Сохранить доступ" : "Отправить приглашение"}</button>
+        {draft.id && <button type="button" onClick={() => setDraft(emptyProviderMember)} className="w-full text-sm font-semibold text-gray-500">Отмена</button>}
+      </div>
+    </Panel>
+  </div>;
 }
 
 function ContactPanel({ contacts, draft, setDraft, save, busy }: { contacts: Contact[]; draft: Partial<Contact>; setDraft: (v: Partial<Contact>)=>void; save: ()=>void; busy: string|null }) {

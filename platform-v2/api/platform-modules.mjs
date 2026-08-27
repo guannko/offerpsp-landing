@@ -20,6 +20,8 @@ import {
 } from "./_lib/offerpsp-oauth.mjs";
 import { runSiteOneAudit } from "./_lib/siteone-runner.mjs";
 import { runSeoGeoAgent } from "./_lib/seo-geo-agent.mjs";
+import { getGoogleSearchConsoleOverview } from "./_lib/google-search-console.mjs";
+import { getLiveVercelTraffic } from "./_lib/vercel-web-analytics.mjs";
 import { probeDocling } from "./_lib/modules/docling.mjs";
 import {
   evaluateMerchantRouteRisk,
@@ -27,6 +29,8 @@ import {
   probeRules,
 } from "./_lib/modules/gorules.mjs";
 import { probeSearch } from "./_lib/modules/meilisearch.mjs";
+import { providerOfferSourceHandler } from "./_lib/provider-offer-source.mjs";
+import { bixGatewayHealthHandler } from "./_lib/bix-gateway-health.mjs";
 import {
   getSemanticMemoryConfig,
   probeSemanticMemory,
@@ -50,6 +54,20 @@ async function settle(name, probe) {
   } catch (error) {
     return { name, healthy: false, error: error.message };
   }
+}
+
+async function probeVercelWebAnalytics() {
+  const traffic = await getLiveVercelTraffic();
+  return {
+    name: "vercel_web_analytics",
+    configured: true,
+    enabled: true,
+    healthy: true,
+    source: traffic.source,
+    visitors: traffic.visitors,
+    pageviews: traffic.pageviews,
+    fetched_at: traffic.fetched_at,
+  };
 }
 
 async function evaluateRules(request, response) {
@@ -80,6 +98,7 @@ async function moduleHealth(request, response) {
     settle("gorules", probeRules),
     settle("meilisearch", probeSearch),
     settle("mem0", probeSemanticMemory),
+    settle("vercel_web_analytics", probeVercelWebAnalytics),
   ]);
   const modules = probedModules.map((item) => {
     if (item.name === "docling" && !item.enabled) {
@@ -234,6 +253,16 @@ async function seoAuditScheduled(request, response) {
   return sendJson(response, 201, { run_id: run.id, status: "completed", audit_id: audit.id });
 }
 
+async function seoLiveTraffic(request, response) {
+  if (request.method !== "GET") return sendJson(response, 405, { error: "Method not allowed" });
+  return sendJson(response, 200, await getLiveVercelTraffic());
+}
+
+async function googleSearchConsole(request, response) {
+  if (request.method !== "GET") return sendJson(response, 405, { error: "Method not allowed" });
+  return sendJson(response, 200, await getGoogleSearchConsoleOverview());
+}
+
 const handlers = {
   "evaluate-rules": evaluateRules,
   "module-health": moduleHealth,
@@ -249,7 +278,11 @@ const handlers = {
   "oauth-decision": oauthDecisionHandler,
   "seo-audit": seoAudit,
   "seo-audit-scheduled": seoAuditScheduled,
+  "seo-live-traffic": seoLiveTraffic,
+  "google-search-console": googleSearchConsole,
   "semantic-memory": semanticMemory,
+  "provider-offer-source": providerOfferSourceHandler,
+  "bix-gateway-health": bixGatewayHealthHandler,
 };
 
 export default async function handler(request, response) {
@@ -257,7 +290,7 @@ export default async function handler(request, response) {
     const moduleName = String(request.query?.module || "");
     const moduleHandler = handlers[moduleName];
     if (!moduleHandler) throw new HttpError(404, "Unknown platform module endpoint");
-    if (["mcp", "mcp-resource-metadata", "gpt-actions", "gpt-actions-schema", "oauth-metadata", "oauth-register", "oauth-authorize", "oauth-token"].includes(moduleName)) {
+    if (["mcp", "mcp-resource-metadata", "gpt-actions", "gpt-actions-schema", "oauth-metadata", "oauth-register", "oauth-authorize", "oauth-token", "provider-offer-source", "bix-gateway-health"].includes(moduleName)) {
       return await moduleHandler(request, response);
     }
     if (moduleName === "seo-audit-scheduled") {

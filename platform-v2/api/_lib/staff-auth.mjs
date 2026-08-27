@@ -99,6 +99,47 @@ export async function requireOfferPspStaff(request) {
   return { supabaseUrl, token, user };
 }
 
+export async function requireOfferPspProvider(request, providerId, roles = null) {
+  const supabaseUrl = requiredEnv("SUPABASE_URL", "SUPABASE_URL", "VITE_SUPABASE_URL");
+  requiredEnv(
+    "SUPABASE_PUBLISHABLE_KEY",
+    "SUPABASE_PUBLISHABLE_KEY",
+    "SUPABASE_ANON_KEY",
+    "VITE_SUPABASE_PUBLISHABLE_KEY",
+  );
+  const token = bearerToken(request);
+  const user = await supabaseJson(`${supabaseUrl}/auth/v1/user`, token, { method: "GET" });
+  const allowed = await supabaseJson(
+    `${supabaseUrl}/rest/v1/rpc/can_access_offerpsp_provider_workspace`,
+    token,
+    {
+      method: "POST",
+      body: JSON.stringify({ p_provider_id: providerId, p_roles: roles }),
+    },
+  );
+  if (allowed !== true) throw new HttpError(403, "PSP workspace access required");
+  return { supabaseUrl, token, user };
+}
+
+export async function providerSupabaseFetch(context, path, init = {}) {
+  const publishableKey = requiredEnv(
+    "SUPABASE_PUBLISHABLE_KEY",
+    "SUPABASE_PUBLISHABLE_KEY",
+    "SUPABASE_ANON_KEY",
+    "VITE_SUPABASE_PUBLISHABLE_KEY",
+  );
+  const response = await fetch(`${context.supabaseUrl}/${path.replace(/^\//, "")}`, {
+    ...init,
+    headers: {
+      apikey: publishableKey,
+      authorization: `Bearer ${context.token}`,
+      ...(init.headers || {}),
+    },
+  });
+  if (!response.ok) throw new HttpError(response.status, "Private source download failed");
+  return response;
+}
+
 export async function staffSupabaseRequest(context, path, init = {}) {
   return supabaseJson(`${context.supabaseUrl}/rest/v1/${path.replace(/^\//, "")}`, context.token, init);
 }

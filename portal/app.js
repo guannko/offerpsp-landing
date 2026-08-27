@@ -8,8 +8,8 @@ import {
 } from "/portal/offer-localization.js";
 
 const supabase = createClient(
-  "https://xcizofpejsomjiflesbx.supabase.co",
-  "sb_publishable_8VDTb7EC6ZGATqgMZZgghA_95pAushW",
+  "https://iceopurxqzqmwtcmwfzl.supabase.co",
+  "sb_publishable_6j6imdLpydTh8gt9wI861Q_YDITWOaM",
   { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } },
 );
 

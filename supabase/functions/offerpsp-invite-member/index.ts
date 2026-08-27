@@ -62,26 +62,40 @@ Deno.serve(async (request: Request) => {
     return json(request, 400, { success: false, error: "Invalid JSON payload" });
   }
   const organizationId = String(payload.organization_id || "").trim();
+  const providerId = String(payload.provider_id || "").trim();
   const email = String(payload.email || "").trim().toLowerCase();
-  const role = String(payload.role || "manager").trim().toLowerCase();
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(organizationId)) {
-    return json(request, 400, { success: false, error: "Valid organization_id is required" });
+  const isProviderInvite = Boolean(providerId);
+  const targetId = isProviderInvite ? providerId : organizationId;
+  const role = String(payload.role || (isProviderInvite ? "editor" : "manager")).trim().toLowerCase();
+  if (Boolean(organizationId) === Boolean(providerId)) {
+    return json(request, 400, { success: false, error: "Provide exactly one of organization_id or provider_id" });
+  }
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(targetId)) {
+    return json(request, 400, { success: false, error: `Valid ${isProviderInvite ? "provider_id" : "organization_id"} is required` });
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return json(request, 400, { success: false, error: "Valid email is required" });
   }
-  if (!["owner", "admin", "manager", "viewer"].includes(role)) {
-    return json(request, 400, { success: false, error: "Unsupported organization role" });
+  const allowedRoles = isProviderInvite
+    ? ["owner", "admin", "editor", "viewer"]
+    : ["owner", "admin", "manager", "viewer"];
+  if (!allowedRoles.includes(role)) {
+    return json(request, 400, { success: false, error: `Unsupported ${isProviderInvite ? "PSP" : "organization"} role` });
   }
 
   const memberParams = {
-    p_organization_id: organizationId,
+    ...(isProviderInvite
+      ? { p_provider_id: providerId }
+      : { p_organization_id: organizationId }),
     p_member_id: null,
     p_email: email,
     p_role: role,
     p_active: true,
   };
-  const existingMember = await sessionClient.rpc("save_offerpsp_organization_member", memberParams);
+  const memberRpc = isProviderInvite
+    ? "save_offerpsp_provider_member"
+    : "save_offerpsp_organization_member";
+  const existingMember = await sessionClient.rpc(memberRpc, memberParams);
   if (!existingMember.error) {
     return json(request, 200, { success: true, invited: false, member: existingMember.data });
   }
@@ -93,18 +107,23 @@ Deno.serve(async (request: Request) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const origin = request.headers.get("origin");
-  const redirectOrigin = origin && allowedOrigins.has(origin)
-    ? origin
-    : "https://ops-7q4m2x9k8v3n.vercel.app";
+  const redirectTo = isProviderInvite
+    ? "https://offerpsp.com/psp/"
+    : `${origin && allowedOrigins.has(origin) ? origin : "https://ops-7q4m2x9k8v3n.vercel.app"}/signin`;
   const invitation = await adminClient.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${redirectOrigin}/signin`,
-    data: { offerpsp_invited_by: userData.user.id, offerpsp_organization_id: organizationId },
+    redirectTo,
+    data: {
+      offerpsp_invited_by: userData.user.id,
+      ...(isProviderInvite
+        ? { offerpsp_provider_id: providerId }
+        : { offerpsp_organization_id: organizationId }),
+    },
   });
   if (invitation.error) {
     return json(request, 400, { success: false, error: invitation.error.message });
   }
 
-  const savedMember = await sessionClient.rpc("save_offerpsp_organization_member", memberParams);
+  const savedMember = await sessionClient.rpc(memberRpc, memberParams);
   if (savedMember.error) {
     return json(request, 500, {
       success: false,

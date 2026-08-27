@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import PageMeta from "../components/common/PageMeta";
 import { EmptyState, ErrorBanner, Metric, PageHeading, Panel, SkeletonPage } from "../components/control/Ui";
@@ -57,6 +57,48 @@ type TrafficSnapshot = {
   referrers?: CountRow[];
   paths?: CountRow[];
   limitations?: Array<{ code: string; message: string }>;
+};
+type LiveTraffic = {
+  source: "vercel_web_analytics_live";
+  period_start: string;
+  period_end: string;
+  fetched_at: string;
+  visitors: number;
+  pageviews: number;
+  countries: CountRow[];
+  referrers: CountRow[];
+  paths: CountRow[];
+};
+type SearchMetric = {
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
+};
+type SearchPeriod = SearchMetric & { start_date: string; end_date: string };
+type SearchDimensionRow = SearchMetric & { key: string; dimension: string };
+type SearchInspection = {
+  url: string;
+  verdict: string;
+  coverage_state?: string | null;
+  last_crawl_time?: string | null;
+  user_canonical?: string | null;
+  google_canonical?: string | null;
+};
+type GoogleSearchConsole = {
+  source: "google_search_console";
+  fetched_at: string;
+  data_through: string;
+  periods: { days_7: SearchPeriod; days_28: SearchPeriod; days_90: SearchPeriod };
+  queries: SearchDimensionRow[];
+  pages: SearchDimensionRow[];
+  countries: SearchDimensionRow[];
+  devices: SearchDimensionRow[];
+  sitemaps: Array<{ path: string; errors: number; warnings: number; pending: boolean; contents: Array<{ submitted: number; indexed: number }> }>;
+  inspection: {
+    summary: { total: number; indexed: number; not_indexed: number; neutral: number };
+    urls: SearchInspection[];
+  };
 };
 type TechnicalAudit = {
   tool?: string;
@@ -122,6 +164,14 @@ const sourceName = (value?: string | null) => {
   return value;
 };
 const countryName = (value?: string) => ({ CY: "Кипр", RU: "Россия", IN: "Индия", DE: "Германия", IT: "Италия", GB: "Великобритания" }[value || ""] || value || "—");
+const searchCountryName = (value?: string) => ({ vnm: "Вьетнам", rus: "Россия", cze: "Чехия", usa: "США", cyp: "Кипр", gbr: "Великобритания", deu: "Германия", mlt: "Мальта", nld: "Нидерланды", bra: "Бразилия" }[value || ""] || value?.toUpperCase() || "—");
+const percent = (value: unknown) => `${(number(value) * 100).toFixed(1)}%`;
+const position = (value: unknown) => number(value) ? number(value).toFixed(1) : "—";
+const shortPage = (value: string) => value.replace(/^https?:\/\/offerpsp\.com/i, "") || "/";
+const SEO_ANALYTICS_REFRESH_MS = 5 * 60_000;
+const LIVE_TRAFFIC_REFRESH_MS = 5 * 60_000;
+const GOOGLE_REFRESH_MS = 15 * 60_000;
+const ACTIVE_AUDIT_POLL_MS = 15_000;
 
 function BarList({ rows, valueKey, empty }: { rows: CountRow[]; valueKey: "visitors" | "pageviews" | "leads"; empty: string }) {
   const maximum = Math.max(1, ...rows.map((row) => number(row[valueKey])));
@@ -141,61 +191,134 @@ function BarList({ rows, valueKey, empty }: { rows: CountRow[]; valueKey: "visit
 
 export default function SeoGeoPage() {
   const [payload, setPayload] = useState<AnalyticsPayload | null>(null);
+  const [liveTraffic, setLiveTraffic] = useState<LiveTraffic | null>(null);
+  const [googleData, setGoogleData] = useState<GoogleSearchConsole | null>(null);
   const [loading, setLoading] = useState(true);
+  const [liveTrafficLoading, setLiveTrafficLoading] = useState(true);
+  const [googleLoading, setGoogleLoading] = useState(true);
   const [startingAudit, setStartingAudit] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [liveTrafficError, setLiveTrafficError] = useState<string | null>(null);
+  const [googleError, setGoogleError] = useState<string | null>(null);
   const [refreshNotice, setRefreshNotice] = useState<string | null>(null);
-  const [liveStatus, setLiveStatus] = useState<"connecting" | "live" | "fallback">("connecting");
-  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+  const analyticsLoadInFlight = useRef<Promise<void> | null>(null);
+  const analyticsLoadedAt = useRef(0);
+  const liveTrafficLoadedAt = useRef(0);
+  const googleLoadedAt = useRef(0);
 
-  const load = useCallback(async (background = false) => {
-    if (!background) setLoading(true);
-    setError(null);
-    const { data, error: loadError } = await supabase.rpc("get_offerpsp_seo_geo_analytics");
-    if (loadError) setError(loadError.message);
-    else {
-      setPayload((data || {}) as AnalyticsPayload);
-      setLastSyncedAt(new Date().toISOString());
-    }
-    setLoading(false);
+  const load = useCallback((background = false) => {
+    if (analyticsLoadInFlight.current) return analyticsLoadInFlight.current;
+    const request = (async () => {
+      if (!background) setLoading(true);
+      setError(null);
+      const { data, error: loadError } = await supabase.rpc("get_offerpsp_seo_geo_analytics");
+      if (loadError) setError(loadError.message);
+      else setPayload((data || {}) as AnalyticsPayload);
+      setLoading(false);
+      analyticsLoadedAt.current = Date.now();
+    })();
+    analyticsLoadInFlight.current = request;
+    request.then(
+      () => { if (analyticsLoadInFlight.current === request) analyticsLoadInFlight.current = null; },
+      () => { if (analyticsLoadInFlight.current === request) analyticsLoadInFlight.current = null; },
+    );
+    return request;
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  const loadLiveTraffic = useCallback(async () => {
+    setLiveTrafficLoading(true);
+    setLiveTrafficError(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) throw new Error("Сессия истекла. Войдите снова.");
+      const response = await fetch("/api/seo-live-traffic", {
+        method: "GET",
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: "no-store",
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "Живые данные Vercel недоступны");
+      setLiveTraffic(result as LiveTraffic);
+    } catch (trafficError) {
+      setLiveTraffic(null);
+      setLiveTrafficError(trafficError instanceof Error ? trafficError.message : "Живые данные Vercel недоступны");
+    } finally {
+      setLiveTrafficLoading(false);
+      liveTrafficLoadedAt.current = Date.now();
+    }
+  }, []);
+
+  const loadGoogle = useCallback(async () => {
+    setGoogleLoading(true);
+    setGoogleError(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) throw new Error("Сессия истекла. Войдите снова.");
+      const response = await fetch("/api/google-search-console", {
+        method: "GET",
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: "no-store",
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "Google Search Console недоступен");
+      setGoogleData(result as GoogleSearchConsole);
+    } catch (googleLoadError) {
+      setGoogleData(null);
+      setGoogleError(googleLoadError instanceof Error ? googleLoadError.message : "Google Search Console недоступен");
+    } finally {
+      setGoogleLoading(false);
+      googleLoadedAt.current = Date.now();
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+    void loadLiveTraffic();
+    void loadGoogle();
+  }, [load, loadLiveTraffic, loadGoogle]);
 
   useEffect(() => {
     const refresh = () => { void load(true); };
+    const refreshStaleSources = () => {
+      const now = Date.now();
+      if (now - analyticsLoadedAt.current >= SEO_ANALYTICS_REFRESH_MS) refresh();
+      if (now - liveTrafficLoadedAt.current >= LIVE_TRAFFIC_REFRESH_MS) void loadLiveTraffic();
+      if (now - googleLoadedAt.current >= GOOGLE_REFRESH_MS) void loadGoogle();
+    };
     const channel = supabase
       .channel("offerpsp-seo-geo-live")
       .on("postgres_changes", { event: "*", schema: "public", table: "offerpsp_seo_audit_runs" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "offerpsp_technical_audits" }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "offerpsp_growth_analytics_snapshots" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "offerpsp_leads" }, refresh)
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") setLiveStatus("live");
-        else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") setLiveStatus("fallback");
-      });
+      .subscribe();
 
-    const fallbackInterval = window.setInterval(refresh, 30_000);
+    const fallbackInterval = window.setInterval(refresh, SEO_ANALYTICS_REFRESH_MS);
+    const liveTrafficInterval = window.setInterval(() => { void loadLiveTraffic(); }, LIVE_TRAFFIC_REFRESH_MS);
+    const googleInterval = window.setInterval(() => { void loadGoogle(); }, GOOGLE_REFRESH_MS);
     const refreshWhenVisible = () => {
-      if (document.visibilityState === "visible") refresh();
+      if (document.visibilityState === "visible") refreshStaleSources();
     };
-    window.addEventListener("focus", refresh);
+    window.addEventListener("focus", refreshStaleSources);
     document.addEventListener("visibilitychange", refreshWhenVisible);
 
     return () => {
       window.clearInterval(fallbackInterval);
-      window.removeEventListener("focus", refresh);
+      window.clearInterval(liveTrafficInterval);
+      window.clearInterval(googleInterval);
+      window.removeEventListener("focus", refreshStaleSources);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
       void supabase.removeChannel(channel);
     };
-  }, [load]);
+  }, [load, loadLiveTraffic, loadGoogle]);
 
   const auditRun = payload?.audit_run || {};
   const auditActive = auditRun.status === "queued" || auditRun.status === "running";
 
   useEffect(() => {
     if (!auditActive) return undefined;
-    const interval = window.setInterval(() => { void load(true); }, 4_000);
+    const interval = window.setInterval(() => { void load(true); }, ACTIVE_AUDIT_POLL_MS);
     return () => window.clearInterval(interval);
   }, [auditActive, load]);
 
@@ -227,7 +350,9 @@ export default function SeoGeoPage() {
     }
   }, [load]);
 
-  const traffic = payload?.traffic || {};
+  const traffic = liveTraffic;
+  const trafficHistory = payload?.traffic_history || [];
+  const auditHistory = payload?.audit_history || [];
   const attribution = payload?.lead_attribution || {};
   const audit = payload?.technical_audit || {};
   const totalLeads = number(attribution.total_business_leads);
@@ -238,10 +363,12 @@ export default function SeoGeoPage() {
   const agentPriorities = agent.priorities || [];
   const categoryScores = Object.entries(audit.category_scores || {});
   const geoSignals = audit.metadata?.geo_signals;
-  const referrers = (traffic.referrers || []).map((row) => ({ ...row, key: row.key === "direct" ? "Прямой заход" : row.key }));
+  const referrers = (traffic?.referrers || []).map((row) => ({ ...row, key: row.key === "direct" ? "Прямой заход" : row.key }));
   const recent = attribution.recent || [];
   const sourceRows = attribution.sources || [];
   const maxSource = Math.max(1, ...sourceRows.map((row) => number(row.leads)));
+  const google90 = googleData?.periods.days_90;
+  const indexAttention = number(googleData?.inspection.summary.not_indexed) + number(googleData?.inspection.summary.neutral);
 
   if (loading) return <SkeletonPage/>;
 
@@ -251,14 +378,36 @@ export default function SeoGeoPage() {
     <PageHeading
       eyebrow="Growth intelligence"
       title="SEO / GEO и источники лидов"
-      description="Трафик и атрибуция собраны из production-данных. Каждый аудит заново запускает SiteOne, после чего наш read-only AI-агент анализирует страницы и расставляет приоритеты."
-      action={<div className="flex flex-col items-end gap-2"><button onClick={() => void startAudit()} disabled={startingAudit || auditActive} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50">{startingAudit ? "Запускаю…" : auditActive ? "Аудит выполняется…" : "Запустить полный аудит"}</button><span className={`text-xs font-medium ${liveStatus === "live" ? "text-success-600 dark:text-success-400" : "text-gray-400"}`}>{liveStatus === "live" ? "● Live" : liveStatus === "fallback" ? "Автообновление · 30 сек" : "Подключаю live…"}{lastSyncedAt ? ` · ${dateTime(lastSyncedAt)}` : ""}</span></div>}
+      description="Посещения идут напрямую из Vercel, поисковый спрос и индексация — напрямую из Google Search Console. Аудиты и заявки хранятся отдельно."
+      action={<div className="flex flex-col items-end gap-2"><button onClick={() => void startAudit()} disabled={startingAudit || auditActive} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50">{startingAudit ? "Запускаю…" : auditActive ? "Аудит выполняется…" : "Запустить полный аудит"}</button><span className={`text-xs font-medium ${liveTraffic ? "text-success-600 dark:text-success-400" : liveTrafficError ? "text-error-600 dark:text-error-400" : "text-gray-400"}`}>{liveTraffic ? `● Live Vercel · ${dateTime(liveTraffic.fetched_at)}` : liveTrafficLoading ? "Подключаю Vercel…" : "Live Vercel недоступен"}</span><span className={`text-xs font-medium ${googleData ? "text-success-600 dark:text-success-400" : googleError ? "text-error-600 dark:text-error-400" : "text-gray-400"}`}>{googleData ? `● Google · данные по ${shortDate(googleData.data_through)}` : googleLoading ? "Подключаю Google…" : "Google недоступен"}</span></div>}
     />
     {refreshNotice && <div className="mb-5 rounded-xl border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-700 dark:border-success-500/20 dark:bg-success-500/10 dark:text-success-300">{refreshNotice}</div>}
+    {liveTrafficError && <div className="mb-5 rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-500/20 dark:bg-error-500/10 dark:text-error-300"><strong>Текущий трафик не показан.</strong> {liveTrafficError} Архивные данные не используются.</div>}
+    {googleError && <div className="mb-5 rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-500/20 dark:bg-error-500/10 dark:text-error-300"><strong>Данные Google не показаны.</strong> {googleError} Архивные данные не используются.</div>}
+
+    <Panel className="mb-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Google Search Console</h2><p className="mt-1 text-sm text-gray-500">Органический поиск и фактическая индексация. Google публикует эти данные с задержкой, поэтому это не live‑счётчик.</p></div>
+        <span className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500 dark:bg-white/[0.03]">{googleData ? `Данные по ${shortDate(googleData.data_through)} · получены ${dateTime(googleData.fetched_at)}` : googleLoading ? "Загрузка…" : "Нет данных"}</span>
+      </div>
+      <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <Metric label="Клики · 90 дней" value={google90 ? number(google90.clicks) : "—"} hint={google90 ? `${shortDate(google90.start_date)} — ${shortDate(google90.end_date)}` : "Google недоступен"}/>
+        <Metric label="Показы · 90 дней" value={google90 ? number(google90.impressions) : "—"} hint="органический поиск Google"/>
+        <Metric label="CTR" value={google90 ? percent(google90.ctr) : "—"} hint="клики ÷ показы" tone={google90 && google90.ctr < 0.02 ? "warning" : "success"}/>
+        <Metric label="Средняя позиция" value={google90 ? position(google90.position) : "—"} hint="меньше — лучше" tone={google90 && google90.position > 30 ? "warning" : "success"}/>
+        <Metric label="В индексе" value={googleData ? `${googleData.inspection.summary.indexed}/${googleData.inspection.summary.total}` : "—"} hint={googleData ? `${indexAttention} требуют внимания` : "проверка URL не получена"} tone={indexAttention ? "warning" : "success"}/>
+      </div>
+      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div><h3 className="text-sm font-semibold text-gray-900 dark:text-white">Запросы</h3><div className="mt-3 space-y-2">{(googleData?.queries || []).slice(0, 8).map((row) => <div key={row.key} className="grid grid-cols-[1fr_52px_62px] gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm dark:border-gray-800"><span className="truncate text-gray-700 dark:text-gray-300">{row.key}</span><strong className="text-right text-gray-900 dark:text-white">{row.impressions}</strong><span className="text-right text-gray-400">поз. {position(row.position)}</span></div>)}{!googleData?.queries.length && <EmptyState title="Запросов нет" description="Google ещё не показал поисковые запросы."/>}</div></div>
+        <div><h3 className="text-sm font-semibold text-gray-900 dark:text-white">Страницы из поиска</h3><div className="mt-3 space-y-2">{(googleData?.pages || []).slice(0, 8).map((row) => <div key={row.key} className="grid grid-cols-[1fr_52px_62px] gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm dark:border-gray-800"><code className="truncate text-xs text-gray-700 dark:text-gray-300">{shortPage(row.key)}</code><strong className="text-right text-gray-900 dark:text-white">{row.impressions}</strong><span className="text-right text-gray-400">{row.clicks} клик.</span></div>)}{!googleData?.pages.length && <EmptyState title="Страниц нет" description="Google ещё не показал страницы в поиске."/>}</div></div>
+        <div><h3 className="text-sm font-semibold text-gray-900 dark:text-white">Страны поиска</h3><div className="mt-3 space-y-2">{(googleData?.countries || []).slice(0, 8).map((row) => <div key={row.key} className="grid grid-cols-[1fr_52px_62px] gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm dark:border-gray-800"><span className="truncate text-gray-700 dark:text-gray-300">{searchCountryName(row.key)}</span><strong className="text-right text-gray-900 dark:text-white">{row.impressions}</strong><span className="text-right text-gray-400">{row.clicks} клик.</span></div>)}{!googleData?.countries.length && <EmptyState title="Стран нет" description="Google ещё не показал географию поиска."/>}</div></div>
+      </div>
+      {googleData && <details className="mt-6 rounded-xl border border-gray-200 dark:border-gray-800"><summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">Индексация URL · {googleData.inspection.summary.indexed} в индексе, {indexAttention} требуют внимания</summary><div className="border-t border-gray-100 p-4 dark:border-gray-800"><div className="space-y-2">{googleData.inspection.urls.map((row) => <div key={row.url} className="flex flex-col justify-between gap-2 rounded-xl bg-gray-50 px-4 py-3 text-sm dark:bg-white/[0.03] sm:flex-row sm:items-center"><div className="min-w-0"><code className="block truncate text-xs text-gray-700 dark:text-gray-300">{shortPage(row.url)}</code><span className="mt-1 block text-xs text-gray-400">{row.coverage_state || "Статус не указан"}{row.last_crawl_time ? ` · обход ${dateTime(row.last_crawl_time)}` : ""}</span></div><strong className={row.verdict === "PASS" ? "text-success-600 dark:text-success-400" : "text-warning-600"}>{row.verdict === "PASS" ? "В индексе" : "Требует внимания"}</strong></div>)}</div></div></details>}
+    </Panel>
 
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
-      <Metric label="Посетители" value={number(traffic.visitors)} hint={`${shortDate(traffic.period_start)} — ${shortDate(traffic.period_end)}`}/>
-      <Metric label="Просмотры" value={number(traffic.pageviews)} hint="production‑сайт по данным Vercel"/>
+      <Metric label="Посетители" value={traffic ? number(traffic.visitors) : "—"} hint={traffic ? `${shortDate(traffic.period_start)} — ${shortDate(traffic.period_end)}` : "живой источник недоступен"}/>
+      <Metric label="Просмотры" value={traffic ? number(traffic.pageviews) : "—"} hint={traffic ? "production‑сайт по данным Vercel" : "архивные данные не используются"}/>
       <Metric label="Заявки · 30 дней" value={number(attribution.last_30_days)} hint="без E2E, спама и архивных дублей" tone="success"/>
       <Metric label="Атрибуция" value={`${coverage}%`} hint={`${attributedLeads} из ${totalLeads} рабочих заявок`} tone={coverage < 50 ? "warning" : "success"}/>
       <Metric label="Техаудит" value={audit.audited_at ? `${number(audit.overall_score).toFixed(1)}/10` : "—"} hint={auditActive ? "новый crawl выполняется" : audit.audited_at ? `${audit.tool || "аудит"} ${audit.tool_version || ""}` : "crawl пока не запускался"} tone={audit.audited_at && number(audit.overall_score) >= 9 ? "success" : "warning"}/>
@@ -282,7 +431,7 @@ export default function SeoGeoPage() {
       <Panel>
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">География посещений</h2>
         <p className="mt-1 text-sm text-gray-500">Страны реальных посетителей сайта, не GEO платёжного запроса.</p>
-        <div className="mt-6"><BarList rows={traffic.countries || []} valueKey="visitors" empty="Vercel ещё не зафиксировал географию посетителей."/></div>
+        <div className="mt-6"><BarList rows={traffic?.countries || []} valueKey="visitors" empty={liveTrafficError ? "Живой источник Vercel недоступен." : "Vercel ещё не зафиксировал географию посетителей."}/></div>
       </Panel>
     </div>
 
@@ -295,7 +444,7 @@ export default function SeoGeoPage() {
       <Panel>
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Посадочные страницы</h2>
         <p className="mt-1 text-sm text-gray-500">Какие URL получают входящий трафик.</p>
-        <div className="mt-6 space-y-3">{(traffic.paths || []).map((row, index) => <div key={`${row.key}-${index}`} className="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3 dark:border-gray-800"><code className="text-sm text-gray-700 dark:text-gray-300">{row.key || "/"}</code><strong className="text-sm text-gray-900 dark:text-white">{number(row.pageviews)}</strong></div>)}{!(traffic.paths || []).length && <EmptyState title="Страниц пока нет" description="Данные появятся после посещений."/>}</div>
+        <div className="mt-6 space-y-3">{(traffic?.paths || []).map((row, index) => <div key={`${row.key}-${index}`} className="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3 dark:border-gray-800"><code className="text-sm text-gray-700 dark:text-gray-300">{row.key || "/"}</code><strong className="text-sm text-gray-900 dark:text-white">{number(row.pageviews)}</strong></div>)}{!(traffic?.paths || []).length && <EmptyState title="Страниц пока нет" description={liveTrafficError ? "Живой источник Vercel недоступен." : "Данные появятся после посещений."}/>}</div>
       </Panel>
       <Panel>
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Спрос по GEO</h2>
@@ -332,8 +481,8 @@ export default function SeoGeoPage() {
           <div className="rounded-xl bg-success-50 p-4 text-sm text-success-800 dark:bg-success-500/10 dark:text-success-300"><strong>Lead attribution работает</strong><p className="mt-1 text-xs">Новые формы сохраняют AI‑платформу, referrer, first/last touch и UTM в нашей базе.</p></div>
           <div className="rounded-xl bg-success-50 p-4 text-sm text-success-800 dark:bg-success-500/10 dark:text-success-300"><strong>Живой crawler подключён</strong><p className="mt-1 text-xs">SiteOne Crawler запускается вручную этой страницей и по расписанию, затем сохраняет новый проверяемый аудит.</p></div>
           {auditRun.status === "failed" && <div className="rounded-xl bg-error-50 p-4 text-sm text-error-800 dark:bg-error-500/10 dark:text-error-300"><strong>Последний запуск завершился ошибкой</strong><p className="mt-1 text-xs">{auditRun.error_message || "Повторите запуск или проверьте runtime-логи модуля."}</p></div>}
-          {(traffic.limitations || []).map((item) => <div key={item.code} className="rounded-xl bg-warning-50 p-4 text-sm text-warning-800 dark:bg-warning-500/10 dark:text-warning-300"><strong>{item.code === "utm_dimensions_unavailable" ? "Ограничение тарифа Vercel" : "Короткая история"}</strong><p className="mt-1 text-xs">{item.message}</p></div>)}
-          <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800"><span className="block text-xs text-gray-400">Снимок трафика</span><strong className="mt-1 block text-sm text-gray-800 dark:text-white/90">{dateTime(traffic.captured_at)}</strong><span className="mt-3 block text-xs text-gray-400">Технический аудит</span><strong className="mt-1 block text-sm text-gray-800 dark:text-white/90">{dateTime(audit.audited_at)}</strong></div>
+          <div className={`rounded-xl p-4 text-sm ${traffic ? "bg-success-50 text-success-800 dark:bg-success-500/10 dark:text-success-300" : "bg-error-50 text-error-800 dark:bg-error-500/10 dark:text-error-300"}`}><strong>{traffic ? "Живой трафик подключён" : "Живой трафик недоступен"}</strong><p className="mt-1 text-xs">{traffic ? `Прямой запрос к Vercel выполнен ${dateTime(traffic.fetched_at)}. Архивные данные не участвуют.` : "Текущие показатели скрыты: подмена историей запрещена."}</p></div>
+          <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800"><span className="block text-xs text-gray-400">Технический аудит</span><strong className="mt-1 block text-sm text-gray-800 dark:text-white/90">{dateTime(audit.audited_at)}</strong></div>
         </div>
       </Panel>
     </div>
@@ -363,5 +512,13 @@ export default function SeoGeoPage() {
         {!!agent.quick_wins?.length && <div className="mt-5 rounded-xl bg-gray-50 p-4 dark:bg-white/[0.03]"><h3 className="text-sm font-semibold text-gray-900 dark:text-white">Быстрые улучшения</h3><ul className="mt-3 grid grid-cols-1 gap-2 text-sm text-gray-600 dark:text-gray-300 md:grid-cols-2">{agent.quick_wins.map((item, index) => <li key={`${item}-${index}`} className="flex gap-2"><span className="text-success-500">✓</span><span>{item}</span></li>)}</ul></div>}
       </> : agent.status === "failed" ? <div className="mt-5 rounded-xl bg-error-50 p-4 text-sm text-error-800 dark:bg-error-500/10 dark:text-error-300"><strong>SiteOne завершил crawl, но AI-анализ не получен</strong><p className="mt-1 text-xs">{agent.error_message || "Повторите полный аудит или проверьте SEO/GEO workflow."}</p></div> : <EmptyState title="AI-анализ ещё не запускался" description="Нажмите «Запустить полный аудит»: сначала SiteOne соберёт факты, затем отдельный агент подготовит рекомендации."/>}
     </Panel>
+
+    <details className="mt-6 rounded-2xl border border-gray-200 bg-white shadow-theme-xs dark:border-[#34435a] dark:bg-[#202d42]">
+      <summary className="cursor-pointer px-5 py-4 text-sm font-semibold text-gray-900 dark:text-white">История SEO/GEO · {trafficHistory.length} архивных записей трафика, {auditHistory.length} аудитов</summary>
+      <div className="border-t border-gray-100 px-5 py-4 dark:border-gray-800">
+        <p className="mb-4 text-sm text-gray-500">Архив только для аналитики. Эти значения никогда не подставляются в текущие показатели.</p>
+        <div className="space-y-2">{trafficHistory.map((snapshot, index) => <div key={`${snapshot.captured_at}-${index}`} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 px-4 py-3 text-sm dark:border-gray-800"><span className="text-gray-500">{dateTime(snapshot.captured_at)} · {shortDate(snapshot.period_start)} — {shortDate(snapshot.period_end)}</span><strong className="text-gray-900 dark:text-white">{number(snapshot.visitors)} посетителей · {number(snapshot.pageviews)} просмотров</strong></div>)}{!trafficHistory.length && <EmptyState title="История пуста" description="Архивных записей SEO/GEO нет."/>}</div>
+      </div>
+    </details>
   </>;
 }

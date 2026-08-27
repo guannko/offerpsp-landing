@@ -95,6 +95,22 @@
       "destination": "/api/platform-modules?module=seo-audit-scheduled"
     },
     {
+      "source": "/api/seo-live-traffic",
+      "destination": "/api/platform-modules?module=seo-live-traffic"
+    },
+    {
+      "source": "/api/google-search-console",
+      "destination": "/api/platform-modules?module=google-search-console"
+    },
+    {
+      "source": "/api/bix-gateway-health",
+      "destination": "/api/platform-modules?module=bix-gateway-health"
+    },
+    {
+      "source": "/api/provider-offer-source",
+      "destination": "/api/platform-modules?module=provider-offer-source"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },

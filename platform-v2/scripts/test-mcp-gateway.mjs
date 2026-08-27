@@ -48,8 +48,44 @@ global.fetch = async (url, init = {}) => {
     management: { providers: [], organizations: [] }, coverage: { routes: [] },
     captains_bridge: { casino_leads: [], psp_providers: [] },
   });
+  if (String(url).endsWith("/rpc/get_offerpsp_seo_geo_analytics")) return Response.json({
+    traffic: { source: "historical_snapshot", visitors: 2, pageviews: 2 },
+    traffic_history: [{ source: "historical_snapshot", visitors: 2, pageviews: 2 }],
+    technical_audit: { overall_score: 9.4 },
+  });
   if (String(url).endsWith("/rpc/record_offerpsp_mcp_action")) return Response.json({ ok: true, journal_id: "33333333-3333-4333-8333-333333333333" });
   if (String(url).endsWith("/rpc/save_offerpsp_task")) return Response.json({ id: "44444444-4444-4444-8444-444444444444", title: "Follow up" });
+  if (String(url).endsWith("/rpc/prepare_offerpsp_route_replacements")) return Response.json({
+    handled: true,
+    confirmation_required: true,
+    confirmation_token: "55555555-5555-4555-8555-555555555555",
+    operation: "replace_offer_routes",
+    count: 2,
+    status: "pending",
+  });
+  if (String(url).endsWith("/rpc/confirm_offerpsp_route_replacements")) return Response.json({
+    handled: true,
+    confirmation_token: "55555555-5555-4555-8555-555555555555",
+    operation: "replace_offer_routes",
+    processed: 2,
+    status: "executed",
+  });
+  if (String(url).includes("/api/bix-gateway-health")) return Response.json({
+    status: "live",
+    dependency_checks_performed: false,
+    data_planes: {
+      primary: { id: "primary", mode: "delegated" },
+      reserve: { id: "reserve", mode: "not_provisioned" },
+    },
+  });
+  if (String(url).includes("/api/integration-health")) return Response.json({ status: "ok" });
+  if (String(url).includes("/api/module-health")) return Response.json({ status: "ok" });
+  if (String(url).includes("/api/seo-live-traffic")) return Response.json({
+    source: "vercel_web_analytics_live",
+    visitors: 43,
+    pageviews: 69,
+    fetched_at: "2026-08-27T10:27:15.954Z",
+  });
   if (String(url).includes("/api/aibot-command")) return Response.json({ success: true, answer: "Prepared only", confirmation_required: false });
   throw new Error(`Unexpected fetch: ${url}`);
 };
@@ -103,6 +139,62 @@ const created = responseMock();
 await mcpHandler(request({ jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "create_task", arguments: { title: "Follow up" } } }), created);
 assert.equal(created.payload.result.structuredContent.title, "Follow up");
 assert.equal(calls.filter((entry) => entry.url.endsWith("/rpc/record_offerpsp_mcp_action")).length, 2);
+const auditCalls = calls.filter((entry) => entry.url.endsWith("/rpc/record_offerpsp_mcp_action"));
+for (const auditCall of auditCalls) {
+  const auditBody = JSON.parse(auditCall.init.body);
+  assert.equal(auditBody.p_metadata.bix_operation.action_type, "mcp_create_task");
+  assert.match(auditBody.p_metadata.bix_operation.operation_id, /^[0-9a-f-]{36}$/);
+  assert.match(auditBody.p_metadata.bix_operation.fingerprint, /^[0-9a-f]{64}$/);
+}
+
+const healthChecked = responseMock();
+await mcpHandler(request({ jsonrpc: "2.0", id: 6, method: "tools/call", params: { name: "system_health", arguments: {} } }), healthChecked);
+assert.equal(healthChecked.statusCode, 200);
+assert.equal(healthChecked.payload.result.structuredContent.gateway_liveness.status, "live");
+assert.equal(healthChecked.payload.result.structuredContent.gateway_liveness.dependency_checks_performed, false);
+assert.equal(healthChecked.payload.result.structuredContent.gateway_liveness.data_planes.primary.mode, "delegated");
+assert.equal(healthChecked.payload.result.structuredContent.gateway_liveness.data_planes.reserve.mode, "not_provisioned");
+
+const seoChecked = responseMock();
+await mcpHandler(request({ jsonrpc: "2.0", id: 61, method: "tools/call", params: { name: "get_seo_geo_analytics", arguments: {} } }), seoChecked);
+assert.equal(seoChecked.statusCode, 200);
+assert.equal(seoChecked.payload.result.structuredContent.traffic, undefined);
+assert.equal(seoChecked.payload.result.structuredContent.live_traffic.source, "vercel_web_analytics_live");
+assert.equal(seoChecked.payload.result.structuredContent.live_traffic.visitors, 43);
+assert.equal(seoChecked.payload.result.structuredContent.traffic_history.length, 1);
+
+const preparedRoutes = responseMock();
+await mcpHandler(request({
+  jsonrpc: "2.0", id: 7, method: "tools/call",
+  params: {
+    name: "prepare_bulk_operation",
+    arguments: {
+      instruction: "Preview only: OFF-000198 -> OFF-000227 and OFF-000199 -> OFF-000228",
+    },
+  },
+}), preparedRoutes);
+assert.equal(preparedRoutes.statusCode, 200);
+assert.equal(preparedRoutes.payload.result.structuredContent.operation, "replace_offer_routes");
+assert.equal(preparedRoutes.payload.result.structuredContent.count, 2);
+assert.equal(preparedRoutes.payload.result.structuredContent.confirmation_required, true);
+const prepareRpc = calls.find((entry) => entry.url.endsWith("/rpc/prepare_offerpsp_route_replacements"));
+assert.deepEqual(JSON.parse(prepareRpc.init.body).p_pairs, [
+  { published_route_code: "OFF-000198", draft_route_code: "OFF-000227" },
+  { published_route_code: "OFF-000199", draft_route_code: "OFF-000228" },
+]);
+
+const confirmedRoutes = responseMock();
+await mcpHandler(request({
+  jsonrpc: "2.0", id: 8, method: "tools/call",
+  params: {
+    name: "confirm_bulk_operation",
+    arguments: { confirmation_token: "55555555-5555-4555-8555-555555555555" },
+  },
+}), confirmedRoutes);
+assert.equal(confirmedRoutes.statusCode, 200);
+assert.equal(confirmedRoutes.payload.result.structuredContent.status, "executed");
+assert.equal(confirmedRoutes.payload.result.structuredContent.processed, 2);
+assert.equal(calls.some((entry) => entry.url.includes("/api/aibot-command")), false);
 
 const source = await readFile(new URL("../api/_lib/offerpsp-mcp.mjs", import.meta.url), "utf8");
 assert.equal(source.includes("SUPABASE_SERVICE_ROLE_KEY"), false);

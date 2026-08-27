@@ -48,6 +48,7 @@ async function bootstrap() {
     create role anon nologin;
     create role authenticated nologin;
     create role service_role nologin bypassrls;
+    create publication supabase_realtime;
     create schema auth;
     create schema storage;
     create table auth.users (
@@ -89,92 +90,12 @@ async function bootstrap() {
     );
     alter table storage.objects enable row level security;
 
-    create table public.offerpsp_leads (
-      lead_id uuid primary key default gen_random_uuid(),
-      name text not null,
-      work_email text not null,
-      telegram text,
-      company text not null,
-      company_url text,
-      vertical text not null,
-      monthly_volume text,
-      geos text not null,
-      methods text,
-      details text,
-      source text,
-      utm_source text,
-      utm_campaign text,
-      status text not null default 'new',
-      consent boolean not null default false,
-      submitted_at timestamptz not null default now()
-    );
-
-    create table public.psp_providers (
-      id serial primary key,
-      name text not null,
-      website text,
-      geo text,
-      cluster text,
-      specialization text,
-      methods text,
-      notes text,
-      contact_status text default 'not_contacted',
-      commission_terms text,
-      email text,
-      contact_name text,
-      phone text,
-      telegram text,
-      linkedin text,
-      other_contacts text,
-      supported_countries text[] not null default '{}',
-      supported_currencies text[] not null default '{}',
-      payment_methods text[] not null default '{}',
-      supported_verticals text[] not null default '{}',
-      restricted_countries text[] not null default '{}',
-      integration_types text[] not null default '{}',
-      min_monthly_volume numeric,
-      max_monthly_volume numeric,
-      risk_appetite text,
-      provider_status text default 'research',
-      capabilities_verified_at timestamptz,
-      capabilities_source text,
-      created_at timestamptz default now(),
-      updated_at timestamptz default now()
-    );
-
-    create sequence public.casino_leads_internal_seq start 1;
-
-    create table public.casino_leads (
-      id serial primary key, internal_id text, name text not null, website text,
-      description text, geo text, license text, software text, affiliate_program text,
-      sphere text, email text, contact_name text,
-      contact_title text, telegram text, phone text, linkedin text,
-      contact_status text not null default 'new', score integer, source text,
-      city text, emails_sent integer, last_contacted_at timestamptz,
-      last_reply_at timestamptz, reply_status text, next_follow_up date,
-      notes text, tags text[], enriched_emails jsonb not null default '[]'::jsonb,
-      created_at timestamptz default now(), updated_at timestamptz default now(),
-      unique (internal_id)
-    );
-
-    create table public.email_drafts (
-      id bigserial primary key, chat_id text not null, lead_internal_id text,
-      to_email text, subject text, body text, status text,
-      created_at timestamptz default now()
-    );
-
-    create table public.chat_logs (
-      id bigserial primary key, chat_id text not null, role text not null,
-      message text not null, created_at timestamptz default now()
-    );
-
-    create table public.bot_tasks (
-      id serial primary key, task_type text, payload jsonb, priority integer,
-      scheduled_for timestamptz, status text, result text, error text,
-      created_by text, created_at timestamptz default now(), started_at timestamptz,
-      completed_at timestamptz, ref_type text, ref_id text
-    );
   `);
+  const legacyTables = await readFile(
+    new URL("../supabase/bootstrap/offerpsp_legacy_tables.sql", import.meta.url),
+    "utf8",
+  );
+  await db.exec(legacyTables);
 }
 
 async function applyMigrations() {
@@ -281,6 +202,24 @@ async function applyMigrations() {
     "20260814133349_offerpsp_seo_geo_agent.sql",
     "20260814162123_offerpsp_security_and_lifecycle_remediation.sql",
     "20260814165107_offerpsp_fixture_thread_visibility_fix.sql",
+    "20260815090000_offerpsp_email_mark_unread.sql",
+    "20260815100529_offerpsp_mcp_operator_audit.sql",
+    "20260815112741_offerpsp_mcp_oauth.sql",
+    "20260815114620_offerpsp_mcp_oauth_foreign_key_indexes.sql",
+    "20260815121747_offerpsp_search_snapshot_staff_access.sql",
+    "20260815181907_add_standalone_portal_support.sql",
+    "20260815230000_offerpsp_gpt_actions_oauth.sql",
+    "20260816012341_offerpsp_portal_self_service_profile.sql",
+    "20260816090000_offerpsp_seo_geo_realtime.sql",
+    "20260820170000_offerpsp_ingestion_lifecycle.sql",
+    "20260822090000_bix_resilience_outbox.sql",
+    "20260826120000_offerpsp_provider_portal_foundation.sql",
+    "20260826133000_offerpsp_provider_workspace_content.sql",
+    "20260826153000_offerpsp_incremental_provider_imports.sql",
+    "20260826182158_offerpsp_leads_enable_rls.sql",
+    "20260826190000_offerpsp_rate_card_batch_history.sql",
+    "20260827000500_offerpsp_route_code_sequence_alignment.sql",
+    "20260827003000_offerpsp_route_replacement_bulk_confirmations.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -300,15 +239,16 @@ async function applyMigrations() {
 
 async function verifyLeadGrants() {
   const result = await query(`select
+    (select relrowsecurity from pg_class where oid = 'public.offerpsp_leads'::regclass) as rls_enabled,
     has_table_privilege('authenticated', 'public.offerpsp_leads', 'UPDATE') as authenticated_update,
     has_table_privilege('authenticated', 'public.offerpsp_leads', 'DELETE') as authenticated_delete,
     has_table_privilege('anon', 'public.offerpsp_leads', 'UPDATE') as anon_update,
     has_table_privilege('anon', 'public.offerpsp_leads', 'DELETE') as anon_delete`);
   const grants = result.rows[0];
-  if (!grants.authenticated_update || !grants.authenticated_delete || grants.anon_update || grants.anon_delete) {
+  if (!grants.rls_enabled || !grants.authenticated_update || !grants.authenticated_delete || grants.anon_update || grants.anon_delete) {
     throw new Error("OfferPSP lead table grants do not match the staff RLS model");
   }
-  process.stdout.write("PASS authenticated lead UPDATE/DELETE grants with anon denied\n");
+  process.stdout.write("PASS OfferPSP leads RLS and authenticated UPDATE/DELETE grants with anon denied\n");
 }
 
 async function verifyWorkspaceGrants() {
@@ -493,6 +433,183 @@ async function seedUsers() {
   `);
 }
 
+async function verifyProviderPortalBoundary() {
+  const expectTransactionFailure = async (sql, params, expectedMessage) => {
+    await query("savepoint provider_portal_expected_failure");
+    try {
+      await query(sql, params);
+    } catch (error) {
+      await query("rollback to savepoint provider_portal_expected_failure");
+      if (!String(error.message).includes(expectedMessage)) {
+        throw new Error(`Expected failure containing "${expectedMessage}", received: ${error.message}`);
+      }
+      return;
+    }
+    await query("release savepoint provider_portal_expected_failure");
+    throw new Error(`Expected query to fail with "${expectedMessage}"`);
+  };
+  const privileges = await query(`select
+    has_table_privilege('authenticated', 'public.offerpsp_provider_memberships', 'select') as membership_select,
+    has_table_privilege('authenticated', 'public.offerpsp_provider_offer_drafts', 'select') as draft_select,
+    has_function_privilege('anon', 'public.list_offerpsp_my_provider_workspaces()', 'execute') as anon_list,
+    has_function_privilege('authenticated', 'public.list_offerpsp_my_provider_workspaces()', 'execute') as authenticated_list,
+    has_function_privilege('authenticated', 'public.submit_offerpsp_provider_offer_draft(uuid,uuid)', 'execute') as authenticated_submit
+  `);
+  const boundary = privileges.rows[0];
+  if (boundary.membership_select || boundary.draft_select || boundary.anon_list
+      || !boundary.authenticated_list || !boundary.authenticated_submit) {
+    throw new Error(`PSP portal grants are unsafe: ${JSON.stringify(boundary)}`);
+  }
+
+  await query("begin");
+  try {
+    const providers = await query(`
+      insert into private.offerpsp_providers (brand_name, relationship_status)
+      values
+        ('Provider Portal Fixture', 'active'),
+        ('Foreign Provider Fixture', 'active'),
+        ('First Owner Fixture', 'active')
+      returning id, brand_name
+    `);
+    const providerId = providers.rows.find((item) => item.brand_name === "Provider Portal Fixture").id;
+    const foreignProviderId = providers.rows.find((item) => item.brand_name === "Foreign Provider Fixture").id;
+    const firstOwnerProviderId = providers.rows.find((item) => item.brand_name === "First Owner Fixture").id;
+    await setUser(STAFF_ID);
+    await expectTransactionFailure(
+      "select public.save_offerpsp_provider_member($1, null, 'agent@example.com', 'viewer', true)",
+      [firstOwnerProviderId],
+      "The first active PSP member must be an owner",
+    );
+    await query(
+      "select public.save_offerpsp_provider_member($1, null, 'agent@example.com', 'owner', true)",
+      [firstOwnerProviderId],
+    );
+    await query(`
+      insert into public.offerpsp_provider_memberships (provider_id, user_id, role, created_by)
+      values ($1, $2, 'owner', $4), ($1, $3, 'viewer', $4)
+    `, [providerId, CLIENT_ID, OTHER_CLIENT_ID, STAFF_ID]);
+
+    await setUser(CLIENT_ID);
+    const owned = await query("select public.list_offerpsp_my_provider_workspaces() as value");
+    if (owned.rows[0].value.length !== 1 || owned.rows[0].value[0].provider_id !== providerId) {
+      throw new Error(`PSP owner workspace listing leaked or omitted data: ${JSON.stringify(owned.rows[0].value)}`);
+    }
+    await expectTransactionFailure(
+      "select public.get_offerpsp_provider_portal_workspace($1)",
+      [foreignProviderId],
+      "PSP workspace access required",
+    );
+
+    const payload = JSON.stringify({
+      client_title: "Brazil PIX fixture",
+      flow: "payin",
+      coverage_mode: "specific",
+      geos: ["BR"],
+      blocked_geos: [],
+      currencies: ["BRL"],
+      methods: ["PIX"],
+      card_brands: [],
+      traffic_types: ["FTD"],
+      verticals: ["IGAMING"],
+      prohibited_verticals: [],
+      integrations: ["H2H"],
+      freshness_days: 30,
+      fees: [{ flow: "payin", percent: 5.5, applies_on: "success" }],
+      limits: [{ flow: "payin", scope: "transaction", currency: "BRL", minimum_amount: 10, maximum_amount: 10000 }],
+      settlements: [{ currency: "USDT", period: "T+1", fee_percent: 0.5 }],
+      risk_terms: { notes: "Portal validation fixture" },
+      operational_notes: "Review only",
+    });
+    const saved = await query(
+      "select public.save_offerpsp_provider_offer_draft($1, null, $2::jsonb) as value",
+      [providerId, payload],
+    );
+    const submitted = await query(
+      "select public.submit_offerpsp_provider_offer_draft($1, $2) as value",
+      [providerId, saved.rows[0].value.id],
+    );
+    await query(
+      "select public.save_offerpsp_provider_portal_profile($1, $2::jsonb)",
+      [providerId, JSON.stringify({
+        brand_name: "Provider Portal Fixture",
+        legal_name: "Provider Portal Fixture Ltd",
+        website: "https://provider-fixture.invalid",
+        company_description: "Provider-maintained profile",
+        headquarters_country: "GB",
+        operating_geos: ["BR", "MX"],
+        supported_currencies: ["BRL", "MXN"],
+        payment_methods: ["PIX"],
+        supported_verticals: ["IGAMING"],
+        integrations: ["H2H", "API"],
+        licences: [{ jurisdiction: "GB", status: "declared" }],
+      })],
+    );
+    await query(
+      "select public.save_offerpsp_provider_portal_contact($1, null, $2::jsonb)",
+      [providerId, JSON.stringify({ full_name: "PSP Manager", role_title: "Sales", email: "manager@provider.invalid", preferred_channel: "email", active: true })],
+    );
+    await query(
+      "select public.save_offerpsp_provider_update($1, null, $2::jsonb, true)",
+      [providerId, JSON.stringify({ update_type: "coverage", title: "New Brazil coverage", body: "PIX is available for review." })],
+    );
+    const queued = await query(
+      "select public.enqueue_offerpsp_provider_source($1, $2, 'text', null, '{}'::jsonb) as value",
+      [providerId, "Country: Brazil\nMethod: PIX\nPayIn: 5.5%\nLimits: 10 - 1000 BRL"],
+    );
+    const supply = await query(`select
+      (select status from private.offerpsp_offer_routes where id = $1) as route_status,
+      (select status from private.offerpsp_rate_card_batches where id = $2) as batch_status,
+      (select count(*)::integer from private.offerpsp_offer_routes where provider_id = $3 and status = 'published') as published_count,
+      (select count(*)::integer from public.offerpsp_provider_profile_details where provider_id = $3) as profile_count,
+      (select count(*)::integer from private.offerpsp_provider_contacts where provider_id = $3 and created_by_provider_user = $4) as provider_contact_count,
+      (select count(*)::integer from public.offerpsp_provider_updates where provider_id = $3 and status = 'submitted') as submitted_update_count,
+      (select status from private.offerpsp_ingestion_jobs where id = $5) as ingestion_status
+    `, [submitted.rows[0].value.route_id, submitted.rows[0].value.batch_id, providerId, CLIENT_ID, queued.rows[0].value.job_id]);
+    if (supply.rows[0].route_status !== "review"
+        || supply.rows[0].batch_status !== "review"
+        || supply.rows[0].published_count !== 0
+        || supply.rows[0].profile_count !== 1
+        || supply.rows[0].provider_contact_count !== 1
+        || supply.rows[0].submitted_update_count !== 1
+        || supply.rows[0].ingestion_status !== "queued") {
+      throw new Error(`PSP submission bypassed staff review: ${JSON.stringify(supply.rows[0])}`);
+    }
+
+    await setUser(OTHER_CLIENT_ID);
+    await expectTransactionFailure(
+      "select public.save_offerpsp_provider_portal_profile($1, $2::jsonb)",
+      [providerId, JSON.stringify({ brand_name: "Viewer mutation" })],
+      "PSP manager access required",
+    );
+    await expectTransactionFailure(
+      "select public.save_offerpsp_provider_offer_draft($1, null, $2::jsonb)",
+      [providerId, payload],
+      "PSP editor access required",
+    );
+
+    await setUser(STAFF_ID);
+    const ownerMembership = await query(
+      "select id from public.offerpsp_provider_memberships where provider_id = $1 and user_id = $2",
+      [providerId, CLIENT_ID],
+    );
+    await expectTransactionFailure(
+      "select public.save_offerpsp_provider_member($1, $2, null, 'viewer', false)",
+      [providerId, ownerMembership.rows[0].id],
+      "PSP workspace must keep at least one active owner",
+    );
+    await expectTransactionFailure(
+      "select public.save_offerpsp_provider_member($1, null, 'client@example.com', 'viewer', false)",
+      [providerId],
+      "PSP workspace must keep at least one active owner",
+    );
+  } finally {
+    await query("rollback");
+    await setRole("authenticated");
+    await setUser(STAFF_ID);
+  }
+  process.stdout.write("PASS closed PSP portal ownership, viewer isolation and review-only submission\n");
+}
+
 async function verifyAtomicRouteReplacement() {
   await setUser(STAFF_ID);
   await setRole("authenticated");
@@ -618,6 +735,91 @@ async function verifyAtomicRouteReplacement() {
   }
   await query("select public.publish_offerpsp_route($1)", [independentRoute.rows[0].id]);
   process.stdout.write("PASS staff-confirmed atomic replacement preserves omitted sibling routes\n");
+}
+
+async function verifyIncrementalDraftImports() {
+  await setUser(STAFF_ID);
+  await setRole("authenticated");
+  const provider = await query(`select public.upsert_offerpsp_provider(
+    'Incremental Provider Fixture', null, null, 'https://incremental.invalid',
+    'onboarding', 0, false, 'Validation only'
+  ) as value`);
+  const providerCode = provider.rows[0].value.internal_code;
+  const route = (title, geo, currency, method, percent) => ({
+    client_title: title,
+    coverage_scope: "specific",
+    geos: [geo],
+    blocked_geos: [],
+    currencies: [currency],
+    flow: "payin",
+    methods: [method],
+    card_brands: [],
+    traffic_types: ["TRUSTED"],
+    verticals: ["IGAMING"],
+    prohibited_verticals: [],
+    integrations: ["H2H"],
+    fees: [{ flow: "payin", fee_type: "percent", base_percent: percent, applies_on: "success" }],
+    limits: [],
+    settlement: [],
+    anomalies: [],
+  });
+
+  const first = await query(`select public.import_offerpsp_rate_card(
+    $1, 'file', 'incremental-first', 'incremental:first', null,
+    'incremental-fixture-v1', '{"entrypoint":"provider_portal","submitted_by_provider":true}'::jsonb, $2::jsonb
+  ) as value`, [providerCode, JSON.stringify([
+    route("Indonesia QRIS v1", "ID", "IDR", "QRIS", 3.8),
+    route("Bangladesh BKASH", "BD", "BDT", "BKASH", 3.5),
+  ])]);
+  const second = await query(`select public.import_offerpsp_rate_card(
+    $1, 'file', 'incremental-second', 'incremental:second', null,
+    'incremental-fixture-v2', '{"entrypoint":"provider_portal","submitted_by_provider":true}'::jsonb, $2::jsonb
+  ) as value`, [providerCode, JSON.stringify([
+    route("Brazil PIX", "BR", "BRL", "PIX", 4.1),
+  ])]);
+  const afterIndependent = await query(`select r.client_title, r.status
+    from private.offerpsp_offer_routes r
+    where r.batch_id in ($1, $2)
+    order by r.client_title`, [first.rows[0].value.batch_id, second.rows[0].value.batch_id]);
+  if (afterIndependent.rows.length !== 3
+      || afterIndependent.rows.some((item) => item.status !== "draft")) {
+    throw new Error(`Independent provider upload archived unrelated drafts: ${JSON.stringify(afterIndependent.rows)}`);
+  }
+
+  const replacement = await query(`select public.import_offerpsp_rate_card(
+    $1, 'file', 'incremental-third', 'incremental:third', null,
+    'incremental-fixture-v3', '{"entrypoint":"provider_portal","submitted_by_provider":true}'::jsonb, $2::jsonb
+  ) as value`, [providerCode, JSON.stringify([
+    route("Indonesia QRIS v2", "ID", "IDR", "QRIS", 4.2),
+  ])]);
+  const finalState = await query(`select r.client_title, r.status, r.revision_of_route_id
+    from private.offerpsp_offer_routes r
+    where r.batch_id in ($1, $2, $3)
+    order by r.created_at`, [first.rows[0].value.batch_id, second.rows[0].value.batch_id, replacement.rows[0].value.batch_id]);
+  const oldIndonesia = finalState.rows.find((item) => item.client_title === "Indonesia QRIS v1");
+  const bangladesh = finalState.rows.find((item) => item.client_title === "Bangladesh BKASH");
+  const brazil = finalState.rows.find((item) => item.client_title === "Brazil PIX");
+  const newIndonesia = finalState.rows.find((item) => item.client_title === "Indonesia QRIS v2");
+  if (oldIndonesia?.status !== "archived"
+      || bangladesh?.status !== "draft"
+      || brazil?.status !== "draft"
+      || newIndonesia?.status !== "draft"
+      || newIndonesia?.revision_of_route_id !== null) {
+    throw new Error(`Incremental route replacement state is incorrect: ${JSON.stringify(finalState.rows)}`);
+  }
+  process.stdout.write("PASS incremental provider uploads preserve unrelated draft routes\n");
+}
+
+async function verifyRateCardBatchHistory() {
+  const result = await query(`select count(*)::int as conflicting_constraints
+    from pg_constraint
+    where conrelid = 'private.offerpsp_rate_card_batches'::regclass
+      and contype = 'u'
+      and pg_get_constraintdef(oid) ilike '%provider_id%source_hash%parser_version%'`);
+  if (Number(result.rows[0]?.conflicting_constraints ?? 0) !== 0) {
+    throw new Error("Rate-card batch history still rejects legitimate reprocessing versions");
+  }
+  process.stdout.write("PASS rate-card batch history permits source reprocessing versions\n");
 }
 
 async function clearPreCompliance(leadId, classification = "merchant") {
@@ -879,20 +1081,20 @@ async function importPreparedDrafts() {
     }
     const versionState = await query(
       `select
-        count(distinct b.id) filter (where b.status = 'superseded')::integer as superseded_batches,
         count(*) filter (where r.status = 'archived')::integer as archived_routes,
-        count(*) filter (where b.id = $2 and r.status in ('draft', 'review'))::integer as current_routes
+        count(*) filter (where b.id = $2 and r.status in ('draft', 'review'))::integer as current_routes,
+        count(*) filter (where r.status in ('draft', 'review', 'published', 'paused'))::integer as active_routes
       from private.offerpsp_rate_card_batches b
       join private.offerpsp_offer_routes r on r.batch_id = b.id
       where b.provider_id = (select id from private.offerpsp_providers where internal_code = $1)`,
       [providerCode, imported.batch_id],
     );
     if (
-      versionState.rows[0].superseded_batches !== 1
-      || versionState.rows[0].archived_routes !== legacyPayload.batch.routes.length
+      versionState.rows[0].archived_routes !== legacyPayload.batch.routes.length
       || versionState.rows[0].current_routes !== expected.routes
+      || versionState.rows[0].active_routes !== expected.routes
     ) {
-      throw new Error(`${providerKey} parser reparse did not supersede the previous draft cleanly: ${JSON.stringify(versionState.rows[0])}`);
+      throw new Error(`${providerKey} parser reparse did not replace the previous route families cleanly: ${JSON.stringify(versionState.rows[0])}`);
     }
     const publishability = await query(
       `select r.client_title, r.coverage_scope, r.geos, r.currencies, r.methods
@@ -3138,6 +3340,104 @@ async function verifySecurityAndLifecycleRemediation() {
   process.stdout.write("PASS legacy client RPC denied and archived workspace access revoked\n");
 }
 
+async function verifyBixResilience() {
+  const privileges = await query(`select
+    has_schema_privilege('anon', 'bix_resilience', 'usage') as anon_schema,
+    has_schema_privilege('authenticated', 'bix_resilience', 'usage') as authenticated_schema,
+    has_schema_privilege('service_role', 'bix_resilience', 'usage') as service_schema,
+    has_table_privilege('anon', 'bix_resilience.outbox_events', 'select') as anon_table,
+    has_table_privilege('authenticated', 'bix_resilience.outbox_events', 'select') as authenticated_table,
+    has_table_privilege('service_role', 'bix_resilience.outbox_events', 'select,insert,update,delete') as service_table,
+    has_function_privilege('anon', 'public.bix_reserve_claim_outbox(text,integer,integer)', 'execute') as anon_claim,
+    has_function_privilege('authenticated', 'public.bix_reserve_claim_outbox(text,integer,integer)', 'execute') as authenticated_claim,
+    has_function_privilege('service_role', 'public.bix_reserve_claim_outbox(text,integer,integer)', 'execute') as service_claim
+  `);
+  const boundary = privileges.rows[0];
+  if (boundary.anon_schema
+      || boundary.authenticated_schema
+      || !boundary.service_schema
+      || boundary.anon_table
+      || boundary.authenticated_table
+      || !boundary.service_table
+      || boundary.anon_claim
+      || boundary.authenticated_claim
+      || !boundary.service_claim) {
+    throw new Error(`BIX resilience grants are unsafe: ${JSON.stringify(boundary)}`);
+  }
+
+  await query("begin");
+  try {
+    const lead = await query(`
+      insert into public.offerpsp_leads (
+        name, work_email, company, vertical, geos, consent,
+        client_user_id, status, record_state
+      ) values (
+        'BIX reserve fixture', 'bix-reserve@example.invalid',
+        'BIX reserve fixture', 'Other', 'Worldwide', true,
+        $1, 'new', 'active'
+      ) returning lead_id
+    `, [CLIENT_ID]);
+    const leadId = lead.rows[0].lead_id;
+    const event = await query(`
+      select event_id, operation, aggregate_key
+      from bix_resilience.outbox_events
+      where table_name = 'offerpsp_leads'
+        and operation = 'INSERT'
+        and new_record ->> 'lead_id' = $1::text
+      order by occurred_at asc, event_id asc
+      limit 1
+    `, [leadId]);
+    if (event.rows.length !== 1
+        || event.rows[0].operation !== "INSERT"
+        || event.rows[0].aggregate_key.lead_id !== leadId) {
+      throw new Error(`Outbox trigger did not capture the lead: ${JSON.stringify(event.rows)}`);
+    }
+
+    const claimed = await query(
+      "select public.bix_reserve_claim_outbox('migration-validator', 500, 120) as value",
+    );
+    const claimedEvents = claimed.rows[0].value;
+    if (!Array.isArray(claimedEvents)
+        || !claimedEvents.some((item) => item.event_id === event.rows[0].event_id)) {
+      throw new Error(`Outbox worker did not claim the fixture event: ${JSON.stringify(claimedEvents)}`);
+    }
+    const delivered = await query(
+      "select public.bix_reserve_mark_outbox_delivered('migration-validator', array[$1::uuid]) as value",
+      [event.rows[0].event_id],
+    );
+    if (delivered.rows[0].value !== 1) {
+      throw new Error(`Outbox worker did not mark the fixture delivered: ${JSON.stringify(delivered.rows[0])}`);
+    }
+
+    const firstLease = (await query(
+      "select public.bix_reserve_acquire_writer_lease('offerpsp-writer', 'primary-validator', 30) as value",
+    )).rows[0].value;
+    const renewedLease = (await query(
+      "select public.bix_reserve_acquire_writer_lease('offerpsp-writer', 'primary-validator', 30) as value",
+    )).rows[0].value;
+    const blockedLease = (await query(
+      "select public.bix_reserve_acquire_writer_lease('offerpsp-writer', 'reserve-validator', 30) as value",
+    )).rows[0].value;
+    const asserted = (await query(
+      "select public.bix_reserve_assert_writer_lease('offerpsp-writer', 'primary-validator', $1::bigint) as value",
+      [firstLease.fencing_token],
+    )).rows[0].value;
+
+    if (!firstLease.acquired
+        || !renewedLease.acquired
+        || renewedLease.fencing_token !== firstLease.fencing_token
+        || blockedLease.acquired !== false
+        || asserted !== true) {
+      throw new Error(`Writer lease fencing failed: ${JSON.stringify({ firstLease, renewedLease, blockedLease, asserted })}`);
+    }
+  } finally {
+    await query("rollback");
+    await setRole("authenticated");
+    await setUser(STAFF_ID);
+  }
+  process.stdout.write("PASS BIX outbox delivery and single-writer fencing\n");
+}
+
 try {
   verifyCanonicalGeoHeaderParsing();
   verifyWorldwideCoverageParsing();
@@ -3153,10 +3453,14 @@ try {
   await verify360WorkspaceGrants();
   await verifyResearchCrudGrants();
   await seedUsers();
+  await verifyProviderPortalBoundary();
   await verifyGeoRegionAliases();
   await verifyContactTimelineCooldown();
   await verifyAibotExecutionJournal();
   await verifySecurityAndLifecycleRemediation();
+  await verifyBixResilience();
+  await verifyIncrementalDraftImports();
+  await verifyRateCardBatchHistory();
   await verifyAtomicRouteReplacement();
   await verifyCounterpartyOrganizer();
   await verifyOperationsAndIntegrations();

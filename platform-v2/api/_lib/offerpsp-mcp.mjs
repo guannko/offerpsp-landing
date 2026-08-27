@@ -1,6 +1,8 @@
 import { HttpError, staffSupabaseRequest } from "./staff-auth.mjs";
+import { createOperationEnvelope, createSupabasePrimaryDataPlane } from "./data-plane.mjs";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ROUTE_CODE = /^OFF-[0-9]{6}$/;
 const oauthReadSecurity = [{ type: "oauth2", scopes: ["offerpsp:read"] }];
 const oauthWriteSecurity = [{ type: "oauth2", scopes: ["offerpsp:read", "offerpsp:write"] }];
 
@@ -105,8 +107,24 @@ export const offerPspTools = [
       tone: { enum: ["neutral", "warm", "firm", "concise"], default: "neutral" },
     }, required: ["message"],
   }, readOnly),
-  tool("prepare_bulk_operation", "Prepare bulk operation", "Ask the existing AIBot to create an immutable bulk preview and one-time server confirmation token. Does not execute the change.", {
-    properties: { instruction: stringSchema("Exact bulk action, entity type, IDs and requested changes", 3000) }, required: ["instruction"],
+  tool("prepare_bulk_operation", "Prepare bulk operation", "Create an immutable bulk preview and one-time server confirmation token. Explicit OFF-code route pairs use the staff-authenticated atomic replacement path; other supported bulk requests use the existing AIBot. This never executes the change.", {
+    properties: {
+      instruction: stringSchema("Exact bulk action, entity type, IDs and requested changes", 3000),
+      route_replacements: {
+        type: "array",
+        minItems: 1,
+        maxItems: 50,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            published_route_code: { type: "string", pattern: "^OFF-[0-9]{6}$" },
+            draft_route_code: { type: "string", pattern: "^OFF-[0-9]{6}$" },
+          },
+          required: ["published_route_code", "draft_route_code"],
+        },
+      },
+    }, required: ["instruction"],
   }, internalWrite),
   tool("confirm_bulk_operation", "Confirm bulk operation", "Execute only the immutable bulk preview bound to this MCP staff session and one-time server token.", {
     properties: { confirmation_token: stringSchema("Server-issued UUID confirmation token", 36) }, required: ["confirmation_token"],
@@ -126,8 +144,48 @@ function requireUuid(value, label) {
   return id;
 }
 
+function routeReplacementPairs(input) {
+  const supplied = Array.isArray(input?.route_replacements)
+    ? input.route_replacements.map((pair) => ({
+      published_route_code: clamp(pair?.published_route_code, 20).toUpperCase(),
+      draft_route_code: clamp(pair?.draft_route_code, 20).toUpperCase(),
+    }))
+    : [];
+  const extracted = supplied.length ? supplied : Array.from(
+    clamp(input?.instruction, 3000).matchAll(/\b(OFF-[0-9]{6})\s*(?:->|→)\s*(OFF-[0-9]{6})\b/gi),
+    (match) => ({
+      published_route_code: match[1].toUpperCase(),
+      draft_route_code: match[2].toUpperCase(),
+    }),
+  );
+  if (!extracted.length) return [];
+  if (extracted.length > 50) throw new HttpError(400, "Route replacement preview is limited to 50 pairs");
+  const oldCodes = new Set();
+  const newCodes = new Set();
+  for (const pair of extracted) {
+    if (!ROUTE_CODE.test(pair.published_route_code) || !ROUTE_CODE.test(pair.draft_route_code)) {
+      throw new HttpError(400, "Route replacements require valid OFF-000000 codes");
+    }
+    if (oldCodes.has(pair.published_route_code) || newCodes.has(pair.draft_route_code)) {
+      throw new HttpError(400, "A route may appear only once in a replacement preview");
+    }
+    oldCodes.add(pair.published_route_code);
+    newCodes.add(pair.draft_route_code);
+  }
+  return extracted;
+}
+
+function primaryDataPlane(context) {
+  return createSupabasePrimaryDataPlane({
+    executeRpc: (name, body) => staffSupabaseRequest(context, `rpc/${name}`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  });
+}
+
 async function rpc(context, name, body = {}) {
-  return staffSupabaseRequest(context, `rpc/${name}`, { method: "POST", body: JSON.stringify(body) });
+  return primaryDataPlane(context).rpc(name, body);
 }
 
 function originFor(request) {
@@ -204,13 +262,28 @@ async function audit(context, input) {
 
 async function audited(context, callId, details, action) {
   const key = `mcp:${context.user?.id || "staff"}:${clamp(callId, 80)}`;
-  await audit(context, { ...details, status: "in_progress", idempotency_key: key });
+  const operation = createOperationEnvelope({
+    idempotencyKey: key,
+    actionType: clamp(details.action_type, 120),
+    actorId: context.user?.id || "staff",
+    payload: {
+      call_id: clamp(callId, 80) || null,
+      entity_id: details.entity_id || null,
+      entity_type: details.entity_type || null,
+    },
+  });
+  const auditedDetails = {
+    ...details,
+    metadata: { ...(details.metadata || {}), bix_operation: operation },
+  };
+
+  await audit(context, { ...auditedDetails, status: "in_progress", idempotency_key: key });
   try {
     const result = await action();
-    await audit(context, { ...details, status: "completed", idempotency_key: key, result_summary: "MCP action completed" });
+    await audit(context, { ...auditedDetails, status: "completed", idempotency_key: key, result_summary: "MCP action completed" });
     return result;
   } catch (error) {
-    await audit(context, { ...details, status: "failed", idempotency_key: key, error_message: error?.message || "MCP action failed" }).catch(() => null);
+    await audit(context, { ...auditedDetails, status: "failed", idempotency_key: key, error_message: error?.message || "MCP action failed" }).catch(() => null);
     throw error;
   }
 }
@@ -303,7 +376,20 @@ export async function executeOfferPspTool(name, args, { request, context, callId
     return audited(context, callId, { action_type: "mcp_rebuild_matching", description: "Rebuild route matching from OfferPSP MCP", entity_type: "merchant", entity_id: merchantId },
       () => rpc(context, "rebuild_offerpsp_route_matches", { p_lead_id: merchantId }));
   }
-  if (name === "get_seo_geo_analytics") return rpc(context, "get_offerpsp_seo_geo_analytics");
+  if (name === "get_seo_geo_analytics") {
+    const [storedAnalytics, liveTrafficResult] = await Promise.all([
+      rpc(context, "get_offerpsp_seo_geo_analytics"),
+      localJson(request, context, "/api/seo-live-traffic", { method: "GET" })
+        .then((value) => ({ value, error: null }))
+        .catch((error) => ({ value: null, error: error?.message || "Live Vercel traffic is unavailable" })),
+    ]);
+    const { traffic: _discardedCurrentSnapshot, ...historyAndAudits } = storedAnalytics || {};
+    return {
+      ...historyAndAudits,
+      live_traffic: liveTrafficResult.value,
+      live_traffic_error: liveTrafficResult.error,
+    };
+  }
   if (name === "run_seo_geo_audit") {
     return audited(context, callId, { action_type: "mcp_run_seo_geo_audit", description: "Run live SiteOne and SEO/GEO agent audit from OfferPSP MCP", entity_type: "system", entity_id: "offerpsp.com" },
       () => localJson(request, context, "/api/seo-audit", { method: "POST", body: "{}" }));
@@ -362,20 +448,34 @@ export async function executeOfferPspTool(name, args, { request, context, callId
   }
   if (name === "prepare_bulk_operation") {
     const instruction = clamp(input.instruction, 3000);
+    const replacements = routeReplacementPairs(input);
+    if (replacements.length) {
+      return audited(context, callId, {
+        action_type: "mcp_prepare_route_replacements",
+        description: `Prepare immutable preview for ${replacements.length} route replacements`,
+        entity_type: "offer",
+        entity_id: "bulk",
+      }, () => rpc(context, "prepare_offerpsp_route_replacements", { p_pairs: replacements }));
+    }
     return audited(context, callId, { action_type: "mcp_prepare_bulk", description: "Prepare immutable bulk-operation preview", entity_type: "system", entity_id: "bulk" },
       () => askAgent(request, context, `MCP BULK PREPARE ONLY. Use Bulk Operations to prepare, never execute. Return the exact preview, confirmation token and expiry.\n\n${instruction}`));
   }
   if (name === "confirm_bulk_operation") {
     const token = requireUuid(input.confirmation_token, "confirmation_token");
     return audited(context, callId, { action_type: "mcp_confirm_bulk", description: "Confirm server-bound bulk operation", entity_type: "system", entity_id: token },
-      () => askAgent(request, context, `Confirm the already prepared bulk operation with confirmation token ${token}. Execute only that immutable token-bound preview.`));
+      async () => {
+        const routeReplacement = await rpc(context, "confirm_offerpsp_route_replacements", { p_confirmation_token: token });
+        if (routeReplacement?.handled === true) return routeReplacement;
+        return askAgent(request, context, `Confirm the already prepared bulk operation with confirmation token ${token}. Execute only that immutable token-bound preview.`);
+      });
   }
   if (name === "system_health") {
-    const [gateways, modules] = await Promise.all([
+    const [gatewayLiveness, gateways, modules] = await Promise.all([
+      localJson(request, context, "/api/bix-gateway-health", { method: "GET" }),
       localJson(request, context, "/api/integration-health", { method: "GET" }),
       localJson(request, context, "/api/module-health", { method: "GET" }),
     ]);
-    return { gateways, modules, mcp: { authenticated: true, staff_user_id: context.user?.id || null, memory_profile: "BIXOFFPSP" } };
+    return { gateway_liveness: gatewayLiveness, gateways, modules, mcp: { authenticated: true, staff_user_id: context.user?.id || null, memory_profile: "BIXOFFPSP" } };
   }
   throw new HttpError(404, `Unknown MCP tool: ${name}`);
 }

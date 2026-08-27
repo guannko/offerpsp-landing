@@ -6,13 +6,15 @@ import path from "node:path";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const read = (relativePath) => readFile(path.join(root, relativePath), "utf8");
 
-const [captain, merchant, integrations, platform, modules, ui] = await Promise.all([
+const [captain, merchant, integrations, platform, modules, ui, context, seoGeo] = await Promise.all([
   read("platform-v2/src/pages/CaptainPages.tsx"),
   read("platform-v2/src/pages/MerchantWorkspace.tsx"),
   read("platform-v2/src/pages/IntegrationsWorkspace.tsx"),
   read("platform-v2/src/pages/Platform.tsx"),
   read("platform-v2/src/config/modules.tsx"),
   read("platform-v2/src/components/control/Ui.tsx"),
+  read("platform-v2/src/context/ControlBridgeContext.tsx"),
+  read("platform-v2/src/pages/SeoGeoPage.tsx"),
 ]);
 
 assert.match(captain, /Пометить непрочитанным/);
@@ -32,6 +34,14 @@ assert.doesNotMatch(platform, />Новая поисковая миссия<\/but
 
 assert.match(ui, /role="status"/);
 assert.match(ui, /Загружаем рабочие данные/);
+
+assert.match(context, /CORE_CACHE_TTL_MS = 5 \* 60_000/);
+assert.match(context, /CORE_BACKGROUND_REFRESH_MS = 5 \* 60_000/);
+assert.match(context, /void refreshLeads\(user\)/);
+assert.doesNotMatch(context, /load\(user, true\)[\s\S]{0,600}setInterval/);
+assert.match(seoGeo, /SEO_ANALYTICS_REFRESH_MS = 5 \* 60_000/);
+assert.match(seoGeo, /ACTIVE_AUDIT_POLL_MS = 15_000/);
+assert.match(platform, /hasProcessingJobs \? 15_000 : 120_000/);
 
 if (process.env.VERCEL !== "1") {
   const migration = await read("supabase/migrations/20260815090000_offerpsp_email_mark_unread.sql");

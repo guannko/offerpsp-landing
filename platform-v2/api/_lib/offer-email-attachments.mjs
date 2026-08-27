@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import mammoth from "mammoth";
-import readXlsxFile from "read-excel-file/node";
+import readXlsxWorkbook from "read-excel-file/node";
 import { extractPdfText } from "./pdf-text-extractor.mjs";
 
 export const MAX_EMAIL_ATTACHMENT_BYTES = 10 * 1024 * 1024;
@@ -43,7 +43,7 @@ const isInlineAsset = (attachment) => {
   return disposition === "inline" && contentType.startsWith("image/");
 };
 
-export async function extractOfferEmailAttachment(attachment) {
+export async function extractOfferEmailAttachment(attachment, options = {}) {
   const filename = String(attachment?.filename || "attachment").trim().slice(0, 255) || "attachment";
   const reportedContentType = String(attachment?.contentType || "application/octet-stream").toLowerCase();
   const content = Buffer.isBuffer(attachment?.content) ? attachment.content : Buffer.from(attachment?.content || "");
@@ -68,8 +68,9 @@ export async function extractOfferEmailAttachment(attachment) {
   if (!size) {
     return { ...base, accepted: false, status: "empty", extraction_error: "Attachment is empty" };
   }
-  if (size > MAX_EMAIL_ATTACHMENT_BYTES) {
-    return { ...base, accepted: false, status: "too_large", extraction_error: "Attachment exceeds the 10 MB email limit" };
+  const maxBytes = Number(options.maxBytes || MAX_EMAIL_ATTACHMENT_BYTES);
+  if (size > maxBytes) {
+    return { ...base, accepted: false, status: "too_large", extraction_error: `Attachment exceeds the ${Math.floor(maxBytes / 1024 / 1024)} MB limit` };
   }
 
   try {
@@ -87,7 +88,14 @@ export async function extractOfferEmailAttachment(attachment) {
       extractedText = normalizeText(extracted.value);
       extractionMethod = "offerpsp-server-mammoth-v1";
     } else if (extension === "xlsx") {
-      const rows = await readXlsxFile(content);
+      const sheets = await readXlsxWorkbook(content);
+      const rows = sheets.flatMap((sheet, index) => {
+        if (!sheet || !Array.isArray(sheet.data)) return [];
+        return [[`Sheet: ${sheet.sheet || index + 1}`], ...sheet.data, []];
+      });
+      if (!rows.some((row) => Array.isArray(row) && row.some((cell) => cell != null && String(cell).trim()))) {
+        throw new Error("Workbook contains no readable cells");
+      }
       extractedText = normalizeText(rows.map((row) => row.map(normalizeCell).join("\t")).join("\n"));
       extractionMethod = "offerpsp-server-xlsx-v1";
     }

@@ -428,16 +428,17 @@ function OfferIntakePanel({ providerNames, onImported }: { providerNames: string
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
-  const loadJobs = async () => {
+  const loadJobs = useCallback(async () => {
     const result = await supabase.rpc("list_offerpsp_ingestion_jobs", { p_limit: 100 });
     if (result.error) setMessage(result.error.message);
     else setJobs((result.data || []) as OfferIngestionJob[]);
-  };
+  }, []);
+  const hasProcessingJobs = jobs.some((job) => ["queued", "processing"].includes(job.status));
   useEffect(() => {
     void loadJobs();
-    const timer = window.setInterval(() => void loadJobs(), 15000);
+    const timer = window.setInterval(() => void loadJobs(), hasProcessingJobs ? 15_000 : 120_000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [hasProcessingJobs, loadJobs]);
 
   const enqueue = async () => {
     if (!providerName.trim() || !sourceText.trim()) {

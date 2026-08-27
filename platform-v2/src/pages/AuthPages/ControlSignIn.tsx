@@ -9,7 +9,8 @@ export default function ControlSignIn() {
   const navigate = useNavigate();
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
-  const authRedirectUrl = new URL(import.meta.env.BASE_URL, window.location.origin).toString();
+  const authBaseUrl = new URL(import.meta.env.BASE_URL, window.location.origin);
+  const authRedirectUrl = new URL("signin", authBaseUrl).toString();
 
   useEffect(() => {
     if (!user || !staff) return;

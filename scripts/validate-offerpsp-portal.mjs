@@ -51,7 +51,12 @@ assert.equal(
 
 const appSource = await readFile(new URL("../portal/app.js", import.meta.url), "utf8");
 const htmlSource = await readFile(new URL("../portal/index.html", import.meta.url), "utf8");
+const pspAppSource = await readFile(new URL("../psp/app.js", import.meta.url), "utf8");
+const pspHtmlSource = await readFile(new URL("../psp/index.html", import.meta.url), "utf8");
 const publicHtmlSource = await readFile(new URL("../index.html", import.meta.url), "utf8");
+const privacyHtmlSource = await readFile(new URL("../privacy.html", import.meta.url), "utf8");
+const termsHtmlSource = await readFile(new URL("../terms.html", import.meta.url), "utf8");
+const seoGeneratorSource = await readFile(new URL("./generate-seo-pages.mjs", import.meta.url), "utf8");
 const vercelConfig = JSON.parse(await readFile(new URL("../vercel.json", import.meta.url), "utf8"));
 const adminSource = await readFile(new URL("../admin/app.js", import.meta.url), "utf8");
 const adminHtmlSource = await readFile(new URL("../admin/index.html", import.meta.url), "utf8");
@@ -63,6 +68,14 @@ const selfServiceProfileMigration = await readFile(
   throw error;
 });
 assert.match(appSource, /rpc\("list_offerpsp_workspace_requests"\)/);
+for (const [name, source] of [
+  ["homepage", publicHtmlSource],
+  ["privacy page", privacyHtmlSource],
+  ["terms page", termsHtmlSource],
+  ["SEO page generator", seoGeneratorSource],
+]) {
+  assert.match(source, /\/_vercel\/insights\/script\.js/, `${name} must load Vercel Web Analytics`);
+}
 assert.match(appSource, /rpc\("list_offerpsp_client_deals"/);
 assert.match(appSource, /rpc\("list_offerpsp_client_offers"/);
 assert.doesNotMatch(appSource, /rpc\("list_offerpsp_client_options"/);
@@ -134,6 +147,52 @@ assert.match(appSource, /rpc\("ensure_offerpsp_my_merchant_profile"/);
 assert.match(appSource, /rpc\("get_offerpsp_company_workspace_by_organization"/);
 assert.match(appSource, /classList\.toggle\("profile-only", !hasRequests\)/);
 assert.doesNotMatch(appSource, /service_role/);
+assert.match(pspHtmlSource, /<meta name="robots" content="noindex, nofollow">/);
+assert.match(pspHtmlSource, /Закрытый кабинет PSP/);
+assert.match(pspHtmlSource, /\/psp\/app\.js\?v=20260827-5/);
+assert.match(pspHtmlSource, /\/psp\/styles\.css\?v=20260827-4/);
+assert.match(pspHtmlSource, /class="portal-sidebar"/);
+assert.match(pspHtmlSource, /id="uploadOfferButton"/);
+assert.match(pspHtmlSource, /class="process-strip"/);
+assert.match(pspAppSource, /class="stat-index"/);
+assert.match(pspAppSource, /byId\("uploadOfferButton"\)\.addEventListener/);
+assert.match(pspAppSource, /over_email_send_rate_limit/);
+assert.match(pspAppSource, /function startLoginCooldown\(seconds = 60\)/);
+assert.match(pspAppSource, /const SUPABASE_BROWSER_URL = `\$\{window\.location\.origin\}\/\_data`/);
+assert.match(pspAppSource, /async function checkAuthGateway\(\)/);
+assert.match(pspAppSource, /document\.documentElement\.dataset\.authGateway = "ready"/);
+assert.match(pspAppSource, /createClient\(\s*SUPABASE_BROWSER_URL/);
+assert.doesNotMatch(pspAppSource, /createClient\(\s*"https:\/\/iceopurxqzqmwtcmwfzl\.supabase\.co"/);
+assert.match(pspAppSource, /shouldCreateUser: false/);
+assert.match(pspAppSource, /emailRedirectTo: `\$\{window\.location\.origin\}\/psp\/`/);
+for (const rpc of [
+  "list_offerpsp_my_provider_workspaces",
+  "get_offerpsp_provider_portal_workspace",
+  "save_offerpsp_provider_portal_profile",
+  "enqueue_offerpsp_provider_source",
+  "save_offerpsp_provider_portal_contact",
+  "save_offerpsp_provider_update",
+  "save_offerpsp_provider_offer_draft",
+  "submit_offerpsp_provider_offer_draft",
+  "pause_offerpsp_provider_route",
+  "confirm_offerpsp_provider_portal_freshness",
+]) assert.match(pspAppSource, new RegExp(`rpc\\("${rpc}"`));
+assert.doesNotMatch(pspAppSource, /service_role|margin_polic|commission_terms|publish_offerpsp|set_offerpsp_route_status/);
+assert.match(pspHtmlSource, /Публикация возможна только после проверки OfferPSP/);
+assert.match(pspHtmlSource, /Новости и изменения/);
+assert.match(pspHtmlSource, /Будущая карточка каталога/);
+assert.match(pspAppSource, /offerpsp-private-sources/);
+assert.match(pspAppSource, /provider-offer-source/);
+const pspCacheHeader = vercelConfig.headers.find((entry) => entry.source === "/psp/(.*)");
+assert.deepEqual(pspCacheHeader?.headers, [
+  { key: "Cache-Control", value: "private, no-store, max-age=0" },
+]);
+assert.deepEqual(vercelConfig.rewrites, [
+  {
+    source: "/_data/:path*",
+    destination: "https://iceopurxqzqmwtcmwfzl.supabase.co/:path*",
+  },
+]);
 if (selfServiceProfileMigration) {
   assert.match(selfServiceProfileMigration, /security definer/);
   assert.match(selfServiceProfileMigration, /pg_advisory_xact_lock/);
@@ -171,4 +230,4 @@ assert.match(adminHtmlSource, /id="merchantRecordForm"/);
 assert.match(adminHtmlSource, /id="manualOfferForm"/);
 assert.match(adminHtmlSource, /id="organizationForm"/);
 
-process.stdout.write("PASS persistent portal, operational Deal Desk and PSP supply workspace guards\n");
+process.stdout.write("PASS merchant portal, closed PSP portal and operational supply guards\n");

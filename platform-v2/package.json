@@ -10,13 +10,17 @@
     "preview": "vite preview",
     "test:pdf-extractor": "node scripts/test-pdf-extractor.mjs",
     "test:offer-parser": "node scripts/test-offer-parser.mjs",
+    "test:provider-source": "node scripts/test-provider-offer-source.mjs",
     "test:mailbox-poller": "node scripts/test-mailbox-poller.mjs",
     "test:modules": "node scripts/test-platform-modules.mjs",
     "test:control-integrity": "node scripts/test-control-integrity.mjs",
     "test:pwa": "node scripts/test-pwa.mjs",
     "test:siteone-audit": "node scripts/test-siteone-audit.mjs",
     "test:bridges": "node scripts/test-integration-bridges.mjs",
-    "test:mcp": "node scripts/test-mcp-gateway.mjs && node scripts/test-offerpsp-oauth.mjs"
+    "test:mcp": "node scripts/test-mcp-gateway.mjs && node scripts/test-offerpsp-oauth.mjs",
+    "test:bix-reserve": "node scripts/test-bix-reserve-foundation.mjs",
+    "test:seo-live-traffic": "node scripts/test-vercel-web-analytics.mjs",
+    "test:google-search-console": "node scripts/test-google-search-console.mjs"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.15",

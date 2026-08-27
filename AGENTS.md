@@ -1,6 +1,6 @@
 # OfferPSP — shared project context for Codex and Claude Code
 
-Updated: 2026-08-15
+Updated: 2026-08-26
 
 Owner and operator: offerpsp.com (Individual Entrepreneur, Georgia), trading as OfferPSP
 
@@ -31,11 +31,36 @@ Use these result labels consistently:
 
 Never report documentation, a checked task or a local test as proof of production state.
 
+## Task and project boundary
+
+- This Codex task/chat is the durable working context for **OfferPSP only**.
+- Studio ONE, FitBot/FatBotSlim and every other product must use separate Codex tasks/chats for
+  implementation, billing, Stripe, n8n product flows and product-specific decisions.
+- Do not mix another product's backlog, credentials, payment catalogue or operational memory into
+  `BIXOFFPSP`. Shared infrastructure may be referenced here only when OfferPSP directly depends on
+  it.
+- BRAININDEX OÜ is the Estonian IT development company. It may sell its own products and receive
+  their revenue to its own operating account, but that is not an OfferPSP billing decision and must
+  be configured in each product's separate task.
+- BRAININDEX OÜ is not the OfferPSP operator or default OfferPSP payee. Do not silently substitute
+  it for the OfferPSP operator in legal pages, contracts, invoices, Stripe or other payment setup.
+
 ## Product and commercial goal
 
 OfferPSP is a confidential B2B payment-matching, qualification and introduction platform
 operated by offerpsp.com. Brain Index may provide IT development support but is not the
 operator of the OfferPSP business.
+
+The canonical commercial direction and phased disclosure strategy are defined in
+`docs/OFFERPSP-BUSINESS-MODEL.md`. During the current supply-building stages, provider identity
+remains confidential until accepted review and managed introduction. A transparent named PSP
+catalogue is a later stage that starts only after OfferPSP has sufficient verified supply, live
+results, partner attribution agreements and freshness controls. Do not expose providers early or
+treat the future catalogue as a production capability.
+
+Business volume never overrides the zero quality gate: no stage transition or provider disclosure
+until the complete role-based journey, access isolation, live-state honesty, lifecycle consistency,
+observability and recovery path are verified without open P0/P1 defects.
 
 Its end-to-end job is to:
 
@@ -136,7 +161,21 @@ These addresses are routing information, not proof that the latest deployment is
 - Merchant Payment Workspace: `https://offerpsp.com/portal/`
 - Staff Captain's Bridge: `https://ops-7q4m2x9k8v3n.vercel.app/`
 - Legacy rollback UI: `https://offerpsp.com/admin/`
-- Supabase project: `xcizofpejsomjiflesbx`
+- Production Supabase project: `iceopurxqzqmwtcmwfzl` (`offerpsp-production`)
+- Legacy shared BIX Supabase project: `xcizofpejsomjiflesbx` — not an OfferPSP data plane; retained only for the separately scoped legacy workflows that still own their data there.
+
+Domain policy:
+
+- `offerpsp.com` is the canonical OfferPSP domain and source of truth.
+- `offerspsp.com` is the only domain that may be an OfferPSP mirror/clone. Any mirror must preserve
+  one canonical SEO identity pointing to `https://offerpsp.com/` through canonical URLs and/or an
+  explicit redirect strategy; do not create competing duplicate indexes.
+- Other Boris-owned domains, including `brain-index.com`, `31xstudio.com`, `allstudio.one`,
+  `annoris.net` and `fatbotslim.fit`, remain independent products/sites. Ownership is not
+  authorization to clone OfferPSP onto them, redirect all their traffic to OfferPSP or merge their
+  SEO/GEO strategy.
+- Cross-domain traffic or SEO work requires an explicit per-domain plan and verification of the
+  site's real purpose before any production change.
 
 ## Verified handoff — 2026-08-15
 
@@ -272,6 +311,7 @@ Do not assume that a workflow is active merely because it exists.
 - Supabase migrations and RPC contracts: `supabase/migrations/`
 - Portal and regression guards: `scripts/`
 - Project status journal: `TASKS.md`
+- Canonical business model and development stages: `docs/OFFERPSP-BUSINESS-MODEL.md`
 - Architecture: `docs/OFFERPSP-PLATFORM-ARCHITECTURE.md`
 - Offer model: `docs/OFFERPSP-OFFER-MODEL.md`
 - Ingestion standard: `docs/OFFERPSP-INGESTION-STANDARD.md`

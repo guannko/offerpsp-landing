@@ -29,5 +29,6 @@ await writeSeoPages(output);
 
 await cp(resolve(root, "platform-v2/public/brand"), resolve(output, "brand"), { recursive: true });
 await cp(resolve(root, "portal"), resolve(output, "portal"), { recursive: true });
+await cp(resolve(root, "psp"), resolve(output, "psp"), { recursive: true });
 
-process.stdout.write("PASS assembled public landing, SEO/GEO pages and client portal without staff surfaces\n");
+process.stdout.write("PASS assembled public landing, SEO/GEO pages, merchant portal and PSP portal without staff surfaces\n");

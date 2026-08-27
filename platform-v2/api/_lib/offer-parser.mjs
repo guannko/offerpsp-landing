@@ -25,6 +25,7 @@ const GEO_RULES = [
   ["ID", /indonesia|индонези|\bidr\b/i],
   ["UZ", /uzbekistan|узбекистан|\buzs\b/i],
   ["KG", /kyrgyzstan|kyrgyz|киргиз|\bkgs\b/i],
+  ["KZ", /kazakhstan|казахстан|\bkzt\b/i],
   ["IN", /india|индия|\binr\b/i],
   ["AZ", /azerbaijan|азербайджан|\bazn\b/i],
   ["RU", /russia|россия|(?:^|\s)рф(?:\s|$)|\bруб\b|\brub\b|₽/i],
@@ -90,11 +91,21 @@ const METHOD_RULES = [
   ["KAKAO", /\bkakao\b/i],
   ["ONE_CLICK", /one\s*click|1\s*click/i],
   ["CARDS", /\bcards?\b|\bvisa\b|master\s?card|карты|картами/i],
+  ["KASPI", /\bkaspi\b/i],
+  ["KAPITALBANK", /\bkapital\s*bank\b|\bkapitalbank\b/i],
+  ["MBANK", /\bmbank\b/i],
+  ["OPTIMABANK", /\boptima\s*bank\b|\boptimabank\b/i],
 ];
 
 const TRAFFIC_RULES = [
   ["FTD", /\bftd\b|первичн/i],
-  ["TRUSTED", /\btrusted\b|\bstd\b|вторичн/i],
+  ["TRUSTED", /\btrusted\b|\bstd\b|\btd\b|вторичн/i],
+];
+
+const VERTICAL_RULES = [
+  ["IGAMING", /\bigaming\b|\bgaming\b|\bgambling\b|\bbetting\b|казино|ставки/i],
+  ["FOREX", /\bforex\b/i],
+  ["ADULT", /\badult\b/i],
 ];
 
 const INTEGRATION_RULES = [
@@ -102,6 +113,7 @@ const INTEGRATION_RULES = [
   ["H2C", /\bh2c\b/i],
   ["API", /\bapi\b/i],
   ["DEEPLINK", /deep\s?link/i],
+  ["REDIRECT", /\bredirect\b/i],
 ];
 
 export function parseCliArgs(argv) {
@@ -144,11 +156,22 @@ function providerFromArgs(args) {
 
 function normalizeText(value) {
   return value
+    .replace(/&#(?:x([0-9a-f]+)|(\d+));/gi, (_entity, hex, decimal) => {
+      const codePoint = Number.parseInt(hex || decimal, hex ? 16 : 10);
+      return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : _entity;
+    })
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
     .replaceAll("\r\n", "\n")
     .replaceAll("\r", "\n")
     .replace(/[\u2028\u2029]/g, "\n")
     .replace(/[\u00a0\u2007\u202f]/g, " ")
     .replace(/[–—]/g, "-")
+    .replace(/^\\\s*$/gm, "")
     .trim();
 }
 
@@ -156,15 +179,23 @@ function unique(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
+function isCountryCurrencyHeader(value) {
+  if (value.length > 160) return false;
+  const countryAtStart = /^(?:bangladesh|indonesia|uzbekistan|kyrgyzstan|kazakhstan|india|azerbaijan|russia|argentina|brazil|brasil|vietnam|colombia|thailand|south korea|korea|turkey|türkiye|poland|australia|united kingdom|switzerland|netherlands|europe)\b/i.test(value);
+  const hasCurrency = CURRENCY_CODES.some((code) => new RegExp(`(?:^|[^A-Z])${code}(?:[^A-Z]|$)`, "i").test(value));
+  return countryAtStart && hasCurrency;
+}
+
 function startsBlock(line) {
-  const value = line.trim();
+  const value = line.trim().replace(/^[*_~`\s]+/, "");
   if (!value) return false;
   return /^(?:[🇦-🇿]{2}|🌎|🌍)\s*/u.test(value)
     || /^country\s*:/i.test(value)
     || /^(?:geo|гео)\s*[-:—]/iu.test(value)
     || /^(?:классический p2p|турция(?:\s|$)|payouts?\s+-\s+cards|offers?\s+rf|оффер\s+рф)/iu.test(value)
     || /^(?:trustly|ideal|apple\s*pay\s*\/\s*google\s*pay)\b/i.test(value)
-    || /^(?:australia|poland|india|argentina|south korea)\b/i.test(value);
+    || /^(?:australia|poland|india|argentina|south korea)\b/i.test(value)
+    || isCountryCurrencyHeader(value);
 }
 
 function normalizeFlatCountryTable(sourceText) {
@@ -193,7 +224,11 @@ function splitBlocks(sourceText) {
   let started = false;
 
   for (const line of lines) {
-    const beginsBlock = startsBlock(line);
+    const currentMeaningful = current.map((item) => item.trim()).filter(Boolean);
+    const geoContinuation = /^(?:[*_~`\s]*)(?:geo|гео)\s*[-:—]/iu.test(line)
+      && currentMeaningful.length > 0
+      && !/^[-━⸻─_*~`]+$/u.test(currentMeaningful.at(-1));
+    const beginsBlock = startsBlock(line) && !geoContinuation;
     if (!started && !beginsBlock) continue;
     if (beginsBlock) started = true;
     if (beginsBlock && current.some((item) => item.trim())) {
@@ -336,7 +371,7 @@ function extractGeoCoverage(block) {
   const explicit = lines.filter((line) => /^(?:[•-]?\s*)?(?:open\s+geo|geo|гео)\s*[-:—]/i.test(line)).join(" ");
   const searchText = `${header} ${explicit}`;
   const flagGeos = [
-    ["🇺🇿", "UZ"], ["🇰🇬", "KG"], ["🇮🇳", "IN"], ["🇦🇿", "AZ"], ["🇷🇺", "RU"],
+    ["🇺🇿", "UZ"], ["🇰🇬", "KG"], ["🇰🇿", "KZ"], ["🇮🇳", "IN"], ["🇦🇿", "AZ"], ["🇷🇺", "RU"],
     ["🇦🇷", "AR"], ["🇰🇷", "KR"], ["🇹🇷", "TR"], ["🇵🇱", "PL"], ["🇦🇺", "AU"], ["🇪🇺", "EU"],
   ].filter(([flag]) => searchText.includes(flag)).map(([, code]) => code);
   const geos = [...flagGeos, ...GEO_RULES.filter(([, pattern]) => pattern.test(searchText)).map(([code]) => code)];
@@ -358,7 +393,7 @@ function extractCurrencies(block, geos) {
   if (/\$/u.test(block)) return ["USD"];
 
   const geoCurrency = {
-    BD: "BDT", ID: "IDR", UZ: "UZS", KG: "KGS", IN: "INR", AZ: "AZN", RU: "RUB", AR: "ARS", BR: "BRL", VN: "VND", CO: "COP", TH: "THB", KR: "KRW", TR: "TRY", PL: "PLN", AU: "AUD", GB: "GBP", CH: "CHF", NL: "EUR", EU: "EUR",
+    BD: "BDT", ID: "IDR", UZ: "UZS", KG: "KGS", KZ: "KZT", IN: "INR", AZ: "AZN", RU: "RUB", AR: "ARS", BR: "BRL", VN: "VND", CO: "COP", TH: "THB", KR: "KRW", TR: "TRY", PL: "PLN", AU: "AUD", GB: "GBP", CH: "CHF", NL: "EUR", EU: "EUR",
   };
   return unique(geos.map((geo) => geoCurrency[geo]));
 }
@@ -368,7 +403,14 @@ function extractByRules(block, rules) {
 }
 
 function extractMethods(block) {
-  return unique(extractByRules(block, METHOD_RULES));
+  const paymentScope = block
+    .split("\n")
+    .map((line) => {
+      const settlementIndex = line.search(/\bsettlement\b|сеттл|расч[её]т/i);
+      return settlementIndex >= 0 ? line.slice(0, settlementIndex) : line;
+    })
+    .join("\n");
+  return unique(extractByRules(paymentScope, METHOD_RULES));
 }
 
 function extractCardBrands(block) {
@@ -401,6 +443,12 @@ function inferFlow(block) {
 }
 
 function inferFeeFlow(line, fallbackFlow) {
+  // Spreadsheet extraction can place notes in later columns on the same line
+  // (for example `PayIn 3.8% ... Offer type PayIn / PayOut`). The leading row
+  // label is authoritative; scanning the whole line first would misclassify
+  // that fee as payout merely because `PayOut` appears in an adjacent cell.
+  if (/^(?:pay[-\s]?in|deposit|при[её]м(?:\s+платежей)?|\bmdr\b)(?:\s|:|\t|$)/i.test(line)) return "payin";
+  if (/^(?:pay[-\s]?out|payouts?|выплаты?)(?:\s|:|\t|$)/i.test(line)) return "payout";
   if (/pay[-\s]?out|payout|выплат/i.test(line)) return "payout";
   if (/pay[-\s]?in|deposit|при[её]м|\bmdr\b/i.test(line)) return "payin";
   if (/settlement|сеттл|расч[её]т|funding|kraken|binance|bybit|rapira|htx|paribu|uznex|\bxe\b/i.test(line)) return "settlement";
@@ -432,13 +480,35 @@ function extractFees(block, fallbackFlow, currencies) {
   let contextFlow = fallbackFlow === "both" ? null : fallbackFlow;
   let reserveSection = false;
   for (const rawLine of block.split("\n")) {
-    const line = rawLine.trim();
+    const line = rawLine.replace(/[*_`]/g, "").trim();
     if (/^(?:reserve|rolling reserve|rr)\s*:/i.test(line)) reserveSection = true;
     if (/^(?:pay\s*in|при[её]м(?:\s+платежей)?)[\s:]*$/i.test(line)) contextFlow = "payin";
     if (/^(?:pay\s*out|payouts?|выплаты?)[\s:]*$/i.test(line)) contextFlow = "payout";
     if (/^settlement\s*:/i.test(line)) contextFlow = "settlement";
     if (!line.includes("%")) continue;
     if (reserveSection || /rolling reserve|reserve:|\brr\s*:|netting|неттинг|approval|\bar\s*:/i.test(line)) continue;
+
+    const tieredFees = [...line.matchAll(/\b(FTD|TD|TRUSTED|STD)\b\s*[-:=]?\s*(\d+(?:[.,]\d+)?)\s*%/gi)];
+    if (tieredFees.length > 1) {
+      const flow = inferFeeFlow(line, contextFlow || fallbackFlow);
+      if (flow) {
+        for (const tieredFee of tieredFees) {
+          fees.push({
+            flow,
+            traffic_tier: /^FTD$/i.test(tieredFee[1]) ? "FTD" : "TRUSTED",
+            method_scope: [],
+            region_scope: [],
+            fee_type: "percent",
+            base_percent: parseDecimal(tieredFee[2]),
+            base_fixed: null,
+            base_fixed_currency: null,
+            applies_on: "success",
+            source_text: line,
+          });
+        }
+      }
+      continue;
+    }
 
     const percentMatch = line.match(/(\d+(?:[.,]\d+)?)\s*%/);
     if (!percentMatch) continue;
@@ -498,9 +568,9 @@ function extractLimits(block, fallbackFlow, currencies) {
   const englishFromToPattern = /from\s*(A\$|€|\$|₽|[A-Z]{3})?\s*([\d][\d\s.,]*)\s*(?:[A-Z]{3}|A\$|€|\$|₽)?\s*to\s*(A\$|€|\$|₽|[A-Z]{3})?\s*([\d][\d\s.,]*)\s*(A\$|€|\$|₽|[A-Z]{3})?/i;
 
   for (const rawLine of block.split("\n")) {
-    const line = rawLine.trim();
-    if (/^(?:pay\s*in|при[её]м(?:\s+платежей)?)(?:\s|:|$)/i.test(line)) contextFlow = "payin";
-    if (/^(?:pay\s*out|payouts?|выплаты?)(?:\s|:|$)/i.test(line)) contextFlow = "payout";
+    const line = rawLine.replace(/[*_`]/g, "").trim();
+    if (/^(?:pay[-\s]*in|при[её]м(?:\s+платежей)?)(?:\s|:|$)/i.test(line)) contextFlow = "payin";
+    if (/^(?:pay[-\s]*out|payouts?|выплаты?)(?:\s|:|$)/i.test(line)) contextFlow = "payout";
     if (/^(?:limits?|лимиты)[\s:]*$/i.test(line)) {
       limitContext = true;
       continue;
@@ -612,6 +682,7 @@ function parseRoute(block, index) {
   const currencies = extractCurrencies(block, geos);
   let methods = extractMethods(block);
   const trafficTypes = unique(extractByRules(block, TRAFFIC_RULES));
+  const verticals = unique(extractByRules(block, VERTICAL_RULES));
   const integrations = unique(extractByRules(block, INTEGRATION_RULES));
   const cardBrands = extractCardBrands(block);
   const flowResult = inferFlow(block);
@@ -632,7 +703,7 @@ function parseRoute(block, index) {
   if (methodInferred) anomalies.push({ code: "method_inferred", severity: "warning", field: "methods", message: "Card method was inferred from the offer heading and requires staff confirmation.", source_excerpt: block.split("\n").slice(0, 3).join(" | ") });
   if (flowResult.inferred) anomalies.push({ code: "flow_inferred", severity: "warning", field: "flow", message: "PayIn flow was inferred from the offer heading and requires staff confirmation.", source_excerpt: block.split("\n").slice(0, 3).join(" | ") });
   if (!trafficTypes.length) anomalies.push({ code: "traffic_unconfirmed", severity: "warning", field: "traffic_types", message: "Traffic type requires staff confirmation.", source_excerpt: block.slice(0, 240) });
-  anomalies.push({ code: "vertical_unconfirmed", severity: "warning", field: "verticals", message: "Vertical acceptance is not explicit in the source and requires PSP confirmation.", source_excerpt: block.slice(0, 240) });
+  if (!verticals.length) anomalies.push({ code: "vertical_unconfirmed", severity: "warning", field: "verticals", message: "Vertical acceptance is not explicit in the source and requires PSP confirmation.", source_excerpt: block.slice(0, 240) });
   if (/660\s*000\s*00(?:\D|$)/.test(block)) anomalies.push({ code: "malformed_limit", severity: "error", field: "limits", message: "A transaction maximum appears malformed.", source_excerpt: block.match(/[^\n]*660\s*000\s*00[^\n]*/)?.[0] || "" });
   if (/pay\s*out\s+min\/max[^\n]*\b1\s*-\s*660\s*000\s*00[\s\S]*limits\s+pay\s*out:[\s\S]*pay\s*out\s+min\/max[^\n]*\b5\s*000\s*-\s*660\s*000\s*00/i.test(block)) {
     anomalies.push({ code: "conflicting_limit_minimum", severity: "error", field: "limits", message: "The source gives two different PayOut minimum amounts (1 and 5,000).", source_excerpt: "PayOut minimum: 1 / 5 000" });
@@ -657,7 +728,7 @@ function parseRoute(block, index) {
     methods,
     card_brands: cardBrands,
     traffic_types: trafficTypes,
-    verticals: [],
+    verticals,
     prohibited_verticals: [],
     integrations,
     niche_key: buildRouteFamilyKey({ coverageMode, geos, currencies, flow, methods, cardBrands, trafficTypes, integrations }),
@@ -669,9 +740,9 @@ function parseRoute(block, index) {
     max_monthly_volume: null,
     volume_currency: null,
     risk_terms: {
-      rolling_reserve: block.match(/(?:rolling reserve|(?:^|\n)\s*RR\s*:)[^\n]*/i)?.[0]?.trim() || null,
-      chargeback: block.match(/charge\s?back[^\n]*/i)?.[0] || null,
-      refund: block.match(/refund[^\n]*/i)?.[0] || null,
+      rolling_reserve: block.match(/(?:rolling reserve|(?:^|\n)\s*RR\s*(?::|-))[^\n]*/i)?.[0]?.trim() || null,
+      chargeback: block.match(/(?:charge\s?back|(?:^|\n)\s*CB\s*(?::|-))[^\n]*/i)?.[0]?.trim() || null,
+      refund: block.match(/refund(?:\s+fee)?[^\n]*/i)?.[0]?.trim() || null,
     },
     operational_notes: null,
     raw_block: block,

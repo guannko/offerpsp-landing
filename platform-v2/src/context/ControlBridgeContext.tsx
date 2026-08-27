@@ -76,9 +76,11 @@ type CoreSnapshot = Pick<
   error: string | null;
 };
 
-const CORE_CACHE_TTL_MS = 30_000;
+const CORE_CACHE_TTL_MS = 5 * 60_000;
+const CORE_BACKGROUND_REFRESH_MS = 5 * 60_000;
 const CORE_CACHE_MAX_USERS = 3;
 const coreCache = new Map<string, CoreSnapshot>();
+const coreRequests = new Map<string, Promise<CoreSnapshot>>();
 
 function readCoreCache(userId: string) {
   const cached = coreCache.get(userId);
@@ -104,6 +106,8 @@ function writeCoreCache(userId: string, snapshot: CoreSnapshot) {
 export function ControlBridgeProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ControlBridgeData>(emptyData);
   const backgroundRefreshActive = useRef(false);
+  const leadsRefreshActive = useRef(false);
+  const lastFullRefreshAt = useRef(0);
   const { pathname } = useLocation();
 
   const load = useCallback(async (userOverride?: User | null, force = false) => {
@@ -165,7 +169,8 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
     const cachedCore = force ? null : readCoreCache(user.id);
     const coreRequest = cachedCore
       ? Promise.resolve(cachedCore)
-      : Promise.all([
+      : coreRequests.get(user.id) || (() => {
+        const request = Promise.all([
           supabase.from("offerpsp_leads").select("*").order("submitted_at", { ascending: false }),
           supabase.rpc("get_offerpsp_management_registry"),
           supabase.rpc("list_offerpsp_supply"),
@@ -198,6 +203,13 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
           writeCoreCache(user.id, snapshot);
           return snapshot;
         });
+        coreRequests.set(user.id, request);
+        request.then(
+          () => { if (coreRequests.get(user.id) === request) coreRequests.delete(user.id); },
+          () => { if (coreRequests.get(user.id) === request) coreRequests.delete(user.id); },
+        );
+        return request;
+      })();
     const [core, captainsResult, mailResult, ingestionResult, freshnessResult] = await Promise.all([
       coreRequest,
       needsCaptains ? supabase.rpc("get_offerpsp_captains_bridge") : skipped,
@@ -208,6 +220,8 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
 
     const scopedError = [captainsResult.error, mailResult.error, ingestionResult.error, freshnessResult.error].find(Boolean);
 
+    const updatedAt = new Date();
+    lastFullRefreshAt.current = updatedAt.getTime();
     setState((current) => ({
       user,
       staff: staffResult.data as StaffMember,
@@ -229,7 +243,7 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
       ready: true,
       accessDenied: false,
       error: core.error || scopedError?.message || null,
-      lastUpdatedAt: new Date(),
+      lastUpdatedAt: updatedAt,
     }));
   }, [pathname]);
 
@@ -243,6 +257,27 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => load(state.user, true), [load, state.user]);
 
+  const refreshLeads = useCallback(async (user: User) => {
+    if (leadsRefreshActive.current) return;
+    leadsRefreshActive.current = true;
+    try {
+      const result = await supabase
+        .from("offerpsp_leads")
+        .select("*")
+        .order("submitted_at", { ascending: false });
+      if (result.error) {
+        setState((current) => ({ ...current, error: result.error.message }));
+        return;
+      }
+      const leads = asArray<Lead>(result.data);
+      const cached = coreCache.get(user.id);
+      if (cached) writeCoreCache(user.id, { ...cached, leads });
+      setState((current) => ({ ...current, leads, error: null }));
+    } finally {
+      leadsRefreshActive.current = false;
+    }
+  }, []);
+
   useEffect(() => {
     if (!state.ready || !state.user) return;
     const user = state.user;
@@ -251,32 +286,34 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
       if (backgroundRefreshActive.current) return;
       backgroundRefreshActive.current = true;
       try {
-        await load(user, true);
+        await load(user);
       } finally {
         backgroundRefreshActive.current = false;
       }
     };
-    const refreshWhenVisible = () => {
-      if (document.visibilityState === "visible") void refreshInBackground();
+    const refreshWhenStale = () => {
+      if (
+        document.visibilityState === "visible"
+        && Date.now() - lastFullRefreshAt.current >= CORE_BACKGROUND_REFRESH_MS
+      ) void refreshInBackground();
     };
     const channel = supabase
       .channel(`control-bridge-leads-${user.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "offerpsp_leads" }, () => {
-        coreCache.delete(user.id);
-        void refreshInBackground();
+        void refreshLeads(user);
       })
       .subscribe();
-    const timer = window.setInterval(() => void refreshInBackground(), 30_000);
-    window.addEventListener("focus", refreshWhenVisible);
-    document.addEventListener("visibilitychange", refreshWhenVisible);
+    const timer = window.setInterval(() => void refreshInBackground(), CORE_BACKGROUND_REFRESH_MS);
+    window.addEventListener("focus", refreshWhenStale);
+    document.addEventListener("visibilitychange", refreshWhenStale);
 
     return () => {
       window.clearInterval(timer);
-      window.removeEventListener("focus", refreshWhenVisible);
-      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.removeEventListener("focus", refreshWhenStale);
+      document.removeEventListener("visibilitychange", refreshWhenStale);
       void supabase.removeChannel(channel);
     };
-  }, [load, state.ready, state.user]);
+  }, [load, refreshLeads, state.ready, state.user]);
   const signOut = useCallback(async () => {
     if (state.user) coreCache.delete(state.user.id);
     await supabase.auth.signOut();
