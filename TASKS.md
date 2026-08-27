@@ -1490,6 +1490,17 @@ stay isolated behind feature modes until their own verification is complete.
   `23422911-c7d2-40eb-a7c4-e9be6adce847` scored 9.9 with 31/31 successful URLs, zero broken URLs,
   no security warnings or critical findings and no agent priorities. Remaining SiteOne security
   entries are notices for optional or compatibility-oriented headers, not a P1 defect.
+- [x] Reworked qualified-lead meta descriptions on 2026-08-28 for Europe, high-risk, Forex,
+  iGaming and video-game acquisition pages. Each live description now leads with private PSP
+  matching, offers qualified introductions and states that OfferPSP does not publish a provider
+  list. Public deployment `dpl_AG9eARoXvp8Ss4mW3emBRpv7fJRH` and final staff audit deployment
+  `dpl_FprccBWQcPJBoaAj4QwAiCJuTkZU` are `READY`. Audit
+  `9656e27a-5b51-469f-ae97-e80b3c6e0ef7` scored 9.9 with 31/31 successful URLs, zero broken URLs
+  and no duplicate or empty content recommendations. The normalizer also discards the verified
+  private portal's intentional noindex notice and summary claims contradicted by live `llms.txt`.
+- [ ] Add verified FAQPage and HowTo JSON-LD to the six vertical pages identified by audit
+  `9656e27a-5b51-469f-ae97-e80b3c6e0ef7`, using only questions and steps already visible on each
+  page; rerun the live audit before closing this separate P1 GEO task.
 
 ### Captain's Bridge restart remediation — verified 2026-08-20
 
