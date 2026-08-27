@@ -338,27 +338,41 @@ function noindexPageUrls(evidence) {
 function claimsMetadataChange(item) {
   const text = [item?.title, item?.evidence, item?.recommendation, item?.rationale,
     item?.suggested_title, item?.suggested_meta_description].join(" ");
-  return /(meta[- ]?description|мета-описан|meta title|title)/i.test(text)
+  return /(meta[- _]?description|мета-описан|meta title|title)/i.test(text)
     || Boolean(item?.suggested_title)
     || Boolean(item?.suggested_meta_description);
 }
 
-function claimsSearchMetadataBenefit(item) {
-  const text = [item?.title, item?.evidence, item?.recommendation, item?.rationale].join(" ");
-  return claimsMetadataChange(item)
-    && /(SEO|search|index|visibility|CTR|выдач|поиск|индекс|видимост)/i.test(text);
-}
-
-function targetsOnlyNoindexPages(item, noindexUrls) {
+function targetsOnlySearchMetadataExcludedPages(item, noindexUrls) {
   const urls = Array.isArray(item?.affected_urls)
     ? item.affected_urls
     : (item?.url ? [item.url] : []);
-  return urls.length > 0 && urls.every((url) => noindexUrls.has(url));
+  return urls.length > 0 && urls.every((url) => {
+    if (noindexUrls.has(url)) return true;
+    try {
+      return /\/(?:privacy|terms)(?:\.html)?\/?$/i.test(new URL(url).pathname);
+    } catch {
+      return false;
+    }
+  });
 }
 
 function mentionsNoindexPage(value, noindexUrls) {
   const text = String(value || "");
   return [...noindexUrls].some((url) => text.includes(url));
+}
+
+function mentionsExcludedSearchPage(value, noindexUrls) {
+  const text = String(value || "");
+  if (/\/(?:privacy|terms)(?:\.html)?\/?/i.test(text)) return true;
+  return [...noindexUrls].some((url) => {
+    if (text.includes(url)) return true;
+    try {
+      return text.includes(new URL(url).pathname);
+    } catch {
+      return false;
+    }
+  });
 }
 
 function indexedPagesHaveMetaDescriptions(evidence) {
@@ -389,7 +403,7 @@ function stripUnsupportedSummarySentences(summary, { modernImages, brotli, metad
   const filtered = sentences.filter((sentence) => {
     if (modernImages && /(webp|avif)/i.test(sentence)) return false;
     if (brotli && /brotli/i.test(sentence)) return false;
-    if (metadata && /(meta[- ]?description|мета-описан)/i.test(sentence)) return false;
+    if (metadata && /(meta[- _]?description|мета-описан)/i.test(sentence)) return false;
     return true;
   });
   return clampText(filtered.join(" ") || "Техническое состояние сайта подтверждено живым crawl и проверкой production-ответов.", 1_200);
@@ -426,9 +440,9 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     && (normalizedPriorities.some(claimsMissingStructuredDataTypes) || claimsMissingStructuredDataTypes(summaryItem));
   const removedNoindexMetadata = (indexedMetadataComplete && claimsMetadataChange(summaryItem))
     || normalizedPriorities.some((item) =>
-      claimsSearchMetadataBenefit(item) && targetsOnlyNoindexPages(item, noindexUrls))
+      claimsMetadataChange(item) && targetsOnlySearchMetadataExcludedPages(item, noindexUrls))
     || normalizedContentRecommendations.some((item) =>
-      claimsSearchMetadataBenefit(item) && targetsOnlyNoindexPages(item, noindexUrls));
+      claimsMetadataChange(item) && targetsOnlySearchMetadataExcludedPages(item, noindexUrls));
   const removedUnsupportedLlms = verifiedLlmsCoverage
     && (normalizedPriorities.some(claimsLlmsReview) || claimsLlmsReview(summaryItem));
   const priorities = normalizedPriorities.filter((item) => {
@@ -436,7 +450,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     if (removedUnsupportedBrotli && claimsMissingBrotli(item)) return false;
     if (removedUnsupportedImages && claimsMissingModernImages(item)) return false;
     if (removedUnsupportedStructuredData && claimsMissingStructuredDataTypes(item)) return false;
-    if (claimsSearchMetadataBenefit(item) && targetsOnlyNoindexPages(item, noindexUrls)) return false;
+    if (claimsMetadataChange(item) && targetsOnlySearchMetadataExcludedPages(item, noindexUrls)) return false;
     if (removedUnsupportedLlms && claimsLlmsReview(item)) return false;
     return true;
   });
@@ -461,7 +475,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     limitations.unshift("Live JSON-LD already declares Schema.org types; recommendations claiming the type is unspecified were discarded.");
   }
   if (removedNoindexMetadata) {
-    limitations.unshift("The portal is intentionally noindex; search-snippet metadata recommendations for that private surface were discarded.");
+    limitations.unshift("The portal is intentionally noindex and legal pages are not acquisition landing pages; unsupported search-snippet metadata recommendations for those surfaces were discarded.");
   }
   if (removedUnsupportedLlms) {
     limitations.unshift("Live llms.txt already describes OfferPSP and links every crawled indexable page; generic expansion recommendations were discarded.");
@@ -487,14 +501,15 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     quick_wins: quickWins.filter((item) => {
       if (removedUnsupportedBrotli && /brotli/i.test(item)) return false;
       if (removedUnsupportedImages && /(webp|avif)/i.test(item)) return false;
-      if (indexedMetadataComplete && /(meta[- ]?description|мета-описан)/i.test(item)) return false;
+      if (indexedMetadataComplete && /(meta[- _]?description|мета-описан)/i.test(item)) return false;
       if (removedUnsupportedSecurity && /(security|CSP|заголов)/i.test(item)) return false;
       if (removedUnsupportedLlms && /llms\.txt/i.test(item)) return false;
       if (mentionsNoindexPage(item, noindexUrls) && /(canonical|meta|SEO|index|hreflang)/i.test(item)) return false;
+      if (mentionsExcludedSearchPage(item, noindexUrls) && /(meta[- _]?description|мета-описан|SEO|CTR|поиск|индекс)/i.test(item)) return false;
       return true;
     }),
     content_recommendations: normalizedContentRecommendations.filter((item) =>
-      !(claimsSearchMetadataBenefit(item) && targetsOnlyNoindexPages(item, noindexUrls))),
+      !(claimsMetadataChange(item) && targetsOnlySearchMetadataExcludedPages(item, noindexUrls))),
     geo_recommendations: Array.isArray(source.geo_recommendations)
       ? source.geo_recommendations.slice(0, 8).map((item) => clampText(item, 600)).filter((item) =>
         item

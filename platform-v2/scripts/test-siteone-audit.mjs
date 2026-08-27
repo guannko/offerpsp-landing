@@ -259,6 +259,29 @@ assert.equal(unsupportedNoindexMetadata.content_recommendations.length, 0);
 assert.doesNotMatch(unsupportedNoindexMetadata.executive_summary, /meta[- ]?description/i);
 assert.match(unsupportedNoindexMetadata.limitations.join(" "), /intentionally noindex/i);
 
+const unsupportedMixedNonAcquisitionMetadata = normalizeSeoAgentAnalysis({ analysis: {
+  ...rawAgentAnalysis,
+  priorities: [{
+    priority: "P1",
+    area: "Content",
+    title: "Improve meta descriptions",
+    evidence: "The portal has an empty meta_description and the legal descriptions lack payment keywords.",
+    recommendation: "Add acquisition keywords to all three pages.",
+    affected_urls: [
+      "https://offerpsp.com/portal/",
+      "https://offerpsp.com/privacy.html",
+      "https://offerpsp.com/terms.html",
+    ],
+  }],
+  quick_wins: [
+    "Add meta_description for /portal/.",
+    "Update meta_description for /privacy.html and /terms.html.",
+  ],
+} }, evidence);
+assert.equal(unsupportedMixedNonAcquisitionMetadata.priorities.length, 0);
+assert.equal(unsupportedMixedNonAcquisitionMetadata.quick_wins.length, 0);
+assert.match(unsupportedMixedNonAcquisitionMetadata.limitations.join(" "), /legal pages are not acquisition/i);
+
 const unsupportedSecurityReview = normalizeSeoAgentAnalysis({ analysis: {
   ...rawAgentAnalysis,
   quick_wins: ["Verify security headers on every page", "Check https://offerpsp.com/portal/ canonical for SEO"],
