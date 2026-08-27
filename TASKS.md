@@ -1463,6 +1463,15 @@ stay isolated behind feature modes until their own verification is complete.
 - [x] Sitemap, schema and canonical strategy. Every generated acquisition page is validated against
   `sitemap.xml` and `llms.txt` during the production build; generated HTML is verified to contain its
   self-canonical, JSON-LD and private-request CTA before release.
+- [x] Added the live public-page registry to the staff SEO/GEO screen on 2026-08-27. Each current
+  indexable URL now shows its latest HTTP response, JSON-LD count, canonical, Google URL Inspection
+  verdict, last Google crawl, 90-day impressions, clicks and position. Production deployment
+  `dpl_BTTPrkwzsMKLVup7zGgMDS2S8A7B` is `READY`. Fresh audit
+  `5e27d123-ef77-45e2-b05a-bee796508261` recorded 17 checked pages, 16 indexable pages, 17 HTTP 200
+  responses and 16 self-canonicals; the private noindex portal is excluded from the public registry.
+  Live UI verification showed 16 public pages, 16/16 HTTP OK, 16/16 self-canonical, 14/16 indexed by
+  Google and 12/16 with search impressions. Missing Google data remains visibly empty and is not
+  replaced by history.
 
 ### Captain's Bridge restart remediation — verified 2026-08-20
 
