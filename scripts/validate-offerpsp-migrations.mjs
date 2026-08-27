@@ -225,6 +225,7 @@ async function applyMigrations() {
     "20260827113000_offerpsp_staff_table_grants.sql",
     "20260827150000_offerpsp_policy_overlap_performance.sql",
     "20260827151000_offerpsp_lead_policy_initplan.sql",
+    "20260827160000_offerpsp_contact_research_queue.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -240,6 +241,34 @@ async function applyMigrations() {
       throw new Error(`Migration ${migrationName} failed: ${error.message}`);
     }
   }
+}
+
+async function verifyContactResearchQueue() {
+  const column = await query(`
+    select count(*)::integer as count
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'psp_providers'
+      and column_name = 'searched_at'
+      and data_type = 'timestamp with time zone'
+  `);
+  const index = await query(`
+    select count(*)::integer as count
+    from pg_indexes
+    where schemaname = 'public'
+      and tablename = 'psp_providers'
+      and indexname = 'psp_providers_pending_contact_research_idx'
+      and indexdef ilike '%searched_at is null%'
+      and indexdef ilike '%archived_at is null%'
+      and indexdef ilike '%website is not null%'
+  `);
+  if (column.rows[0].count !== 1 || index.rows[0].count !== 1) {
+    throw new Error(`Contact research queue schema is incomplete: ${JSON.stringify({
+      column: column.rows[0],
+      index: index.rows[0],
+    })}`);
+  }
+  process.stdout.write("PASS PSP contact research queue schema\n");
 }
 
 async function verifyLeadGrants() {
@@ -3564,6 +3593,7 @@ try {
   verifyWorldwideCoverageParsing();
   await bootstrap();
   await applyMigrations();
+  await verifyContactResearchQueue();
   await verifyLeadGrants();
   await verifyWorkspaceGrants();
   await verifyStaffTableGrants();

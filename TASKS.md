@@ -24,16 +24,23 @@ two account-level security operations remain explicitly listed below.
   nine previously overlapping OfferPSP tables.
 - [x] Reviewed all 150 authenticated `SECURITY DEFINER` OfferPSP/AIBot RPCs in the isolated database.
   Every exposed function has a staff, client, provider, organization or authenticated-user guard;
-  worker-only RPCs remain unavailable to ordinary authenticated users.
+  worker-only RPCs remain unavailable to ordinary authenticated users. Supabase's newer generic
+  `0029` advisor still flags intentionally authenticated `SECURITY DEFINER` RPCs without evaluating
+  their internal guards; blanket revocation would break the verified portal contracts.
 - [x] Cleared the inactive ingestion queue item and verified no active OfferPSP ingestion, update or
   email-attachment jobs were left stuck. Review-only history remains auditable and is not presented
   as a current queue.
-- [x] Validated all nine active OfferPSP n8n workflows with zero validation errors or warnings.
-  Scheduled worker, freshness, pre-compliance and mailbox executions are succeeding. The affected
+- [x] Validated all eleven active OfferPSP/PSP n8n workflows with zero validation errors. Ten have
+  zero warnings; `PSP | Email Finder` has only three expected unreachable-node warnings from its
+  deliberately disabled legacy Telegram trigger branch. Its five deprecated `continueOnFail`
+  properties were migrated to equivalent modern error handling in the published graph.
+- [x] Replaced `PSP | Contact Researcher`'s former public mutation webhook with a durable internal
+  daily schedule at 05:20 `Europe/Nicosia`, removed its outbound Telegram node and activated the
+  published seven-node workflow. Production now has a `searched_at` queue marker and partial pending
+  research index; 77 existing providers are eligible for the first bounded ten-record pass.
+- [x] Scheduled worker, freshness, pre-compliance and mailbox executions are succeeding. The affected
   iGaming Task Runner recovered after the legacy Supabase credential repair; its five latest checked
   executions succeeded.
-- [x] Kept `PSP | Contact Researcher` inactive because its former public mutation webhook had no
-  authenticated caller. It must not be activated until a protected caller exists.
 - [x] Removed snapshots from current SEO/GEO traffic. Current visitor/pageview numbers come only from
   live Vercel Web Analytics; historical records are shown only as history and never substitute for
   unavailable current data.
@@ -45,14 +52,19 @@ two account-level security operations remain explicitly listed below.
 - [x] Published Captain's Bridge production deployment `dpl_436G6vN7L3eo5A9JaGD6df5rMFfo`
   (`READY`) at `https://ops-7q4m2x9k8v3n.vercel.app`. Public `https://offerpsp.com`, merchant `/portal/`
   and PSP `/psp/` remain separate production surfaces.
-- [ ] Enable Supabase leaked-password protection in the Auth dashboard; the current MCP does not
-  expose this account-level setting.
+- [x] Verified Supabase leaked-password protection is unavailable on the current Free plan. The
+  invite-only merchant and PSP cabinets use passwordless magic links, so the unavailable password
+  check is not a current authentication gap; revisit it only with a Pro upgrade or password login.
 - [ ] Rotate the previously exposed Telegram bot token in a coordinated maintenance window and
-  replace it atomically in every dependent workflow/environment.
+  replace it atomically in every dependent workflow/environment. Boris explicitly deferred this
+  maintenance on 2026-08-27.
 - [ ] Provision the optional GCP reserve only after explicit cost approval (current estimate about
-  EUR 205.65/month); the primary runtime and recovery code do not require this paid reserve today.
-- [ ] Schedule the shared n8n platform upgrade separately because it affects every BIX workflow, not
-  only OfferPSP.
+  EUR 205.65/month); the primary runtime and recovery code do not require this paid reserve today,
+  and no billing account or reserve infrastructure was enabled.
+- [x] Upgraded the shared Northflank n8n runtime from `2.35.7` to `2.36.7` through a controlled
+  rollout. Added `/healthz` liveness and `/healthz/readiness` database-readiness probes; the new pod
+  is `Running`, both probes pass, the authenticated API responds and the former repeating insights
+  persistence error is absent from the new deployment logs.
 
 ## Canonical business model and development stages — decision 2026-08-26
 
