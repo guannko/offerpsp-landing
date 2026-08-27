@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { collectGeoSignals, normalizeSiteOneAudit } from "../api/_lib/siteone-audit.mjs";
+import { collectGeoSignals, normalizeSiteOneAudit, publicPageChecksFromEvidence } from "../api/_lib/siteone-audit.mjs";
 import { runSiteOneAudit } from "../api/_lib/siteone-runner.mjs";
 import {
   collectSeoAgentEvidence,
@@ -133,6 +133,13 @@ assert.deepEqual(evidence.pages[1].form_controls.unlabeled_controls, [{ tag: "in
 assert.equal(evidence.pages[0].image_inventory.content_raster_images, 0);
 assert.equal(evidence.pages[0].image_inventory.image_tags, 1);
 assert.equal(evidence.pages[0].image_inventory.brand_or_ui_images, 1);
+const publicPageChecks = publicPageChecksFromEvidence(evidence);
+assert.equal(publicPageChecks.pages.length, 3);
+assert.equal(publicPageChecks.pages[0].url, "https://offerpsp.com/");
+assert.equal(publicPageChecks.pages[0].status, 200);
+assert.equal(publicPageChecks.pages[0].canonical, "https://offerpsp.com/");
+assert.equal(publicPageChecks.pages[0].indexable, true);
+assert.equal(publicPageChecks.pages.find((page) => page.url.endsWith("/portal/"))?.indexable, false);
 assert.equal(evidence.pages[0].image_inventory.content_images, 0);
 assert.deepEqual(evidence.pages[0].hreflang_alternates, [{ hreflang: "en", href: "https://offerpsp.com/" }]);
 assert.equal(evidence.pages[0].response_headers["content-security-policy"], "default-src 'self'");

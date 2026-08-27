@@ -91,6 +91,38 @@ export function normalizeSiteOneAudit(report, targetUrl = "https://offerpsp.com/
   };
 }
 
+export function publicPageChecksFromEvidence(evidence) {
+  const targetOrigin = new URL(evidence?.target_url || "https://offerpsp.com/").origin;
+  const pages = (Array.isArray(evidence?.pages) ? evidence.pages : [])
+    .filter((page) => {
+      try {
+        return new URL(page?.url).origin === targetOrigin;
+      } catch {
+        return false;
+      }
+    })
+    .map((page) => ({
+      url: String(page.url),
+      status: Number(page.status || 0),
+      title: String(page.title || "").slice(0, 240),
+      canonical: String(page.canonical || "").slice(0, 1_000) || null,
+      indexable: !/(?:^|[,\s])noindex(?:$|[,\s])/i.test(String(page.meta_robots || "")),
+      structured_data_blocks: Number(page.json_ld_blocks || 0),
+    }))
+    .sort((left, right) => {
+      const leftPath = new URL(left.url).pathname;
+      const rightPath = new URL(right.url).pathname;
+      if (leftPath === "/") return -1;
+      if (rightPath === "/") return 1;
+      return leftPath.localeCompare(rightPath);
+    });
+
+  return {
+    checked_at: String(evidence?.collected_at || new Date().toISOString()),
+    pages,
+  };
+}
+
 async function probeText(url, fetchImpl) {
   try {
     const response = await fetchImpl(url, { headers: { "user-agent": "OfferPSP-SEO-GEO-Monitor/1.0" } });

@@ -85,6 +85,14 @@ type SearchInspection = {
   user_canonical?: string | null;
   google_canonical?: string | null;
 };
+type PublicPageCheck = {
+  url: string;
+  status?: number;
+  title?: string;
+  canonical?: string | null;
+  indexable?: boolean;
+  structured_data_blocks?: number;
+};
 type GoogleSearchConsole = {
   source: "google_search_console";
   fetched_at: string;
@@ -111,6 +119,11 @@ type TechnicalAudit = {
   issues?: AuditIssue[];
   agent_analysis?: AgentAnalysis;
   metadata?: {
+    crawled_page_urls?: string[];
+    public_page_checks?: {
+      checked_at?: string;
+      pages?: PublicPageCheck[];
+    };
     geo_signals?: {
       checked_at?: string;
       robots_txt?: { ok?: boolean; status?: number; ai_crawlers_allowed?: boolean };
@@ -195,6 +208,17 @@ const searchCountryName = (value?: string) => ({ vnm: "Вьетнам", rus: "Р
 const percent = (value: unknown) => `${(number(value) * 100).toFixed(1)}%`;
 const position = (value: unknown) => number(value) ? number(value).toFixed(1) : "—";
 const shortPage = (value: string) => value.replace(/^https?:\/\/offerpsp\.com/i, "") || "/";
+const sameUrl = (left?: string | null, right?: string | null) => {
+  try {
+    const normalize = (value: string) => {
+      const url = new URL(value);
+      return `${url.origin}${url.pathname.replace(/\/$/, "") || "/"}`;
+    };
+    return Boolean(left && right && normalize(left) === normalize(right));
+  } catch {
+    return false;
+  }
+};
 const SEO_ANALYTICS_REFRESH_MS = 5 * 60_000;
 const LIVE_TRAFFIC_REFRESH_MS = 5 * 60_000;
 const GOOGLE_REFRESH_MS = 15 * 60_000;
@@ -404,6 +428,34 @@ export default function SeoGeoPage() {
   const maxSource = Math.max(1, ...sourceRows.map((row) => number(row.leads)));
   const google90 = googleData?.periods.days_90;
   const indexAttention = number(googleData?.inspection.summary.not_indexed) + number(googleData?.inspection.summary.neutral);
+  const publicPageMap = new Map<string, PublicPageCheck>();
+  for (const page of audit.metadata?.public_page_checks?.pages || []) {
+    if (page.indexable !== false) publicPageMap.set(page.url, page);
+  }
+  if (!publicPageMap.size) {
+    for (const url of audit.metadata?.crawled_page_urls || []) {
+      if (!/\/portal\/?$/i.test(url)) publicPageMap.set(url, { url });
+    }
+  }
+  for (const inspection of googleData?.inspection.urls || []) {
+    if (!publicPageMap.has(inspection.url)) publicPageMap.set(inspection.url, { url: inspection.url });
+  }
+  const searchPages = new Map((googleData?.pages || []).map((row) => [row.key, row]));
+  const inspectionPages = new Map((googleData?.inspection.urls || []).map((row) => [row.url, row]));
+  const publicPageRows = [...publicPageMap.values()].sort((left, right) => {
+    const leftPath = shortPage(left.url);
+    const rightPath = shortPage(right.url);
+    if (leftPath === "/") return -1;
+    if (rightPath === "/") return 1;
+    return leftPath.localeCompare(rightPath);
+  });
+  const publicHttpOk = publicPageRows.filter((page) => number(page.status) >= 200 && number(page.status) < 400).length;
+  const publicCanonicalOk = publicPageRows.filter((page) => {
+    const inspection = inspectionPages.get(page.url);
+    return sameUrl(page.canonical || inspection?.user_canonical, page.url);
+  }).length;
+  const publicIndexed = publicPageRows.filter((page) => inspectionPages.get(page.url)?.verdict === "PASS").length;
+  const publicWithImpressions = publicPageRows.filter((page) => number(searchPages.get(page.url)?.impressions) > 0).length;
 
   if (loading) return <SkeletonPage/>;
 
@@ -437,7 +489,42 @@ export default function SeoGeoPage() {
         <div><h3 className="text-sm font-semibold text-gray-900 dark:text-white">Страницы из поиска</h3><div className="mt-3 space-y-2">{(googleData?.pages || []).slice(0, 8).map((row) => <div key={row.key} className="grid grid-cols-[1fr_52px_62px] gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm dark:border-gray-800"><code className="truncate text-xs text-gray-700 dark:text-gray-300">{shortPage(row.key)}</code><strong className="text-right text-gray-900 dark:text-white">{row.impressions}</strong><span className="text-right text-gray-400">{row.clicks} клик.</span></div>)}{!googleData?.pages.length && <EmptyState title="Страниц нет" description="Google ещё не показал страницы в поиске."/>}</div></div>
         <div><h3 className="text-sm font-semibold text-gray-900 dark:text-white">Страны поиска</h3><div className="mt-3 space-y-2">{(googleData?.countries || []).slice(0, 8).map((row) => <div key={row.key} className="grid grid-cols-[1fr_52px_62px] gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm dark:border-gray-800"><span className="truncate text-gray-700 dark:text-gray-300">{searchCountryName(row.key)}</span><strong className="text-right text-gray-900 dark:text-white">{row.impressions}</strong><span className="text-right text-gray-400">{row.clicks} клик.</span></div>)}{!googleData?.countries.length && <EmptyState title="Стран нет" description="Google ещё не показал географию поиска."/>}</div></div>
       </div>
-      {googleData && <details className="mt-6 rounded-xl border border-gray-200 dark:border-gray-800"><summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">Индексация URL · {googleData.inspection.summary.indexed} в индексе, {indexAttention} требуют внимания</summary><div className="border-t border-gray-100 p-4 dark:border-gray-800"><div className="space-y-2">{googleData.inspection.urls.map((row) => <div key={row.url} className="flex flex-col justify-between gap-2 rounded-xl bg-gray-50 px-4 py-3 text-sm dark:bg-white/[0.03] sm:flex-row sm:items-center"><div className="min-w-0"><code className="block truncate text-xs text-gray-700 dark:text-gray-300">{shortPage(row.url)}</code><span className="mt-1 block text-xs text-gray-400">{row.coverage_state || "Статус не указан"}{row.last_crawl_time ? ` · обход ${dateTime(row.last_crawl_time)}` : ""}</span></div><strong className={row.verdict === "PASS" ? "text-success-600 dark:text-success-400" : "text-warning-600"}>{row.verdict === "PASS" ? "В индексе" : "Требует внимания"}</strong></div>)}</div></div></details>}
+    </Panel>
+
+    <Panel className="mb-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Публичные SEO‑страницы</h2><p className="mt-1 text-sm text-gray-500">Последний live‑crawl OfferPSP объединён с текущими URL Inspection и Search Analytics Google. Пустое значение не заменяется архивом.</p></div>
+        <span className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500 dark:bg-white/[0.03]">Проверено {dateTime(audit.metadata?.public_page_checks?.checked_at || audit.audited_at)}</span>
+      </div>
+      <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <Metric label="Публичные страницы" value={publicPageRows.length || "—"} hint="текущий crawl + sitemap"/>
+        <Metric label="HTTP OK" value={publicPageRows.length ? `${publicHttpOk}/${publicPageRows.length}` : "—"} hint="живой ответ страницы" tone={publicHttpOk === publicPageRows.length ? "success" : "warning"}/>
+        <Metric label="Self-canonical" value={publicPageRows.length ? `${publicCanonicalOk}/${publicPageRows.length}` : "—"} hint="наш или подтверждённый Google" tone={publicCanonicalOk === publicPageRows.length ? "success" : "warning"}/>
+        <Metric label="В индексе Google" value={publicPageRows.length ? `${publicIndexed}/${publicPageRows.length}` : "—"} hint="URL Inspection" tone={publicIndexed === publicPageRows.length ? "success" : "warning"}/>
+        <Metric label="Есть показы" value={publicPageRows.length ? `${publicWithImpressions}/${publicPageRows.length}` : "—"} hint="Search Console · 90 дней" tone={publicWithImpressions ? "success" : "warning"}/>
+      </div>
+      <div className="mt-6 overflow-x-auto">
+        <table className="min-w-[1080px] w-full text-left text-sm">
+          <thead><tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-400 dark:border-gray-800"><th className="px-3 py-3">Страница</th><th className="px-3 py-3">HTTP / schema</th><th className="px-3 py-3">Canonical</th><th className="px-3 py-3">Google</th><th className="px-3 py-3">Последний обход</th><th className="px-3 py-3 text-right">Показы</th><th className="px-3 py-3 text-right">Клики</th><th className="px-3 py-3 text-right">Позиция</th></tr></thead>
+          <tbody>{publicPageRows.map((page) => {
+            const inspection = inspectionPages.get(page.url);
+            const search = searchPages.get(page.url);
+            const canonical = page.canonical || inspection?.user_canonical;
+            const httpStatus = number(page.status);
+            const httpOk = httpStatus >= 200 && httpStatus < 400;
+            return <tr key={page.url} className="border-b border-gray-100 last:border-0 dark:border-gray-800">
+              <td className="px-3 py-4"><a href={page.url} target="_blank" rel="noreferrer" className="font-semibold text-gray-900 hover:text-brand-500 dark:text-white"><code className="text-xs">{shortPage(page.url)}</code></a>{page.title && <span className="mt-1 block max-w-[300px] truncate text-xs text-gray-400">{page.title}</span>}</td>
+              <td className="px-3 py-4"><strong className={httpOk ? "text-success-600 dark:text-success-400" : httpStatus ? "text-error-600" : "text-gray-400"}>{httpStatus ? `HTTP ${httpStatus}` : "Ожидает crawl"}</strong><span className="mt-1 block text-xs text-gray-400">{number(page.structured_data_blocks) ? `${number(page.structured_data_blocks)} JSON‑LD` : "schema —"}</span></td>
+              <td className="px-3 py-4"><strong className={sameUrl(canonical, page.url) ? "text-success-600 dark:text-success-400" : canonical ? "text-warning-600" : "text-gray-400"}>{sameUrl(canonical, page.url) ? "Self" : canonical ? "Другой" : "—"}</strong>{canonical && !sameUrl(canonical, page.url) && <code className="mt-1 block max-w-[220px] truncate text-xs text-gray-400">{shortPage(canonical)}</code>}{inspection?.google_canonical && !sameUrl(inspection.google_canonical, canonical) && <code className="mt-1 block max-w-[220px] truncate text-xs text-gray-400">Google: {shortPage(inspection.google_canonical)}</code>}</td>
+              <td className="px-3 py-4"><strong className={inspection?.verdict === "PASS" ? "text-success-600 dark:text-success-400" : inspection ? "text-warning-600" : "text-gray-400"}>{inspection?.verdict === "PASS" ? "В индексе" : inspection ? "Ожидает индекс" : "Нет данных"}</strong><span className="mt-1 block max-w-[220px] truncate text-xs text-gray-400">{inspection?.coverage_state || "—"}</span></td>
+              <td className="px-3 py-4 text-xs text-gray-500">{dateTime(inspection?.last_crawl_time)}</td>
+              <td className="px-3 py-4 text-right font-semibold text-gray-900 dark:text-white">{number(search?.impressions)}</td>
+              <td className="px-3 py-4 text-right text-gray-700 dark:text-gray-300">{number(search?.clicks)}</td>
+              <td className="px-3 py-4 text-right text-gray-500">{position(search?.position)}</td>
+            </tr>;
+          })}{!publicPageRows.length && <tr><td colSpan={8} className="py-8"><EmptyState title="Страницы ещё не проверены" description="Запустите полный аудит после публикации production-сайта."/></td></tr>}</tbody>
+        </table>
+      </div>
     </Panel>
 
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">

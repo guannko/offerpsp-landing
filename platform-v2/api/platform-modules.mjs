@@ -7,7 +7,7 @@ import {
   staffSupabaseRequest,
 } from "./_lib/staff-auth.mjs";
 import { waitUntil } from "@vercel/functions";
-import { collectGeoSignals, normalizeSiteOneAudit } from "./_lib/siteone-audit.mjs";
+import { collectGeoSignals, normalizeSiteOneAudit, publicPageChecksFromEvidence } from "./_lib/siteone-audit.mjs";
 import { mcpResourceMetadataHandler, offerPspMcpHandler } from "./_lib/offerpsp-mcp-http.mjs";
 import { offerPspActionHandler, offerPspActionsSchemaHandler } from "./_lib/offerpsp-actions.mjs";
 import {
@@ -197,6 +197,7 @@ async function executeAuditRun(runId) {
     const audit = normalizeSiteOneAudit(report, "https://offerpsp.com/");
     audit.metadata = { ...audit.metadata, geo_signals: await collectGeoSignals() };
     const evidence = await collectSeoAgentEvidence(audit);
+    audit.metadata.public_page_checks = publicPageChecksFromEvidence(evidence);
     const affectedFormPages = evidence.pages
       .filter((page) => Number(page?.form_controls?.unlabeled || 0) > 0)
       .map((page) => ({
