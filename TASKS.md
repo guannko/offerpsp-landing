@@ -1472,6 +1472,13 @@ stay isolated behind feature modes until their own verification is complete.
   Live UI verification showed 16 public pages, 16/16 HTTP OK, 16/16 self-canonical, 14/16 indexed by
   Google and 12/16 with search impressions. Missing Google data remains visibly empty and is not
   replaced by history.
+- [x] Fixed the SiteOne short-cache finding on 2026-08-27. The shared
+  `acquisition-attribution.js` URL is now versioned and served with
+  `Cache-Control: public, max-age=31536000, immutable`; HTML and authenticated portals retain their
+  non-immutable policies. Public deployment `dpl_7j9igpWnJCmJXePtUfodrrih9yps` is `READY` and
+  aliased to `https://offerpsp.com`. Fresh audit `2907a774-a0a4-4948-b169-23a38798d4e8`
+  completed with 31/31 successful URLs, zero broken URLs and no
+  `static-assets-short-cache` issue.
 
 ### Captain's Bridge restart remediation — verified 2026-08-20
 
