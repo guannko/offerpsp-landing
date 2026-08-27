@@ -102,8 +102,8 @@ const sitemapXml = `<?xml version="1.0"?><urlset>
 const pageHtml = (title, h1) => `<!doctype html><html lang="en"><head>
   <title>${title}</title><meta name="description" content="Confidential payment matching">
   <link rel="canonical" href="https://offerpsp.com/"><script type="application/ld+json">{"@graph":[{"@type":"Organization"},{"@type":"Service"}]}</script>
-  </head><body><h1>${h1}</h1><h2>How it works</h2><p>Qualified payment introductions for merchants and PSPs.</p><label for="company">Company</label><input id="company" type="text"></body></html>`;
-const portalHtml = `<!doctype html><html lang="ru"><head><title>Portal</title></head><body><main><h1>Portal</h1>
+  </head><body><a class="brand"><img src="/brand/offerpsp-logo-horizontal-transparent.png" alt="OfferPSP"></a><h1>${h1}</h1><h2>How it works</h2><p>Qualified payment introductions for merchants and PSPs.</p><label for="company">Company</label><input id="company" type="text"></body></html>`;
+const portalHtml = `<!doctype html><html lang="ru"><head><title>Portal</title><meta name="robots" content="noindex, nofollow"></head><body><main><h1>Portal</h1>
   <input id="trap" type="text" aria-hidden="true">
 </main></body></html>`;
 const securityHeaders = {
@@ -116,6 +116,7 @@ const securityHeaders = {
 };
 const evidence = await collectSeoAgentEvidence(agentAudit, async (url) => {
   if (url === "https://offerpsp.com/sitemap.xml") return new Response(sitemapXml, { status: 200, headers: securityHeaders });
+  if (url === "https://offerpsp.com/llms.txt") return new Response(`# OfferPSP\n- Home: https://offerpsp.com/\n- Privacy: https://offerpsp.com/privacy.html`, { status: 200, headers: securityHeaders });
   if (url === "https://offerpsp.com/") return new Response(pageHtml("OfferPSP", "The right PSP"), { status: 200, headers: securityHeaders });
   if (url === "https://offerpsp.com/privacy.html") return new Response(pageHtml("Privacy", "Privacy policy"), { status: 200, headers: securityHeaders });
   if (url === "https://offerpsp.com/portal/") return new Response(portalHtml, { status: 200, headers: securityHeaders });
@@ -130,7 +131,12 @@ assert.equal(evidence.pages[0].form_controls.unlabeled, 0);
 assert.equal(evidence.pages[1].url, "https://offerpsp.com/portal/");
 assert.deepEqual(evidence.pages[1].form_controls.unlabeled_controls, [{ tag: "input", id: "trap", name: "", type: "text" }]);
 assert.equal(evidence.pages[0].image_inventory.content_raster_images, 0);
+assert.equal(evidence.pages[0].image_inventory.image_tags, 1);
+assert.equal(evidence.pages[0].image_inventory.brand_or_ui_images, 1);
+assert.equal(evidence.pages[0].image_inventory.content_images, 0);
 assert.equal(evidence.pages[0].response_headers["content-security-policy"], "default-src 'self'");
+assert.equal(evidence.llms_txt.ok, true);
+assert.deepEqual(evidence.llms_txt.same_origin_urls, ["https://offerpsp.com/", "https://offerpsp.com/privacy.html"]);
 
 assert.equal(resolveSeoAgentWebhookUrl({
   AIBOT_WEBHOOK_URL: "https://n8n.test/webhook/captains-bridge-aibot",
@@ -227,6 +233,63 @@ const unsupportedStructuredData = normalizeSeoAgentAnalysis({ analysis: {
 assert.equal(unsupportedStructuredData.priorities.length, 0);
 assert.equal(unsupportedStructuredData.confidence, "medium");
 assert.match(unsupportedStructuredData.limitations.join(" "), /already declares Schema\.org types/i);
+
+const unsupportedNoindexMetadata = normalizeSeoAgentAnalysis({ analysis: {
+  ...rawAgentAnalysis,
+  executive_summary: "The site is healthy. Improve meta-descriptions for stronger search visibility.",
+  priorities: [{
+    priority: "P1",
+    area: "SEO",
+    title: "Add a meta-description to the portal",
+    evidence: "The portal has no meta-description, reducing CTR in search results.",
+    recommendation: "Add a search description.",
+    affected_urls: ["https://offerpsp.com/portal/"],
+  }],
+  quick_wins: ["Add a meta-description to the portal"],
+  content_recommendations: [{
+    url: "https://offerpsp.com/portal/",
+    suggested_title: "Private portal",
+    suggested_meta_description: "Private workspace",
+    rationale: "Improve search visibility and CTR.",
+  }],
+} }, evidence);
+assert.equal(unsupportedNoindexMetadata.priorities.length, 0);
+assert.equal(unsupportedNoindexMetadata.quick_wins.length, 0);
+assert.equal(unsupportedNoindexMetadata.content_recommendations.length, 0);
+assert.doesNotMatch(unsupportedNoindexMetadata.executive_summary, /meta[- ]?description/i);
+assert.match(unsupportedNoindexMetadata.limitations.join(" "), /intentionally noindex/i);
+
+const unsupportedSecurityReview = normalizeSeoAgentAnalysis({ analysis: {
+  ...rawAgentAnalysis,
+  priorities: [{
+    priority: "P1",
+    area: "Technical",
+    title: "Review SiteOne security warnings",
+    evidence: "The aggregate says security warnings exist, although live headers are present.",
+    recommendation: "Verify CSP and other security headers on every page.",
+    affected_urls: ["https://offerpsp.com/"],
+  }],
+} }, evidence);
+assert.equal(unsupportedSecurityReview.priorities.length, 0);
+assert.match(unsupportedSecurityReview.limitations.join(" "), /already contain/i);
+
+const unsupportedLlmsReview = normalizeSeoAgentAnalysis({ analysis: {
+  ...rawAgentAnalysis,
+  priorities: [{
+    priority: "P2",
+    area: "GEO",
+    title: "Expand llms.txt",
+    evidence: "The content was not supplied.",
+    recommendation: "Check llms.txt and include all key pages.",
+    affected_urls: ["https://offerpsp.com/llms.txt"],
+  }],
+  quick_wins: ["Check and update llms.txt"],
+  geo_recommendations: ["Ensure llms.txt links every key page"],
+} }, evidence);
+assert.equal(unsupportedLlmsReview.priorities.length, 0);
+assert.equal(unsupportedLlmsReview.quick_wins.length, 0);
+assert.equal(unsupportedLlmsReview.geo_recommendations.length, 0);
+assert.match(unsupportedLlmsReview.limitations.join(" "), /links every crawled indexable page/i);
 
 let agentRequest = null;
 const agentResult = await runSeoGeoAgent(agentAudit, {

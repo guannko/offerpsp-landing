@@ -223,6 +223,8 @@ async function applyMigrations() {
     "20260827110000_offerpsp_rls_initplan_performance.sql",
     "20260827112000_offerpsp_inactive_lead_queue_cleanup.sql",
     "20260827113000_offerpsp_staff_table_grants.sql",
+    "20260827150000_offerpsp_policy_overlap_performance.sql",
+    "20260827151000_offerpsp_lead_policy_initplan.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -308,6 +310,57 @@ async function verifyClientPolicyBoundary() {
     throw new Error("Client or agent has a direct shortlist-item RLS policy that can expose private IDs");
   }
   process.stdout.write("PASS shortlist items remain staff-only; clients and agents use the safe projection\n");
+}
+
+async function verifyPolicyOverlapPerformance() {
+  const targetTables = [
+    "offerpsp_agent_clients",
+    "offerpsp_conversations",
+    "offerpsp_lead_activities",
+    "offerpsp_messages",
+    "offerpsp_notifications",
+    "offerpsp_organization_members",
+    "offerpsp_organizations",
+    "offerpsp_shortlists",
+    "offerpsp_staff_members",
+  ];
+  const policies = await query(`
+    select tablename, cmd, count(*)::integer as policy_count
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = any($1::text[])
+      and permissive = 'PERMISSIVE'
+      and 'authenticated' = any(roles)
+    group by tablename, cmd
+    order by tablename, cmd
+  `, [targetTables]);
+  const expectedCommands = new Set(targetTables.flatMap((table) =>
+    ["SELECT", "INSERT", "UPDATE", "DELETE"].map((command) => `${table}:${command}`)));
+  for (const policy of policies.rows) {
+    if (policy.cmd === "ALL" || policy.policy_count !== 1) {
+      throw new Error(`Overlapping authenticated RLS policies remain: ${JSON.stringify(policy)}`);
+    }
+    expectedCommands.delete(`${policy.tablename}:${policy.cmd}`);
+  }
+  if (expectedCommands.size) {
+    throw new Error(`Missing command-specific RLS policies: ${[...expectedCommands].join(", ")}`);
+  }
+  process.stdout.write("PASS OfferPSP command-specific RLS policies have no permissive overlaps\n");
+}
+
+async function verifyLeadPolicyInitplan() {
+  const result = await query(`
+    select qual
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'offerpsp_leads'
+      and policyname = 'offerpsp_staff_select_leads'
+  `);
+  const expression = result.rows[0]?.qual ?? "";
+  if (!/select\s+auth\.uid\(\)/i.test(expression)) {
+    throw new Error(`Lead SELECT policy does not cache auth.uid(): ${expression}`);
+  }
+  process.stdout.write("PASS lead SELECT policy caches auth.uid() through an init plan\n");
 }
 
 async function verifySupplyOperationGrants() {
@@ -3515,6 +3568,8 @@ try {
   await verifyWorkspaceGrants();
   await verifyStaffTableGrants();
   await verifyClientPolicyBoundary();
+  await verifyPolicyOverlapPerformance();
+  await verifyLeadPolicyInitplan();
   await verifySupplyOperationGrants();
   await verifyManagementOperationGrants();
   await verifyPreComplianceGrants();

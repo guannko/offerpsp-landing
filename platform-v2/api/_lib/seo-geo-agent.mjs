@@ -138,6 +138,18 @@ function sitemapUrls(xml, targetOrigin) {
   return [...new Set(urls)].slice(0, MAX_PAGES);
 }
 
+function sameOriginUrls(text, targetOrigin) {
+  return [...new Set((String(text || "").match(/https?:\/\/[^\s<>)\]"']+/gi) || [])
+    .map((value) => value.replace(/[.,;:]+$/, ""))
+    .filter((value) => {
+      try {
+        return new URL(value).origin === targetOrigin;
+      } catch {
+        return false;
+      }
+    }))].slice(0, 100);
+}
+
 async function fetchText(url, fetchImpl) {
   const response = await fetchImpl(url, {
     headers: {
@@ -163,7 +175,10 @@ function pageBrief(url, result) {
   const imageSources = imageTags
     .map((tag) => clampText(decodeHtml(tag.match(/\bsrc=["']([^"']+)["']/i)?.[1]), 1_000))
     .filter(Boolean);
-  const contentRasterImages = imageSources.filter((source) => /\.(?:avif|webp|png|jpe?g)(?:[?#]|$)/i.test(source));
+  const brandOrUiImages = imageSources.filter((source) =>
+    /(?:^|\/)brand\/|(?:^|[-_/])(logo|favicon|icon)(?:[-_.?/]|$)/i.test(source));
+  const contentImageSources = imageSources.filter((source) => !brandOrUiImages.includes(source));
+  const contentRasterImages = contentImageSources.filter((source) => /\.(?:avif|webp|png|jpe?g)(?:[?#]|$)/i.test(source));
   const socialPreview = metaContent(html, "og:image");
   return {
     url,
@@ -178,7 +193,9 @@ function pageBrief(url, result) {
     json_ld_blocks: (html.match(/application\/ld\+json/gi) || []).length,
     json_ld_types: jsonLdTypes(html),
     image_inventory: {
-      content_images: imageSources.length,
+      image_tags: imageSources.length,
+      brand_or_ui_images: brandOrUiImages.length,
+      content_images: contentImageSources.length,
       content_raster_images: contentRasterImages.length,
       modern_content_images: contentRasterImages.filter((source) => /\.(?:avif|webp)(?:[?#]|$)/i.test(source)).length,
       social_preview_image: socialPreview,
@@ -193,6 +210,7 @@ function pageBrief(url, result) {
 export async function collectSeoAgentEvidence(audit, fetchImpl = fetch) {
   const targetUrl = new URL(audit?.target_url || "https://offerpsp.com/");
   const sitemap = await fetchText(new URL("/sitemap.xml", targetUrl).toString(), fetchImpl);
+  const llmsTxt = await fetchText(new URL("/llms.txt", targetUrl).toString(), fetchImpl);
   const crawledPageUrls = Array.isArray(audit?.metadata?.crawled_page_urls)
     ? audit.metadata.crawled_page_urls.filter((value) => {
       try {
@@ -229,6 +247,12 @@ export async function collectSeoAgentEvidence(audit, fetchImpl = fetch) {
       issues: audit?.issues || [],
     },
     geo_signals: audit?.metadata?.geo_signals || {},
+    llms_txt: {
+      ok: llmsTxt.ok,
+      status: llmsTxt.status,
+      content: clampText(llmsTxt.text, 5_000),
+      same_origin_urls: sameOriginUrls(llmsTxt.text, targetUrl.origin),
+    },
     pages,
   };
 }
@@ -268,6 +292,12 @@ function claimsMissingSecurityHeaders(item) {
     && /(add|missing|absent|добав|отсутств|не установлен|нет заголов)/i.test(text);
 }
 
+function claimsSecurityHeaderAction(item) {
+  const text = [item?.title, item?.evidence, item?.recommendation].join(" ");
+  return /(security|CSP|content-security-policy|x-frame-options|x-content-type-options|referrer-policy|permissions-policy|заголов)/i.test(text)
+    && /(add|missing|absent|check|verify|review|добав|отсутств|не установлен|нет заголов|провер|уточн)/i.test(text);
+}
+
 function claimsMissingBrotli(item) {
   const text = [item?.title, item?.evidence, item?.recommendation].join(" ");
   return /brotli/i.test(text) && /(missing|absent|unsupported|support|enable|отсутств|не поддерж|включ|провер)/i.test(text);
@@ -299,11 +329,62 @@ function hasVerifiedStructuredDataTypes(evidence) {
   return pages.some((page) => Array.isArray(page.json_ld_types) && page.json_ld_types.length > 0);
 }
 
-function stripUnsupportedSummarySentences(summary, { modernImages, brotli }) {
+function noindexPageUrls(evidence) {
+  return new Set((Array.isArray(evidence?.pages) ? evidence.pages : [])
+    .filter((page) => /(?:^|[,\s])noindex(?:$|[,\s])/i.test(page.meta_robots || ""))
+    .map((page) => page.url));
+}
+
+function claimsMetadataChange(item) {
+  const text = [item?.title, item?.evidence, item?.recommendation, item?.rationale,
+    item?.suggested_title, item?.suggested_meta_description].join(" ");
+  return /(meta[- ]?description|мета-описан|meta title|title)/i.test(text)
+    || Boolean(item?.suggested_title)
+    || Boolean(item?.suggested_meta_description);
+}
+
+function claimsSearchMetadataBenefit(item) {
+  const text = [item?.title, item?.evidence, item?.recommendation, item?.rationale].join(" ");
+  return claimsMetadataChange(item)
+    && /(SEO|search|index|visibility|CTR|выдач|поиск|индекс|видимост)/i.test(text);
+}
+
+function targetsOnlyNoindexPages(item, noindexUrls) {
+  const urls = Array.isArray(item?.affected_urls)
+    ? item.affected_urls
+    : (item?.url ? [item.url] : []);
+  return urls.length > 0 && urls.every((url) => noindexUrls.has(url));
+}
+
+function indexedPagesHaveMetaDescriptions(evidence) {
+  const pages = Array.isArray(evidence?.pages) ? evidence.pages.filter((page) => page.status >= 200 && page.status < 400) : [];
+  const indexedPages = pages.filter((page) => !/(?:^|[,\s])noindex(?:$|[,\s])/i.test(page.meta_robots || ""));
+  return indexedPages.length > 0 && indexedPages.every((page) => Boolean(page.meta_description));
+}
+
+function hasVerifiedLlmsCoverage(evidence) {
+  if (!evidence?.llms_txt?.ok) return false;
+  const declared = new Set(Array.isArray(evidence.llms_txt.same_origin_urls)
+    ? evidence.llms_txt.same_origin_urls
+    : []);
+  const indexedPages = (Array.isArray(evidence?.pages) ? evidence.pages : [])
+    .filter((page) => page.status >= 200 && page.status < 400)
+    .filter((page) => !/(?:^|[,\s])noindex(?:$|[,\s])/i.test(page.meta_robots || ""));
+  return indexedPages.length > 0 && indexedPages.every((page) => declared.has(page.url));
+}
+
+function claimsLlmsReview(item) {
+  const text = [item?.title, item?.evidence, item?.recommendation].join(" ");
+  return /llms\.txt/i.test(text)
+    && /(check|verify|review|update|include|expand|missing|провер|обнов|включ|расшир|отсутств)/i.test(text);
+}
+
+function stripUnsupportedSummarySentences(summary, { modernImages, brotli, metadata }) {
   const sentences = String(summary || "").split(/(?<=[.!?])\s+/).filter(Boolean);
   const filtered = sentences.filter((sentence) => {
     if (modernImages && /(webp|avif)/i.test(sentence)) return false;
     if (brotli && /brotli/i.test(sentence)) return false;
+    if (metadata && /(meta[- ]?description|мета-описан)/i.test(sentence)) return false;
     return true;
   });
   return clampText(filtered.join(" ") || "Техническое состояние сайта подтверждено живым crawl и проверкой production-ответов.", 1_200);
@@ -318,24 +399,40 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
   const normalizedPriorities = Array.isArray(source.priorities)
     ? source.priorities.slice(0, 10).map(normalizePriority).filter((item) => item.title)
     : [];
+  const normalizedContentRecommendations = Array.isArray(source.content_recommendations)
+    ? source.content_recommendations.slice(0, 8).map(normalizeContentRecommendation).filter((item) => item.url)
+    : [];
   const verifiedSecurity = hasVerifiedSecurityHeaders(evidence);
   const verifiedBrotli = hasVerifiedBrotli(evidence);
   const noContentRasterImages = hasNoContentRasterImages(evidence);
   const verifiedStructuredDataTypes = hasVerifiedStructuredDataTypes(evidence);
+  const noindexUrls = noindexPageUrls(evidence);
+  const indexedMetadataComplete = indexedPagesHaveMetaDescriptions(evidence);
+  const verifiedLlmsCoverage = hasVerifiedLlmsCoverage(evidence);
   const summaryItem = { title: executiveSummary };
   const removedUnsupportedSecurity = verifiedSecurity
-    && (normalizedPriorities.some(claimsMissingSecurityHeaders) || claimsMissingSecurityHeaders(summaryItem));
+    && (normalizedPriorities.some(claimsSecurityHeaderAction)
+      || claimsMissingSecurityHeaders(summaryItem));
   const removedUnsupportedBrotli = verifiedBrotli
     && (normalizedPriorities.some(claimsMissingBrotli) || claimsMissingBrotli(summaryItem));
   const removedUnsupportedImages = noContentRasterImages
     && (normalizedPriorities.some(claimsMissingModernImages) || claimsMissingModernImages(summaryItem));
   const removedUnsupportedStructuredData = verifiedStructuredDataTypes
     && (normalizedPriorities.some(claimsMissingStructuredDataTypes) || claimsMissingStructuredDataTypes(summaryItem));
+  const removedNoindexMetadata = (indexedMetadataComplete && claimsMetadataChange(summaryItem))
+    || normalizedPriorities.some((item) =>
+      claimsSearchMetadataBenefit(item) && targetsOnlyNoindexPages(item, noindexUrls))
+    || normalizedContentRecommendations.some((item) =>
+      claimsSearchMetadataBenefit(item) && targetsOnlyNoindexPages(item, noindexUrls));
+  const removedUnsupportedLlms = verifiedLlmsCoverage
+    && (normalizedPriorities.some(claimsLlmsReview) || claimsLlmsReview(summaryItem));
   const priorities = normalizedPriorities.filter((item) => {
-    if (removedUnsupportedSecurity && claimsMissingSecurityHeaders(item)) return false;
+    if (removedUnsupportedSecurity && claimsSecurityHeaderAction(item)) return false;
     if (removedUnsupportedBrotli && claimsMissingBrotli(item)) return false;
     if (removedUnsupportedImages && claimsMissingModernImages(item)) return false;
     if (removedUnsupportedStructuredData && claimsMissingStructuredDataTypes(item)) return false;
+    if (claimsSearchMetadataBenefit(item) && targetsOnlyNoindexPages(item, noindexUrls)) return false;
+    if (removedUnsupportedLlms && claimsLlmsReview(item)) return false;
     return true;
   });
   const limitations = Array.isArray(source.limitations)
@@ -353,9 +450,16 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
   if (removedUnsupportedStructuredData) {
     limitations.unshift("Live JSON-LD already declares Schema.org types; recommendations claiming the type is unspecified were discarded.");
   }
+  if (removedNoindexMetadata) {
+    limitations.unshift("The portal is intentionally noindex; search-snippet metadata recommendations for that private surface were discarded.");
+  }
+  if (removedUnsupportedLlms) {
+    limitations.unshift("Live llms.txt already describes OfferPSP and links every crawled indexable page; generic expansion recommendations were discarded.");
+  }
   executiveSummary = stripUnsupportedSummarySentences(executiveSummary, {
     modernImages: removedUnsupportedImages,
     brotli: removedUnsupportedBrotli,
+    metadata: indexedMetadataComplete,
   });
   const quickWins = Array.isArray(source.quick_wins) ? source.quick_wins.slice(0, 8).map((item) => clampText(item, 500)).filter(Boolean) : [];
 
@@ -366,20 +470,23 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     model: clampText(value?.model || source.model || "deepseek-chat", 120),
     generated_at: new Date().toISOString(),
     executive_summary: executiveSummary,
-    confidence: removedUnsupportedSecurity || removedUnsupportedBrotli || removedUnsupportedImages || removedUnsupportedStructuredData
+    confidence: removedUnsupportedSecurity || removedUnsupportedBrotli || removedUnsupportedImages || removedUnsupportedStructuredData || removedNoindexMetadata || removedUnsupportedLlms
       ? "medium"
       : (["high", "medium", "low"].includes(source.confidence) ? source.confidence : "medium"),
     priorities,
     quick_wins: quickWins.filter((item) => {
       if (removedUnsupportedBrotli && /brotli/i.test(item)) return false;
       if (removedUnsupportedImages && /(webp|avif)/i.test(item)) return false;
+      if (indexedMetadataComplete && /(meta[- ]?description|мета-описан)/i.test(item)) return false;
+      if (removedUnsupportedSecurity && /(security|CSP|заголов)/i.test(item)) return false;
+      if (removedUnsupportedLlms && /llms\.txt/i.test(item)) return false;
       return true;
     }),
-    content_recommendations: Array.isArray(source.content_recommendations)
-      ? source.content_recommendations.slice(0, 8).map(normalizeContentRecommendation).filter((item) => item.url)
-      : [],
+    content_recommendations: normalizedContentRecommendations.filter((item) =>
+      !(claimsSearchMetadataBenefit(item) && targetsOnlyNoindexPages(item, noindexUrls))),
     geo_recommendations: Array.isArray(source.geo_recommendations)
-      ? source.geo_recommendations.slice(0, 8).map((item) => clampText(item, 600)).filter(Boolean)
+      ? source.geo_recommendations.slice(0, 8).map((item) => clampText(item, 600)).filter((item) =>
+        item && !(removedUnsupportedLlms && /llms\.txt/i.test(item)))
       : [],
     limitations: limitations.slice(0, 6),
   };

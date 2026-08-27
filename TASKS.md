@@ -1,9 +1,58 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-08-26
+Updated: 2026-08-27
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
+
+## Technical stabilization and isolated production — 2026-08-27
+
+Status: `VERIFIED` for the dedicated OfferPSP database, role/E2E boundaries, active automation
+validation, live SEO/GEO collection and current production releases. Costed reserve provisioning and
+two account-level security operations remain explicitly listed below.
+
+- [x] Moved the production OfferPSP runtime to the dedicated Supabase project
+  `offerpsp-production`; the public portal and Captain's Bridge read the isolated project. The legacy
+  shared project remains available to iGaming/AIBot and was not deleted or rewritten as OfferPSP's
+  current source of truth.
+- [x] Completed rollback-safe production E2Es for an isolated PSP workspace and for the merchant
+  request → matching → shortlist → dossier → PSP review → deal lifecycle. Test records were removed
+  after verification; no real offer was published and no external message was sent.
+- [x] Applied queue cleanup, authenticated staff-table grant tightening, cached `auth.uid()` RLS
+  evaluation and command-specific RLS policies. The dedicated production database now reports zero
+  Supabase performance warnings and exactly one authenticated permissive policy per operation on the
+  nine previously overlapping OfferPSP tables.
+- [x] Reviewed all 150 authenticated `SECURITY DEFINER` OfferPSP/AIBot RPCs in the isolated database.
+  Every exposed function has a staff, client, provider, organization or authenticated-user guard;
+  worker-only RPCs remain unavailable to ordinary authenticated users.
+- [x] Cleared the inactive ingestion queue item and verified no active OfferPSP ingestion, update or
+  email-attachment jobs were left stuck. Review-only history remains auditable and is not presented
+  as a current queue.
+- [x] Validated all nine active OfferPSP n8n workflows with zero validation errors or warnings.
+  Scheduled worker, freshness, pre-compliance and mailbox executions are succeeding. The affected
+  iGaming Task Runner recovered after the legacy Supabase credential repair; its five latest checked
+  executions succeeded.
+- [x] Kept `PSP | Contact Researcher` inactive because its former public mutation webhook had no
+  authenticated caller. It must not be activated until a protected caller exists.
+- [x] Removed snapshots from current SEO/GEO traffic. Current visitor/pageview numbers come only from
+  live Vercel Web Analytics; historical records are shown only as history and never substitute for
+  unavailable current data.
+- [x] Upgraded the SiteOne pipeline to preserve exact crawled-page and form-control evidence. Live
+  crawl reached 9.6 overall, SEO 10, accessibility 10, 28/28 successful URLs, zero broken URLs and no
+  unlabeled form control. Brand/UI assets are excluded from content-image recommendations, the
+  private noindex portal is excluded from search-snippet advice and verified headers cannot become
+  speculative security work.
+- [x] Published Captain's Bridge production deployment `dpl_E2iGT36YTe2G9T3kCbo2vTASMWke`
+  (`READY`) at `https://ops-7q4m2x9k8v3n.vercel.app`. Public `https://offerpsp.com`, merchant `/portal/`
+  and PSP `/psp/` remain separate production surfaces.
+- [ ] Enable Supabase leaked-password protection in the Auth dashboard; the current MCP does not
+  expose this account-level setting.
+- [ ] Rotate the previously exposed Telegram bot token in a coordinated maintenance window and
+  replace it atomically in every dependent workflow/environment.
+- [ ] Provision the optional GCP reserve only after explicit cost approval (current estimate about
+  EUR 205.65/month); the primary runtime and recovery code do not require this paid reserve today.
+- [ ] Schedule the shared n8n platform upgrade separately because it affects every BIX workflow, not
+  only OfferPSP.
 
 ## Canonical business model and development stages — decision 2026-08-26
 
