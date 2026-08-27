@@ -307,7 +307,7 @@ function claimsMissingSecurityHeaders(item) {
 function claimsSecurityHeaderAction(item) {
   const text = [item?.title, item?.evidence, item?.recommendation].join(" ");
   return /(security|CSP|content-security-policy|x-frame-options|x-content-type-options|referrer-policy|permissions-policy|заголов)/i.test(text)
-    && /(add|missing|absent|check|verify|review|добав|отсутств|не установлен|нет заголов|провер|уточн)/i.test(text);
+    && /(add|missing|absent|check|verify|review|resolve|eliminate|добав|отсутств|не установлен|нет заголов|провер|уточн|устран|свер)/i.test(text);
 }
 
 function claimsMissingBrotli(item) {
@@ -474,6 +474,41 @@ function claimsHreflangWithoutDiscoveredTranslations(item, evidence) {
     && urls.every((url) => !hasDiscoveredTranslation(url, evidence));
 }
 
+function hasCompleteReciprocalHreflang(pageUrl, evidence) {
+  const pages = (Array.isArray(evidence?.pages) ? evidence.pages : [])
+    .filter((page) => page.status >= 200 && page.status < 400);
+  const page = pages.find((candidate) => candidate.url === pageUrl);
+  if (!page?.lang || !Array.isArray(page.hreflang_alternates)) return false;
+  const translatedPages = pages.filter((candidate) => candidate.url !== pageUrl
+    && candidate.lang
+    && candidate.lang.toLowerCase() !== page.lang.toLowerCase()
+    && translationBasePath(candidate.url) === translationBasePath(pageUrl));
+  if (translatedPages.length === 0) return false;
+
+  const ownLanguage = page.lang.toLowerCase();
+  const hasSelf = page.hreflang_alternates.some((alternate) =>
+    alternate.hreflang?.toLowerCase() === ownLanguage && alternate.href === page.url);
+  if (!hasSelf) return false;
+
+  return translatedPages.every((translatedPage) => {
+    const translatedLanguage = translatedPage.lang.toLowerCase();
+    const linksToTranslation = page.hreflang_alternates.some((alternate) =>
+      alternate.hreflang?.toLowerCase() === translatedLanguage && alternate.href === translatedPage.url);
+    const translationLinksBack = Array.isArray(translatedPage.hreflang_alternates)
+      && translatedPage.hreflang_alternates.some((alternate) =>
+        alternate.hreflang?.toLowerCase() === ownLanguage && alternate.href === page.url);
+    return linksToTranslation && translationLinksBack;
+  });
+}
+
+function claimsImplementedHreflangChange(item, evidence) {
+  const text = [item?.title, item?.evidence, item?.recommendation].join(" ");
+  const urls = Array.isArray(item?.affected_urls) ? item.affected_urls : [];
+  return /hreflang/i.test(text)
+    && urls.length > 0
+    && urls.every((url) => hasCompleteReciprocalHreflang(url, evidence));
+}
+
 function hreflangAdviceHasDiscoveredTarget(value, evidence) {
   const text = String(value || "");
   if (!/hreflang/i.test(text)) return true;
@@ -550,6 +585,8 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
   const removedUnverifiableAggregate = normalizedPriorities.some(claimsUnverifiableAggregateReview);
   const removedUnsupportedHreflang = normalizedPriorities.some((item) =>
     claimsHreflangWithoutDiscoveredTranslations(item, evidence));
+  const removedImplementedHreflang = normalizedPriorities.some((item) =>
+    claimsImplementedHreflangChange(item, evidence));
   const removedExistingPageCreation = normalizedPriorities.some((item) => claimsCreationOfExistingPage(item, evidence));
   const removedNoindexReview = normalizedPriorities.some((item) =>
     claimsNoindexReview(item) && targetsOnlyNoindexPages(item, noindexUrls));
@@ -564,6 +601,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     if (claimsNoindexReview(item) && targetsOnlyNoindexPages(item, noindexUrls)) return false;
     if (claimsUnverifiableAggregateReview(item)) return false;
     if (claimsHreflangWithoutDiscoveredTranslations(item, evidence)) return false;
+    if (claimsImplementedHreflangChange(item, evidence)) return false;
     return true;
   });
   const limitations = Array.isArray(source.limitations)
@@ -604,6 +642,9 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
   if (removedUnsupportedHreflang) {
     limitations.unshift("Hreflang recommendations without a discovered live translation counterpart were discarded.");
   }
+  if (removedImplementedHreflang) {
+    limitations.unshift("Live language counterparts already declare reciprocal hreflang links; duplicate implementation recommendations were discarded.");
+  }
   executiveSummary = stripUnsupportedSummarySentences(executiveSummary, {
     modernImages: removedUnsupportedImages,
     brotli: removedUnsupportedBrotli,
@@ -618,7 +659,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     model: clampText(value?.model || source.model || "deepseek-chat", 120),
     generated_at: new Date().toISOString(),
     executive_summary: executiveSummary,
-    confidence: removedUnsupportedSecurity || removedUnsupportedBrotli || removedUnsupportedImages || removedUnsupportedStructuredData || removedNoindexMetadata || removedUnsupportedLlms || removedExistingPageCreation || removedNoindexReview || removedUnverifiableAggregate || removedUnsupportedHreflang
+    confidence: removedUnsupportedSecurity || removedUnsupportedBrotli || removedUnsupportedImages || removedUnsupportedStructuredData || removedNoindexMetadata || removedUnsupportedLlms || removedExistingPageCreation || removedNoindexReview || removedUnverifiableAggregate || removedUnsupportedHreflang || removedImplementedHreflang
       ? "medium"
       : (["high", "medium", "low"].includes(source.confidence) ? source.confidence : "medium"),
     priorities,

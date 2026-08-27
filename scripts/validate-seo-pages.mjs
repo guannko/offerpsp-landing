@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { seoPages } from "./generate-seo-pages.mjs";
+import { renderPage, seoPages } from "./generate-seo-pages.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const [sitemap, llms, home, generatorSource, vercelConfigSource] = await Promise.all([
@@ -15,6 +16,34 @@ const [sitemap, llms, home, generatorSource, vercelConfigSource] = await Promise
 ]);
 
 const vercelConfig = JSON.parse(vercelConfigSource);
+
+const cspRule = vercelConfig.headers.find((rule) => rule.source === "/(.*)");
+const csp = cspRule?.headers?.find((header) => header.key === "Content-Security-Policy")?.value ?? "";
+const cspDirective = (name) => csp
+  .split(";")
+  .map((directive) => directive.trim())
+  .find((directive) => directive.startsWith(`${name} `)) ?? "";
+const sha256 = (value) => `'sha256-${createHash("sha256").update(value).digest("base64")}'`;
+const executableInlineScripts = (html) => [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
+  .filter((match) => !/\bsrc\s*=/.test(match[1]))
+  .filter((match) => !/type=["']application\/ld\+json["']/i.test(match[1]))
+  .map((match) => match[2]);
+const inlineStyles = (html) => [...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)]
+  .map((match) => match[1]);
+
+const renderedPages = [home, ...seoPages.map(renderPage)];
+const scriptDirective = cspDirective("script-src");
+const styleDirective = cspDirective("style-src");
+assert.ok(scriptDirective, "CSP must define script-src");
+assert.ok(styleDirective, "CSP must define style-src");
+assert.ok(!scriptDirective.includes("'unsafe-inline'"), "script-src must not allow arbitrary inline JavaScript");
+assert.ok(!styleDirective.includes("'unsafe-inline'"), "style-src must not allow arbitrary inline CSS");
+for (const source of renderedPages.flatMap(executableInlineScripts)) {
+  assert.ok(scriptDirective.includes(sha256(source)), "every executable inline script must be covered by a CSP hash");
+}
+for (const source of renderedPages.flatMap(inlineStyles)) {
+  assert.ok(styleDirective.includes(sha256(source)), "every inline style block must be covered by a CSP hash");
+}
 
 const slugs = seoPages.map((page) => page.slug);
 const knownSlugs = new Set(slugs);

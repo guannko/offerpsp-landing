@@ -457,7 +457,7 @@ const buildStructuredData = (page) => {
   return { "@context": "https://schema.org", "@graph": graph };
 };
 
-const renderPage = (page) => {
+export const renderPage = (page) => {
   const canonical = `https://offerpsp.com/${page.slug}.html`;
   const language = page.lang || "en";
   const ui = language === "ru" ? {

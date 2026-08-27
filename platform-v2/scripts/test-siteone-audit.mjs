@@ -347,6 +347,45 @@ assert.equal(unsupportedHreflangExpansion.geo_recommendations.length, 0);
 assert.doesNotMatch(unsupportedHreflangExpansion.limitations.join(" "), /skipped URLs|external links/i);
 assert.match(unsupportedHreflangExpansion.limitations.join(" "), /without a discovered live translation/i);
 
+const reciprocalHreflangEvidence = {
+  ...evidence,
+  pages: [
+    {
+      url: "https://offerpsp.com/payment-provider-cis-central-asia.html",
+      status: 200,
+      lang: "en",
+      hreflang_alternates: [
+        { hreflang: "en", href: "https://offerpsp.com/payment-provider-cis-central-asia.html" },
+        { hreflang: "ru", href: "https://offerpsp.com/payment-provider-cis-central-asia-ru.html" },
+        { hreflang: "x-default", href: "https://offerpsp.com/payment-provider-cis-central-asia.html" },
+      ],
+    },
+    {
+      url: "https://offerpsp.com/payment-provider-cis-central-asia-ru.html",
+      status: 200,
+      lang: "ru",
+      hreflang_alternates: [
+        { hreflang: "en", href: "https://offerpsp.com/payment-provider-cis-central-asia.html" },
+        { hreflang: "ru", href: "https://offerpsp.com/payment-provider-cis-central-asia-ru.html" },
+        { hreflang: "x-default", href: "https://offerpsp.com/payment-provider-cis-central-asia.html" },
+      ],
+    },
+  ],
+};
+const unsupportedImplementedHreflang = normalizeSeoAgentAnalysis({ analysis: {
+  ...rawAgentAnalysis,
+  priorities: [{
+    priority: "P2",
+    area: "SEO",
+    title: "Add hreflang for the English page",
+    evidence: "Only the Russian page has alternates.",
+    recommendation: "Add hreflang to the English CIS page.",
+    affected_urls: ["https://offerpsp.com/payment-provider-cis-central-asia.html"],
+  }],
+} }, reciprocalHreflangEvidence);
+assert.equal(unsupportedImplementedHreflang.priorities.length, 0);
+assert.match(unsupportedImplementedHreflang.limitations.join(" "), /already declare reciprocal hreflang/i);
+
 const unsupportedSecurityReview = normalizeSeoAgentAnalysis({ analysis: {
   ...rawAgentAnalysis,
   quick_wins: ["Verify security headers on every page", "Check https://offerpsp.com/portal/ canonical for SEO", "Check robots.txt content"],
