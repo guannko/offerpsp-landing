@@ -42,7 +42,7 @@ two account-level security operations remain explicitly listed below.
   unlabeled form control. Brand/UI assets are excluded from content-image recommendations, the
   private noindex portal is excluded from search-snippet advice and verified headers cannot become
   speculative security work.
-- [x] Published Captain's Bridge production deployment `dpl_E2iGT36YTe2G9T3kCbo2vTASMWke`
+- [x] Published Captain's Bridge production deployment `dpl_4HxeA5g5mUi87vsvTQKNr4BTHohT`
   (`READY`) at `https://ops-7q4m2x9k8v3n.vercel.app`. Public `https://offerpsp.com`, merchant `/portal/`
   and PSP `/psp/` remain separate production surfaces.
 - [ ] Enable Supabase leaked-password protection in the Auth dashboard; the current MCP does not
