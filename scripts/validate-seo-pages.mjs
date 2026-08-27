@@ -7,10 +7,12 @@ import { resolve } from "node:path";
 import { renderPage, seoPages } from "./generate-seo-pages.mjs";
 
 const root = resolve(import.meta.dirname, "..");
-const [sitemap, llms, home, generatorSource, vercelConfigSource] = await Promise.all([
+const [sitemap, llms, home, terms, privacy, generatorSource, vercelConfigSource] = await Promise.all([
   readFile(resolve(root, "sitemap.xml"), "utf8"),
   readFile(resolve(root, "llms.txt"), "utf8"),
   readFile(resolve(root, "index.html"), "utf8"),
+  readFile(resolve(root, "terms.html"), "utf8"),
+  readFile(resolve(root, "privacy.html"), "utf8"),
   readFile(resolve(root, "scripts/generate-seo-pages.mjs"), "utf8"),
   readFile(resolve(root, "vercel.json"), "utf8"),
 ]);
@@ -31,7 +33,7 @@ const executableInlineScripts = (html) => [...html.matchAll(/<script\b([^>]*)>([
 const inlineStyles = (html) => [...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)]
   .map((match) => match[1]);
 
-const renderedPages = [home, ...seoPages.map(renderPage)];
+const renderedPages = [home, terms, privacy, ...seoPages.map(renderPage)];
 const scriptDirective = cspDirective("script-src");
 const styleDirective = cspDirective("style-src");
 assert.ok(scriptDirective, "CSP must define script-src");

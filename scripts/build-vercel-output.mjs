@@ -17,6 +17,9 @@ const publicFiles = [
   "llms.txt",
   "service-pages.css",
   "acquisition-attribution.js",
+  "legal.css",
+  "contact-dialog.css",
+  "contact-dialog.js",
 ];
 
 await rm(output, { recursive: true, force: true });
