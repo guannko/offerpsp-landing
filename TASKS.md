@@ -44,8 +44,8 @@ two account-level security operations remain explicitly listed below.
 - [x] Removed snapshots from current SEO/GEO traffic. Current visitor/pageview numbers come only from
   live Vercel Web Analytics; historical records are shown only as history and never substitute for
   unavailable current data.
-- [x] Upgraded the SiteOne pipeline to preserve exact crawled-page and form-control evidence. Live
-  crawl reached 9.6 overall, SEO 10, accessibility 10, 28/28 successful URLs, zero broken URLs and no
+- [x] Upgraded the SiteOne pipeline to preserve exact crawled-page and form-control evidence. The
+  latest live crawl reached 9.6 overall, SEO 10, accessibility 10, 31/31 successful URLs, zero broken URLs and no
   unlabeled form control. Brand/UI assets are excluded from content-image recommendations, the
   private noindex portal is excluded from search-snippet advice and verified headers cannot become
   speculative security work.
@@ -1444,10 +1444,14 @@ stay isolated behind feature modes until their own verification is complete.
 
 - [ ] `Become an OfferPSP partner` funnel.
 - [ ] Reviewed PSP-research source list, starting with AboutPayments and PaymentProviders.io.
-- [x] Sanitized SEO pages by GEO, method and vertical. Production serves the iGaming, higher-risk,
-  cross-border, SaaS, marketplace, payment-method-by-GEO and matching-process pages. A fresh live
-  read of `payment-methods-by-geo.html` on 2026-08-15 confirmed its page title, H1, index/follow
-  directive, self-canonical URL and JSON-LD block.
+- [x] Sanitized SEO pages by GEO, method and vertical. Production serves 13 generated acquisition
+  pages, including iGaming, Forex, high-risk PSP, e-commerce, video games, cross-border, SaaS,
+  marketplace, payment-method-by-GEO and regional matching. The homepage now links the iGaming and
+  Forex briefs instead of rendering non-clickable placeholder cards. Production deployment
+  `dpl_AkYkZaTa57g9yVMJtBaEZXpThL3k` is `READY` and aliased to `https://offerpsp.com`. `VERIFIED`
+  2026-08-27: the new e-commerce and video-game pages, updated high-risk page, sitemap and `llms.txt`
+  all return HTTP 200; a fresh SiteOne run completed at 9.6 with 31/31 successful URLs and zero broken
+  URLs. No Google Ads campaign, billing method or advertising spend was enabled.
 - [x] Connect the staff SEO/GEO screen directly to Google Search Console with read-only service
   account access. Production now shows 7/28/90-day clicks, impressions, CTR, position, top queries,
   pages, countries and URL Inspection status without substituting internal snapshots. `VERIFIED`
@@ -1456,9 +1460,9 @@ stay isolated behind feature modes until their own verification is complete.
   to Google's priority crawl queue. Staff deployment `dpl_ECX4eZD8MKjPuoYXTuERQuRjbPMT` and public
   deployment `dpl_B3QUZZW4frZqDDRsep6yf2iAWpCx` are `READY`.
 - [ ] Public content generated from active routes without provider identity.
-- [x] Sitemap, schema and canonical strategy. The live production sitemap returned all seven
-  acquisition pages plus the homepage and legal pages on 2026-08-15; the live acquisition page
-  exposes its self-canonical and structured data.
+- [x] Sitemap, schema and canonical strategy. Every generated acquisition page is validated against
+  `sitemap.xml` and `llms.txt` during the production build; generated HTML is verified to contain its
+  self-canonical, JSON-LD and private-request CTA before release.
 
 ### Captain's Bridge restart remediation — verified 2026-08-20
 
