@@ -330,11 +330,13 @@ const unsupportedHreflangExpansion = normalizeSeoAgentAnalysis({ analysis: {
     recommendation: "Add hreflang for future translations.",
     affected_urls: ["https://offerpsp.com/"],
   }],
-  quick_wins: ["Add hreflang to all main pages", "Check skipped URLs in SiteOne"],
+  quick_wins: ["Add hreflang to all main pages", "Add hreflang to psp-for-marketplaces.html and psp-for-saas.html", "Check skipped URLs in SiteOne"],
+  geo_recommendations: ["Check canonical and hreflang for multilingual versions"],
   limitations: ["Full details for skipped URLs are unavailable.", "Information about external links is unavailable."],
 } }, evidence);
 assert.equal(unsupportedHreflangExpansion.priorities.length, 0);
 assert.equal(unsupportedHreflangExpansion.quick_wins.length, 0);
+assert.equal(unsupportedHreflangExpansion.geo_recommendations.length, 0);
 assert.doesNotMatch(unsupportedHreflangExpansion.limitations.join(" "), /skipped URLs|external links/i);
 assert.match(unsupportedHreflangExpansion.limitations.join(" "), /without a discovered live translation/i);
 

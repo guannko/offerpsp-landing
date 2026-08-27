@@ -474,6 +474,25 @@ function claimsHreflangWithoutDiscoveredTranslations(item, evidence) {
     && urls.every((url) => !hasDiscoveredTranslation(url, evidence));
 }
 
+function hreflangAdviceHasDiscoveredTarget(value, evidence) {
+  const text = String(value || "");
+  if (!/hreflang/i.test(text)) return true;
+  const filenames = [...text.matchAll(/(?:^|[/(\s])([a-z0-9-]+\.html)(?=$|[),\s])/gi)]
+    .map((match) => match[1]);
+  if (filenames.length === 0) return false;
+  const pages = Array.isArray(evidence?.pages) ? evidence.pages : [];
+  return filenames.some((filename) => {
+    const page = pages.find((candidate) => {
+      try {
+        return new URL(candidate.url).pathname.endsWith(`/${filename}`);
+      } catch {
+        return false;
+      }
+    });
+    return Boolean(page && hasDiscoveredTranslation(page.url, evidence));
+  });
+}
+
 function stripUnsupportedSummarySentences(summary, { modernImages, brotli, metadata }) {
   const sentences = String(summary || "").split(/(?<=[.!?])\s+/).filter(Boolean);
   const filtered = sentences.filter((sentence) => {
@@ -610,7 +629,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
       if (removedUnsupportedSecurity && /(security|CSP|заголов)/i.test(item)) return false;
       if (removedUnsupportedLlms && /llms\.txt/i.test(item)) return false;
       if (evidence?.geo_signals?.robots_txt?.ai_crawlers_allowed && /robots\.txt/i.test(item)) return false;
-      if (/hreflang/i.test(item) && /(all|every|future|все|кажд|будущ|основн)/i.test(item)) return false;
+      if (/hreflang/i.test(item) && !hreflangAdviceHasDiscoveredTarget(item, evidence)) return false;
       if (/(skipped|пропущенн)/i.test(item) && /(check|verify|провер)/i.test(item)) return false;
       if (mentionsNoindexPage(item, noindexUrls) && /(canonical|meta|SEO|index|hreflang)/i.test(item)) return false;
       if (mentionsExcludedSearchPage(item, noindexUrls) && /(meta[- _]?description|мета-описан|SEO|CTR|поиск|индекс)/i.test(item)) return false;
@@ -622,7 +641,8 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
       ? source.geo_recommendations.slice(0, 8).map((item) => clampText(item, 600)).filter((item) =>
         item
         && !(removedUnsupportedLlms && /llms\.txt/i.test(item))
-        && !(evidence?.geo_signals?.robots_txt?.ai_crawlers_allowed && /(robots\.txt|GPTBot|ClaudeBot|AI[- ]crawler)/i.test(item)))
+        && !(evidence?.geo_signals?.robots_txt?.ai_crawlers_allowed && /(robots\.txt|GPTBot|ClaudeBot|AI[- ]crawler)/i.test(item))
+        && !(/hreflang/i.test(item) && !hreflangAdviceHasDiscoveredTarget(item, evidence)))
       : [],
     limitations: limitations.slice(0, 6),
   };
