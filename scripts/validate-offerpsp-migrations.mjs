@@ -226,6 +226,7 @@ async function applyMigrations() {
     "20260827150000_offerpsp_policy_overlap_performance.sql",
     "20260827151000_offerpsp_lead_policy_initplan.sql",
     "20260827160000_offerpsp_contact_research_queue.sql",
+    "20260827181354_offerpsp_acquisition_conversion_attribution.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {

@@ -429,10 +429,19 @@ or source pricing.
 Primary acquisition paths:
 
 - merchant search pages;
+- Google Ads Search for high-intent, provider-neutral B2B requests;
+- later Demand Gen and display/remarketing only after a compliant consent layer and enough verified
+  conversion data exist;
 - PSP partner onboarding;
 - Telegram content;
 - email/CRM follow-up;
-- referrals and direct outreach.
+- attributable referrals, affiliate partners and direct outreach.
+
+Paid acquisition must optimize to business outcomes, not decorative traffic. `lead_submitted` is an
+early signal; the preferred optimization sequence is `qualified_lead`, `provider_accepted`,
+`deal_won` and `processing_live`. Cost and ROAS are shown only after they are read from a live ad
+source. OfferPSP does not advertise itself as a PSP and initially excludes gambling/forex ad
+destinations that would require restricted-category review or certification.
 
 Research references:
 

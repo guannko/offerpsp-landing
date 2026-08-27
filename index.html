@@ -2154,6 +2154,7 @@
 
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+    import { buildLeadAttributionFields, collectAcquisitionAttribution } from "/acquisition-attribution.js";
 
     const LEAD_ENDPOINT = "https://annoris--n8n-make--xjvz9xynmzwk.code.run/webhook/offerpsp-lead-v1";
     const supabase = createClient(
@@ -2254,105 +2255,7 @@
       revealItems.forEach((item) => item.classList.add("visible"));
     }
 
-    const params = new URLSearchParams(window.location.search);
-    const knownMarketingParams = [
-      "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
-      "gclid", "msclkid", "fbclid", "li_fat_id", "ttclid"
-    ];
-
-    const normalizeSource = (value) => String(value || "")
-      .trim()
-      .toLowerCase()
-      .replace(/^https?:\/\//, "")
-      .replace(/^www\./, "")
-      .split(/[/?#]/)[0]
-      .replace(/[^a-z0-9._-]/g, "-")
-      .slice(0, 80);
-
-    const hostMatches = (host, domain) => host === domain || host.endsWith(`.${domain}`);
-
-    const sourceDirectory = [
-      { platform: "chatgpt", category: "ai", domains: ["chatgpt.com", "chat.openai.com", "openai.com"], aliases: ["chatgpt", "openai"] },
-      { platform: "gemini", category: "ai", domains: ["gemini.google.com", "bard.google.com"], aliases: ["gemini", "google-gemini", "bard"] },
-      { platform: "claude", category: "ai", domains: ["claude.ai"], aliases: ["claude", "anthropic"] },
-      { platform: "perplexity", category: "ai", domains: ["perplexity.ai"], aliases: ["perplexity"] },
-      { platform: "copilot", category: "ai", domains: ["copilot.microsoft.com"], aliases: ["copilot", "microsoft-copilot"] },
-      { platform: "grok", category: "ai", domains: ["grok.com"], aliases: ["grok", "xai"] },
-      { platform: "deepseek", category: "ai", domains: ["chat.deepseek.com", "deepseek.com"], aliases: ["deepseek"] },
-      { platform: "mistral", category: "ai", domains: ["chat.mistral.ai", "mistral.ai"], aliases: ["mistral", "le-chat", "lechat"] },
-      { platform: "meta-ai", category: "ai", domains: ["meta.ai"], aliases: ["meta-ai", "metaai"] },
-      { platform: "you-com", category: "ai", domains: ["you.com"], aliases: ["you", "you-com"] },
-      { platform: "poe", category: "ai", domains: ["poe.com"], aliases: ["poe"] },
-      { platform: "phind", category: "ai", domains: ["phind.com"], aliases: ["phind"] },
-      { platform: "qwen", category: "ai", domains: ["qwen.ai", "chat.qwen.ai"], aliases: ["qwen", "tongyi"] },
-      { platform: "kimi", category: "ai", domains: ["kimi.com", "kimi.moonshot.cn"], aliases: ["kimi", "moonshot"] },
-      { platform: "doubao", category: "ai", domains: ["doubao.com"], aliases: ["doubao"] },
-      { platform: "huggingchat", category: "ai", domains: ["huggingface.co"], aliases: ["huggingchat"] },
-      { platform: "google", category: "search", domains: ["google.com", "google.co.uk", "google.de", "google.fr", "google.it"], aliases: ["google"] },
-      { platform: "bing", category: "search", domains: ["bing.com"], aliases: ["bing"] },
-      { platform: "duckduckgo", category: "search", domains: ["duckduckgo.com"], aliases: ["duckduckgo", "ddg"] },
-      { platform: "brave-search", category: "search", domains: ["search.brave.com"], aliases: ["brave", "brave-search"] },
-      { platform: "ecosia", category: "search", domains: ["ecosia.org"], aliases: ["ecosia"] },
-      { platform: "baidu", category: "search", domains: ["baidu.com"], aliases: ["baidu"] },
-      { platform: "yahoo", category: "search", domains: ["search.yahoo.com", "yahoo.com"], aliases: ["yahoo"] },
-      { platform: "yandex", category: "search", domains: ["yandex.com", "yandex.ru"], aliases: ["yandex"] },
-      { platform: "linkedin", category: "social", domains: ["linkedin.com"], aliases: ["linkedin"] },
-      { platform: "telegram", category: "social", domains: ["t.me", "telegram.org"], aliases: ["telegram", "tg"] },
-      { platform: "x", category: "social", domains: ["x.com", "twitter.com"], aliases: ["x", "twitter"] },
-      { platform: "facebook", category: "social", domains: ["facebook.com", "m.facebook.com"], aliases: ["facebook", "fb"] },
-      { platform: "instagram", category: "social", domains: ["instagram.com"], aliases: ["instagram"] },
-      { platform: "youtube", category: "social", domains: ["youtube.com", "youtu.be"], aliases: ["youtube"] },
-      { platform: "reddit", category: "social", domains: ["reddit.com"], aliases: ["reddit"] },
-      { platform: "tiktok", category: "social", domains: ["tiktok.com"], aliases: ["tiktok"] }
-    ];
-
-    const resolveDirectoryEntry = ({ host = "", alias = "" } = {}) => sourceDirectory.find((entry) =>
-      entry.domains.some((domain) => hostMatches(host, domain)) || entry.aliases.includes(alias)
-    );
-
-    const sanitizedReferrer = (() => {
-      if (!document.referrer) return "";
-      try {
-        const url = new URL(document.referrer);
-        return `${url.origin}${url.pathname}`.slice(0, 500);
-      } catch {
-        return "";
-      }
-    })();
-
-    const buildTouch = () => {
-      const explicitSource = normalizeSource(params.get("utm_source"));
-      let referrerHost = "";
-      if (sanitizedReferrer) {
-        try { referrerHost = new URL(sanitizedReferrer).hostname.toLowerCase(); } catch { referrerHost = ""; }
-      }
-
-      const entry = resolveDirectoryEntry({ host: referrerHost, alias: explicitSource });
-      const hasCampaign = knownMarketingParams.some((key) => params.has(key));
-      const isInternal = referrerHost && hostMatches(referrerHost, window.location.hostname.toLowerCase());
-      const platform = entry?.platform || explicitSource || (referrerHost && !isInternal ? referrerHost.replace(/^www\./, "") : "direct");
-      const category = entry?.category || (hasCampaign ? "campaign" : (referrerHost && !isInternal ? "referral" : "direct"));
-
-      const touch = {
-        source_category: category,
-        source_platform: platform,
-        referrer: isInternal ? "" : sanitizedReferrer,
-        landing_path: window.location.pathname.slice(0, 300),
-        captured_at: new Date().toISOString()
-      };
-
-      knownMarketingParams.forEach((key) => {
-        const value = String(params.get(key) || "").trim();
-        if (value) touch[key] = value.slice(0, 300);
-      });
-      return touch;
-    };
-
-    const lastTouch = buildTouch();
-    const firstTouch = lastTouch;
-    const sessionId = typeof crypto.randomUUID === "function"
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const acquisition = window.offerpspAcquisition || collectAcquisitionAttribution();
 
     leadForm.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -2373,21 +2276,7 @@
       payload.telegram = "";
       payload.details = "";
       payload.consent = formData.get("consent") === "on";
-      payload.source_category = lastTouch.source_category;
-      payload.source_platform = lastTouch.source_platform;
-      payload.source_referrer = lastTouch.referrer || "";
-      payload.landing_path = lastTouch.landing_path;
-      payload.utm_source = lastTouch.utm_source || "";
-      payload.utm_medium = lastTouch.utm_medium || "";
-      payload.utm_campaign = lastTouch.utm_campaign || "";
-      payload.utm_term = lastTouch.utm_term || "";
-      payload.utm_content = lastTouch.utm_content || "";
-      payload.attribution = {
-        version: 1,
-        first_touch: firstTouch,
-        last_touch: lastTouch,
-        session_id: sessionId
-      };
+      Object.assign(payload, buildLeadAttributionFields(acquisition));
 
       submitButton.disabled = true;
       submitButton.textContent = "Submitting…";

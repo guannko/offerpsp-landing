@@ -146,6 +146,33 @@ type AnalyticsPayload = {
     geo_demand?: CountRow[];
   };
 };
+type AcquisitionFunnelRow = {
+  source: string;
+  category?: string;
+  medium?: string;
+  campaign?: string;
+  leads: number;
+  qualified: number;
+  won: number;
+  live: number;
+};
+type AcquisitionFunnel = {
+  generated_at?: string;
+  totals?: {
+    leads?: number;
+    qualified?: number;
+    won?: number;
+    live?: number;
+    paid_leads?: number;
+    google_ads_leads?: number;
+    affiliate_leads?: number;
+    tracked_clicks?: number;
+    conversion_ready?: number;
+    conversion_blocked_consent?: number;
+  };
+  sources?: AcquisitionFunnelRow[];
+  campaigns?: AcquisitionFunnelRow[];
+};
 
 const number = (value: unknown) => Number(value || 0);
 const dateTime = (value?: string | null) => value
@@ -191,6 +218,7 @@ function BarList({ rows, valueKey, empty }: { rows: CountRow[]; valueKey: "visit
 
 export default function SeoGeoPage() {
   const [payload, setPayload] = useState<AnalyticsPayload | null>(null);
+  const [acquisition, setAcquisition] = useState<AcquisitionFunnel | null>(null);
   const [liveTraffic, setLiveTraffic] = useState<LiveTraffic | null>(null);
   const [googleData, setGoogleData] = useState<GoogleSearchConsole | null>(null);
   const [loading, setLoading] = useState(true);
@@ -211,9 +239,14 @@ export default function SeoGeoPage() {
     const request = (async () => {
       if (!background) setLoading(true);
       setError(null);
-      const { data, error: loadError } = await supabase.rpc("get_offerpsp_seo_geo_analytics");
+      const [analyticsResult, acquisitionResult] = await Promise.all([
+        supabase.rpc("get_offerpsp_seo_geo_analytics"),
+        supabase.rpc("get_offerpsp_acquisition_funnel"),
+      ]);
+      const loadError = analyticsResult.error || acquisitionResult.error;
       if (loadError) setError(loadError.message);
-      else setPayload((data || {}) as AnalyticsPayload);
+      if (!analyticsResult.error) setPayload((analyticsResult.data || {}) as AnalyticsPayload);
+      if (!acquisitionResult.error) setAcquisition((acquisitionResult.data || {}) as AcquisitionFunnel);
       setLoading(false);
       analyticsLoadedAt.current = Date.now();
     })();
@@ -366,6 +399,8 @@ export default function SeoGeoPage() {
   const referrers = (traffic?.referrers || []).map((row) => ({ ...row, key: row.key === "direct" ? "Прямой заход" : row.key }));
   const recent = attribution.recent || [];
   const sourceRows = attribution.sources || [];
+  const acquisitionTotals = acquisition?.totals || {};
+  const campaignRows = acquisition?.campaigns || [];
   const maxSource = Math.max(1, ...sourceRows.map((row) => number(row.leads)));
   const google90 = googleData?.periods.days_90;
   const indexAttention = number(googleData?.inspection.summary.not_indexed) + number(googleData?.inspection.summary.neutral);
@@ -434,6 +469,28 @@ export default function SeoGeoPage() {
         <div className="mt-6"><BarList rows={traffic?.countries || []} valueKey="visitors" empty={liveTrafficError ? "Живой источник Vercel недоступен." : "Vercel ещё не зафиксировал географию посетителей."}/></div>
       </Panel>
     </div>
+
+    <Panel className="mt-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Рекламная и affiliate‑атрибуция</h2><p className="mt-1 text-sm text-gray-500">Честная цепочка: рекламный или партнёрский клик → заявка → квалификация → выигранная сделка → live‑подключение.</p></div>
+        <span className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500 dark:bg-white/[0.03]">Без расхода и ROAS, пока Google Ads не отдаёт живую стоимость</span>
+      </div>
+      <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-7">
+        <Metric label="Paid‑лиды" value={number(acquisitionTotals.paid_leads)} hint="любые платные кампании"/>
+        <Metric label="Google Ads" value={number(acquisitionTotals.google_ads_leads)} hint="gclid / gbraid / wbraid"/>
+        <Metric label="Affiliate" value={number(acquisitionTotals.affiliate_leads)} hint="партнёрский ID или click ID"/>
+        <Metric label="Квалифицированы" value={number(acquisitionTotals.qualified)} hint={`из ${number(acquisitionTotals.leads)} заявок`} tone="success"/>
+        <Metric label="Выиграно" value={number(acquisitionTotals.won)} hint="зафиксирован outcome" tone="success"/>
+        <Metric label="Live" value={number(acquisitionTotals.live)} hint="реально запущено" tone="success"/>
+        <Metric label="Google export" value={number(acquisitionTotals.conversion_ready)} hint={number(acquisitionTotals.conversion_blocked_consent) ? `${number(acquisitionTotals.conversion_blocked_consent)} ждут consent` : "готовых событий"} tone={number(acquisitionTotals.conversion_blocked_consent) ? "warning" : "success"}/>
+      </div>
+      <div className="mt-6 overflow-x-auto">
+        <table className="min-w-[780px] w-full text-left text-sm">
+          <thead><tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-400 dark:border-gray-800"><th className="px-3 py-3">Источник / кампания</th><th className="px-3 py-3">Medium</th><th className="px-3 py-3 text-right">Лиды</th><th className="px-3 py-3 text-right">Qualified</th><th className="px-3 py-3 text-right">Won</th><th className="px-3 py-3 text-right">Live</th></tr></thead>
+          <tbody>{campaignRows.map((row, index) => <tr key={`${row.source}-${row.campaign}-${index}`} className="border-b border-gray-100 last:border-0 dark:border-gray-800"><td className="px-3 py-4"><strong className="block text-gray-800 dark:text-white/90">{sourceName(row.source)}</strong><span className="text-xs text-gray-400">{row.campaign || "Без названия кампании"}</span></td><td className="px-3 py-4 text-gray-500">{row.medium || "—"}</td><td className="px-3 py-4 text-right font-semibold">{number(row.leads)}</td><td className="px-3 py-4 text-right">{number(row.qualified)}</td><td className="px-3 py-4 text-right">{number(row.won)}</td><td className="px-3 py-4 text-right">{number(row.live)}</td></tr>)}{!campaignRows.length && <tr><td colSpan={6} className="py-8"><EmptyState title="Платных или партнёрских лидов пока нет" description="После первого реального клика с UTM/click ID здесь появится его путь до результата."/></td></tr>}</tbody>
+        </table>
+      </div>
+    </Panel>
 
     <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
       <Panel>

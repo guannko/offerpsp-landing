@@ -16,6 +16,7 @@ const publicFiles = [
   "sitemap.xml",
   "llms.txt",
   "service-pages.css",
+  "acquisition-attribution.js",
 ];
 
 await rm(output, { recursive: true, force: true });

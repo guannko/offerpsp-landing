@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "validate": "node scripts/validate-offerpsp-portal.mjs && node scripts/test-portal-notification.mjs && npm --prefix platform-v2 run test:control-integrity",
+    "validate": "node scripts/test-acquisition-attribution.mjs && node scripts/validate-offerpsp-portal.mjs && node scripts/test-portal-notification.mjs && npm --prefix platform-v2 run test:control-integrity",
     "build:admin": "npm --prefix platform-v2 ci && npm --prefix platform-v2 run build -- --base=/admin/",
     "build": "npm run validate && node scripts/build-vercel-output.mjs"
   }

@@ -1407,7 +1407,14 @@ stay isolated behind feature modes until their own verification is complete.
 
 ### P2 — Analytics
 
-- [ ] Acquisition and campaign attribution.
+- [x] Added the production acquisition-attribution foundation on 2026-08-27: Google Ads and other
+  click IDs, UTM and affiliate identifiers survive the current OfferPSP visit as first/last touch,
+  pass through the active inbound n8n workflow and are stored on the lead. Private lifecycle events
+  cover submitted, qualified, PSP accepted, introduction, won and processing-live milestones. The
+  staff SEO/GEO screen reads the source/campaign funnel without inventing spend or ROAS. Google
+  export remains consent-gated and no advertising tag, campaign or spend was enabled.
+- [ ] Connect live Google Ads cost data and consented offline-conversion export after the immutable
+  billing country, currency and time zone are approved and the first search campaign is funded.
 - [ ] Lead quality by source, GEO and vertical.
 - [ ] Lead → shortlist → option selected → introduction conversion.
 - [ ] PSP review acceptance, decline and clarification rates.
