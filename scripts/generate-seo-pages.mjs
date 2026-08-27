@@ -218,7 +218,7 @@ export const seoPages = [
   },
   {
     slug: "payment-provider-cis-central-asia",
-    title: "Payment Provider Matching for CIS and Central Asia | OfferPSP",
+    title: "Payment Providers for CIS & Central Asia | OfferPSP",
     description: "Payment provider matching for CIS and Central Asia: local rails, cards, currencies, cross-border settlement and profile-specific compliance screening.",
     kicker: "CIS and Central Asia payment coverage",
     heading: "Map viable payment routes for CIS and Central Asia.",
@@ -251,7 +251,7 @@ export const seoPages = [
   {
     slug: "payment-provider-cis-central-asia-ru",
     lang: "ru",
-    title: "Подбор платёжного провайдера для СНГ и Центральной Азии | OfferPSP",
+    title: "Платёжные провайдеры СНГ и Центральной Азии | OfferPSP",
     description: "Подбор платёжных провайдеров для СНГ и Центральной Азии: карты, локальные методы, валюты, выплаты, расчёты и проверка соответствия профилю бизнеса.",
     kicker: "Платежи в СНГ и Центральной Азии",
     heading: "Подберём платёжные маршруты для СНГ и Центральной Азии.",

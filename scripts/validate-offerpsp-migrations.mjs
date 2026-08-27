@@ -220,6 +220,9 @@ async function applyMigrations() {
     "20260826190000_offerpsp_rate_card_batch_history.sql",
     "20260827000500_offerpsp_route_code_sequence_alignment.sql",
     "20260827003000_offerpsp_route_replacement_bulk_confirmations.sql",
+    "20260827110000_offerpsp_rls_initplan_performance.sql",
+    "20260827112000_offerpsp_inactive_lead_queue_cleanup.sql",
+    "20260827113000_offerpsp_staff_table_grants.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -272,6 +275,25 @@ async function verifyWorkspaceGrants() {
     throw new Error("Workspace table and view grants are broader than required");
   }
   process.stdout.write("PASS minimal workspace grants with legacy client view removed\n");
+}
+
+async function verifyStaffTableGrants() {
+  const result = await query(`select
+    has_table_privilege('anon', 'public.offerpsp_staff_members', 'SELECT') as anon_select,
+    has_table_privilege('anon', 'public.offerpsp_staff_members', 'INSERT,UPDATE,DELETE') as anon_write,
+    has_table_privilege('authenticated', 'public.offerpsp_staff_members', 'SELECT') as authenticated_select,
+    has_table_privilege('authenticated', 'public.offerpsp_staff_members', 'INSERT,UPDATE,DELETE') as authenticated_write,
+    has_table_privilege('service_role', 'public.offerpsp_staff_members', 'SELECT,INSERT,UPDATE,DELETE') as service_access
+  `);
+  const grants = result.rows[0];
+  if (grants.anon_select
+      || grants.anon_write
+      || !grants.authenticated_select
+      || grants.authenticated_write
+      || !grants.service_access) {
+    throw new Error(`Staff table grants are broader than required: ${JSON.stringify(grants)}`);
+  }
+  process.stdout.write("PASS staff membership table is authenticated read-only with anon denied\n");
 }
 
 async function verifyClientPolicyBoundary() {
@@ -3307,9 +3329,16 @@ async function verifySecurityAndLifecycleRemediation() {
     (select count(*)::integer
       from public.offerpsp_email_threads
       where status <> 'archived'
-        and (subject ilike '[TEST]%' or subject ilike '[LIVE E2E]%')) as visible_fixture_threads
+        and (subject ilike '[TEST]%' or subject ilike '[LIVE E2E]%')) as visible_fixture_threads,
+    (select count(*)::integer
+      from private.offerpsp_offer_update_queue q
+      join public.offerpsp_leads l on l.lead_id = q.lead_id
+      where q.status in ('pending','in_progress')
+        and (l.record_state = 'archived' or l.status in ('closed','spam'))) as inactive_offer_updates
   `);
-  if (queues.rows[0].inactive_tasks !== 0 || queues.rows[0].visible_fixture_threads !== 0) {
+  if (queues.rows[0].inactive_tasks !== 0
+      || queues.rows[0].visible_fixture_threads !== 0
+      || queues.rows[0].inactive_offer_updates !== 0) {
     throw new Error(`Inactive work remains in live queues: ${JSON.stringify(queues.rows[0])}`);
   }
 
@@ -3333,11 +3362,50 @@ async function verifySecurityAndLifecycleRemediation() {
     if (access.rows[0].allowed) {
       throw new Error("Archived merchant workspace remains client-accessible");
     }
+
+    await setUser(STAFF_ID);
+    await query(
+      "update public.offerpsp_leads set record_state = 'active' where lead_id = $1",
+      [archived.rows[0].lead_id],
+    );
+    const legacyProvider = await query(
+      "insert into public.psp_providers(name) values ('Inactive queue fixture') returning id",
+    );
+    const shortlist = await query(
+      "insert into public.offerpsp_shortlists(lead_id, title) values ($1, 'Inactive queue fixture') returning id",
+      [archived.rows[0].lead_id],
+    );
+    const shortlistItem = await query(
+      "insert into public.offerpsp_shortlist_items(shortlist_id, psp_id, rank) values ($1, $2, 1) returning id",
+      [shortlist.rows[0].id, legacyProvider.rows[0].id],
+    );
+    const queueFixture = await query(`
+      insert into private.offerpsp_offer_update_queue (
+        lead_id, shortlist_id, shortlist_item_id,
+        trigger_event, status, due_at
+      ) values ($1, $2, $3, 'unavailable', 'pending', now())
+      returning id, lead_id
+    `, [archived.rows[0].lead_id, shortlist.rows[0].id, shortlistItem.rows[0].id]);
+    if (queueFixture.rows.length !== 1) {
+      throw new Error("Could not create inactive-lead queue lifecycle fixture");
+    }
+    await query(
+      "update public.offerpsp_leads set record_state = 'archived' where lead_id = $1",
+      [queueFixture.rows[0].lead_id],
+    );
+    const dismissed = await query(
+      "select status, notes from private.offerpsp_offer_update_queue where id = $1",
+      [queueFixture.rows[0].id],
+    );
+    if (dismissed.rows[0].status !== "dismissed"
+        || !dismissed.rows[0].notes.includes("merchant workspace is inactive")) {
+      throw new Error(`Inactive merchant offer-update queue was not dismissed: ${JSON.stringify(dismissed.rows[0])}`);
+    }
   } finally {
     await query("rollback");
     await setUser(STAFF_ID);
   }
-  process.stdout.write("PASS legacy client RPC denied and archived workspace access revoked\n");
+  process.stdout.write("PASS legacy client RPC denied, archived workspace access revoked and stale queues dismissed\n");
 }
 
 async function verifyBixResilience() {
@@ -3445,6 +3513,7 @@ try {
   await applyMigrations();
   await verifyLeadGrants();
   await verifyWorkspaceGrants();
+  await verifyStaffTableGrants();
   await verifyClientPolicyBoundary();
   await verifySupplyOperationGrants();
   await verifyManagementOperationGrants();
