@@ -329,6 +329,7 @@ assert.match(unsupportedExistingPageCreation.limitations.join(" "), /noindex dir
 
 const unsupportedAggregateNoindexReview = normalizeSeoAgentAnalysis({ analysis: {
   ...rawAgentAnalysis,
+  executive_summary: "The site is healthy, but one unknown noindex page requires review.",
   priorities: [{
     priority: "P2",
     area: "Technical",
@@ -340,6 +341,7 @@ const unsupportedAggregateNoindexReview = normalizeSeoAgentAnalysis({ analysis: 
 } }, evidence);
 assert.equal(unsupportedAggregateNoindexReview.priorities.length, 0);
 assert.match(unsupportedAggregateNoindexReview.limitations.join(" "), /noindex directive is intentional/i);
+assert.doesNotMatch(unsupportedAggregateNoindexReview.executive_summary, /noindex/i);
 
 const filteredContentRecommendations = normalizeSeoAgentAnalysis({ analysis: {
   ...rawAgentAnalysis,
@@ -444,6 +446,7 @@ assert.match(unsupportedSecurityReview.limitations.join(" "), /already contain/i
 
 const unsupportedLlmsReview = normalizeSeoAgentAnalysis({ analysis: {
   ...rawAgentAnalysis,
+  executive_summary: "Technical health is strong, but llms.txt is missing and requires review.",
   priorities: [{
     priority: "P2",
     area: "GEO",
@@ -461,6 +464,7 @@ assert.equal(unsupportedLlmsReview.quick_wins.length, 0);
 assert.equal(unsupportedLlmsReview.geo_recommendations.length, 0);
 assert.doesNotMatch(unsupportedLlmsReview.limitations.join(" "), /No data about llms/i);
 assert.match(unsupportedLlmsReview.limitations.join(" "), /links every crawled indexable page/i);
+assert.doesNotMatch(unsupportedLlmsReview.executive_summary, /llms\.txt/i);
 
 let agentRequest = null;
 const agentResult = await runSeoGeoAgent(agentAudit, {

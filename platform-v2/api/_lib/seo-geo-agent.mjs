@@ -562,12 +562,22 @@ function hreflangAdviceHasDiscoveredTarget(value, evidence) {
   });
 }
 
-function stripUnsupportedSummarySentences(summary, { modernImages, brotli, metadata }) {
+function stripUnsupportedSummarySentences(summary, {
+  modernImages,
+  brotli,
+  metadata,
+  llms,
+  hreflang,
+  noindex,
+}) {
   const sentences = String(summary || "").split(/(?<=[.!?])\s+/).filter(Boolean);
   const filtered = sentences.filter((sentence) => {
     if (modernImages && /(webp|avif)/i.test(sentence)) return false;
     if (brotli && /brotli/i.test(sentence)) return false;
     if (metadata && /(meta[- _]?description|мета-описан)/i.test(sentence)) return false;
+    if (llms && /llms\.txt/i.test(sentence)) return false;
+    if (hreflang && /hreflang/i.test(sentence)) return false;
+    if (noindex && /noindex/i.test(sentence)) return false;
     return true;
   });
   return clampText(filtered.join(" ") || "Техническое состояние сайта подтверждено живым crawl и проверкой production-ответов.", 1_200);
@@ -683,6 +693,9 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     modernImages: removedUnsupportedImages,
     brotli: removedUnsupportedBrotli,
     metadata: indexedMetadataComplete,
+    llms: removedUnsupportedLlms,
+    hreflang: removedUnsupportedHreflang || removedImplementedHreflang,
+    noindex: removedNoindexReview,
   });
   const quickWins = Array.isArray(source.quick_wins) ? source.quick_wins.slice(0, 8).map((item) => clampText(item, 500)).filter(Boolean) : [];
 
