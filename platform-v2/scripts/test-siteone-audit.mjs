@@ -320,6 +320,24 @@ assert.equal(unsupportedExistingPageCreation.priorities.length, 0);
 assert.match(unsupportedExistingPageCreation.limitations.join(" "), /successfully loaded/i);
 assert.match(unsupportedExistingPageCreation.limitations.join(" "), /noindex directive is intentional/i);
 
+const unsupportedHreflangExpansion = normalizeSeoAgentAnalysis({ analysis: {
+  ...rawAgentAnalysis,
+  priorities: [{
+    priority: "P1",
+    area: "SEO",
+    title: "Add hreflang to every main page",
+    evidence: "The English pages do not have Russian alternates.",
+    recommendation: "Add hreflang for future translations.",
+    affected_urls: ["https://offerpsp.com/"],
+  }],
+  quick_wins: ["Add hreflang to all main pages", "Check skipped URLs in SiteOne"],
+  limitations: ["Full details for skipped URLs are unavailable.", "Information about external links is unavailable."],
+} }, evidence);
+assert.equal(unsupportedHreflangExpansion.priorities.length, 0);
+assert.equal(unsupportedHreflangExpansion.quick_wins.length, 0);
+assert.doesNotMatch(unsupportedHreflangExpansion.limitations.join(" "), /skipped URLs|external links/i);
+assert.match(unsupportedHreflangExpansion.limitations.join(" "), /without a discovered live translation/i);
+
 const unsupportedSecurityReview = normalizeSeoAgentAnalysis({ analysis: {
   ...rawAgentAnalysis,
   quick_wins: ["Verify security headers on every page", "Check https://offerpsp.com/portal/ canonical for SEO", "Check robots.txt content"],

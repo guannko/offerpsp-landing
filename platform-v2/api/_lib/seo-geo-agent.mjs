@@ -441,8 +441,37 @@ function claimsUnverifiableAggregateReview(item) {
   const text = [item?.title, item?.evidence, item?.recommendation].join(" ");
   const urls = Array.isArray(item?.affected_urls) ? item.affected_urls : [];
   return urls.length === 0
-    && /(skipped|external URLs?|пропущенн|внешн.*URL)/i.test(text)
+    && /(skipped|external (?:URLs?|links?)|пропущенн|внешн.*(?:URL|ссыл))/i.test(text)
     && /(check|verify|review|full report|провер|полном отч[её]те)/i.test(text);
+}
+
+function translationBasePath(url) {
+  try {
+    return new URL(url).pathname.replace(/-([a-z]{2,3})(?=\.html$)/i, "");
+  } catch {
+    return "";
+  }
+}
+
+function hasDiscoveredTranslation(pageUrl, evidence) {
+  const pages = (Array.isArray(evidence?.pages) ? evidence.pages : [])
+    .filter((page) => page.status >= 200 && page.status < 400);
+  const target = pages.find((page) => page.url === pageUrl);
+  const targetBase = translationBasePath(pageUrl);
+  if (!target || !targetBase) return false;
+  return pages.some((page) => page.url !== pageUrl
+    && page.lang
+    && target.lang
+    && page.lang.toLowerCase() !== target.lang.toLowerCase()
+    && translationBasePath(page.url) === targetBase);
+}
+
+function claimsHreflangWithoutDiscoveredTranslations(item, evidence) {
+  const text = [item?.title, item?.evidence, item?.recommendation].join(" ");
+  const urls = Array.isArray(item?.affected_urls) ? item.affected_urls : [];
+  return /hreflang/i.test(text)
+    && urls.length > 0
+    && urls.every((url) => !hasDiscoveredTranslation(url, evidence));
 }
 
 function stripUnsupportedSummarySentences(summary, { modernImages, brotli, metadata }) {
@@ -500,6 +529,8 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
       ]
         .some((item) => /llms\.txt/i.test(String(item || ""))));
   const removedUnverifiableAggregate = normalizedPriorities.some(claimsUnverifiableAggregateReview);
+  const removedUnsupportedHreflang = normalizedPriorities.some((item) =>
+    claimsHreflangWithoutDiscoveredTranslations(item, evidence));
   const removedExistingPageCreation = normalizedPriorities.some((item) => claimsCreationOfExistingPage(item, evidence));
   const removedNoindexReview = normalizedPriorities.some((item) =>
     claimsNoindexReview(item) && targetsOnlyNoindexPages(item, noindexUrls));
@@ -513,6 +544,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     if (claimsCreationOfExistingPage(item, evidence)) return false;
     if (claimsNoindexReview(item) && targetsOnlyNoindexPages(item, noindexUrls)) return false;
     if (claimsUnverifiableAggregateReview(item)) return false;
+    if (claimsHreflangWithoutDiscoveredTranslations(item, evidence)) return false;
     return true;
   });
   const limitations = Array.isArray(source.limitations)
@@ -522,7 +554,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
       if (verifiedBrotli && /brotli/i.test(item) && /(verify|check|require|contradict|провер|треб|противореч)/i.test(item)) return false;
       if (verifiedLlmsCoverage && /llms\.txt/i.test(item) && /(no data|not provided|unavailable|нет данных|не предостав|недоступ)/i.test(item)) return false;
       if (evidence?.geo_signals?.robots_txt?.ai_crawlers_allowed && /robots\.txt/i.test(item) && /(no data|not provided|unavailable|нет данных|не предостав|недоступ)/i.test(item)) return false;
-      if (removedUnverifiableAggregate && /(skipped|external URLs?|пропущенн|внешн.*URL)/i.test(item)) return false;
+      if (/(skipped|external (?:URLs?|links?)|пропущенн|внешн.*(?:URL|ссыл))/i.test(item) && /(no data|not provided|unavailable|недоступ|нет данных|отсутств.*информац)/i.test(item)) return false;
       return true;
     })
     : [];
@@ -550,6 +582,9 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
   if (removedNoindexReview) {
     limitations.unshift("The private portal's verified noindex directive is intentional and is not an SEO defect.");
   }
+  if (removedUnsupportedHreflang) {
+    limitations.unshift("Hreflang recommendations without a discovered live translation counterpart were discarded.");
+  }
   executiveSummary = stripUnsupportedSummarySentences(executiveSummary, {
     modernImages: removedUnsupportedImages,
     brotli: removedUnsupportedBrotli,
@@ -564,7 +599,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     model: clampText(value?.model || source.model || "deepseek-chat", 120),
     generated_at: new Date().toISOString(),
     executive_summary: executiveSummary,
-    confidence: removedUnsupportedSecurity || removedUnsupportedBrotli || removedUnsupportedImages || removedUnsupportedStructuredData || removedNoindexMetadata || removedUnsupportedLlms || removedExistingPageCreation || removedNoindexReview || removedUnverifiableAggregate
+    confidence: removedUnsupportedSecurity || removedUnsupportedBrotli || removedUnsupportedImages || removedUnsupportedStructuredData || removedNoindexMetadata || removedUnsupportedLlms || removedExistingPageCreation || removedNoindexReview || removedUnverifiableAggregate || removedUnsupportedHreflang
       ? "medium"
       : (["high", "medium", "low"].includes(source.confidence) ? source.confidence : "medium"),
     priorities,
@@ -575,6 +610,8 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
       if (removedUnsupportedSecurity && /(security|CSP|заголов)/i.test(item)) return false;
       if (removedUnsupportedLlms && /llms\.txt/i.test(item)) return false;
       if (evidence?.geo_signals?.robots_txt?.ai_crawlers_allowed && /robots\.txt/i.test(item)) return false;
+      if (/hreflang/i.test(item) && /(all|every|future|все|кажд|будущ|основн)/i.test(item)) return false;
+      if (/(skipped|пропущенн)/i.test(item) && /(check|verify|провер)/i.test(item)) return false;
       if (mentionsNoindexPage(item, noindexUrls) && /(canonical|meta|SEO|index|hreflang)/i.test(item)) return false;
       if (mentionsExcludedSearchPage(item, noindexUrls) && /(meta[- _]?description|мета-описан|SEO|CTR|поиск|индекс)/i.test(item)) return false;
       return true;
