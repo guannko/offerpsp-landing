@@ -32,6 +32,11 @@ const report = {
     { aplCode: "dns-ipv6", status: "NOTICE", text: "DNS IPv6 unavailable (DNS server: 169.254.100.5)." },
     { aplCode: "static-assets-short-cache", status: "NOTICE", text: "5 static asset(s) use a short cache policy." },
   ] },
+  results: [
+    { url: "https://offerpsp.com/", status: "200", type: 1 },
+    { url: "https://offerpsp.com/portal/", status: "200", type: 1 },
+    { url: "https://outside.test/ignored", status: "200", type: 1 },
+  ],
 };
 
 const audit = normalizeSiteOneAudit(report);
@@ -44,6 +49,7 @@ assert.equal(audit.issues[2].count, 1);
 assert.equal(audit.issues[3].count, 1);
 assert.equal(audit.issues[4].count, 5);
 assert.equal(audit.audited_at, "2026-08-14T11:47:50.000Z");
+assert.deepEqual(audit.metadata.crawled_page_urls, ["https://offerpsp.com/", "https://offerpsp.com/portal/"]);
 assert.throws(() => normalizeSiteOneAudit({ crawler_error: "crawl failed" }), /crawl failed/);
 
 const responses = new Map([
@@ -86,7 +92,7 @@ await assert.rejects(() => runSiteOneAudit({ runtimeArch: "ppc64" }), /does not 
 
 const agentAudit = {
   ...audit,
-  metadata: { geo_signals: geo },
+  metadata: { ...audit.metadata, geo_signals: geo },
 };
 const sitemapXml = `<?xml version="1.0"?><urlset>
   <url><loc>https://offerpsp.com/</loc></url>
@@ -96,7 +102,10 @@ const sitemapXml = `<?xml version="1.0"?><urlset>
 const pageHtml = (title, h1) => `<!doctype html><html lang="en"><head>
   <title>${title}</title><meta name="description" content="Confidential payment matching">
   <link rel="canonical" href="https://offerpsp.com/"><script type="application/ld+json">{"@graph":[{"@type":"Organization"},{"@type":"Service"}]}</script>
-  </head><body><h1>${h1}</h1><h2>How it works</h2><p>Qualified payment introductions for merchants and PSPs.</p></body></html>`;
+  </head><body><h1>${h1}</h1><h2>How it works</h2><p>Qualified payment introductions for merchants and PSPs.</p><label for="company">Company</label><input id="company" type="text"></body></html>`;
+const portalHtml = `<!doctype html><html lang="ru"><head><title>Portal</title></head><body><main><h1>Portal</h1>
+  <input id="trap" type="text" aria-hidden="true">
+</main></body></html>`;
 const securityHeaders = {
   "content-security-policy": "default-src 'self'",
   "x-frame-options": "DENY",
@@ -109,13 +118,17 @@ const evidence = await collectSeoAgentEvidence(agentAudit, async (url) => {
   if (url === "https://offerpsp.com/sitemap.xml") return new Response(sitemapXml, { status: 200, headers: securityHeaders });
   if (url === "https://offerpsp.com/") return new Response(pageHtml("OfferPSP", "The right PSP"), { status: 200, headers: securityHeaders });
   if (url === "https://offerpsp.com/privacy.html") return new Response(pageHtml("Privacy", "Privacy policy"), { status: 200, headers: securityHeaders });
+  if (url === "https://offerpsp.com/portal/") return new Response(portalHtml, { status: 200, headers: securityHeaders });
   return new Response("not found", { status: 404 });
 });
-assert.equal(evidence.pages.length, 2);
+assert.equal(evidence.pages.length, 3);
 assert.equal(evidence.pages[0].title, "OfferPSP");
 assert.deepEqual(evidence.pages[0].h1, ["The right PSP"]);
 assert.equal(evidence.pages[0].json_ld_blocks, 1);
 assert.deepEqual(evidence.pages[0].json_ld_types, ["Organization", "Service"]);
+assert.equal(evidence.pages[0].form_controls.unlabeled, 0);
+assert.equal(evidence.pages[1].url, "https://offerpsp.com/portal/");
+assert.deepEqual(evidence.pages[1].form_controls.unlabeled_controls, [{ tag: "input", id: "trap", name: "", type: "text" }]);
 assert.equal(evidence.pages[0].image_inventory.content_raster_images, 0);
 assert.equal(evidence.pages[0].response_headers["content-security-policy"], "default-src 'self'");
 
@@ -229,7 +242,7 @@ const agentResult = await runSeoGeoAgent(agentAudit, {
 });
 assert.equal(agentRequest.url, "https://n8n.test/webhook/offerpsp-seo-geo-agent");
 assert.equal(agentRequest.init.headers["x-captain-secret"], "test-secret");
-assert.equal(JSON.parse(agentRequest.init.body).evidence.pages.length, 2);
+assert.equal(JSON.parse(agentRequest.init.body).evidence.pages.length, 3);
 assert.equal(agentResult.agent, "OfferPSP SEO/GEO Agent");
 
 console.log("SiteOne audit normalization tests passed");

@@ -19,7 +19,7 @@ import {
   oauthTokenHandler,
 } from "./_lib/offerpsp-oauth.mjs";
 import { runSiteOneAudit } from "./_lib/siteone-runner.mjs";
-import { runSeoGeoAgent } from "./_lib/seo-geo-agent.mjs";
+import { collectSeoAgentEvidence, runSeoGeoAgent } from "./_lib/seo-geo-agent.mjs";
 import { getGoogleSearchConsoleOverview } from "./_lib/google-search-console.mjs";
 import { getLiveVercelTraffic } from "./_lib/vercel-web-analytics.mjs";
 import { probeDocling } from "./_lib/modules/docling.mjs";
@@ -196,8 +196,20 @@ async function executeAuditRun(runId) {
     const report = await runSiteOneAudit();
     const audit = normalizeSiteOneAudit(report, "https://offerpsp.com/");
     audit.metadata = { ...audit.metadata, geo_signals: await collectGeoSignals() };
+    const evidence = await collectSeoAgentEvidence(audit);
+    const affectedFormPages = evidence.pages
+      .filter((page) => Number(page?.form_controls?.unlabeled || 0) > 0)
+      .map((page) => ({
+        url: page.url,
+        unlabeled_controls: page.form_controls.unlabeled_controls,
+      }));
+    audit.metadata.form_label_evidence = {
+      verified: true,
+      checked_pages: evidence.pages.filter((page) => Number(page?.status) >= 200 && Number(page?.status) < 400).length,
+      affected_pages: affectedFormPages,
+    };
     try {
-      audit.agent_analysis = await runSeoGeoAgent(audit);
+      audit.agent_analysis = await runSeoGeoAgent(audit, { evidence });
     } catch (agentError) {
       audit.agent_analysis = {
         status: "failed",

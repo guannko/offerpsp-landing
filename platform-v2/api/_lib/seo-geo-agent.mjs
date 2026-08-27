@@ -1,7 +1,7 @@
 const AGENT_NAME = "OfferPSP SEO/GEO Agent";
 const AGENT_VERSION = "offerpsp-seo-geo-agent-v1";
 const DEFAULT_WEBHOOK_PATH = "offerpsp-seo-geo-agent";
-const MAX_PAGES = 12;
+const MAX_PAGES = 20;
 const MAX_TEXT_SAMPLE = 3_500;
 const SECURITY_HEADERS = [
   "content-security-policy",
@@ -58,6 +58,48 @@ function visibleText(html) {
     .replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, " ")
     .replace(/<!--([\s\S]*?)-->/g, " ")
     .replace(/<[^>]+>/g, " ")), MAX_TEXT_SAMPLE);
+}
+
+function formControlInventory(html) {
+  const source = String(html || "");
+  const controls = [...source.matchAll(/<(input|select|textarea)\b[^>]*>/gi)]
+    .filter((match) => {
+      if (match[1].toLowerCase() !== "input") return true;
+      const type = match[0].match(/\btype=["']([^"']+)["']/i)?.[1]?.toLowerCase() || "text";
+      return !["hidden", "submit", "button", "reset", "image"].includes(type);
+    });
+  const labelTargets = new Set([...source.matchAll(/<label\b[^>]*\bfor=["']([^"']+)["'][^>]*>/gi)]
+    .map((match) => decodeHtml(match[1]).trim())
+    .filter(Boolean));
+  const unlabeledControls = [];
+
+  for (const match of controls) {
+    const tag = match[0];
+    const id = decodeHtml(tag.match(/\bid=["']([^"']+)["']/i)?.[1]).trim();
+    const name = decodeHtml(tag.match(/\bname=["']([^"']+)["']/i)?.[1]).trim();
+    const type = match[1].toLowerCase() === "input"
+      ? (tag.match(/\btype=["']([^"']+)["']/i)?.[1]?.toLowerCase() || "text")
+      : match[1].toLowerCase();
+    const directlyLabeled = /\b(?:aria-label|aria-labelledby|title)=["']\s*[^"'\s][^"']*["']/i.test(tag);
+    const explicitLabel = Boolean(id && labelTargets.has(id));
+    const before = source.slice(0, match.index);
+    const wrappingLabel = before.lastIndexOf("<label") > before.lastIndexOf("</label>");
+    if (!directlyLabeled && !explicitLabel && !wrappingLabel) {
+      unlabeledControls.push({
+        tag: match[1].toLowerCase(),
+        id: clampText(id, 120),
+        name: clampText(name, 120),
+        type: clampText(type, 40),
+      });
+    }
+  }
+
+  return {
+    total: controls.length,
+    labeled: controls.length - unlabeledControls.length,
+    unlabeled: unlabeledControls.length,
+    unlabeled_controls: unlabeledControls.slice(0, 20),
+  };
 }
 
 function jsonLdTypes(html) {
@@ -141,6 +183,7 @@ function pageBrief(url, result) {
       modern_content_images: contentRasterImages.filter((source) => /\.(?:avif|webp)(?:[?#]|$)/i.test(source)).length,
       social_preview_image: socialPreview,
     },
+    form_controls: formControlInventory(html),
     word_count: text ? text.split(/\s+/).length : 0,
     response_headers: result.headers || {},
     text_sample: text,
@@ -150,8 +193,20 @@ function pageBrief(url, result) {
 export async function collectSeoAgentEvidence(audit, fetchImpl = fetch) {
   const targetUrl = new URL(audit?.target_url || "https://offerpsp.com/");
   const sitemap = await fetchText(new URL("/sitemap.xml", targetUrl).toString(), fetchImpl);
-  const urls = sitemapUrls(sitemap.text, targetUrl.origin);
-  if (!urls.includes(targetUrl.toString())) urls.unshift(targetUrl.toString());
+  const crawledPageUrls = Array.isArray(audit?.metadata?.crawled_page_urls)
+    ? audit.metadata.crawled_page_urls.filter((value) => {
+      try {
+        return new URL(value).origin === targetUrl.origin;
+      } catch {
+        return false;
+      }
+    })
+    : [];
+  const urls = [...new Set([
+    targetUrl.toString(),
+    ...crawledPageUrls,
+    ...sitemapUrls(sitemap.text, targetUrl.origin),
+  ])].slice(0, MAX_PAGES);
 
   const pages = await Promise.all(urls.slice(0, MAX_PAGES).map(async (url) => {
     try {

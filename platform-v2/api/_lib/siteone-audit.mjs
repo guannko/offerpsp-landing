@@ -51,6 +51,17 @@ export function normalizeSiteOneAudit(report, targetUrl = "https://offerpsp.com/
   const brokenUrls = Object.entries(stats.countByStatus || {})
     .filter(([code]) => Number(code) >= 400)
     .reduce((sum, [, count]) => sum + Number(count || 0), 0);
+  const targetOrigin = new URL(targetUrl).origin;
+  const crawledPageUrls = [...new Set((Array.isArray(report.results) ? report.results : [])
+    .filter((result) => Number(result?.type) === 1 && Number(result?.status) >= 200 && Number(result?.status) < 400)
+    .map((result) => String(result?.url || "").trim())
+    .filter((url) => {
+      try {
+        return new URL(url).origin === targetOrigin;
+      } catch {
+        return false;
+      }
+    }))].slice(0, 30);
 
   return {
     tool: "SiteOne Crawler",
@@ -75,6 +86,7 @@ export function normalizeSiteOneAudit(report, targetUrl = "https://offerpsp.com/
       report_format: "siteone-json-v2",
       scope: "public_site",
       summary_item_count: Number(report.summary?.items?.length || 0),
+      crawled_page_urls: crawledPageUrls,
     },
   };
 }
