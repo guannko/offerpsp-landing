@@ -261,6 +261,9 @@ assert.match(unsupportedNoindexMetadata.limitations.join(" "), /intentionally no
 
 const unsupportedSecurityReview = normalizeSeoAgentAnalysis({ analysis: {
   ...rawAgentAnalysis,
+  quick_wins: ["Verify security headers on every page", "Check https://offerpsp.com/portal/ canonical for SEO"],
+  limitations: ["Security warnings require additional verification", "Brotli results contradict live headers and require checking"],
+  geo_recommendations: ["Check robots.txt and add GPTBot access"],
   priorities: [{
     priority: "P1",
     area: "Technical",
@@ -271,6 +274,9 @@ const unsupportedSecurityReview = normalizeSeoAgentAnalysis({ analysis: {
   }],
 } }, evidence);
 assert.equal(unsupportedSecurityReview.priorities.length, 0);
+assert.equal(unsupportedSecurityReview.quick_wins.length, 0);
+assert.equal(unsupportedSecurityReview.geo_recommendations.length, 0);
+assert.doesNotMatch(unsupportedSecurityReview.limitations.join(" "), /require additional|require checking/i);
 assert.match(unsupportedSecurityReview.limitations.join(" "), /already contain/i);
 
 const unsupportedLlmsReview = normalizeSeoAgentAnalysis({ analysis: {

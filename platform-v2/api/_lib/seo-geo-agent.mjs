@@ -356,6 +356,11 @@ function targetsOnlyNoindexPages(item, noindexUrls) {
   return urls.length > 0 && urls.every((url) => noindexUrls.has(url));
 }
 
+function mentionsNoindexPage(value, noindexUrls) {
+  const text = String(value || "");
+  return [...noindexUrls].some((url) => text.includes(url));
+}
+
 function indexedPagesHaveMetaDescriptions(evidence) {
   const pages = Array.isArray(evidence?.pages) ? evidence.pages.filter((page) => page.status >= 200 && page.status < 400) : [];
   const indexedPages = pages.filter((page) => !/(?:^|[,\s])noindex(?:$|[,\s])/i.test(page.meta_robots || ""));
@@ -436,7 +441,12 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     return true;
   });
   const limitations = Array.isArray(source.limitations)
-    ? source.limitations.slice(0, 6).map((item) => clampText(item, 500)).filter(Boolean)
+    ? source.limitations.slice(0, 8).map((item) => clampText(item, 500)).filter((item) => {
+      if (!item) return false;
+      if (verifiedSecurity && /(security|CSP|заголов)/i.test(item) && /(verify|check|require|провер|треб)/i.test(item)) return false;
+      if (verifiedBrotli && /brotli/i.test(item) && /(verify|check|require|contradict|провер|треб|противореч)/i.test(item)) return false;
+      return true;
+    })
     : [];
   if (removedUnsupportedSecurity) {
     limitations.unshift("Live responses already contain the baseline security headers; the aggregate SiteOne security finding needs URL/check-level evidence.");
@@ -480,13 +490,16 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
       if (indexedMetadataComplete && /(meta[- ]?description|мета-описан)/i.test(item)) return false;
       if (removedUnsupportedSecurity && /(security|CSP|заголов)/i.test(item)) return false;
       if (removedUnsupportedLlms && /llms\.txt/i.test(item)) return false;
+      if (mentionsNoindexPage(item, noindexUrls) && /(canonical|meta|SEO|index|hreflang)/i.test(item)) return false;
       return true;
     }),
     content_recommendations: normalizedContentRecommendations.filter((item) =>
       !(claimsSearchMetadataBenefit(item) && targetsOnlyNoindexPages(item, noindexUrls))),
     geo_recommendations: Array.isArray(source.geo_recommendations)
       ? source.geo_recommendations.slice(0, 8).map((item) => clampText(item, 600)).filter((item) =>
-        item && !(removedUnsupportedLlms && /llms\.txt/i.test(item)))
+        item
+        && !(removedUnsupportedLlms && /llms\.txt/i.test(item))
+        && !(evidence?.geo_signals?.robots_txt?.ai_crawlers_allowed && /(robots\.txt|GPTBot|ClaudeBot|AI[- ]crawler)/i.test(item)))
       : [],
     limitations: limitations.slice(0, 6),
   };
