@@ -51,6 +51,17 @@ function linkHref(html, rel) {
   return "";
 }
 
+function hreflangAlternates(html) {
+  const tags = String(html || "").match(/<link\b[^>]*>/gi) || [];
+  return tags.map((tag) => {
+    const relations = String(tag.match(/rel=["']([^"']+)["']/i)?.[1] || "").toLowerCase().split(/\s+/);
+    if (!relations.includes("alternate")) return null;
+    const hreflang = clampText(decodeHtml(tag.match(/hreflang=["']([^"']+)["']/i)?.[1]), 40);
+    const href = clampText(decodeHtml(tag.match(/href=["']([^"']+)["']/i)?.[1]), 1_000);
+    return hreflang && href ? { hreflang, href } : null;
+  }).filter(Boolean).slice(0, 20);
+}
+
 function visibleText(html) {
   return clampText(decodeHtml(String(html || "")
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
@@ -187,6 +198,7 @@ function pageBrief(url, result) {
     meta_description: metaContent(html, "description"),
     meta_robots: metaContent(html, "robots"),
     canonical: linkHref(html, "canonical"),
+    hreflang_alternates: hreflangAlternates(html),
     h1: tagValues(html, "h1", 5),
     h2: tagValues(html, "h2", 10),
     lang: clampText(html.match(/<html\b[^>]*\blang=["']([^"']+)["']/i)?.[1], 20),
@@ -357,6 +369,33 @@ function targetsOnlySearchMetadataExcludedPages(item, noindexUrls) {
   });
 }
 
+function targetsOnlyNoindexPages(item, noindexUrls) {
+  const urls = Array.isArray(item?.affected_urls)
+    ? item.affected_urls
+    : (item?.url ? [item.url] : []);
+  return urls.length > 0 && urls.every((url) => noindexUrls.has(url));
+}
+
+function claimsNoindexReview(item) {
+  const text = [item?.title, item?.evidence, item?.recommendation].join(" ");
+  return /noindex/i.test(text) && /(check|verify|ensure|review|провер|убед)/i.test(text);
+}
+
+function claimsCreationOfExistingPage(item, evidence) {
+  const text = [item?.title, item?.evidence, item?.recommendation].join(" ");
+  if (!/(create|develop|add|build|созда|разработ|добав|сделать).*(page|pages|страниц)/i.test(text)) return false;
+  const pages = Array.isArray(evidence?.pages) ? evidence.pages : [];
+  return pages.some((page) => {
+    if (!(page.status >= 200 && page.status < 400)) return false;
+    try {
+      const path = new URL(page.url).pathname;
+      return path !== "/" && text.includes(path);
+    } catch {
+      return false;
+    }
+  });
+}
+
 function mentionsNoindexPage(value, noindexUrls) {
   const text = String(value || "");
   return [...noindexUrls].some((url) => text.includes(url));
@@ -445,6 +484,9 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
       claimsMetadataChange(item) && targetsOnlySearchMetadataExcludedPages(item, noindexUrls));
   const removedUnsupportedLlms = verifiedLlmsCoverage
     && (normalizedPriorities.some(claimsLlmsReview) || claimsLlmsReview(summaryItem));
+  const removedExistingPageCreation = normalizedPriorities.some((item) => claimsCreationOfExistingPage(item, evidence));
+  const removedNoindexReview = normalizedPriorities.some((item) =>
+    claimsNoindexReview(item) && targetsOnlyNoindexPages(item, noindexUrls));
   const priorities = normalizedPriorities.filter((item) => {
     if (removedUnsupportedSecurity && claimsSecurityHeaderAction(item)) return false;
     if (removedUnsupportedBrotli && claimsMissingBrotli(item)) return false;
@@ -452,6 +494,8 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     if (removedUnsupportedStructuredData && claimsMissingStructuredDataTypes(item)) return false;
     if (claimsMetadataChange(item) && targetsOnlySearchMetadataExcludedPages(item, noindexUrls)) return false;
     if (removedUnsupportedLlms && claimsLlmsReview(item)) return false;
+    if (claimsCreationOfExistingPage(item, evidence)) return false;
+    if (claimsNoindexReview(item) && targetsOnlyNoindexPages(item, noindexUrls)) return false;
     return true;
   });
   const limitations = Array.isArray(source.limitations)
@@ -480,6 +524,12 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
   if (removedUnsupportedLlms) {
     limitations.unshift("Live llms.txt already describes OfferPSP and links every crawled indexable page; generic expansion recommendations were discarded.");
   }
+  if (removedExistingPageCreation) {
+    limitations.unshift("Recommendations to create pages that the live crawler successfully loaded were discarded.");
+  }
+  if (removedNoindexReview) {
+    limitations.unshift("The private portal's verified noindex directive is intentional and is not an SEO defect.");
+  }
   executiveSummary = stripUnsupportedSummarySentences(executiveSummary, {
     modernImages: removedUnsupportedImages,
     brotli: removedUnsupportedBrotli,
@@ -494,7 +544,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     model: clampText(value?.model || source.model || "deepseek-chat", 120),
     generated_at: new Date().toISOString(),
     executive_summary: executiveSummary,
-    confidence: removedUnsupportedSecurity || removedUnsupportedBrotli || removedUnsupportedImages || removedUnsupportedStructuredData || removedNoindexMetadata || removedUnsupportedLlms
+    confidence: removedUnsupportedSecurity || removedUnsupportedBrotli || removedUnsupportedImages || removedUnsupportedStructuredData || removedNoindexMetadata || removedUnsupportedLlms || removedExistingPageCreation || removedNoindexReview
       ? "medium"
       : (["high", "medium", "low"].includes(source.confidence) ? source.confidence : "medium"),
     priorities,

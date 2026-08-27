@@ -101,7 +101,7 @@ const sitemapXml = `<?xml version="1.0"?><urlset>
 </urlset>`;
 const pageHtml = (title, h1) => `<!doctype html><html lang="en"><head>
   <title>${title}</title><meta name="description" content="Confidential payment matching">
-  <link rel="canonical" href="https://offerpsp.com/"><script type="application/ld+json">{"@graph":[{"@type":"Organization"},{"@type":"Service"}]}</script>
+  <link rel="canonical" href="https://offerpsp.com/"><link rel="alternate" hreflang="en" href="https://offerpsp.com/"><script type="application/ld+json">{"@graph":[{"@type":"Organization"},{"@type":"Service"}]}</script>
   </head><body><a class="brand"><img src="/brand/offerpsp-logo-horizontal-transparent.png" alt="OfferPSP"></a><h1>${h1}</h1><h2>How it works</h2><p>Qualified payment introductions for merchants and PSPs.</p><label for="company">Company</label><input id="company" type="text"></body></html>`;
 const portalHtml = `<!doctype html><html lang="ru"><head><title>Portal</title><meta name="robots" content="noindex, nofollow"></head><body><main><h1>Portal</h1>
   <input id="trap" type="text" aria-hidden="true">
@@ -134,6 +134,7 @@ assert.equal(evidence.pages[0].image_inventory.content_raster_images, 0);
 assert.equal(evidence.pages[0].image_inventory.image_tags, 1);
 assert.equal(evidence.pages[0].image_inventory.brand_or_ui_images, 1);
 assert.equal(evidence.pages[0].image_inventory.content_images, 0);
+assert.deepEqual(evidence.pages[0].hreflang_alternates, [{ hreflang: "en", href: "https://offerpsp.com/" }]);
 assert.equal(evidence.pages[0].response_headers["content-security-policy"], "default-src 'self'");
 assert.equal(evidence.llms_txt.ok, true);
 assert.deepEqual(evidence.llms_txt.same_origin_urls, ["https://offerpsp.com/", "https://offerpsp.com/privacy.html"]);
@@ -281,6 +282,36 @@ const unsupportedMixedNonAcquisitionMetadata = normalizeSeoAgentAnalysis({ analy
 assert.equal(unsupportedMixedNonAcquisitionMetadata.priorities.length, 0);
 assert.equal(unsupportedMixedNonAcquisitionMetadata.quick_wins.length, 0);
 assert.match(unsupportedMixedNonAcquisitionMetadata.limitations.join(" "), /legal pages are not acquisition/i);
+
+const evidenceWithVerticals = {
+  ...evidence,
+  pages: [
+    ...evidence.pages,
+    { url: "https://offerpsp.com/psp-for-igaming.html", status: 200 },
+    { url: "https://offerpsp.com/psp-for-forex.html", status: 200 },
+  ],
+};
+const unsupportedExistingPageCreation = normalizeSeoAgentAnalysis({ analysis: {
+  ...rawAgentAnalysis,
+  priorities: [{
+    priority: "P2",
+    area: "Content",
+    title: "Create iGaming and Forex pages",
+    evidence: "The verticals are mentioned but have no pages.",
+    recommendation: "Develop /psp-for-igaming.html and /psp-for-forex.html.",
+    affected_urls: ["https://offerpsp.com/"],
+  }, {
+    priority: "P2",
+    area: "Technical",
+    title: "Check the noindex portal",
+    evidence: "The portal is noindex.",
+    recommendation: "Verify that noindex is intentional.",
+    affected_urls: ["https://offerpsp.com/portal/"],
+  }],
+} }, evidenceWithVerticals);
+assert.equal(unsupportedExistingPageCreation.priorities.length, 0);
+assert.match(unsupportedExistingPageCreation.limitations.join(" "), /successfully loaded/i);
+assert.match(unsupportedExistingPageCreation.limitations.join(" "), /noindex directive is intentional/i);
 
 const unsupportedSecurityReview = normalizeSeoAgentAnalysis({ analysis: {
   ...rawAgentAnalysis,
