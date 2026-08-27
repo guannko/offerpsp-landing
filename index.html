@@ -309,6 +309,7 @@
     }
 
     .nav-links a {
+      padding: 12px 0;
       color: var(--paper-muted);
       text-decoration: none;
       font-size: 14px;
@@ -715,6 +716,100 @@
       border-right: 0;
     }
 
+    .trust-proof {
+      padding-block: 104px;
+      background:
+        linear-gradient(145deg, rgba(167,243,208,.055), transparent 38%),
+        #0b0e18;
+    }
+
+    .trust-proof-head {
+      display: grid;
+      grid-template-columns: 1.12fr .88fr;
+      gap: clamp(42px, 8vw, 108px);
+      align-items: end;
+    }
+
+    .trust-proof-head .section-title {
+      max-width: 740px;
+      margin-bottom: 0;
+    }
+
+    .trust-proof-head .section-lead {
+      margin-bottom: 8px;
+    }
+
+    .proof-grid {
+      margin-top: 58px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border-top: 1px solid var(--line);
+      border-left: 1px solid var(--line);
+    }
+
+    .proof-card {
+      min-height: 285px;
+      padding: 30px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.018);
+    }
+
+    .proof-card > span {
+      display: block;
+      margin-bottom: 54px;
+      color: var(--mint);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+
+    .proof-card h3 {
+      margin-bottom: 12px;
+      font-size: 23px;
+      letter-spacing: -.035em;
+      line-height: 1.2;
+    }
+
+    .proof-card p {
+      margin-bottom: 0;
+      color: var(--paper-muted);
+      font-size: 14px;
+    }
+
+    .proof-links {
+      margin-top: 22px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .proof-links a,
+    .brief-directory a {
+      min-height: 44px;
+      padding: 10px 15px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--paper-muted);
+      background: rgba(255,255,255,.018);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 700;
+      transition: color .2s ease, border-color .2s ease, background .2s ease;
+    }
+
+    .proof-links a:hover,
+    .proof-links a:focus-visible,
+    .brief-directory a:hover,
+    .brief-directory a:focus-visible {
+      border-color: var(--line-strong);
+      color: var(--paper);
+      background: rgba(255,255,255,.045);
+    }
+
     section {
       padding: 120px 0;
     }
@@ -848,6 +943,25 @@
       margin: auto 0 0;
       color: var(--paper-muted);
       font-size: 13px;
+    }
+
+    .brief-directory {
+      margin-top: 18px;
+      padding-top: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      border-top: 1px solid var(--line);
+    }
+
+    .brief-directory > span {
+      margin-right: 8px;
+      color: #7f8491;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .1em;
+      text-transform: uppercase;
     }
 
     .matching {
@@ -1462,12 +1576,17 @@
     }
 
     .footer-links a {
+      min-height: 40px;
+      padding: 8px 0;
+      display: inline-flex;
+      align-items: center;
       color: #a3a6af;
       text-decoration: none;
       font-size: 13px;
     }
 
-    .footer-links a:hover {
+    .footer-links a:hover,
+    .footer-links a:focus-visible {
       color: var(--paper);
     }
 
@@ -1500,6 +1619,7 @@
 
     @media (max-width: 1020px) {
       .hero-grid,
+      .trust-proof-head,
       .matching-layout,
       .faq-layout {
         grid-template-columns: 1fr;
@@ -1526,6 +1646,10 @@
       }
 
       .problem-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .proof-grid {
         grid-template-columns: 1fr 1fr;
       }
 
@@ -1559,6 +1683,14 @@
     }
 
     @media (max-width: 760px) {
+      .menu-open .site-header {
+        height: 100dvh;
+        background: #080a13;
+        border-color: var(--line);
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+      }
+
       .nav {
         width: min(calc(100% - 28px), var(--max));
         height: 70px;
@@ -1571,13 +1703,15 @@
       .nav-links {
         position: fixed;
         inset: 70px 0 0;
+        z-index: 1;
         margin: 0;
         padding: 40px 24px;
         display: flex;
         flex-direction: column;
         align-items: flex-start;
         gap: 8px;
-        background: rgba(8,10,19,.97);
+        overflow-y: auto;
+        background: #080a13;
         transform: translateX(100%);
         transition: transform .25s ease;
       }
@@ -1648,6 +1782,7 @@
       }
 
       .problem-grid,
+      .proof-grid,
       .solutions-grid,
       .coverage-grid,
       .method-grid,
@@ -1661,6 +1796,30 @@
 
       .problem-index {
         margin-bottom: 50px;
+      }
+
+      .trust-proof {
+        padding-block: 78px;
+      }
+
+      .proof-card {
+        min-height: auto;
+      }
+
+      .proof-card > span {
+        margin-bottom: 34px;
+      }
+
+      .proof-links,
+      .proof-links a,
+      .brief-directory,
+      .brief-directory a {
+        width: 100%;
+      }
+
+      .brief-directory > span {
+        width: 100%;
+        margin: 0 0 4px;
       }
 
       .region {
@@ -1751,13 +1910,13 @@
 
       <ul class="nav-links" id="navLinks">
         <li><a href="#solutions">Solutions</a></li>
-        <li><a href="#process">Process</a></li>
+        <li><a href="#process" data-analytics-event="process_click" data-analytics-placement="nav">Process</a></li>
         <li><a href="#coverage">Coverage</a></li>
         <li><a href="#faq">FAQ</a></li>
         <li><a href="/portal/">Client login</a></li>
       </ul>
 
-      <a class="nav-cta" href="#request" data-open-lead-modal>Request a match</a>
+      <a class="nav-cta" href="#request" data-open-lead-modal data-analytics-placement="nav">Request a private match</a>
       <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false" aria-controls="navLinks" aria-label="Open navigation">
         <span></span>
       </button>
@@ -1774,8 +1933,8 @@
             We turn your operating profile into a focused shortlist of relevant payment partners — aligned to your GEOs, vertical, methods, volumes and risk model.
           </p>
           <div class="hero-actions">
-            <a class="button button-arrow" href="#request" data-open-lead-modal>Request a private match</a>
-            <a class="button button-secondary" href="#process">See how matching works</a>
+            <a class="button button-arrow" href="#request" data-open-lead-modal data-analytics-placement="hero">Request a private match</a>
+            <a class="button button-secondary" href="#process" data-analytics-event="process_click" data-analytics-placement="hero">See how matching works</a>
           </div>
           <p class="hero-note">Your operating profile stays private and is reviewed by a specialist.</p>
         </div>
@@ -1823,51 +1982,36 @@
       </div>
     </div>
 
-    <section class="solutions" id="solutions">
+    <section class="trust-proof" id="trust">
       <div class="container">
-        <div class="section-kicker reveal">Payment briefs</div>
-        <h2 class="section-title reveal">Start with the operating problem, not a provider logo.</h2>
-        <p class="section-lead reveal">Explore the requirements that change a PSP match. Each page explains the inputs providers need and the limits of what a matching service can promise.</p>
-        <div class="solutions-grid reveal">
-          <a class="solution-card" href="/psp-for-igaming.html"><span>Licensed iGaming</span><h3>Controlled multi-market payment flows</h3><p>Licensing posture, deposits, payouts, player geography and operational risk controls.</p></a>
-          <a class="solution-card" href="/high-risk-payment-provider.html"><span>Complex profiles</span><h3>Higher-risk payment routes</h3><p>Profile-specific underwriting, evidence, settlement and resilience.</p></a>
-          <a class="solution-card" href="/payment-provider-for-ecommerce.html"><span>Online commerce</span><h3>PSPs for e-commerce</h3><p>Checkout methods, recurring flows, refunds, disputes and settlement.</p></a>
-          <a class="solution-card" href="/psp-for-video-games.html"><span>Video games</span><h3>Player payment infrastructure</h3><p>Virtual goods, subscriptions, global players, fraud and digital fulfilment.</p></a>
-          <a class="solution-card" href="/cross-border-payment-matching.html"><span>Multi-GEO</span><h3>Cross-border payment matching</h3><p>Entity, currency, local method, settlement and backup coverage.</p></a>
-          <a class="solution-card" href="/psp-for-saas.html"><span>Recurring revenue</span><h3>PSPs for SaaS</h3><p>Recurring mandates, retries, churn, reporting and international billing.</p></a>
-          <a class="solution-card" href="/psp-for-marketplaces.html"><span>Platform funds flow</span><h3>PSPs for marketplaces</h3><p>Seller onboarding, collection, split funds, payouts and reconciliation.</p></a>
-          <a class="solution-card" href="/payment-methods-by-geo.html"><span>Local coverage</span><h3>Payment methods by GEO</h3><p>Cards, banks, wallets, vouchers and payouts by route.</p></a>
-          <a class="solution-card" href="/psp-for-forex.html"><span>Licensed forex</span><h3>Funding and withdrawal infrastructure</h3><p>Entity structure, customer funding, withdrawals, acquisition controls and multi-market routing.</p></a>
-          <a class="solution-card" href="/payment-provider-europe.html"><span>European coverage</span><h3>Payment providers in Europe</h3><p>EEA and UK cards, SEPA, open banking, local methods and settlement.</p></a>
-          <a class="solution-card" href="/payment-provider-cis-central-asia.html"><span>CIS &amp; Central Asia</span><h3>Regional payment routes</h3><p>Local rails, currencies, cross-border settlement and compliance constraints.</p></a>
+        <div class="trust-proof-head reveal">
+          <div>
+            <div class="section-kicker">What OfferPSP is</div>
+            <h2 class="section-title">A private matching service — not a processor or provider directory.</h2>
+          </div>
+          <p class="section-lead">OfferPSP is operated by offerpsp.com, an individual entrepreneur registered in Georgia. We research, qualify and introduce relevant independent PSPs for a specific merchant brief.</p>
         </div>
-      </div>
-    </section>
-
-    <section id="why">
-      <div class="container">
-        <div class="section-kicker reveal">The problem</div>
-        <h2 class="section-title reveal">A long provider list is not a payment strategy.</h2>
-        <p class="section-lead reveal">
-          The wrong introduction wastes compliance time on both sides. We qualify the context first, then open only the conversations that have a credible reason to move forward.
-        </p>
-
-        <div class="problem-grid reveal">
-          <article class="problem">
-            <div class="problem-index"><span>01</span></div>
-            <h3>Generic lists ignore the operating reality</h3>
-            <p>A provider may support your country on paper and still be the wrong fit for your vertical, traffic, methods or expected volume.</p>
+        <div class="proof-grid reveal">
+          <article class="proof-card">
+            <span>01 · Private by design</span>
+            <h3>Your profile is not published</h3>
+            <p>We review the operating context privately and share provider names only where the specific request has a credible reason to move forward.</p>
           </article>
-          <article class="problem">
-            <div class="problem-index"><span>02</span></div>
-            <h3>Cold outreach creates slow, low-signal conversations</h3>
-            <p>Merchants repeat the same profile to multiple teams. PSPs spend time qualifying requests that should never have reached sales.</p>
+          <article class="proof-card">
+            <span>02 · Clear output</span>
+            <h3>A shortlist with reasons, not a database dump</h3>
+            <p>Each route should be relevant to the merchant’s GEO, methods, vertical, risk profile, onboarding needs or commercial structure.</p>
           </article>
-          <article class="problem">
-            <div class="problem-index"><span>03</span></div>
-            <h3>Approval is only the beginning</h3>
-            <p>Commercial terms, integration path, payout logic and operational support matter just as much as the initial account opening.</p>
+          <article class="proof-card">
+            <span>03 · Defined boundary</span>
+            <h3>Independent PSPs make the final decision</h3>
+            <p>OfferPSP does not approve accounts or receive, hold, transfer or settle third-party funds. Underwriting and final terms remain with each PSP.</p>
           </article>
+        </div>
+        <div class="proof-links reveal">
+          <a href="/privacy.html">How we handle business data</a>
+          <a href="/terms.html">Service terms and limitations</a>
+          <a href="mailto:bizdev@offerpsp.com">bizdev@offerpsp.com</a>
         </div>
       </div>
     </section>
@@ -1914,6 +2058,30 @@
           <div class="process-note">
             OfferPSP does not approve merchant accounts or process funds. Final onboarding, due diligence and commercial terms are determined by each independent provider.
           </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="solutions" id="solutions">
+      <div class="container">
+        <div class="section-kicker reveal">Selected payment briefs</div>
+        <h2 class="section-title reveal">Start with the operating problem, not a provider logo.</h2>
+        <p class="section-lead reveal">Start with the operating case closest to yours. The remaining payment research is available in the compact directory below.</p>
+        <div class="solutions-grid reveal">
+          <a class="solution-card" href="/psp-for-igaming.html" data-analytics-event="vertical_brief_click" data-analytics-placement="igaming"><span>Licensed iGaming</span><h3>Controlled multi-market payment flows</h3><p>Licensing posture, deposits, payouts, player geography and operational risk controls.</p></a>
+          <a class="solution-card" href="/high-risk-payment-provider.html" data-analytics-event="vertical_brief_click" data-analytics-placement="complex_profiles"><span>Complex profiles</span><h3>Higher-risk payment routes</h3><p>Profile-specific underwriting, evidence, settlement and resilience.</p></a>
+          <a class="solution-card" href="/payment-provider-for-ecommerce.html" data-analytics-event="vertical_brief_click" data-analytics-placement="ecommerce"><span>Online commerce</span><h3>PSPs for e-commerce</h3><p>Checkout methods, recurring flows, refunds, disputes and settlement.</p></a>
+          <a class="solution-card" href="/cross-border-payment-matching.html" data-analytics-event="vertical_brief_click" data-analytics-placement="cross_border"><span>Multi-GEO</span><h3>Cross-border payment matching</h3><p>Entity, currency, local method, settlement and backup coverage.</p></a>
+          <a class="solution-card" href="/payment-provider-europe.html" data-analytics-event="vertical_brief_click" data-analytics-placement="europe"><span>European coverage</span><h3>Payment providers in Europe</h3><p>EEA and UK cards, SEPA, open banking, local methods and settlement.</p></a>
+          <a class="solution-card" href="/payment-provider-cis-central-asia.html" data-analytics-event="vertical_brief_click" data-analytics-placement="cis_central_asia"><span>CIS &amp; Central Asia</span><h3>Regional payment routes</h3><p>Local rails, currencies, cross-border settlement and compliance constraints.</p></a>
+        </div>
+        <div class="brief-directory reveal" aria-label="More payment briefs">
+          <span>More payment briefs</span>
+          <a href="/psp-for-video-games.html" data-analytics-event="vertical_brief_click" data-analytics-placement="video_games">Video games</a>
+          <a href="/psp-for-saas.html" data-analytics-event="vertical_brief_click" data-analytics-placement="saas">SaaS</a>
+          <a href="/psp-for-marketplaces.html" data-analytics-event="vertical_brief_click" data-analytics-placement="marketplaces">Marketplaces</a>
+          <a href="/payment-methods-by-geo.html" data-analytics-event="vertical_brief_click" data-analytics-placement="methods_by_geo">Methods by GEO</a>
+          <a href="/psp-for-forex.html" data-analytics-event="vertical_brief_click" data-analytics-placement="forex">Forex</a>
         </div>
       </div>
     </section>
@@ -2036,7 +2204,7 @@
             <p>Five operating facts are enough to begin. We will email you a secure link to confirm your address and open your private workspace.</p>
           </div>
           <div class="request-strip-actions">
-            <button class="button button-arrow" type="button" data-open-lead-modal>Request a private match</button>
+            <button class="button button-arrow" type="button" data-open-lead-modal data-analytics-placement="request_section">Request a private match</button>
             <p class="request-strip-note">No password. About 2 minutes.</p>
           </div>
         </div>
@@ -2182,6 +2350,50 @@
     const leadDialog = document.getElementById("leadDialog");
     const closeLeadDialog = document.getElementById("closeLeadDialog");
     let leadDialogTrigger = null;
+    let leadFormStarted = false;
+
+    const query = new URLSearchParams(window.location.search);
+    try {
+      if (query.get("qa") === "1") sessionStorage.setItem("offerpsp_qa", "1");
+      if (query.get("qa") === "0") sessionStorage.removeItem("offerpsp_qa");
+    } catch {
+      // Session storage can be unavailable in privacy-restricted browsers.
+    }
+    const isQaVisit = (() => {
+      if (!/^(?:www\.)?offerpsp\.com$/i.test(window.location.hostname)) return true;
+      try {
+        return sessionStorage.getItem("offerpsp_qa") === "1";
+      } catch {
+        return query.get("qa") === "1";
+      }
+    })();
+    const flowId = (() => {
+      try {
+        const current = sessionStorage.getItem("offerpsp_flow_id");
+        if (current) return current;
+        const created = crypto.randomUUID();
+        sessionStorage.setItem("offerpsp_flow_id", created);
+        return created;
+      } catch {
+        return crypto.randomUUID();
+      }
+    })();
+    const trackExperienceEvent = (eventName, placement = "") => {
+      const safePlacement = String(placement || "").replace(/[^a-z0-9_/-]/gi, "_").slice(0, 80);
+      void fetch("/api/acquisition-event", {
+        method: "POST",
+        credentials: "omit",
+        keepalive: true,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event_name: eventName,
+          flow_id: flowId,
+          page_path: window.location.pathname,
+          placement: safePlacement,
+          is_qa: isQaVisit,
+        }),
+      }).catch(() => {});
+    };
 
     document.getElementById("year").textContent = new Date().getFullYear();
 
@@ -2210,6 +2422,9 @@
       leadDialogTrigger = trigger;
       closeMenu();
       if (!leadDialog.open) leadDialog.showModal();
+      const placement = trigger?.dataset.analyticsPlacement || "direct_link";
+      if (placement === "hero") trackExperienceEvent("hero_cta_click", placement);
+      trackExperienceEvent("lead_form_open", placement);
       window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#request`);
       requestAnimationFrame(() => document.getElementById("name").focus());
     };
@@ -2227,6 +2442,12 @@
       trigger.addEventListener("click", (event) => {
         event.preventDefault();
         openLeadDialog(trigger);
+      });
+    });
+
+    document.querySelectorAll("[data-analytics-event]").forEach((target) => {
+      target.addEventListener("click", () => {
+        trackExperienceEvent(target.dataset.analyticsEvent, target.dataset.analyticsPlacement || "link");
       });
     });
 
@@ -2263,6 +2484,16 @@
 
     const acquisition = window.offerpspAcquisition || collectAcquisitionAttribution();
 
+    leadForm.addEventListener("input", (event) => {
+      if (leadFormStarted || event.target?.name === "website_url" || event.target?.name === "consent") return;
+      leadFormStarted = true;
+      trackExperienceEvent("lead_form_start", "request_form");
+    });
+
+    document.getElementById("consent").addEventListener("change", (event) => {
+      if (event.target.checked) trackExperienceEvent("lead_consent_checked", "request_form");
+    });
+
     leadForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       formStatus.className = "form-status";
@@ -2270,10 +2501,13 @@
 
       if (!leadForm.checkValidity()) {
         leadForm.reportValidity();
+        trackExperienceEvent("lead_submit_failure", "validation");
         formStatus.classList.add("error");
         formStatus.textContent = "Please complete the required fields.";
         return;
       }
+
+      trackExperienceEvent("lead_submit_attempt", "request_form");
 
       const formData = new FormData(leadForm);
       const payload = Object.fromEntries(formData.entries());
@@ -2306,6 +2540,8 @@
           throw new Error("Submission was not confirmed");
         }
 
+        trackExperienceEvent("lead_submit_success", "request_stored");
+
         formStatus.textContent = "Request received. Sending your secure access link…";
 
         let accessLinkError = null;
@@ -2335,6 +2571,7 @@
           portalFallbackLink.hidden = false;
         }
       } catch (error) {
+        trackExperienceEvent("lead_submit_failure", "delivery_unconfirmed");
         formStatus.classList.add("error");
         formStatus.textContent = "We could not confirm delivery. Please try again or email bizdev@offerpsp.com.";
         submitButton.disabled = false;
