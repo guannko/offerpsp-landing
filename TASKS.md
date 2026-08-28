@@ -1459,6 +1459,11 @@ stay isolated behind feature modes until their own verification is complete.
   position 52.8; all 14 sitemap URLs pass URL Inspection after the improved Forex page was submitted
   to Google's priority crawl queue. Staff deployment `dpl_ECX4eZD8MKjPuoYXTuERQuRjbPMT` and public
   deployment `dpl_B3QUZZW4frZqDDRsep6yf2iAWpCx` are `READY`.
+  `VERIFIED` 2026-08-28: transient Google timeouts are retried and an unavailable individual URL
+  Inspection no longer suppresses current Search Analytics. Production deployment
+  `dpl_ATPj4xZhu3keL6zvxwUGBz6BJ1xU` is `READY`; the authenticated staff UI loaded direct Google
+  data through 2026-08-25 with 2 clicks, 239 impressions, 0.8% CTR, average position 53.8 and 15/16
+  current sitemap URLs indexed. Partial failures remain explicitly empty and never use archive data.
 - [ ] Public content generated from active routes without provider identity.
 - [x] Sitemap, schema and canonical strategy. Every generated acquisition page is validated against
   `sitemap.xml` and `llms.txt` during the production build; generated HTML is verified to contain its
