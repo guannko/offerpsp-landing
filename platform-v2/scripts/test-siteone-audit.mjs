@@ -37,6 +37,14 @@ const report = {
     { url: "https://offerpsp.com/portal/", status: "200", type: 1 },
     { url: "https://outside.test/ignored", status: "200", type: 1 },
   ],
+  analysis: {
+    skipped: {
+      rows: [
+        { reason: "Not allowed host", sourceAttr: "<script src>", sourceUqId: "/portal/?private=1", url: "https://cdn.example.test/app.js?v=2" },
+        { reason: "Robots.txt", sourceAttr: "<a href>", sourceUqId: "/", url: "/private/?token=redacted" },
+      ],
+    },
+  },
 };
 
 const audit = normalizeSiteOneAudit(report);
@@ -50,6 +58,22 @@ assert.equal(audit.issues[3].count, 1);
 assert.equal(audit.issues[4].count, 5);
 assert.equal(audit.audited_at, "2026-08-14T11:47:50.000Z");
 assert.deepEqual(audit.metadata.crawled_page_urls, ["https://offerpsp.com/", "https://offerpsp.com/portal/"]);
+assert.deepEqual(audit.metadata.skipped_urls, [
+  {
+    reason: "Not allowed host",
+    source: "<script src>",
+    found_at_url: "https://offerpsp.com/portal/",
+    url: "https://cdn.example.test/app.js",
+    external: true,
+  },
+  {
+    reason: "Robots.txt",
+    source: "<a href>",
+    found_at_url: "https://offerpsp.com/",
+    url: "https://offerpsp.com/private/",
+    external: false,
+  },
+]);
 assert.throws(() => normalizeSiteOneAudit({ crawler_error: "crawl failed" }), /crawl failed/);
 
 const responses = new Map([
@@ -144,6 +168,7 @@ assert.equal(evidence.pages[0].image_inventory.content_images, 0);
 assert.deepEqual(evidence.pages[0].hreflang_alternates, [{ hreflang: "en", href: "https://offerpsp.com/" }]);
 assert.equal(evidence.pages[0].response_headers["content-security-policy"], "default-src 'self'");
 assert.equal(evidence.llms_txt.ok, true);
+assert.deepEqual(evidence.siteone.skipped_urls, audit.metadata.skipped_urls);
 assert.deepEqual(evidence.llms_txt.same_origin_urls, ["https://offerpsp.com/", "https://offerpsp.com/privacy.html"]);
 
 assert.equal(resolveSeoAgentWebhookUrl({
@@ -342,6 +367,29 @@ const unsupportedAggregateNoindexReview = normalizeSeoAgentAnalysis({ analysis: 
 assert.equal(unsupportedAggregateNoindexReview.priorities.length, 0);
 assert.match(unsupportedAggregateNoindexReview.limitations.join(" "), /noindex directive is intentional/i);
 assert.doesNotMatch(unsupportedAggregateNoindexReview.executive_summary, /noindex/i);
+
+const benignExternalSkippedReview = normalizeSeoAgentAnalysis({ analysis: {
+  ...rawAgentAnalysis,
+  priorities: [{
+    priority: "P2",
+    area: "Technical",
+    title: "Проверить пропущенные URL и noindex страницы",
+    evidence: "SiteOne сообщает о 3 пропущенных URL и 1 странице с noindex.",
+    recommendation: "Проверить полный отчет и убедиться, что страницы не блокируются.",
+    affected_urls: ["https://offerpsp.com/"],
+  }],
+} }, {
+  ...evidence,
+  siteone: {
+    ...evidence.siteone,
+    skipped_urls: [
+      { reason: "Not allowed host", url: "https://cdn.example.test/app.js", external: true },
+      { reason: "Not allowed host", url: "https://api.example.test/", external: true },
+    ],
+  },
+});
+assert.equal(benignExternalSkippedReview.priorities.length, 0);
+assert.match(benignExternalSkippedReview.limitations.join(" "), /no internal public page/i);
 
 const filteredContentRecommendations = normalizeSeoAgentAnalysis({ analysis: {
   ...rawAgentAnalysis,

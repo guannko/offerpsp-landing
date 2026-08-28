@@ -343,6 +343,141 @@ export const seoPages = [
     related: ["payment-provider-cis-central-asia", "psp-for-forex", "cross-border-payment-matching"]
   },
   {
+    slug: "psp-for-crypto-businesses",
+    title: "PSP Matching for Crypto Businesses | OfferPSP",
+    description: "Private PSP matching for compliant crypto businesses: cards, bank rails, settlements and risk controls. Get a qualified provider introduction securely.",
+    kicker: "Crypto payment infrastructure",
+    heading: "PSP matching for compliant crypto businesses.",
+    lead: "Crypto payment access depends on the exact product, licence, custody model, customer countries, fiat flow and transaction controls. OfferPSP structures those facts before assessing providers that can review the profile.",
+    boundary: "OfferPSP does not provide crypto, custody, exchange or payment services and does not help bypass licensing, sanctions, AML or provider rules. Every route remains subject to independent legal and provider review.",
+    sectionTitle: "What changes a crypto PSP match",
+    sectionIntro: "A wallet, exchange, broker, on-ramp and blockchain software company create different funds flows and underwriting requirements.",
+    points: [
+      ["Product and regulatory status", "Define the service, licensed activities, customer journey, custody model, legal entities and the countries where each activity is offered."],
+      ["Fiat collection and payout", "Map card purchases, bank transfers, open-banking flows, withdrawals, settlement currencies and the point where fiat becomes a digital asset."],
+      ["Customers and transaction controls", "Customer types, KYC tiers, sanctions screening, wallet screening, source-of-funds checks, monitoring and fraud controls shape provider appetite."],
+      ["Operational and treasury fit", "Expected volume, ticket size, reserves, settlement bank, reconciliation, chargebacks, integration and backup routes determine whether a route is usable."]
+    ],
+    checklistTitle: "Prepare the crypto payment brief",
+    checklist: ["Legal entities and licences", "Product, custody and funds-flow diagram", "Customer and operating GEOs", "KYC, AML and wallet-screening controls", "Fiat methods, currencies and withdrawals", "Volume, ticket size and settlement bank"],
+    faqs: [
+      ["Can OfferPSP guarantee a PSP for a crypto business?", "No. Provider appetite varies materially by product, licence, entity, customer geography and controls. We qualify the brief and arrange an introduction only where a credible fit exists."],
+      ["Are all crypto businesses treated the same?", "No. Exchanges, brokers, wallets, on-ramps, custody providers and blockchain software businesses have different regulatory and payment profiles."],
+      ["Can the matching include both cards and bank transfers?", "Yes. Card collection, bank rails and withdrawals are documented as separate routes because provider coverage and requirements can differ."],
+      ["Do you work with anonymous or sanctions-avoidance services?", "No. Matching requires a lawful operating model and transparent ownership, customer due diligence, sanctions controls and source-of-funds procedures."]
+    ],
+    areaServed: ["Europe", "United Kingdom", "Middle East", "Latin America", "Asia-Pacific"],
+    related: ["high-risk-payment-provider", "cross-border-payment-matching", "payment-methods-by-geo"]
+  },
+  {
+    slug: "payment-provider-latin-america",
+    title: "Payment Provider Matching in Latin America | OfferPSP",
+    description: "Private PSP matching for Latin America: local cards, bank transfers, wallets, currencies and payouts. Get a qualified provider introduction securely now.",
+    kicker: "Latin America payment coverage",
+    heading: "Match payment providers market by market in Latin America.",
+    lead: "Latin America combines domestic card schemes, instant bank methods, wallets, cash networks, local currencies and different settlement constraints. OfferPSP maps the merchant profile and priority countries before evaluating current routes.",
+    boundary: "Latin America is not one payment market. Method support, local acquiring, settlement and onboarding remain country-, entity-, vertical- and provider-specific.",
+    sectionTitle: "Build a country-specific Latin America route",
+    sectionIntro: "Brazil, Mexico, Colombia, Chile, Argentina and other markets require separate method, currency and compliance assumptions.",
+    points: [
+      ["Country and entity structure", "Separate customer countries, contracting entity, local-presence requirements, licences and the lawful basis for selling in every priority market."],
+      ["Cards and local methods", "Map domestic and international cards, Pix, SPEI, PSE, wallets, vouchers or cash methods according to actual customer behaviour."],
+      ["Currency and settlement", "Define presentment, FX, settlement currency, repatriation, reserves, payout timing and the bank account that receives provider funds."],
+      ["Collections, refunds and payouts", "Pay-ins, refunds, recurring flows, marketplace payouts and merchant withdrawals should be assessed separately with clear reconciliation requirements."]
+    ],
+    checklistTitle: "Prepare the Latin America brief",
+    checklist: ["Priority countries and launch order", "Merchant entity and local presence", "Cards, bank, wallet and cash methods", "Currencies, FX and settlement", "Pay-in, refund and payout flows", "Volume, ticket size and integration"],
+    faqs: [
+      ["Can one PSP cover all of Latin America?", "Some providers offer regional reach, but entity eligibility, methods, currencies and settlement differ by country. Important markets may still need local specialists."],
+      ["Which local methods should a merchant support?", "The answer depends on country and customer segment. The brief should prioritise methods using credible demand rather than adding every available logo."],
+      ["Is local acquiring always available?", "No. Local acquiring can require an eligible entity, local contract or specific provider structure. Cross-border coverage should not be presented as equivalent."],
+      ["Can OfferPSP arrange payout coverage?", "Where credible routes exist, payouts can be included as a separate requirement with beneficiary, currency, limit, timing and reconciliation details."]
+    ],
+    areaServed: ["Brazil", "Mexico", "Colombia", "Chile", "Argentina", "Peru"],
+    related: ["cross-border-payment-matching", "payment-methods-by-geo", "payment-provider-for-ecommerce"]
+  },
+  {
+    slug: "payment-provider-asia-pacific",
+    title: "Payment Provider Matching in Asia-Pacific | OfferPSP",
+    description: "Private PSP matching across Asia-Pacific: cards, bank methods, wallets, currencies and settlement. Get a qualified provider introduction securely now.",
+    kicker: "Asia-Pacific payment coverage",
+    heading: "Build payment coverage across distinct Asia-Pacific markets.",
+    lead: "Asia-Pacific spans mature card markets, mobile wallets, real-time bank networks and highly local payment behaviour. OfferPSP converts the target-country plan into a provider brief instead of treating APAC as one coverage label.",
+    boundary: "APAC availability depends on the merchant entity, vertical, customer country, local rules and current provider contracts. Regional branding does not prove local acquiring or onboarding.",
+    sectionTitle: "Evaluate APAC routes country by country",
+    sectionIntro: "Australia, Singapore, Japan, South Korea, India and Southeast Asian markets require different method and operating assumptions.",
+    points: [
+      ["Market and entity eligibility", "Document where the merchant is established, where customers are located, regulated activities and whether local presence or licences are required."],
+      ["Cards, wallets and bank rails", "Prioritise domestic cards, instant bank transfers, QR methods and wallets by country, customer segment, device and transaction flow."],
+      ["Currencies and treasury", "Presentment, local currency pricing, FX, settlement currency, reserves, banking and reconciliation should fit the launch sequence."],
+      ["Integration and resilience", "API model, redirects, mobile SDKs, refunds, recurring support, payouts and backup routes determine the operational cost of regional coverage."]
+    ],
+    checklistTitle: "Prepare the Asia-Pacific route matrix",
+    checklist: ["Priority APAC countries", "Entity, licences and local presence", "Cards, wallets, QR and bank methods", "Currencies, FX and settlement", "Refund, recurring and payout flows", "Mobile journey, integration and volume"],
+    faqs: [
+      ["Is Asia-Pacific one payment market?", "No. Payment behaviour, regulation, currencies and provider eligibility differ materially between countries and customer segments."],
+      ["Are cards enough for APAC expansion?", "Not always. Cards are important, but wallets, account-to-account payments and domestic methods can be essential in specific markets."],
+      ["Can one integration cover the region?", "A broad integration may simplify rollout, but actual methods and merchant eligibility still need country-level confirmation and may require local providers."],
+      ["Can the matching include mobile-first checkout?", "Yes. Device mix, redirect or SDK requirements, authentication and app-web handoff should be included in the operating brief."]
+    ],
+    areaServed: ["Australia", "Singapore", "Japan", "South Korea", "India", "Southeast Asia"],
+    related: ["payment-methods-by-geo", "cross-border-payment-matching", "psp-for-video-games"]
+  },
+  {
+    slug: "payment-provider-middle-east",
+    title: "Payment Provider Matching in the Middle East | OfferPSP",
+    description: "Private PSP matching in the Middle East: cards, bank rails, wallets, currencies and settlement. Get a qualified provider introduction securely online.",
+    kicker: "Middle East payment coverage",
+    heading: "Match payment providers to Middle East markets and entities.",
+    lead: "Gulf and wider Middle East markets differ in regulation, entity requirements, domestic rails, wallet adoption, currencies and settlement. OfferPSP maps those operating facts before evaluating provider fit.",
+    boundary: "Country coverage and onboarding remain subject to local law, licensing, sanctions, merchant profile and provider review. OfferPSP does not promise access based on a regional logo list.",
+    sectionTitle: "Build a credible Middle East payment route",
+    sectionIntro: "The UAE, Saudi Arabia, Bahrain, Qatar, Kuwait and neighbouring markets should be evaluated separately rather than grouped under one regional claim.",
+    points: [
+      ["Entity and regulated activity", "Clarify the contracting entity, licences, local-presence requirements, product permissions and customer countries for each route."],
+      ["Cards, bank and wallet methods", "Map domestic schemes, international cards, instant bank methods, wallets, authentication and recurring support by market."],
+      ["Currency and settlement", "Define local presentment, settlement currencies, FX, reserves, payout timing, banking location and reconciliation responsibilities."],
+      ["Risk and operating controls", "Ownership, sanctions screening, source of funds, fraud monitoring, disputes, refunds and customer support affect onboarding and route stability."]
+    ],
+    checklistTitle: "Prepare the Middle East payment brief",
+    checklist: ["Target countries and customer split", "Merchant entity and licence status", "Cards, bank rails and wallets", "Currencies, FX and settlement bank", "Volume, ticket size and disputes", "Integration, support and launch order"],
+    faqs: [
+      ["Can a foreign merchant access Middle East payment methods?", "Potentially, but availability depends on the country, entity, product, provider contract and whether local presence or licensing is required."],
+      ["Is UAE coverage the same as regional coverage?", "No. UAE eligibility does not prove equivalent support in Saudi Arabia, Bahrain, Qatar, Kuwait or other markets."],
+      ["Can the brief include both local and international cards?", "Yes. Scheme, acquiring, currency, authentication and settlement requirements should be confirmed separately for each important market."],
+      ["Does OfferPSP handle local licensing?", "No. We record the regulatory position for matching. Licensing and legal advice remain with qualified advisers and the relevant authorities."]
+    ],
+    areaServed: ["United Arab Emirates", "Saudi Arabia", "Bahrain", "Qatar", "Kuwait", "Jordan"],
+    related: ["cross-border-payment-matching", "payment-methods-by-geo", "psp-for-crypto-businesses"]
+  },
+  {
+    slug: "payment-provider-africa",
+    title: "Payment Provider Matching in Africa | OfferPSP",
+    description: "Private PSP matching across African markets: cards, mobile money, bank methods, currencies and payouts. Get a qualified provider introduction securely.",
+    kicker: "Africa payment coverage",
+    heading: "Map payment providers across distinct African markets.",
+    lead: "African payment markets combine cards, mobile money, bank transfers, local currencies and cross-border settlement constraints. OfferPSP turns priority countries and flows into a provider-matching brief.",
+    boundary: "Africa is not one payment market. Availability depends on country, entity, vertical, licences, method, currency and current provider appetite.",
+    sectionTitle: "Design country-level collection and payout routes",
+    sectionIntro: "South Africa, Nigeria, Kenya, Egypt, Ghana and other markets require distinct method, treasury and compliance assumptions.",
+    points: [
+      ["Country and entity eligibility", "Document the merchant entity, customer countries, licences, local-presence needs and the lawful basis for each product and flow."],
+      ["Cards, mobile money and banks", "Prioritise cards, mobile wallets, account transfers and cash-linked methods using real customer behaviour in each target market."],
+      ["Currencies and settlement", "Define local pricing, FX, settlement currency, reserves, banking location, payout timing and repatriation constraints."],
+      ["Pay-ins, refunds and payouts", "Collection, recurring payments, refunds, marketplace disbursements and merchant payouts need separate coverage, limits and reconciliation."]
+    ],
+    checklistTitle: "Prepare the Africa payment matrix",
+    checklist: ["Priority countries and launch order", "Entity, licences and local presence", "Cards, mobile money and bank methods", "Currencies, FX and settlement", "Pay-in, refund and payout requirements", "Volume, ticket size and integration"],
+    faqs: [
+      ["Can one PSP cover every African country?", "Usually not. Regional providers can simplify part of the rollout, while important countries or methods may require specialist routes."],
+      ["Is mobile money required in Africa?", "It is important in several markets but not universally. Method priority must follow the country, customer segment and transaction flow."],
+      ["Can settlement occur outside the customer country?", "Potentially, depending on regulation, provider structure, currencies and banking. Settlement and FX must be confirmed for each route."],
+      ["Can OfferPSP match payout providers as well as pay-ins?", "Where suitable coverage exists, yes. Beneficiaries, currencies, limits, timing and failure handling are documented separately from collection."]
+    ],
+    areaServed: ["South Africa", "Nigeria", "Kenya", "Egypt", "Ghana", "Morocco"],
+    related: ["payment-methods-by-geo", "cross-border-payment-matching", "psp-for-marketplaces"]
+  },
+  {
     slug: "psp-matching-process",
     title: "How PSP Matching Works | OfferPSP",
     description: "A practical four-step PSP matching process: prepare the merchant brief, screen provider fit, review a focused shortlist and arrange qualified introductions.",
@@ -538,7 +673,7 @@ export const renderPage = (page) => {
             </details>`).join("");
   const related = page.related.map((slug) => {
     const linkedPage = pageBySlug.get(slug);
-    return `<a class="related-card" href="/${linkedPage.slug}.html"><span>${ui.explore}</span><strong>${escapeHtml(linkedPage.heading)}</strong></a>`;
+    return `<a class="related-card" href="/${linkedPage.slug}.html"><span>${escapeHtml(linkedPage.kicker)}</span><strong>${escapeHtml(linkedPage.heading)}</strong></a>`;
   }).join("\n");
 
   return `<!doctype html>

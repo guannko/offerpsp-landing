@@ -21,6 +21,46 @@ function auditTimestamp(value) {
   return parsed.toISOString();
 }
 
+function normalizeSkippedUrls(report, targetUrl) {
+  const rows = Array.isArray(report.analysis?.skipped?.rows) ? report.analysis.skipped.rows : [];
+  const targetOrigin = new URL(targetUrl).origin;
+
+  return rows.slice(0, 50).map((row) => {
+    const rawUrl = String(row?.url || "").trim();
+    const rawSource = String(row?.sourceUqId || "").trim();
+    let url = rawUrl;
+    let foundAtUrl = rawSource;
+    let external = false;
+
+    try {
+      const parsed = new URL(rawUrl, targetOrigin);
+      parsed.search = "";
+      parsed.hash = "";
+      url = parsed.toString();
+      external = parsed.origin !== targetOrigin;
+    } catch {
+      url = rawUrl.slice(0, 1_000);
+    }
+
+    try {
+      const parsed = new URL(rawSource, targetOrigin);
+      parsed.search = "";
+      parsed.hash = "";
+      foundAtUrl = parsed.toString();
+    } catch {
+      foundAtUrl = rawSource.slice(0, 1_000);
+    }
+
+    return {
+      reason: String(row?.reason || "Unknown").slice(0, 160),
+      source: String(row?.sourceAttr || "").slice(0, 160),
+      found_at_url: foundAtUrl,
+      url,
+      external,
+    };
+  }).filter((row) => row.url);
+}
+
 export function normalizeSiteOneAudit(report, targetUrl = "https://offerpsp.com/") {
   if (!report || typeof report !== "object") throw new Error("SiteOne report must be a JSON object");
   if (report.crawler_error) throw new Error(String(report.crawler_error).slice(0, 500));
@@ -52,6 +92,7 @@ export function normalizeSiteOneAudit(report, targetUrl = "https://offerpsp.com/
     .filter(([code]) => Number(code) >= 400)
     .reduce((sum, [, count]) => sum + Number(count || 0), 0);
   const targetOrigin = new URL(targetUrl).origin;
+  const skippedUrls = normalizeSkippedUrls(report, targetUrl);
   const crawledPageUrls = [...new Set((Array.isArray(report.results) ? report.results : [])
     .filter((result) => Number(result?.type) === 1 && Number(result?.status) >= 200 && Number(result?.status) < 400)
     .map((result) => String(result?.url || "").trim())
@@ -87,6 +128,7 @@ export function normalizeSiteOneAudit(report, targetUrl = "https://offerpsp.com/
       scope: "public_site",
       summary_item_count: Number(report.summary?.items?.length || 0),
       crawled_page_urls: crawledPageUrls,
+      skipped_urls: skippedUrls,
     },
   };
 }

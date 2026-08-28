@@ -140,6 +140,11 @@ for (const page of seoPages) {
   for (const relatedSlug of page.related) {
     assert.ok(knownSlugs.has(relatedSlug), `${page.slug} links to unknown SEO page ${relatedSlug}`);
   }
+  assert.ok(!renderPage(page).includes(">Explore<"), `${page.slug} must not use a generic Explore label for related links`);
+  for (const relatedSlug of page.related) {
+    const relatedPage = seoPages.find((candidate) => candidate.slug === relatedSlug);
+    assert.ok(renderPage(page).includes(`>${relatedPage.kicker}</span>`), `${page.slug} must describe its link to ${relatedSlug}`);
+  }
 }
 
 for (const slug of [
@@ -148,6 +153,11 @@ for (const slug of [
   "psp-for-video-games",
   "psp-for-igaming",
   "psp-for-forex",
+  "psp-for-crypto-businesses",
+  "payment-provider-latin-america",
+  "payment-provider-asia-pacific",
+  "payment-provider-middle-east",
+  "payment-provider-africa",
 ]) {
   assert.ok(home.includes(`href="/${slug}.html"`), `${slug} must be linked from the home page`);
 }

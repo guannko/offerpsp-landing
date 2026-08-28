@@ -1,7 +1,7 @@
 const AGENT_NAME = "OfferPSP SEO/GEO Agent";
 const AGENT_VERSION = "offerpsp-seo-geo-agent-v1";
 const DEFAULT_WEBHOOK_PATH = "offerpsp-seo-geo-agent";
-const MAX_PAGES = 20;
+const MAX_PAGES = 40;
 const MAX_TEXT_SAMPLE = 3_500;
 const SECURITY_HEADERS = [
   "content-security-policy",
@@ -257,6 +257,7 @@ export async function collectSeoAgentEvidence(audit, fetchImpl = fetch) {
       category_scores: audit?.category_scores || {},
       crawl_stats: audit?.crawl_stats || {},
       issues: audit?.issues || [],
+      skipped_urls: Array.isArray(audit?.metadata?.skipped_urls) ? audit.metadata.skipped_urls : [],
     },
     geo_signals: audit?.metadata?.geo_signals || {},
     llms_txt: {
@@ -479,6 +480,20 @@ function claimsUnverifiableAggregateReview(item) {
     && /(check|verify|review|full report|провер|полном отч[её]те)/i.test(text);
 }
 
+function hasOnlyExpectedExternalSkips(evidence) {
+  const skippedUrls = evidence?.siteone?.skipped_urls;
+  return Array.isArray(skippedUrls)
+    && skippedUrls.length > 0
+    && skippedUrls.every((item) => item?.external === true && /^not allowed host$/i.test(String(item?.reason || "").trim()));
+}
+
+function claimsBenignSkippedUrlReview(item, evidence) {
+  if (!hasOnlyExpectedExternalSkips(evidence)) return false;
+  const text = [item?.title, item?.evidence, item?.recommendation].join(" ");
+  return /(skipped|external (?:URLs?|links?)|пропущенн|внешн.*(?:URL|ссыл))/i.test(text)
+    && /(check|verify|review|full report|провер|полном отч[её]те|убед)/i.test(text);
+}
+
 function translationBasePath(url) {
   try {
     return new URL(url).pathname.replace(/-([a-z]{2,3})(?=\.html$)/i, "");
@@ -627,6 +642,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
       ]
         .some((item) => /llms\.txt/i.test(String(item || ""))));
   const removedUnverifiableAggregate = normalizedPriorities.some(claimsUnverifiableAggregateReview);
+  const removedBenignSkippedReview = normalizedPriorities.some((item) => claimsBenignSkippedUrlReview(item, evidence));
   const removedUnsupportedHreflang = normalizedPriorities.some((item) =>
     claimsHreflangWithoutDiscoveredTranslations(item, evidence));
   const removedImplementedHreflang = normalizedPriorities.some((item) =>
@@ -644,6 +660,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     if (claimsCreationOfExistingPage(item, evidence)) return false;
     if (claimsIntentionalNoindexReview(item, noindexUrls)) return false;
     if (claimsUnverifiableAggregateReview(item)) return false;
+    if (claimsBenignSkippedUrlReview(item, evidence)) return false;
     if (claimsHreflangWithoutDiscoveredTranslations(item, evidence)) return false;
     if (claimsImplementedHreflangChange(item, evidence)) return false;
     return true;
@@ -683,6 +700,9 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
   if (removedNoindexReview) {
     limitations.unshift("The private portal's verified noindex directive is intentional and is not an SEO defect.");
   }
+  if (removedBenignSkippedReview) {
+    limitations.unshift("SiteOne skipped only expected external hosts; no internal public page was omitted from the crawl.");
+  }
   if (removedUnsupportedHreflang) {
     limitations.unshift("Hreflang recommendations without a discovered live translation counterpart were discarded.");
   }
@@ -706,7 +726,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     model: clampText(value?.model || source.model || "deepseek-chat", 120),
     generated_at: new Date().toISOString(),
     executive_summary: executiveSummary,
-    confidence: removedUnsupportedSecurity || removedUnsupportedBrotli || removedUnsupportedImages || removedUnsupportedStructuredData || removedNoindexMetadata || removedUnsupportedLlms || removedExistingPageCreation || removedNoindexReview || removedUnverifiableAggregate || removedUnsupportedHreflang || removedImplementedHreflang
+    confidence: removedUnsupportedSecurity || removedUnsupportedBrotli || removedUnsupportedImages || removedUnsupportedStructuredData || removedNoindexMetadata || removedUnsupportedLlms || removedExistingPageCreation || removedNoindexReview || removedUnverifiableAggregate || removedBenignSkippedReview || removedUnsupportedHreflang || removedImplementedHreflang
       ? "medium"
       : (["high", "medium", "low"].includes(source.confidence) ? source.confidence : "medium"),
     priorities,

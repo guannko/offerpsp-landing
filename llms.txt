@@ -43,6 +43,11 @@ OfferPSP does not publish its provider network, private routes, rates or custome
 - Russian-language CIS and Central Asia payment matching: https://offerpsp.com/payment-provider-cis-central-asia-ru.html
 - PSP matching for SaaS and subscription businesses: https://offerpsp.com/psp-for-saas.html
 - PSP matching for online marketplaces: https://offerpsp.com/psp-for-marketplaces.html
+- PSP matching for compliant crypto businesses: https://offerpsp.com/psp-for-crypto-businesses.html
+- Payment provider matching in Latin America: https://offerpsp.com/payment-provider-latin-america.html
+- Payment provider matching across Asia-Pacific: https://offerpsp.com/payment-provider-asia-pacific.html
+- Payment provider matching in the Middle East: https://offerpsp.com/payment-provider-middle-east.html
+- Payment provider matching across African markets: https://offerpsp.com/payment-provider-africa.html
 - Payment method planning by GEO: https://offerpsp.com/payment-methods-by-geo.html
 - Privacy notice: https://offerpsp.com/privacy.html
 - Terms: https://offerpsp.com/terms.html
