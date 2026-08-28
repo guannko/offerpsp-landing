@@ -32,6 +32,34 @@ const executableInlineScripts = (html) => [...html.matchAll(/<script\b([^>]*)>([
   .map((match) => match[2]);
 const inlineStyles = (html) => [...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)]
   .map((match) => match[1]);
+const normalizeText = (value) => String(value)
+  .replace(/<[^>]+>/g, " ")
+  .replaceAll("&amp;", "&")
+  .replaceAll("&quot;", '"')
+  .replaceAll("&#39;", "'")
+  .replaceAll("&lt;", "<")
+  .replaceAll("&gt;", ">")
+  .replace(/\s+/g, " ")
+  .trim();
+const visibleFaqEntries = (html) => [...html.matchAll(
+  /<details\b[^>]*>\s*<summary\b[^>]*>([\s\S]*?)<\/summary>\s*<p\b[^>]*>([\s\S]*?)<\/p>\s*<\/details>/gi,
+)].map((match) => ({
+  question: normalizeText(match[1]),
+  answer: normalizeText(match[2]),
+}));
+const faqSchemaEntries = (html) => [...html.matchAll(
+  /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
+)].flatMap((match) => {
+  const data = JSON.parse(match[1]);
+  const nodes = Array.isArray(data?.["@graph"]) ? data["@graph"] : [data];
+  return nodes
+    .filter((node) => node?.["@type"] === "FAQPage")
+    .flatMap((node) => node.mainEntity || [])
+    .map((item) => ({
+      question: normalizeText(item.name),
+      answer: normalizeText(item.acceptedAnswer?.text),
+    }));
+});
 
 const renderedPages = [home, terms, privacy, ...seoPages.map(renderPage)];
 const scriptDirective = cspDirective("script-src");
@@ -45,6 +73,16 @@ for (const source of renderedPages.flatMap(executableInlineScripts)) {
 }
 for (const source of renderedPages.flatMap(inlineStyles)) {
   assert.ok(styleDirective.includes(sha256(source)), "every inline style block must be covered by a CSP hash");
+}
+for (const [index, renderedPage] of renderedPages.entries()) {
+  const visibleFaq = visibleFaqEntries(renderedPage);
+  if (visibleFaq.length === 0) continue;
+  const schemaFaq = faqSchemaEntries(renderedPage);
+  assert.deepEqual(
+    schemaFaq,
+    visibleFaq,
+    `rendered page ${index + 1} must include every visible FAQ question and answer in FAQPage JSON-LD`,
+  );
 }
 
 const slugs = seoPages.map((page) => page.slug);
