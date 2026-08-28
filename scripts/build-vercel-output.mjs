@@ -20,6 +20,7 @@ const publicFiles = [
   "legal.css",
   "contact-dialog.css",
   "contact-dialog.js",
+  "content-visuals.css",
 ];
 
 await rm(output, { recursive: true, force: true });
@@ -32,6 +33,7 @@ for (const file of publicFiles) {
 await writeSeoPages(output);
 
 await cp(resolve(root, "platform-v2/public/brand"), resolve(output, "brand"), { recursive: true });
+await cp(resolve(root, "content"), resolve(output, "content"), { recursive: true });
 await cp(resolve(root, "portal"), resolve(output, "portal"), { recursive: true });
 await cp(resolve(root, "psp"), resolve(output, "psp"), { recursive: true });
 

@@ -1,6 +1,8 @@
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
+export const siteContentRevision = "2026-08-28";
+
 export const seoPages = [
   {
     slug: "psp-for-igaming",
@@ -59,7 +61,7 @@ export const seoPages = [
   {
     slug: "cross-border-payment-matching",
     title: "Cross-Border Payment Provider Matching | OfferPSP",
-    description: "Cross-border PSP matching for businesses that need card acquiring, local payment methods, payouts and settlement across multiple GEOs.",
+    description: "Private cross-border PSP matching for cards, local payment methods, payouts and settlement across multiple GEOs. Get a qualified provider introduction.",
     kicker: "Cross-border payments",
     heading: "Build payment coverage around the markets you actually serve.",
     lead: "International reach on a provider website does not prove operational fit. OfferPSP compares entity location, customer GEOs, currencies, local methods, settlement needs and vertical appetite before a qualified introduction.",
@@ -85,7 +87,7 @@ export const seoPages = [
   {
     slug: "psp-for-saas",
     title: "PSP Matching for SaaS and Subscription Businesses | OfferPSP",
-    description: "Payment provider matching for SaaS and subscription businesses: recurring billing, multi-currency payments, retries, settlement and global growth.",
+    description: "Private PSP matching for SaaS and subscription businesses: recurring billing, retries, currencies and settlement. Get a qualified provider introduction.",
     kicker: "SaaS and subscription payments",
     heading: "Match the payment stack to recurring revenue.",
     lead: "Subscription payments depend on more than checkout acceptance. Recurring mandates, retry logic, card lifecycle updates, multi-currency billing, dispute controls and data portability all affect long-term revenue operations.",
@@ -111,7 +113,7 @@ export const seoPages = [
   {
     slug: "psp-for-marketplaces",
     title: "PSP Matching for Online Marketplaces | OfferPSP",
-    description: "Payment provider matching for marketplaces: buyer payments, seller onboarding, split funds, payouts, reconciliation and multi-GEO operations.",
+    description: "Private PSP matching for marketplaces: buyer payments, seller onboarding, split funds, payouts and reconciliation. Get a qualified provider introduction.",
     kicker: "Marketplace payment infrastructure",
     heading: "Match the provider to the marketplace funds flow.",
     lead: "Marketplace payments depend on who sells, who collects, who holds funds and who pays each participant. OfferPSP maps the operating and regulatory model before identifying relevant provider routes.",
@@ -136,9 +138,9 @@ export const seoPages = [
   },
   {
     slug: "payment-provider-for-ecommerce",
-    modified: "2026-08-27",
+    modified: "2026-08-28",
     title: "E-commerce PSP and Payment Provider Matching | OfferPSP",
-    description: "E-commerce PSP and payment provider matching for cards, local methods, subscriptions, refunds, disputes, multi-currency settlement and new GEOs.",
+    description: "Private e-commerce PSP matching for cards, local methods, subscriptions, refunds, disputes and settlement. Get a qualified provider introduction today.",
     kicker: "E-commerce payment infrastructure",
     heading: "Match an e-commerce PSP to the complete checkout and settlement flow.",
     lead: "An e-commerce payment route has to work beyond the first checkout. OfferPSP maps the entity, products, customer GEOs, payment methods, recurring flows, refunds, disputes and settlement needs before arranging a qualified provider introduction.",
@@ -193,7 +195,7 @@ export const seoPages = [
   {
     slug: "payment-methods-by-geo",
     title: "Payment Methods by GEO: Provider Matching | OfferPSP",
-    description: "Plan card, bank, wallet, voucher and payout coverage by GEO before choosing a payment provider or cross-border PSP route.",
+    description: "Plan cards, bank payments, wallets, vouchers and payouts by GEO before selecting a PSP. Get a qualified introduction based on your payment brief today.",
     kicker: "Local payment method coverage",
     heading: "Choose payment methods by customer behaviour, not by logo count.",
     lead: "The relevant method mix changes by country, customer segment, device, transaction type and product. OfferPSP turns those requirements into a provider-matching brief instead of assuming that global card coverage is enough.",
@@ -311,7 +313,7 @@ export const seoPages = [
     slug: "payment-provider-cis-central-asia-ru",
     lang: "ru",
     title: "Платёжные провайдеры СНГ и Центральной Азии | OfferPSP",
-    description: "Подбор платёжных провайдеров для СНГ и Центральной Азии: карты, локальные методы, валюты, выплаты, расчёты и проверка соответствия профилю бизнеса.",
+    description: "Частный подбор платёжных провайдеров для СНГ и Центральной Азии: карты, локальные методы, валюты и выплаты. Получите релевантное предложение под ваш бизнес.",
     kicker: "Платежи в СНГ и Центральной Азии",
     heading: "Подберём платёжные маршруты для СНГ и Центральной Азии.",
     lead: "В регионе различаются валюты, банковская инфраструктура, локальные методы и требования комплаенса. OfferPSP сначала фиксирует юридическое лицо, страны клиентов, вертикаль и движение средств, а затем проверяет актуальные варианты.",
@@ -408,7 +410,7 @@ const buildStructuredData = (page) => {
       about: { "@id": `${url}#service` },
       breadcrumb: { "@id": `${url}#breadcrumb` },
       inLanguage: language,
-      ...(page.modified ? { dateModified: page.modified } : {})
+      dateModified: siteContentRevision
     },
     {
       "@type": "Service",
@@ -554,6 +556,7 @@ ${alternateLinks}
   <link rel="icon" href="/brand/offerpsp-favicon-48.png?v=20260816-1" type="image/png" sizes="48x48">
   <link rel="apple-touch-icon" href="/brand/offerpsp-apple-touch-icon-180.png?v=20260816-1" sizes="180x180">
   <link rel="stylesheet" href="/service-pages.css?v=20260815-1">
+  <link rel="stylesheet" href="/content-visuals.css?v=20260828-1">
   <meta property="og:type" content="website">
   <meta property="og:url" content="${canonical}">
   <meta property="og:site_name" content="OfferPSP">
@@ -589,6 +592,15 @@ ${structuredData}
           <a class="button" href="/#request">${ui.sendBrief}</a>
         </div>
         <aside class="boundary"><strong>${ui.scope}</strong><p>${escapeHtml(page.boundary)}</p></aside>
+      </div>
+      <div class="container">
+        <figure class="content-visual content-visual-service">
+          <picture>
+            <source media="(max-width: 680px)" srcset="/content/payment-brief-map-mobile.svg?v=20260828-1">
+            <img class="content-visual-image" src="/content/payment-brief-map.svg?v=20260828-1" width="1200" height="620" loading="lazy" decoding="async" alt="${language === "ru" ? "Схема брифа для подбора PSP: юридическое лицо, лицензии, страны клиентов, методы, валюты, риски, оборот и расчёты." : `Payment provider matching brief for ${escapeHtml(page.kicker)}: entity, licences, customer GEOs, methods, currencies, risk, volume and settlement.`}">
+          </picture>
+          <figcaption>${language === "ru" ? "Единый платёжный бриф связывает профиль бизнеса с актуальными требованиями и подходящими маршрутами." : "One payment brief connects the operating profile with current provider requirements and relevant routes."}</figcaption>
+        </figure>
       </div>
     </section>
     <section class="content-section alt">

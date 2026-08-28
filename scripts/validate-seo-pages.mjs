@@ -4,15 +4,21 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { renderPage, seoPages } from "./generate-seo-pages.mjs";
+import { renderPage, seoPages, siteContentRevision } from "./generate-seo-pages.mjs";
 
 const root = resolve(import.meta.dirname, "..");
-const [sitemap, llms, home, terms, privacy, generatorSource, vercelConfigSource] = await Promise.all([
+const [sitemap, llms, home, terms, privacy, matchingVisual, matchingVisualMobile, briefVisual, briefVisualMobile, visualCss, buildSource, generatorSource, vercelConfigSource] = await Promise.all([
   readFile(resolve(root, "sitemap.xml"), "utf8"),
   readFile(resolve(root, "llms.txt"), "utf8"),
   readFile(resolve(root, "index.html"), "utf8"),
   readFile(resolve(root, "terms.html"), "utf8"),
   readFile(resolve(root, "privacy.html"), "utf8"),
+  readFile(resolve(root, "content/offerpsp-matching-flow.svg"), "utf8"),
+  readFile(resolve(root, "content/offerpsp-matching-flow-mobile.svg"), "utf8"),
+  readFile(resolve(root, "content/payment-brief-map.svg"), "utf8"),
+  readFile(resolve(root, "content/payment-brief-map-mobile.svg"), "utf8"),
+  readFile(resolve(root, "content-visuals.css"), "utf8"),
+  readFile(resolve(root, "scripts/build-vercel-output.mjs"), "utf8"),
   readFile(resolve(root, "scripts/generate-seo-pages.mjs"), "utf8"),
   readFile(resolve(root, "vercel.json"), "utf8"),
 ]);
@@ -32,6 +38,12 @@ const executableInlineScripts = (html) => [...html.matchAll(/<script\b([^>]*)>([
   .map((match) => match[2]);
 const inlineStyles = (html) => [...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)]
   .map((match) => match[1]);
+const metaDescription = (html) => html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i)?.[1] ?? "";
+const contentImages = (html) => [...html.matchAll(/<img\b[^>]*class=["'][^"']*content-visual-image[^"']*["'][^>]*>/gi)]
+  .map((match) => ({
+    source: match[0].match(/\bsrc=["']([^"']+)["']/i)?.[1] ?? "",
+    alt: match[0].match(/\balt=["']([^"']+)["']/i)?.[1] ?? "",
+  }));
 const normalizeText = (value) => String(value)
   .replace(/<[^>]+>/g, " ")
   .replaceAll("&amp;", "&")
@@ -85,6 +97,23 @@ for (const [index, renderedPage] of renderedPages.entries()) {
   );
 }
 
+for (const [name, html] of [["home", home], ["privacy", privacy], ["terms", terms]]) {
+  const description = metaDescription(html);
+  assert.ok(description.length >= 150 && description.length <= 160, `${name} meta description must be 150-160 characters`);
+}
+
+const homeImages = contentImages(home);
+assert.equal(homeImages.length, 1, "home page must include one meaningful content visual");
+assert.equal(homeImages[0].source, "/content/offerpsp-matching-flow.svg?v=20260828-1", "home page must load the matching flow visual");
+assert.ok(homeImages[0].alt.length >= 80, "home content visual must have a descriptive alt text");
+assert.ok(home.includes('/content/offerpsp-matching-flow-mobile.svg?v=20260828-1'), "home page must provide a mobile matching visual");
+for (const visual of [matchingVisual, matchingVisualMobile, briefVisual, briefVisualMobile]) {
+  assert.match(visual, /<title\b[^>]*>[^<]+<\/title>/, "content SVG must have an accessible title");
+  assert.match(visual, /<desc\b[^>]*>[^<]+<\/desc>/, "content SVG must have an accessible description");
+}
+assert.match(visualCss, /\.content-visual-image\b/, "content visual stylesheet must size content images");
+assert.match(buildSource, /cp\(resolve\(root, "content"\)/, "production build must copy content visuals");
+
 const slugs = seoPages.map((page) => page.slug);
 const knownSlugs = new Set(slugs);
 
@@ -93,11 +122,20 @@ assert.equal(knownSlugs.size, slugs.length, "SEO page slugs must be unique");
 for (const page of seoPages) {
   const url = `https://offerpsp.com/${page.slug}.html`;
   assert.match(page.title, /OfferPSP$/, `${page.slug} title must identify OfferPSP`);
-  assert.ok(page.description.length >= 80 && page.description.length <= 170, `${page.slug} meta description must be useful and concise`);
+  assert.ok(page.description.length >= 150 && page.description.length <= 160, `${page.slug} meta description must be 150-160 characters`);
   assert.ok(page.points.length >= 4, `${page.slug} must explain the operating requirements`);
   assert.ok(page.faqs.length >= 4, `${page.slug} must answer concrete merchant questions`);
   assert.ok(sitemap.includes(`<loc>${url}</loc>`), `${page.slug} is missing from sitemap.xml`);
   assert.ok(llms.includes(url), `${page.slug} is missing from llms.txt`);
+  assert.ok(
+    sitemap.includes(`<loc>${url}</loc>\n    <lastmod>${siteContentRevision}</lastmod>`),
+    `${page.slug} sitemap lastmod must reflect the current content revision`,
+  );
+  const pageImages = contentImages(renderPage(page));
+  assert.equal(pageImages.length, 1, `${page.slug} must include one meaningful content visual`);
+  assert.equal(pageImages[0].source, "/content/payment-brief-map.svg?v=20260828-1", `${page.slug} must load the payment brief visual`);
+  assert.ok(pageImages[0].alt.length >= 80, `${page.slug} content visual must have a descriptive alt text`);
+  assert.ok(renderPage(page).includes('/content/payment-brief-map-mobile.svg?v=20260828-1'), `${page.slug} must provide a mobile payment brief visual`);
 
   for (const relatedSlug of page.related) {
     assert.ok(knownSlugs.has(relatedSlug), `${page.slug} links to unknown SEO page ${relatedSlug}`);
@@ -146,5 +184,15 @@ assert.match(
   /max-age=31536000.*immutable/,
   "versioned acquisition attribution asset must be cached immutably for one year",
 );
+
+for (const source of ["/content-visuals.css", "/content/(.*)"]) {
+  const contentVisualCacheRule = vercelConfig.headers.find((rule) => rule.source === source);
+  assert.ok(contentVisualCacheRule, `${source} must have an explicit cache rule`);
+  assert.match(
+    contentVisualCacheRule.headers.find((header) => header.key === "Cache-Control")?.value ?? "",
+    /max-age=31536000.*immutable/,
+    `${source} must be cached immutably for one year`,
+  );
+}
 
 process.stdout.write(`PASS ${seoPages.length} SEO pages are complete, internally valid and discoverable\n`);
