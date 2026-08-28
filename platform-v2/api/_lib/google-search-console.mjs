@@ -8,12 +8,40 @@ const READ_ONLY_SCOPE = "https://www.googleapis.com/auth/webmasters.readonly";
 const DEFAULT_SITE_URL = "sc-domain:offerpsp.com";
 const DEFAULT_SITEMAP_URL = "https://offerpsp.com/sitemap.xml";
 const OVERVIEW_CACHE_MS = 15 * 60 * 1000;
+const GOOGLE_REQUEST_TIMEOUT_MS = 20_000;
+const GOOGLE_REQUEST_ATTEMPTS = 2;
 
 let cachedToken = null;
 let cachedOverview = null;
 
 const base64url = (value) => Buffer.from(value).toString("base64url");
 const isoDate = (value) => value.toISOString().slice(0, 10);
+const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+function requestFailureMessage(error) {
+  if (error?.name === "AbortError" || error?.name === "TimeoutError") {
+    return `request timed out after ${GOOGLE_REQUEST_TIMEOUT_MS / 1000} seconds`;
+  }
+  return error?.message || "request failed";
+}
+
+async function fetchWithRetry(url, options, fetchImpl, attempts = GOOGLE_REQUEST_ATTEMPTS) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const response = await fetchImpl(url, {
+        ...options,
+        signal: AbortSignal.timeout(GOOGLE_REQUEST_TIMEOUT_MS),
+      });
+      if (response.status !== 429 && response.status < 500) return response;
+      lastError = new Error(`HTTP ${response.status}`);
+    } catch (error) {
+      lastError = error;
+    }
+    if (attempt < attempts) await delay(250 * attempt);
+  }
+  throw lastError;
+}
 
 function dateOffset(date, days) {
   const copy = new Date(date);
@@ -57,17 +85,16 @@ async function accessToken(credentials, fetchImpl, now) {
   }
   let response;
   try {
-    response = await fetchImpl(TOKEN_URL, {
+    response = await fetchWithRetry(TOKEN_URL, {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
         assertion: createAssertion(credentials, now),
       }),
-      signal: AbortSignal.timeout(12_000),
-    });
+    }, fetchImpl);
   } catch (error) {
-    throw new HttpError(502, `Google authorization is unavailable: ${error?.message || "request failed"}`);
+    throw new HttpError(502, `Google authorization is unavailable: ${requestFailureMessage(error)}`);
   }
   const payload = await response.json().catch(() => null);
   if (!response.ok || !payload?.access_token) {
@@ -84,16 +111,15 @@ async function accessToken(credentials, fetchImpl, now) {
 async function googleJson(url, options, token, fetchImpl) {
   let response;
   try {
-    response = await fetchImpl(url, {
+    response = await fetchWithRetry(url, {
       ...options,
       headers: {
         ...(options?.headers || {}),
         authorization: `Bearer ${token}`,
       },
-      signal: AbortSignal.timeout(15_000),
-    });
+    }, fetchImpl);
   } catch (error) {
-    throw new HttpError(502, `Google Search Console is unavailable: ${error?.message || "request failed"}`);
+    throw new HttpError(502, `Google Search Console is unavailable: ${requestFailureMessage(error)}`);
   }
   const payload = await response.json().catch(() => null);
   if (!response.ok) throw new HttpError(502, `Google Search Console returned HTTP ${response.status}`);
@@ -163,9 +189,9 @@ async function sitemapSummary(siteUrl, token, fetchImpl) {
 async function sitemapUrls(sitemapUrl, fetchImpl) {
   let response;
   try {
-    response = await fetchImpl(sitemapUrl, { method: "GET", signal: AbortSignal.timeout(10_000) });
+    response = await fetchWithRetry(sitemapUrl, { method: "GET" }, fetchImpl);
   } catch (error) {
-    throw new HttpError(502, `OfferPSP sitemap is unavailable: ${error?.message || "request failed"}`);
+    throw new HttpError(502, `OfferPSP sitemap is unavailable: ${requestFailureMessage(error)}`);
   }
   if (!response.ok) throw new HttpError(502, `OfferPSP sitemap returned HTTP ${response.status}`);
   const xml = await response.text();
@@ -229,16 +255,38 @@ export async function getGoogleSearchConsoleOverview({
   const dataThrough = daily.at(-1)?.date || provisionalEnd;
   const periodStart = isoDate(dateOffset(new Date(`${dataThrough}T00:00:00Z`), -89));
 
-  const [queries, pages, countries, devices, sitemaps, urls] = await Promise.all([
+  const [queries, pages, countries, devices] = await Promise.all([
     searchAnalytics(siteUrl, { startDate: periodStart, endDate: dataThrough, dimensions: ["query"], rowLimit: 1000 }, token, fetchImpl),
     searchAnalytics(siteUrl, { startDate: periodStart, endDate: dataThrough, dimensions: ["page"], rowLimit: 1000 }, token, fetchImpl),
     searchAnalytics(siteUrl, { startDate: periodStart, endDate: dataThrough, dimensions: ["country"], rowLimit: 1000 }, token, fetchImpl),
     searchAnalytics(siteUrl, { startDate: periodStart, endDate: dataThrough, dimensions: ["device"], rowLimit: 1000 }, token, fetchImpl),
+  ]);
+
+  const warnings = [];
+  const [sitemapsResult, urlsResult] = await Promise.allSettled([
     sitemapSummary(siteUrl, token, fetchImpl),
     sitemapUrls(sitemapUrl, fetchImpl),
   ]);
+  const sitemaps = sitemapsResult.status === "fulfilled" ? sitemapsResult.value : [];
+  const urls = urlsResult.status === "fulfilled" ? urlsResult.value : [];
+  if (sitemapsResult.status === "rejected") {
+    warnings.push({ code: "sitemaps_unavailable", message: sitemapsResult.reason?.message || "Google sitemap status is unavailable" });
+  }
+  if (urlsResult.status === "rejected") {
+    warnings.push({ code: "sitemap_urls_unavailable", message: urlsResult.reason?.message || "OfferPSP sitemap URLs are unavailable" });
+  }
 
-  const inspection = await Promise.all(urls.map((url) => inspectUrl(url, siteUrl, token, fetchImpl)));
+  const inspectionResults = await Promise.allSettled(urls.map((url) => inspectUrl(url, siteUrl, token, fetchImpl)));
+  const inspection = inspectionResults
+    .filter((result) => result.status === "fulfilled")
+    .map((result) => result.value);
+  const failedInspections = inspectionResults.length - inspection.length;
+  if (failedInspections) {
+    warnings.push({
+      code: "url_inspection_partial",
+      message: `${failedInspections} of ${urls.length} URL inspections were unavailable during this request`,
+    });
+  }
   const end = new Date(`${dataThrough}T00:00:00Z`);
   const value = {
     source: "google_search_console",
@@ -259,7 +307,10 @@ export async function getGoogleSearchConsoleOverview({
     inspection: {
       summary: summarizeInspection(inspection),
       urls: inspection,
+      requested: urls.length,
+      failed: failedInspections,
     },
+    warnings,
   };
   cachedOverview = { key: cacheKey, expiresAt: now.getTime() + OVERVIEW_CACHE_MS, value };
   return value;

@@ -15,6 +15,8 @@ const credentials = JSON.stringify({
 });
 const now = new Date("2026-08-26T12:00:00.000Z");
 const calls = [];
+let transientAnalyticsFailures = 0;
+let inspectionFailuresRemaining = 1;
 
 const analyticsRow = (keys, clicks, impressions, position) => ({
   keys,
@@ -37,6 +39,12 @@ const fetchImpl = async (input, init = {}) => {
   }
   if (url.includes("urlInspection/index:inspect")) {
     const body = JSON.parse(init.body);
+    if (body.inspectionUrl.includes("payment-provider-europe") && inspectionFailuresRemaining > 0) {
+      inspectionFailuresRemaining -= 1;
+      const error = new Error("The operation was aborted due to timeout");
+      error.name = "TimeoutError";
+      throw error;
+    }
     const pass = body.inspectionUrl.endsWith("/");
     return Response.json({ inspectionResult: { indexStatusResult: {
       verdict: pass ? "PASS" : "NEUTRAL",
@@ -52,6 +60,11 @@ const fetchImpl = async (input, init = {}) => {
   if (url.includes("searchAnalytics/query")) {
     const body = JSON.parse(init.body);
     const dimension = body.dimensions[0];
+    if (dimension === "query" && transientAnalyticsFailures++ === 0) {
+      const error = new Error("The operation was aborted due to timeout");
+      error.name = "TimeoutError";
+      throw error;
+    }
     if (dimension === "date") {
       return Response.json({ rows: [
         analyticsRow(["2026-08-22"], 1, 100, 40),
@@ -79,9 +92,26 @@ assert.equal(overview.periods.days_90.impressions, 230);
 assert.equal(Math.round(overview.periods.days_90.position * 10) / 10, 52.8);
 assert.equal(overview.queries[0].key, "high risk psp");
 assert.deepEqual(overview.inspection.summary, { total: 2, indexed: 1, not_indexed: 0, neutral: 1 });
+assert.equal(overview.inspection.requested, 2);
+assert.equal(overview.inspection.failed, 0);
+assert.deepEqual(overview.warnings, []);
 assert.equal(overview.sitemaps[0].contents[0].submitted, 14);
 assert(calls.every((call) => !call.url.includes("aibot-492912")));
 assert(calls.filter((call) => call.url.includes("searchAnalytics/query")).every((call) => call.init.headers.authorization === "Bearer google-token"));
+
+resetGoogleSearchConsoleCache();
+transientAnalyticsFailures = 1;
+inspectionFailuresRemaining = 2;
+const partialOverview = await getGoogleSearchConsoleOverview({
+  env: { GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON: credentials },
+  fetchImpl,
+  now,
+  force: true,
+});
+assert.deepEqual(partialOverview.inspection.summary, { total: 1, indexed: 1, not_indexed: 0, neutral: 0 });
+assert.equal(partialOverview.inspection.requested, 2);
+assert.equal(partialOverview.inspection.failed, 1);
+assert.equal(partialOverview.warnings[0].code, "url_inspection_partial");
 
 assert.deepEqual(summarizeInspection([
   { verdict: "PASS" },

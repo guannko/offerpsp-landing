@@ -106,7 +106,10 @@ type GoogleSearchConsole = {
   inspection: {
     summary: { total: number; indexed: number; not_indexed: number; neutral: number };
     urls: SearchInspection[];
+    requested?: number;
+    failed?: number;
   };
+  warnings?: Array<{ code: string; message: string }>;
 };
 type TechnicalAudit = {
   tool?: string;
@@ -428,6 +431,8 @@ export default function SeoGeoPage() {
   const maxSource = Math.max(1, ...sourceRows.map((row) => number(row.leads)));
   const google90 = googleData?.periods.days_90;
   const indexAttention = number(googleData?.inspection.summary.not_indexed) + number(googleData?.inspection.summary.neutral);
+  const inspectionFailed = number(googleData?.inspection.failed);
+  const inspectionRequested = number(googleData?.inspection.requested) || number(googleData?.inspection.summary.total);
   const publicPageMap = new Map<string, PublicPageCheck>();
   for (const page of audit.metadata?.public_page_checks?.pages || []) {
     if (page.indexable !== false) publicPageMap.set(page.url, page);
@@ -471,6 +476,7 @@ export default function SeoGeoPage() {
     {refreshNotice && <div className="mb-5 rounded-xl border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-700 dark:border-success-500/20 dark:bg-success-500/10 dark:text-success-300">{refreshNotice}</div>}
     {liveTrafficError && <div className="mb-5 rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-500/20 dark:bg-error-500/10 dark:text-error-300"><strong>Текущий трафик не показан.</strong> {liveTrafficError} Архивные данные не используются.</div>}
     {googleError && <div className="mb-5 rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-500/20 dark:bg-error-500/10 dark:text-error-300"><strong>Данные Google не показаны.</strong> {googleError} Архивные данные не используются.</div>}
+    {googleData && inspectionFailed > 0 && <div className="mb-5 rounded-xl border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-700 dark:border-warning-500/20 dark:bg-warning-500/10 dark:text-warning-300"><strong>Google ответил частично.</strong> Поисковые показатели показаны напрямую, но проверка индексации получена для {googleData.inspection.summary.total} из {inspectionRequested} URL. Неполученные значения оставлены пустыми, архив не подставляется.</div>}
 
     <Panel className="mb-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -482,7 +488,7 @@ export default function SeoGeoPage() {
         <Metric label="Показы · 90 дней" value={google90 ? number(google90.impressions) : "—"} hint="органический поиск Google"/>
         <Metric label="CTR" value={google90 ? percent(google90.ctr) : "—"} hint="клики ÷ показы" tone={google90 && google90.ctr < 0.02 ? "warning" : "success"}/>
         <Metric label="Средняя позиция" value={google90 ? position(google90.position) : "—"} hint="меньше — лучше" tone={google90 && google90.position > 30 ? "warning" : "success"}/>
-        <Metric label="В индексе" value={googleData ? `${googleData.inspection.summary.indexed}/${googleData.inspection.summary.total}` : "—"} hint={googleData ? `${indexAttention} требуют внимания` : "проверка URL не получена"} tone={indexAttention ? "warning" : "success"}/>
+        <Metric label="В индексе" value={googleData && googleData.inspection.summary.total ? `${googleData.inspection.summary.indexed}/${googleData.inspection.summary.total}` : "—"} hint={googleData ? inspectionFailed ? `${inspectionFailed} URL не ответили` : `${indexAttention} требуют внимания` : "проверка URL не получена"} tone={indexAttention || inspectionFailed ? "warning" : "success"}/>
       </div>
       <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div><h3 className="text-sm font-semibold text-gray-900 dark:text-white">Запросы</h3><div className="mt-3 space-y-2">{(googleData?.queries || []).slice(0, 8).map((row) => <div key={row.key} className="grid grid-cols-[1fr_52px_62px] gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm dark:border-gray-800"><span className="truncate text-gray-700 dark:text-gray-300">{row.key}</span><strong className="text-right text-gray-900 dark:text-white">{row.impressions}</strong><span className="text-right text-gray-400">поз. {position(row.position)}</span></div>)}{!googleData?.queries.length && <EmptyState title="Запросов нет" description="Google ещё не показал поисковые запросы."/>}</div></div>
