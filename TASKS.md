@@ -1,9 +1,34 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-08-27
+Updated: 2026-08-31
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
+
+## Organic acquisition foundation — 2026-08-31
+
+Status: `VERIFIED` for implementation, production delivery and live page checks. Search-position
+movement remains an external outcome that must be measured over the following weeks.
+
+- [x] Repositioned the home page around private merchant PSP matching and made iGaming, Forex,
+  high-risk and the matching process first-class routes instead of secondary references.
+- [x] Strengthened iGaming, Forex, high-risk, crypto and the five regional acquisition pages with
+  concrete underwriting and route-decision checkpoints rather than generic SEO filler.
+- [x] Added descriptive home-page links to the previously Google-unknown crypto, Latin America,
+  Asia-Pacific, Middle East and Africa pages, plus direct regional navigation and accurate
+  per-page `dateModified`/sitemap `lastmod` values.
+- [x] Added regression checks for the strengthened pages, internal links, metadata and sitemap
+  dates. Root validation/build, staff lint/build and desktop/390 px visual checks pass without
+  horizontal overflow.
+- [x] Published production deployment `dpl_CbDNcAcVz4bEEwwbtQr5JpLur4cc` (`READY`) and aliased it
+  to `https://offerpsp.com`. Live HTML contains the new title/H1 and iGaming decision section;
+  the five strengthened discovery URLs return HTTP 200 and the live sitemap carries 2026-08-31.
+- [x] Completed post-release SEO/GEO audit run `a28aa715-76c7-429e-82d1-c22bf0417cd3` with technical
+  audit `f365e8a5-0c43-41df-9af4-fcb80e6136e8`: 44/44 URLs succeeded, zero broken URLs and overall
+  score 9.9. The only generated P2 suggestion about incomplete FAQ coverage is contradicted by the
+  exact visible-FAQ/FAQPage equality regression and is not treated as an open defect.
+- [ ] Measure Google impressions, CTR, positions and indexing after the normal search-engine delay;
+  deployment itself is not evidence of traffic or ranking growth.
 
 ## Technical stabilization and isolated production — 2026-08-27
 
