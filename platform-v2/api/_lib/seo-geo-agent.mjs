@@ -258,6 +258,7 @@ export async function collectSeoAgentEvidence(audit, fetchImpl = fetch) {
       crawl_stats: audit?.crawl_stats || {},
       issues: audit?.issues || [],
       skipped_urls: Array.isArray(audit?.metadata?.skipped_urls) ? audit.metadata.skipped_urls : [],
+      crawled_page_count: Array.isArray(audit?.metadata?.crawled_page_urls) ? audit.metadata.crawled_page_urls.length : 0,
     },
     geo_signals: audit?.metadata?.geo_signals || {},
     llms_txt: {
@@ -420,7 +421,7 @@ function claimsCreationOfExistingPage(item, evidence) {
   const text = [item?.title, item?.evidence, item?.recommendation].join(" ");
   if (!/(create|develop|add|build|созда|разработ|добав|сделать).*(page|pages|страниц)/i.test(text)) return false;
   const pages = Array.isArray(evidence?.pages) ? evidence.pages : [];
-  return pages.some((page) => {
+  const explicitlyExisting = pages.some((page) => {
     if (!(page.status >= 200 && page.status < 400)) return false;
     try {
       const path = new URL(page.url).pathname;
@@ -429,6 +430,36 @@ function claimsCreationOfExistingPage(item, evidence) {
       return false;
     }
   });
+  if (explicitlyExisting) return true;
+
+  const topicPages = [
+    [/\bigaming\b/i, /\/psp-for-igaming\.html$/],
+    [/\bforex\b/i, /\/psp-for-forex\.html$/],
+    [/\b(?:saas|subscription|subscriptions)\b|подпис/i, /\/psp-for-saas\.html$/],
+    [/\bcrypto\b|крипто/i, /\/psp-for-crypto-businesses\.html$/],
+    [/\bafrica\b|африк/i, /\/payment-provider-africa\.html$/],
+    [/\b(?:asia(?:-pacific)?|apac|southeast asia)\b|азиатско-тихоокеан|юго-восточн.*ази|\bази[ия]\b/i, /\/payment-provider-asia-pacific\.html$/],
+    [/\blatin america\b|латинск.*америк/i, /\/payment-provider-latin-america\.html$/],
+    [/\bmiddle east\b|ближн.*восток/i, /\/payment-provider-middle-east\.html$/],
+  ];
+  const requestedTopics = topicPages.filter(([pattern]) => pattern.test(text));
+  if (requestedTopics.length < 2) return false;
+  return requestedTopics.every(([, pathPattern]) => pages.some((page) => {
+    if (!(page.status >= 200 && page.status < 400)) return false;
+    try {
+      return pathPattern.test(new URL(page.url).pathname);
+    } catch {
+      return false;
+    }
+  }));
+}
+
+function hasCompletePageEvidence(evidence) {
+  const crawledPageCount = Number(evidence?.siteone?.crawled_page_count || 0);
+  const checkedPages = Array.isArray(evidence?.pages)
+    ? evidence.pages.filter((page) => page.status >= 200 && page.status < 400).length
+    : 0;
+  return crawledPageCount > 0 && checkedPages >= crawledPageCount;
 }
 
 function mentionsNoindexPage(value, noindexUrls) {
@@ -673,6 +704,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
       if (verifiedLlmsCoverage && /llms\.txt/i.test(item) && /(no data|not provided|unavailable|нет данных|не предостав|недоступ)/i.test(item)) return false;
       if (evidence?.geo_signals?.robots_txt?.ai_crawlers_allowed && /robots\.txt/i.test(item) && /(no data|not provided|unavailable|нет данных|не предостав|недоступ)/i.test(item)) return false;
       if (/(skipped|external (?:URLs?|links?)|пропущенн|внешн.*(?:URL|ссыл))/i.test(item) && /(no data|not provided|unavailable|недоступ|нет данных|отсутств.*информац)/i.test(item)) return false;
+      if (hasCompletePageEvidence(evidence) && /(full (?:url|page) list|полный список (?:url|страниц)|список url)/i.test(item) && /(unavailable|missing|not provided|недоступ|отсутств|невозмож)/i.test(item)) return false;
       return true;
     })
     : [];

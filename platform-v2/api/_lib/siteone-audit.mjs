@@ -22,7 +22,24 @@ function auditTimestamp(value) {
 }
 
 function normalizeSkippedUrls(report, targetUrl) {
-  const rows = Array.isArray(report.analysis?.skipped?.rows) ? report.analysis.skipped.rows : [];
+  const queue = [report.analysis, report.analyses].filter(Boolean);
+  const visited = new WeakSet();
+  let rows = [];
+  let visitedNodes = 0;
+
+  while (queue.length > 0 && rows.length === 0 && visitedNodes < 20_000) {
+    const current = queue.shift();
+    if (!current || typeof current !== "object" || visited.has(current)) continue;
+    visited.add(current);
+    visitedNodes += 1;
+    if (current.aplCode === "skipped" && Array.isArray(current.rows)) {
+      rows = current.rows;
+      break;
+    }
+    for (const value of Object.values(current)) {
+      if (value && typeof value === "object") queue.push(value);
+    }
+  }
   const targetOrigin = new URL(targetUrl).origin;
 
   return rows.slice(0, 50).map((row) => {

@@ -38,11 +38,14 @@ const report = {
     { url: "https://outside.test/ignored", status: "200", type: 1 },
   ],
   analysis: {
-    skipped: {
-      rows: [
-        { reason: "Not allowed host", sourceAttr: "<script src>", sourceUqId: "/portal/?private=1", url: "https://cdn.example.test/app.js?v=2" },
-        { reason: "Robots.txt", sourceAttr: "<a href>", sourceUqId: "/", url: "/private/?token=redacted" },
-      ],
+    sections: {
+      skipped: {
+        aplCode: "skipped",
+        rows: [
+          { reason: "Not allowed host", sourceAttr: "<script src>", sourceUqId: "/portal/?private=1", url: "https://cdn.example.test/app.js?v=2" },
+          { reason: "Robots.txt", sourceAttr: "<a href>", sourceUqId: "/", url: "/private/?token=redacted" },
+        ],
+      },
     },
   },
 };
@@ -169,6 +172,7 @@ assert.deepEqual(evidence.pages[0].hreflang_alternates, [{ hreflang: "en", href:
 assert.equal(evidence.pages[0].response_headers["content-security-policy"], "default-src 'self'");
 assert.equal(evidence.llms_txt.ok, true);
 assert.deepEqual(evidence.siteone.skipped_urls, audit.metadata.skipped_urls);
+assert.equal(evidence.siteone.crawled_page_count, 2);
 assert.deepEqual(evidence.llms_txt.same_origin_urls, ["https://offerpsp.com/", "https://offerpsp.com/privacy.html"]);
 
 assert.equal(resolveSeoAgentWebhookUrl({
@@ -321,6 +325,10 @@ const evidenceWithVerticals = {
     ...evidence.pages,
     { url: "https://offerpsp.com/psp-for-igaming.html", status: 200 },
     { url: "https://offerpsp.com/psp-for-forex.html", status: 200 },
+    { url: "https://offerpsp.com/psp-for-saas.html", status: 200 },
+    { url: "https://offerpsp.com/psp-for-crypto-businesses.html", status: 200 },
+    { url: "https://offerpsp.com/payment-provider-africa.html", status: 200 },
+    { url: "https://offerpsp.com/payment-provider-asia-pacific.html", status: 200 },
   ],
 };
 const unsupportedExistingPageCreation = normalizeSeoAgentAnalysis({ analysis: {
@@ -351,6 +359,29 @@ const unsupportedExistingPageCreation = normalizeSeoAgentAnalysis({ analysis: {
 assert.equal(unsupportedExistingPageCreation.priorities.length, 0);
 assert.match(unsupportedExistingPageCreation.limitations.join(" "), /successfully loaded/i);
 assert.match(unsupportedExistingPageCreation.limitations.join(" "), /noindex directive is intentional/i);
+
+const unsupportedExistingTopicCreation = normalizeSeoAgentAnalysis({ analysis: {
+  ...rawAgentAnalysis,
+  priorities: [{
+    priority: "P1",
+    area: "Content",
+    title: "Добавить страницы для ключевых вертикалей и регионов",
+    evidence: "В крауле якобы отсутствуют отдельные страницы для iGaming, Forex, SaaS и crypto, а также Африки и Азии.",
+    recommendation: "Создать страницы для iGaming, Forex, SaaS, crypto, Африки и Юго-Восточной Азии.",
+    affected_urls: ["https://offerpsp.com/"],
+  }],
+} }, evidenceWithVerticals);
+assert.equal(unsupportedExistingTopicCreation.priorities.length, 0);
+assert.match(unsupportedExistingTopicCreation.limitations.join(" "), /successfully loaded/i);
+
+const completeEvidenceLimitation = normalizeSeoAgentAnalysis({ analysis: {
+  ...rawAgentAnalysis,
+  limitations: ["Недоступен полный список URL, поэтому невозможно оценить все страницы сайта."],
+} }, {
+  ...evidence,
+  siteone: { ...evidence.siteone, crawled_page_count: evidence.pages.length },
+});
+assert.doesNotMatch(completeEvidenceLimitation.limitations.join(" "), /полный список URL/i);
 
 const unsupportedAggregateNoindexReview = normalizeSeoAgentAnalysis({ analysis: {
   ...rawAgentAnalysis,
