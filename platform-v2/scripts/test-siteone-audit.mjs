@@ -37,7 +37,7 @@ const report = {
     { url: "https://offerpsp.com/portal/", status: "200", type: 1 },
     { url: "https://outside.test/ignored", status: "200", type: 1 },
   ],
-  analysis: {
+  auditDetails: {
     sections: {
       skipped: {
         aplCode: "skipped",

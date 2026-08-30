@@ -22,7 +22,7 @@ function auditTimestamp(value) {
 }
 
 function normalizeSkippedUrls(report, targetUrl) {
-  const queue = [report.analysis, report.analyses].filter(Boolean);
+  const queue = [report.analysis, report.analyses, report].filter(Boolean);
   const visited = new WeakSet();
   let rows = [];
   let visitedNodes = 0;
