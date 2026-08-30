@@ -6,7 +6,7 @@ export const siteContentRevision = "2026-08-28";
 export const seoPages = [
   {
     slug: "psp-for-igaming",
-    modified: "2026-08-28",
+    modified: "2026-08-31",
     title: "PSP Matching for iGaming Businesses | OfferPSP",
     description: "Private PSP matching for licensed iGaming operators: deposits, payouts, GEOs and risk controls. Get qualified introductions without a public provider list.",
     kicker: "iGaming payment infrastructure",
@@ -21,6 +21,14 @@ export const seoPages = [
       ["Traffic and risk profile", "Acquisition channels, target player GEOs, expected chargebacks, fraud controls, responsible-gaming controls and source-of-funds procedures."],
       ["Volume and integration", "Realistic monthly processing volume, average ticket, peak load, current stack, integration preference and launch timetable."]
     ],
+    decisionTitle: "Decision gates before an iGaming PSP introduction",
+    decisionIntro: "A provider name is useful only after the operating case is specific enough for a real underwriting conversation.",
+    decisionPoints: [
+      ["Entity and licence line up", "The contracting entity, gaming licence, player-facing brands and target markets must describe one coherent operating model."],
+      ["Deposits and withdrawals are mapped separately", "Currencies, methods, limits, payout timing and withdrawal controls are recorded as distinct flows rather than treated as one generic payment route."],
+      ["Traffic and controls can be explained", "Acquisition sources, KYC, responsible-gaming controls, fraud prevention and expected disputes need named operational owners and supporting evidence."],
+      ["Commercial terms remain workable", "Reserves, settlement timing, limits, integration effort and backup coverage are checked against the merchant’s real cash-flow and launch plan."]
+    ],
     checklistTitle: "Prepare the matching brief",
     checklist: ["Company and product URLs", "Licensing evidence and jurisdictions", "Player and entity GEOs", "Deposits, payouts and currencies", "Expected volume and ticket size", "Current PSP constraints and launch date"],
     faqs: [
@@ -33,7 +41,7 @@ export const seoPages = [
   },
   {
     slug: "high-risk-payment-provider",
-    modified: "2026-08-28",
+    modified: "2026-08-31",
     title: "High-Risk PSP and Payment Provider Matching | OfferPSP",
     description: "Private high-risk PSP matching for complex online businesses: underwriting, routes and reserves. Get qualified introductions without a public provider list.",
     kicker: "Complex and higher-risk profiles",
@@ -47,6 +55,14 @@ export const seoPages = [
       ["Commercial fit is more than an approval", "Reserves, settlement timing, dispute exposure, rolling limits, payout support and operational response all affect whether the route is usable."],
       ["Evidence shortens qualification", "Corporate documents, policies, processing history, chargeback data and a clear funds flow help providers assess a case without repeated clarification."],
       ["Resilience may require several routes", "A primary provider, local method specialists and a backup route can reduce dependency, provided the structure remains lawful and operationally manageable."]
+    ],
+    decisionTitle: "What makes a high-risk route credible",
+    decisionIntro: "The label ‘high risk’ is too broad for a shortlist. The decision must be tied to evidence, operating controls and usable commercial terms.",
+    decisionPoints: [
+      ["The regulated position is explicit", "Licences, exemptions, product permissions and restricted markets are stated clearly instead of being left for a provider to infer."],
+      ["The complete funds flow is visible", "Customer payment, fulfilment, refund, payout and settlement steps identify who receives funds and where operational exposure sits."],
+      ["Historical risk is documented", "Processing statements, disputes, refunds, fraud controls and prior provider constraints are disclosed where they materially affect underwriting."],
+      ["Approval would still be commercially usable", "Pricing, rolling reserve, settlement, limits and support expectations are tested against the business model—not accepted merely because a provider is willing to review it."]
     ],
     checklistTitle: "What to include in the profile",
     checklist: ["Entity, owners and website", "Licence or regulatory position", "Products, fulfilment and traffic", "Customer and operating GEOs", "Processing history and disputes", "Required methods, currencies and settlement"],
@@ -220,7 +236,7 @@ export const seoPages = [
   },
   {
     slug: "psp-for-forex",
-    modified: "2026-08-28",
+    modified: "2026-08-31",
     title: "Forex PSP Matching for Licensed Brokers | OfferPSP",
     description: "Private PSP matching for licensed forex brokers: deposits, withdrawals and multi-GEO coverage. Get qualified introductions without a public provider list.",
     kicker: "Forex payment infrastructure",
@@ -236,6 +252,14 @@ export const seoPages = [
       ["Underwriting evidence", "Prepare processing statements, chargeback ratios, refund policy, complaints history, licence evidence, customer terms and proof that every trading domain belongs to the reviewed entity."],
       ["Commercial and technical fit", "Expected volume, average ticket, reserves, settlement, integration model, reconciliation and launch sequence."],
       ["Route resilience", "Separate primary and backup routes, card and bank dependencies, failed-withdrawal handling and the operational owner for provider incidents."]
+    ],
+    decisionTitle: "Decision gates for a forex payment route",
+    decisionIntro: "A licensed broker still needs a provider-compatible acquisition model, customer funds flow and evidence package.",
+    decisionPoints: [
+      ["Licence, entity and domains agree", "The authorised entity, permitted activities, trading brands and customer-facing domains must match the markets included in the payment request."],
+      ["Deposit and withdrawal controls are complete", "Methods, currencies, beneficiary rules, source-of-funds checks and withdrawal approval logic are documented as separate operating flows."],
+      ["Financial promotions are accountable", "Affiliate traffic, advertising jurisdictions, promotion review and customer eligibility controls are clear enough for provider compliance to assess."],
+      ["The route has a realistic operating owner", "Reconciliation, failed withdrawals, disputes, reserves, settlement and incident escalation are assigned before integration begins."]
     ],
     checklistTitle: "Prepare the forex payment brief",
     checklist: ["Licence and regulated entities", "Trading brands, domains and product URLs", "Client and entity GEOs", "Deposit, withdrawal and currency flows", "Processing, dispute and refund evidence", "Acquisition model and promotion controls", "Volume, ticket size and launch timing", "Settlement bank and backup-route plan"],
@@ -344,6 +368,7 @@ export const seoPages = [
   },
   {
     slug: "psp-for-crypto-businesses",
+    modified: "2026-08-31",
     title: "PSP Matching for Crypto Businesses | OfferPSP",
     description: "Private PSP matching for compliant crypto businesses: cards, bank rails, settlements and risk controls. Get a qualified provider introduction securely.",
     kicker: "Crypto payment infrastructure",
@@ -358,6 +383,14 @@ export const seoPages = [
       ["Customers and transaction controls", "Customer types, KYC tiers, sanctions screening, wallet screening, source-of-funds checks, monitoring and fraud controls shape provider appetite."],
       ["Operational and treasury fit", "Expected volume, ticket size, reserves, settlement bank, reconciliation, chargebacks, integration and backup routes determine whether a route is usable."]
     ],
+    decisionTitle: "Classify the crypto payment case before matching",
+    decisionIntro: "Provider appetite changes materially with the product and the point where fiat enters or leaves the customer journey.",
+    decisionPoints: [
+      ["Product type is unambiguous", "Exchange, broker, wallet, on-ramp, custody and software models are separated because their payment and regulatory exposure is not interchangeable."],
+      ["Fiat and digital-asset steps are traceable", "The brief identifies the contracting entity, customer, payment recipient, conversion point, custody role and settlement destination."],
+      ["Customer and wallet controls are evidenced", "KYC tiers, sanctions screening, wallet monitoring, source-of-funds rules and manual review ownership are included in the case."],
+      ["Banking and settlement are compatible", "The settlement bank, currencies, reserves, withdrawals and reconciliation process must support the proposed provider route in practice."]
+    ],
     checklistTitle: "Prepare the crypto payment brief",
     checklist: ["Legal entities and licences", "Product, custody and funds-flow diagram", "Customer and operating GEOs", "KYC, AML and wallet-screening controls", "Fiat methods, currencies and withdrawals", "Volume, ticket size and settlement bank"],
     faqs: [
@@ -371,6 +404,7 @@ export const seoPages = [
   },
   {
     slug: "payment-provider-latin-america",
+    modified: "2026-08-31",
     title: "Payment Provider Matching in Latin America | OfferPSP",
     description: "Private PSP matching for Latin America: local cards, bank transfers, wallets, currencies and payouts. Get a qualified provider introduction securely now.",
     kicker: "Latin America payment coverage",
@@ -385,6 +419,14 @@ export const seoPages = [
       ["Currency and settlement", "Define presentment, FX, settlement currency, repatriation, reserves, payout timing and the bank account that receives provider funds."],
       ["Collections, refunds and payouts", "Pay-ins, refunds, recurring flows, marketplace payouts and merchant withdrawals should be assessed separately with clear reconciliation requirements."]
     ],
+    decisionTitle: "Country decisions for a Latin America rollout",
+    decisionIntro: "A regional launch becomes matchable when each priority country has its own entity, method, currency and settlement assumptions.",
+    decisionPoints: [
+      ["Launch order is explicit", "Brazil, Mexico, Colombia, Chile, Argentina, Peru and other markets are prioritised instead of being submitted as one undifferentiated LATAM request."],
+      ["Local and cross-border routes are distinguished", "The brief records whether local acquiring, a local entity or cross-border collection is required and acceptable for each market."],
+      ["Method demand has a business reason", "Cards, Pix, SPEI, PSE, wallets, vouchers or cash-linked methods are requested only where the merchant can explain customer demand and the target flow."],
+      ["Treasury can support the route", "Presentment, FX, settlement, repatriation, refunds and payouts are aligned with the merchant’s banking and reconciliation process."]
+    ],
     checklistTitle: "Prepare the Latin America brief",
     checklist: ["Priority countries and launch order", "Merchant entity and local presence", "Cards, bank, wallet and cash methods", "Currencies, FX and settlement", "Pay-in, refund and payout flows", "Volume, ticket size and integration"],
     faqs: [
@@ -398,6 +440,7 @@ export const seoPages = [
   },
   {
     slug: "payment-provider-asia-pacific",
+    modified: "2026-08-31",
     title: "Payment Provider Matching in Asia-Pacific | OfferPSP",
     description: "Private PSP matching across Asia-Pacific: cards, bank methods, wallets, currencies and settlement. Get a qualified provider introduction securely now.",
     kicker: "Asia-Pacific payment coverage",
@@ -412,6 +455,14 @@ export const seoPages = [
       ["Currencies and treasury", "Presentment, local currency pricing, FX, settlement currency, reserves, banking and reconciliation should fit the launch sequence."],
       ["Integration and resilience", "API model, redirects, mobile SDKs, refunds, recurring support, payouts and backup routes determine the operational cost of regional coverage."]
     ],
+    decisionTitle: "Separate the APAC rollout into operating markets",
+    decisionIntro: "A provider comparison is useful only when mature card markets, mobile-first markets and regulated local routes are not treated as one requirement.",
+    decisionPoints: [
+      ["Market clusters are separated", "Australia and New Zealand, East Asia, India and Southeast Asian markets receive distinct priorities, entities and launch assumptions."],
+      ["The checkout matches customer behaviour", "Cards, bank transfers, QR journeys and wallets are evaluated by country, device and customer segment rather than by regional popularity alone."],
+      ["Local eligibility is confirmed", "Licensing, local presence, contracting and settlement constraints are recorded before local acquiring or domestic methods are treated as available."],
+      ["Integration effort fits the launch plan", "Redirects, mobile SDKs, authentication, refunds, recurring flows, payouts and reconciliation are compared against the team’s operational capacity."]
+    ],
     checklistTitle: "Prepare the Asia-Pacific route matrix",
     checklist: ["Priority APAC countries", "Entity, licences and local presence", "Cards, wallets, QR and bank methods", "Currencies, FX and settlement", "Refund, recurring and payout flows", "Mobile journey, integration and volume"],
     faqs: [
@@ -425,6 +476,7 @@ export const seoPages = [
   },
   {
     slug: "payment-provider-middle-east",
+    modified: "2026-08-31",
     title: "Payment Provider Matching in the Middle East | OfferPSP",
     description: "Private PSP matching in the Middle East: cards, bank rails, wallets, currencies and settlement. Get a qualified provider introduction securely online.",
     kicker: "Middle East payment coverage",
@@ -439,6 +491,14 @@ export const seoPages = [
       ["Currency and settlement", "Define local presentment, settlement currencies, FX, reserves, payout timing, banking location and reconciliation responsibilities."],
       ["Risk and operating controls", "Ownership, sanctions screening, source of funds, fraud monitoring, disputes, refunds and customer support affect onboarding and route stability."]
     ],
+    decisionTitle: "Country decisions for a Middle East route",
+    decisionIntro: "Gulf and neighbouring markets require separate evidence for entity eligibility, payment methods and settlement.",
+    decisionPoints: [
+      ["Country scope is precise", "UAE, Saudi Arabia, Bahrain, Qatar, Kuwait, Jordan and other markets are prioritised individually with customer and volume assumptions."],
+      ["Entity and product permissions are known", "The contracting company, licensed activity, local-presence position and permitted customer journey are documented for each route."],
+      ["Domestic and international methods are separated", "Card schemes, bank rails, wallets, authentication, recurring use and payouts are recorded by market rather than inferred from a regional label."],
+      ["Settlement and controls are operational", "Currencies, FX, settlement bank, reserves, sanctions screening, refunds and disputes have clear owners and reconciliation steps."]
+    ],
     checklistTitle: "Prepare the Middle East payment brief",
     checklist: ["Target countries and customer split", "Merchant entity and licence status", "Cards, bank rails and wallets", "Currencies, FX and settlement bank", "Volume, ticket size and disputes", "Integration, support and launch order"],
     faqs: [
@@ -452,6 +512,7 @@ export const seoPages = [
   },
   {
     slug: "payment-provider-africa",
+    modified: "2026-08-31",
     title: "Payment Provider Matching in Africa | OfferPSP",
     description: "Private PSP matching across African markets: cards, mobile money, bank methods, currencies and payouts. Get a qualified provider introduction securely.",
     kicker: "Africa payment coverage",
@@ -466,6 +527,14 @@ export const seoPages = [
       ["Currencies and settlement", "Define local pricing, FX, settlement currency, reserves, banking location, payout timing and repatriation constraints."],
       ["Pay-ins, refunds and payouts", "Collection, recurring payments, refunds, marketplace disbursements and merchant payouts need separate coverage, limits and reconciliation."]
     ],
+    decisionTitle: "Build an Africa route from country-level facts",
+    decisionIntro: "The matching brief must separate markets where cards, bank transfers, mobile money and payout infrastructure play different roles.",
+    decisionPoints: [
+      ["Priority countries come first", "South Africa, Nigeria, Kenya, Egypt, Ghana, Morocco and other markets are ordered by real launch need, customer volume and entity eligibility."],
+      ["Collection and payout needs are distinct", "Pay-ins, refunds, merchant settlement and beneficiary payouts are documented separately because one route may not support every flow."],
+      ["Method selection is evidence-based", "Cards, account transfers, mobile money and cash-linked methods are prioritised using the merchant’s country and customer journey—not a continent-wide assumption."],
+      ["Currency and treasury constraints are visible", "Local pricing, FX, settlement currency, banking, reserves, repatriation and reconciliation are included before a provider route is shortlisted."]
+    ],
     checklistTitle: "Prepare the Africa payment matrix",
     checklist: ["Priority countries and launch order", "Entity, licences and local presence", "Cards, mobile money and bank methods", "Currencies, FX and settlement", "Pay-in, refund and payout requirements", "Volume, ticket size and integration"],
     faqs: [
@@ -479,6 +548,7 @@ export const seoPages = [
   },
   {
     slug: "psp-matching-process",
+    modified: "2026-08-31",
     title: "How PSP Matching Works | OfferPSP",
     description: "A practical four-step PSP matching process: prepare the merchant brief, screen provider fit, review a focused shortlist and arrange qualified introductions.",
     kicker: "PSP matching process",
@@ -493,6 +563,14 @@ export const seoPages = [
       ["Screen practical provider fit", "We compare the brief with current coverage, method, risk, integration, limit and settlement constraints. Missing facts are clarified rather than invented."],
       ["Review a focused shortlist", "Relevant routes are explained without presenting a generic directory. Provider identity remains controlled until the case is ready for a qualified conversation."],
       ["Confirm interest and introduce", "A provider reviews the merchant dossier and can accept, decline or request more information. A controlled introduction follows only after explicit interest."]
+    ],
+    decisionTitle: "What a merchant receives at each stage",
+    decisionIntro: "The process is designed to preserve the operating context and make every next step visible without presenting a decorative provider list.",
+    decisionPoints: [
+      ["A completeness review", "Missing licences, GEOs, payment flows, volume or risk evidence are identified before the profile is treated as ready."],
+      ["A route rationale", "Each candidate route must have a stated reason tied to GEO, method, vertical appetite, limits, integration or settlement."],
+      ["A controlled decision record", "The merchant can review shortlisted options while confidential provider identity and source economics remain protected until the introduction gate."],
+      ["A provider response", "The PSP can accept, decline or request more information; only explicit interest moves the case into a shared introduction and onboarding conversation."]
     ],
     checklistTitle: "Information that improves the match",
     checklist: ["Legal entity and product URL", "Licence and operating status", "Target markets and currencies", "Methods, flows and settlement", "Volume, ticket and processing history", "Integration, timing and current blockers"],
@@ -545,7 +623,7 @@ const buildStructuredData = (page) => {
       about: { "@id": `${url}#service` },
       breadcrumb: { "@id": `${url}#breadcrumb` },
       inLanguage: language,
-      dateModified: siteContentRevision
+      dateModified: page.modified || siteContentRevision
     },
     {
       "@type": "Service",
@@ -666,6 +744,19 @@ export const renderPage = (page) => {
               <div><h3>${escapeHtml(title)}</h3><p>${escapeHtml(text)}</p></div>
             </article>`).join("");
   const checklist = page.checklist.map((item) => `<div class="check"><strong>${escapeHtml(item)}</strong></div>`).join("\n");
+  const decisionPoints = (page.decisionPoints || []).map(([title, text], index) => `
+            <article class="point">
+              <div class="point-index">D${index + 1}</div>
+              <div><h3>${escapeHtml(title)}</h3><p>${escapeHtml(text)}</p></div>
+            </article>`).join("");
+  const decisionSection = decisionPoints ? `
+    <section class="content-section decision-section" id="decision-checkpoints">
+      <div class="container section-grid">
+        <div><div class="kicker">${language === "ru" ? "Критерии решения" : "Decision checkpoints"}</div><h2>${escapeHtml(page.decisionTitle)}</h2><p class="section-intro">${escapeHtml(page.decisionIntro)}</p></div>
+        <div class="points">${decisionPoints}
+        </div>
+      </div>
+    </section>` : "";
   const faqs = page.faqs.map(([question, answer]) => `
             <details>
               <summary>${escapeHtml(question)}</summary>
@@ -745,13 +836,14 @@ ${structuredData}
         </div>
       </div>
     </section>
-    <section class="content-section">
+${decisionSection}
+    <section class="content-section${decisionPoints ? " alt" : ""}">
       <div class="container section-grid">
         <div><div class="kicker">${ui.inputs}</div><h2>${escapeHtml(page.checklistTitle)}</h2><p class="section-intro">${ui.inputHelp}</p></div>
         <div class="checklist">${checklist}</div>
       </div>
     </section>
-    <section class="content-section alt" id="faq">
+    <section class="content-section${decisionPoints ? "" : " alt"}" id="faq">
       <div class="container section-grid">
         <div><div class="kicker">${ui.questions}</div><h2>${ui.commonQuestions}</h2></div>
         <div class="faq-list">${faqs}

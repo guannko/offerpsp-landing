@@ -128,7 +128,7 @@ for (const page of seoPages) {
   assert.ok(sitemap.includes(`<loc>${url}</loc>`), `${page.slug} is missing from sitemap.xml`);
   assert.ok(llms.includes(url), `${page.slug} is missing from llms.txt`);
   assert.ok(
-    sitemap.includes(`<loc>${url}</loc>\n    <lastmod>${siteContentRevision}</lastmod>`),
+    sitemap.includes(`<loc>${url}</loc>\n    <lastmod>${page.modified || siteContentRevision}</lastmod>`),
     `${page.slug} sitemap lastmod must reflect the current content revision`,
   );
   const pageImages = contentImages(renderPage(page));
@@ -147,10 +147,8 @@ for (const page of seoPages) {
   }
 }
 
-for (const slug of [
+const strengthenedSlugs = [
   "high-risk-payment-provider",
-  "payment-provider-for-ecommerce",
-  "psp-for-video-games",
   "psp-for-igaming",
   "psp-for-forex",
   "psp-for-crypto-businesses",
@@ -158,9 +156,36 @@ for (const slug of [
   "payment-provider-asia-pacific",
   "payment-provider-middle-east",
   "payment-provider-africa",
-]) {
+  "psp-matching-process",
+];
+
+for (const slug of strengthenedSlugs) {
   assert.ok(home.includes(`href="/${slug}.html"`), `${slug} must be linked from the home page`);
+  const page = seoPages.find((candidate) => candidate.slug === slug);
+  assert.equal(page.modified, "2026-08-31", `${slug} must record the substantive content update`);
+  assert.ok(page.decisionPoints?.length >= 4, `${slug} must include concrete decision checkpoints`);
+  const rendered = renderPage(page);
+  assert.ok(rendered.includes(page.decisionTitle), `${slug} must render its decision checkpoint section`);
+  assert.ok(
+    sitemap.includes(`<loc>https://offerpsp.com/${slug}.html</loc>\n    <lastmod>2026-08-31</lastmod>`),
+    `${slug} sitemap lastmod must reflect the substantive content update`,
+  );
 }
+
+for (const [slug, anchor] of [
+  ["psp-for-crypto-businesses", "PSP matching for crypto businesses"],
+  ["payment-provider-latin-america", "Payment providers in Latin America"],
+  ["payment-provider-asia-pacific", "Payment providers across Asia-Pacific"],
+  ["payment-provider-middle-east", "Payment providers in the Middle East"],
+  ["payment-provider-africa", "Payment providers across Africa"],
+]) {
+  assert.ok(home.includes(`href="/${slug}.html"`), `${slug} must have an inbound home-page link`);
+  assert.ok(home.includes(`>${anchor}</a>`), `${slug} must use a descriptive internal anchor`);
+}
+
+assert.match(home, /<title>Private PSP Matching for Merchants \| OfferPSP<\/title>/, "home title must target merchant PSP matching");
+assert.match(home, /<h1>Private PSP matching\./, "home H1 must state the primary service directly");
+assert.ok(home.includes('href="/psp-matching-process.html"'), "home must link to the complete matching process");
 
 for (const slug of [
   "payment-provider-europe",
@@ -175,9 +200,9 @@ for (const slug of [
   assert.match(page.description, /qualified introductions/i, `${slug} must describe the qualified outcome`);
   assert.match(page.description, /without a public provider list/i, `${slug} must explain the non-directory model`);
   assert.ok(page.description.length <= 160, `${slug} meta description must remain snippet-sized`);
-  assert.equal(page.modified, "2026-08-28", `${slug} structured data must record the content update`);
+  assert.ok(page.modified, `${slug} structured data must record the content update`);
   assert.ok(
-    sitemap.includes(`<loc>https://offerpsp.com/${slug}.html</loc>\n    <lastmod>2026-08-28</lastmod>`),
+    sitemap.includes(`<loc>https://offerpsp.com/${slug}.html</loc>\n    <lastmod>${page.modified}</lastmod>`),
     `${slug} sitemap lastmod must reflect the content update`,
   );
 }
