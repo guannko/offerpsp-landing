@@ -93,6 +93,27 @@ type PublicPageCheck = {
   indexable?: boolean;
   structured_data_blocks?: number;
 };
+type AuditSource = {
+  id: string;
+  label: string;
+  mode: "executed" | "independent" | "local_only";
+  status: "completed" | "failed" | "not_triggered";
+  checked_at?: string | null;
+  message: string;
+  metrics?: Record<string, string | number | null>;
+};
+type AuditSourceMatrix = {
+  version?: string;
+  checked_at?: string;
+  summary?: {
+    executed?: number;
+    completed?: number;
+    failed?: number;
+    independent?: number;
+    local_only?: number;
+  };
+  sources?: AuditSource[];
+};
 type GoogleSearchConsole = {
   source: "google_search_console";
   fetched_at: string;
@@ -134,6 +155,7 @@ type TechnicalAudit = {
       sitemap?: { ok?: boolean; status?: number };
       structured_data?: { ok?: boolean; blocks?: number };
     };
+    source_matrix?: AuditSourceMatrix;
   };
 };
 type AuditRun = {
@@ -260,6 +282,7 @@ export default function SeoGeoPage() {
   const analyticsLoadedAt = useRef(0);
   const liveTrafficLoadedAt = useRef(0);
   const googleLoadedAt = useRef(0);
+  const previousAuditStatus = useRef<AuditRun["status"]>(undefined);
 
   const load = useCallback((background = false) => {
     if (analyticsLoadInFlight.current) return analyticsLoadInFlight.current;
@@ -382,6 +405,15 @@ export default function SeoGeoPage() {
     return () => window.clearInterval(interval);
   }, [auditActive, load]);
 
+  useEffect(() => {
+    const previous = previousAuditStatus.current;
+    previousAuditStatus.current = auditRun.status;
+    if ((previous === "queued" || previous === "running") && auditRun.status === "completed") {
+      setRefreshNotice("Полный аудит завершён. SiteOne, SEO/GEO‑агент, Google Search Console и Vercel обновлены; независимые инструменты отмечены отдельно.");
+      void Promise.allSettled([loadLiveTraffic(), loadGoogle()]);
+    }
+  }, [auditRun.status, loadGoogle, loadLiveTraffic]);
+
   const startAudit = useCallback(async () => {
     setStartingAudit(true);
     setError(null);
@@ -400,8 +432,8 @@ export default function SeoGeoPage() {
       setRefreshNotice(result.reused
         ? "Аудит уже выполняется. Страница обновится автоматически после завершения."
         : result.status === "completed"
-          ? "Новый crawl и AI-анализ завершены. Ниже показаны свежие результаты SiteOne и нашего SEO/GEO-агента."
-          : "Полный аудит запущен. SiteOne проверяет production-сайт, затем наш агент расставит приоритеты.");
+          ? "Полный аудит завершён. Ниже показан результат каждого источника."
+          : "Полный аудит запущен: SiteOne проверяет сайт, Google и Vercel обновляют данные, затем SEO/GEO‑агент расставит приоритеты.");
       await load(true);
     } catch (startError) {
       setError(startError instanceof Error ? startError.message : "Не удалось запустить SEO-аудит");
@@ -423,6 +455,8 @@ export default function SeoGeoPage() {
   const agentPriorities = agent.priorities || [];
   const categoryScores = Object.entries(audit.category_scores || {});
   const geoSignals = audit.metadata?.geo_signals;
+  const sourceMatrix = audit.metadata?.source_matrix;
+  const auditSources = sourceMatrix?.sources || [];
   const referrers = (traffic?.referrers || []).map((row) => ({ ...row, key: row.key === "direct" ? "Прямой заход" : row.key }));
   const recent = attribution.recent || [];
   const sourceRows = attribution.sources || [];
@@ -583,6 +617,26 @@ export default function SeoGeoPage() {
           <tbody>{campaignRows.map((row, index) => <tr key={`${row.source}-${row.campaign}-${index}`} className="border-b border-gray-100 last:border-0 dark:border-gray-800"><td className="px-3 py-4"><strong className="block text-gray-800 dark:text-white/90">{sourceName(row.source)}</strong><span className="text-xs text-gray-400">{row.campaign || "Без названия кампании"}</span></td><td className="px-3 py-4 text-gray-500">{row.medium || "—"}</td><td className="px-3 py-4 text-right font-semibold">{number(row.leads)}</td><td className="px-3 py-4 text-right">{number(row.qualified)}</td><td className="px-3 py-4 text-right">{number(row.won)}</td><td className="px-3 py-4 text-right">{number(row.live)}</td></tr>)}{!campaignRows.length && <tr><td colSpan={6} className="py-8"><EmptyState title="Платных или партнёрских лидов пока нет" description="После первого реального клика с UTM/click ID здесь появится его путь до результата."/></td></tr>}</tbody>
         </table>
       </div>
+    </Panel>
+
+    <Panel className="mt-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Источники полного аудита</h2><p className="mt-1 text-sm text-gray-500">Здесь видно, что именно проверено этим запуском, а что работает независимо. Статусы не подменяются старыми результатами.</p></div>
+        <span className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500 dark:bg-white/[0.03]">{sourceMatrix?.checked_at ? `Запуск ${dateTime(sourceMatrix.checked_at)}` : "Новый контур ещё не запускался"}</span>
+      </div>
+      {auditSources.length ? <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {auditSources.map((source) => {
+          const completed = source.status === "completed";
+          const failed = source.status === "failed";
+          const statusLabel = completed ? "Проверено этим запуском" : failed ? "Ошибка этого запуска" : source.mode === "local_only" ? "Только локально" : "Работает отдельно";
+          return <div key={source.id} className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+            <div className="flex items-start justify-between gap-3"><strong className="text-sm text-gray-900 dark:text-white">{source.label}</strong><span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${completed ? "bg-success-500" : failed ? "bg-error-500" : "bg-gray-300 dark:bg-gray-600"}`}/></div>
+            <span className={`mt-2 block text-xs font-semibold ${completed ? "text-success-600 dark:text-success-400" : failed ? "text-error-600 dark:text-error-400" : "text-gray-500"}`}>{statusLabel}</span>
+            <p className="mt-2 text-xs leading-5 text-gray-500">{source.message}</p>
+            {source.checked_at && <span className="mt-3 block text-xs text-gray-400">{dateTime(source.checked_at)}</span>}
+          </div>;
+        })}
+      </div> : <div className="mt-5 rounded-xl border border-warning-200 bg-warning-50 p-4 text-sm text-warning-800 dark:border-warning-500/20 dark:bg-warning-500/10 dark:text-warning-300">Текущий сохранённый аудит создан до объединения источников. Следующий запуск запишет отдельный статус SiteOne, агента, Google, Vercel, Bing, Ahrefs и Screaming Frog.</div>}
     </Panel>
 
     <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">

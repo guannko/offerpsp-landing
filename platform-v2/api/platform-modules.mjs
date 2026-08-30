@@ -22,6 +22,11 @@ import { runSiteOneAudit } from "./_lib/siteone-runner.mjs";
 import { collectSeoAgentEvidence, runSeoGeoAgent } from "./_lib/seo-geo-agent.mjs";
 import { getGoogleSearchConsoleOverview } from "./_lib/google-search-console.mjs";
 import { getLiveVercelTraffic } from "./_lib/vercel-web-analytics.mjs";
+import {
+  buildSeoAuditSourceMatrix,
+  collectLiveSeoAuditSources,
+  seoAgentExternalEvidence,
+} from "./_lib/seo-audit-sources.mjs";
 import { probeDocling } from "./_lib/modules/docling.mjs";
 import {
   evaluateMerchantRouteRisk,
@@ -193,10 +198,13 @@ async function executeAuditRun(runId) {
   });
 
   try {
+    const liveSourcesPromise = collectLiveSeoAuditSources();
     const report = await runSiteOneAudit();
     const audit = normalizeSiteOneAudit(report, "https://offerpsp.com/");
     audit.metadata = { ...audit.metadata, geo_signals: await collectGeoSignals() };
     const evidence = await collectSeoAgentEvidence(audit);
+    const liveSources = await liveSourcesPromise;
+    evidence.external_sources = seoAgentExternalEvidence(liveSources);
     audit.metadata.public_page_checks = publicPageChecksFromEvidence(evidence);
     const affectedFormPages = evidence.pages
       .filter((page) => Number(page?.form_controls?.unlabeled || 0) > 0)
@@ -219,6 +227,7 @@ async function executeAuditRun(runId) {
         error_message: String(agentError?.message || agentError).slice(0, 500),
       };
     }
+    audit.metadata.source_matrix = buildSeoAuditSourceMatrix({ audit, liveSources });
     const inserted = await serviceSupabaseRequest("offerpsp_technical_audits", {
       method: "POST",
       headers: { Prefer: "return=representation" },
@@ -239,6 +248,7 @@ async function executeAuditRun(runId) {
           tool_version: audit.tool_version,
           agent_status: audit.agent_analysis?.status || "unknown",
           agent_model: audit.agent_analysis?.model || null,
+          source_matrix: audit.metadata.source_matrix.summary,
         },
       }),
     });
