@@ -30,6 +30,36 @@ movement remains an external outcome that must be measured over the following we
 - [ ] Measure Google impressions, CTR, positions and indexing after the normal search-engine delay;
   deployment itself is not evidence of traffic or ranking growth.
 
+## Full system control audit — 2026-08-31
+
+Status: `VERIFIED` for read-only production checks. Full evidence and remediation order:
+`docs/OFFERPSP-CONTROL-AUDIT-2026-08-31.md`.
+
+- [x] Checked public site, merchant/PSP cabinets, Captain's Bridge, gateway modules, dedicated
+  Supabase health/advisors/logs, operational queues and all eleven active OfferPSP/PSP workflows.
+- [x] Found no P0 defect. All eleven workflows validate with zero errors; recent scheduled
+  OfferPSP executions succeed and no OfferPSP failure appears in the latest 100 n8n errors.
+- [x] Replaced the Telegram/Captain's Bridge model with low-latency `deepseek-v4-pro` while
+  preserving the BIXOFFPSP memory and tool contract. Executions `436095`, `436096`, `436098` and
+  `436099` verified canonical PAYOK lookup, 66 linked offers, memory recall and Telegram-draft
+  preparation without an external send. OpenAI comparison executions `436053` and `436060` both
+  reached the same account rate limit and were rolled back before the verified DeepSeek cutover.
+- [x] Attached `BIX — Global Error Alerts` to the eight previously uncovered active OfferPSP/PSP
+  workflows and to the shared Telegram/Captain's Bridge AI core. All eleven profile workflows plus
+  the AI core now have the shared error route and validate with zero errors.
+- [x] Removed the embedded Groq Authorization header from inactive `PSP | Email Outreach`, attached
+  the n8n-managed `Groq account` credential and verified that the hardcoded-secret scan no longer
+  flags the workflow. Keep it inactive until the formerly exposed provider key is rotated.
+- [x] Applied `20260831013000_offerpsp_experience_event_policy_initplan`; the production Supabase
+  performance advisor now reports zero warnings.
+- [x] Added canonical-provider action `aibot_n8n_operating_desk_v4` via migration
+  `20260831010000_aibot_canonical_provider_search`. The active agent now separates OfferPSP supplier
+  UUID/provider-code records from integer-ID AIBot research cards instead of conflating
+  `status_scope` semantics.
+- [ ] Remaining P1 before partner outreach: rotate the previously exposed Telegram credential and
+  Groq provider key, then run one controlled post-cutover Telegram reply and email delivery smoke.
+- [ ] Remaining P2: complete the isolated disaster-recovery rehearsal.
+
 ## Technical stabilization and isolated production — 2026-08-27
 
 Status: `VERIFIED` for the dedicated OfferPSP database, role/E2E boundaries, active automation
@@ -413,9 +443,9 @@ agent command.
   `https://ops-7q4m2x9k8v3n.vercel.app`. Authenticated UI smoke opened the assistant and the command
   `Покажи первые 3 неархивированных PSP. Ничего не изменяй.` returned BR-Pay, Acquired.com and
   AntrPay from the working database without a mutation.
-- [ ] Clean up the ambiguous Operating Desk `status_scope=active` filter. The live agent correctly
-  fell back to `record_state=active`, so current work is not blocked, but the old filter name and
-  semantics should be aligned before multi-tenant packaging.
+- [x] Separated canonical OfferPSP providers from legacy research PSP cards with
+  `search_canonical_providers` in Operating Desk v4. Canonical UUID/provider-code lookups now use
+  `record_state`; the legacy integer-ID research action retains its own `status_scope` semantics.
 
 ## Atomic offer replacement and Worldwide coverage — 2026-08-10
 
@@ -1528,9 +1558,10 @@ stay isolated behind feature modes until their own verification is complete.
   `9656e27a-5b51-469f-ae97-e80b3c6e0ef7` scored 9.9 with 31/31 successful URLs, zero broken URLs
   and no duplicate or empty content recommendations. The normalizer also discards the verified
   private portal's intentional noindex notice and summary claims contradicted by live `llms.txt`.
-- [ ] Add verified FAQPage and HowTo JSON-LD to the six vertical pages identified by audit
+- [x] Add verified FAQPage and HowTo JSON-LD to the six vertical pages identified by audit
   `9656e27a-5b51-469f-ae97-e80b3c6e0ef7`, using only questions and steps already visible on each
-  page; rerun the live audit before closing this separate P1 GEO task.
+  page; build regressions compare visible FAQ content with FAQPage JSON-LD exactly, and live audit
+  `f365e8a5-0c43-41df-9af4-fcb80e6136e8` completed after the production rollout.
 
 ### Captain's Bridge restart remediation — verified 2026-08-20
 
@@ -1547,10 +1578,12 @@ stay isolated behind feature modes until their own verification is complete.
   verify the eight live candidates can be selected and cleared without creating a shortlist.
 - [x] Increase AIBot context windows from 16/8 to 30/12 and validate the active n8n workflow with
   zero errors.
-- [ ] Replace `deepseek-chat` with `gpt-5.4-mini` after an OpenAI API credential is available in n8n;
-  keep BIXOFFPSP memory regardless of model.
-- [ ] Observe scheduled mailbox polling after the 10-message batch and 45-second work-budget fix;
-  unprocessed messages must remain deferred rather than cause a 60-second Vercel timeout.
+- [x] Replaced `deepseek-chat` with `deepseek-v4-pro` in low-latency mode after both
+  `gpt-5.4-mini` and `gpt-4o-mini` hit the same OpenAI account rate limit. The verified production
+  model keeps BIXOFFPSP memory and the existing tool contract; OpenAI remains an optional future
+  comparison after account quota is restored, not a launch dependency.
+- [x] Observe scheduled mailbox polling after the 10-message batch and 45-second work-budget fix;
+  the five latest checked minute runs on 2026-08-30 completed successfully without a timeout.
 - [ ] Run a separate shared-Supabase security review for RLS-disabled tables and authenticated
   security-definer RPCs before making any broad policy change.
 
