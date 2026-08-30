@@ -60,6 +60,22 @@ Status: `VERIFIED` for read-only production checks. Full evidence and remediatio
   Groq provider key, then run one controlled post-cutover Telegram reply and email delivery smoke.
 - [ ] Remaining P2: complete the isolated disaster-recovery rehearsal.
 
+## PSP partner discovery — 2026-08-31
+
+Status: `PARTIAL` research only. No candidate was contacted and no new provider record was created.
+Initial evidence and ranking: `docs/PSP-PARTNER-PIPELINE-2026-08-31.md`.
+
+- [x] Checked the first six candidates against canonical providers and research PSP cards. Payop
+  already exists as `psp_research:19`; Rapyd, Sheepy, INXY, RocketFuel and Paysecure returned no
+  OfferPSP match.
+- [x] Verified current official partner-program pages and ranked Rapyd, Payop, Sheepy and INXY as
+  the first due-diligence group. RocketFuel remains a crypto-specialist second-line candidate;
+  Paysecure is an ecosystem/orchestration lead rather than a clean supplier match.
+- [ ] Complete legal, licensing, vertical/GEO, settlement, lead-protection and commission due
+  diligence before creating or updating partner cards.
+- [ ] Do not send applications or outreach until the remaining credential rotation and delivery
+  smoke gates in the control audit are closed.
+
 ## Technical stabilization and isolated production — 2026-08-27
 
 Status: `VERIFIED` for the dedicated OfferPSP database, role/E2E boundaries, active automation
