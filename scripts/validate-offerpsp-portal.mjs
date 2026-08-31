@@ -193,6 +193,12 @@ assert.deepEqual(vercelConfig.rewrites, [
     destination: "https://iceopurxqzqmwtcmwfzl.supabase.co/:path*",
   },
 ]);
+assert.deepEqual(vercelConfig.redirects[0], {
+  source: "/instagram",
+  destination:
+    "https://offerpsp.com/?utm_source=instagram&utm_medium=organic_social&utm_campaign=profile_2026&utm_content=bio",
+  statusCode: 302,
+});
 if (selfServiceProfileMigration) {
   assert.match(selfServiceProfileMigration, /security definer/);
   assert.match(selfServiceProfileMigration, /pg_advisory_xact_lock/);
