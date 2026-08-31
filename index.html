@@ -41,6 +41,10 @@
         "alternateName": "OfferPSP",
         "url": "https://offerpsp.com/",
         "email": "bizdev@offerpsp.com",
+        "sameAs": [
+          "https://www.instagram.com/offerpsp/",
+          "https://t.me/offerpsp"
+        ],
         "brand": {
           "@type": "Brand",
           "name": "OfferPSP"
@@ -1585,6 +1589,44 @@
       font-size: 14px;
     }
 
+    .footer-social {
+      margin-top: 22px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .footer-social a {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: #a3a6af;
+      background: rgba(255, 255, 255, .025);
+      text-decoration: none;
+      transition: color .2s ease, border-color .2s ease, background .2s ease, transform .2s ease;
+    }
+
+    .footer-social a:hover,
+    .footer-social a:focus-visible {
+      color: var(--paper);
+      border-color: rgba(255, 77, 122, .55);
+      background: rgba(255, 77, 122, .08);
+      transform: translateY(-2px);
+    }
+
+    .footer-social a:focus-visible {
+      outline: 2px solid var(--coral);
+      outline-offset: 3px;
+    }
+
+    .footer-social svg {
+      width: 19px;
+      height: 19px;
+    }
+
     .footer-links {
       display: flex;
       flex-wrap: wrap;
@@ -2335,6 +2377,17 @@
             </picture>
           </a>
           <p class="footer-statement">Private payment-partner matching for complex merchant profiles.</p>
+          <div class="footer-social" role="navigation" aria-label="OfferPSP social profiles">
+            <a href="https://www.instagram.com/offerpsp/" target="_blank" rel="noopener noreferrer" aria-label="OfferPSP on Instagram" title="OfferPSP on Instagram">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4.2"></circle><circle cx="17.4" cy="6.7" r="1" fill="currentColor" stroke="none"></circle></svg>
+            </a>
+            <a href="https://t.me/offerpsp" target="_blank" rel="noopener noreferrer" aria-label="OfferPSP on Telegram" title="OfferPSP on Telegram">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3 3.8 9.7c-.9.4-.9 1.2.1 1.5l4.4 1.4 1.7 5.1c.3.9 1 .9 1.5.3l2.5-2.5 4.5 3.3c.8.5 1.4.2 1.6-.8L22 4.3c.2-1-.3-1.6-1-1.3Z"></path><path d="m8.3 12.6 9.4-6.1-7.7 8.4"></path></svg>
+            </a>
+            <a href="https://www.linkedin.com/in/borys-kononenko-offerpsp/" target="_blank" rel="noopener noreferrer" aria-label="Borys Kononenko on LinkedIn" title="Founder on LinkedIn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"></rect><path d="M8 10v7M8 7.3v.1M11.5 17v-7m0 3c0-1.7 1.2-3 2.8-3 1.5 0 2.7 1.1 2.7 3v4"></path></svg>
+            </a>
+          </div>
         </div>
         <nav class="footer-links" aria-label="Footer navigation">
           <a href="#process">Process</a>

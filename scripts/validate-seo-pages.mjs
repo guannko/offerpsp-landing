@@ -74,6 +74,11 @@ const faqSchemaEntries = (html) => [...html.matchAll(
 });
 
 const renderedPages = [home, terms, privacy, ...seoPages.map(renderPage)];
+const liveSocialProfiles = [
+  "https://www.instagram.com/offerpsp/",
+  "https://t.me/offerpsp",
+  "https://www.linkedin.com/in/borys-kononenko-offerpsp/",
+];
 const scriptDirective = cspDirective("script-src");
 const styleDirective = cspDirective("style-src");
 assert.ok(scriptDirective, "CSP must define script-src");
@@ -87,6 +92,12 @@ for (const source of renderedPages.flatMap(inlineStyles)) {
   assert.ok(styleDirective.includes(sha256(source)), "every inline style block must be covered by a CSP hash");
 }
 for (const [index, renderedPage] of renderedPages.entries()) {
+  for (const profileUrl of liveSocialProfiles) {
+    assert.ok(renderedPage.includes(`href="${profileUrl}"`), `rendered page ${index + 1} must link to ${profileUrl}`);
+  }
+  assert.ok(renderedPage.includes('class="footer-social"'), `rendered page ${index + 1} must expose an accessible social profile group`);
+  assert.ok(!renderedPage.includes("x.com/offerpsp"), `rendered page ${index + 1} must not link to unfinished X profile`);
+  assert.ok(!renderedPage.includes("threads.com/@offerpsp"), `rendered page ${index + 1} must not link to unfinished Threads profile`);
   const visibleFaq = visibleFaqEntries(renderedPage);
   if (visibleFaq.length === 0) continue;
   const schemaFaq = faqSchemaEntries(renderedPage);

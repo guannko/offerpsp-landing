@@ -62,7 +62,24 @@ th, td { padding: 14px 16px; border: 1px solid var(--line); text-align: left; ve
 th { color: var(--paper); background: var(--panel); }
 td { color: var(--muted); }
 strong { color: var(--paper); }
-footer { padding: 28px 0 44px; border-top: 1px solid var(--line); color: #6f7480; font-size: 12px; }
+footer { padding: 28px 0 44px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-top: 1px solid var(--line); color: #6f7480; font-size: 12px; }
+.footer-social { display: flex; flex-wrap: wrap; gap: 10px; }
+.footer-social a {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  background: rgba(255,255,255,.025);
+  text-decoration: none;
+  transition: color .2s ease, border-color .2s ease, background .2s ease, transform .2s ease;
+}
+.footer-social a:hover,
+.footer-social a:focus-visible { color: var(--paper); border-color: rgba(255,77,122,.55); background: rgba(255,77,122,.08); transform: translateY(-2px); }
+.footer-social a:focus-visible { outline: 2px solid var(--coral); outline-offset: 3px; }
+.footer-social svg { width: 18px; height: 18px; }
 
 @media (max-width: 640px) {
   nav, main, footer { width: min(calc(100% - 28px), 900px); }
@@ -70,4 +87,5 @@ footer { padding: 28px 0 44px; border-top: 1px solid var(--line); color: #6f7480
   main { padding: 60px 0 90px; }
   .brand-logo { height: 42px; }
   .back-to-top { right: 14px; bottom: 14px; }
+  footer { align-items: flex-start; flex-direction: column; }
 }

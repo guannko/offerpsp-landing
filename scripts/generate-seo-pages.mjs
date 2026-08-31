@@ -603,6 +603,10 @@ const buildStructuredData = (page) => {
       alternateName: "OfferPSP",
       url: "https://offerpsp.com/",
       email: "bizdev@offerpsp.com",
+      sameAs: [
+        "https://www.instagram.com/offerpsp/",
+        "https://t.me/offerpsp"
+      ],
       brand: { "@type": "Brand", name: "OfferPSP" }
     },
     {
@@ -702,6 +706,7 @@ export const renderPage = (page) => {
     terms: "Условия",
     contact: "Связаться",
     footerNav: "Навигация в подвале",
+    socialNav: "Социальные сети OfferPSP",
     backToTop: "Наверх"
   } : {
     skip: "Skip to content",
@@ -728,6 +733,7 @@ export const renderPage = (page) => {
     terms: "Terms",
     contact: "Contact",
     footerNav: "Footer navigation",
+    socialNav: "OfferPSP social profiles",
     backToTop: "Back to top"
   };
   const alternateLinks = (page.alternates || [])
@@ -864,7 +870,14 @@ ${decisionSection}
   </main>
   <footer class="site-footer">
     <div class="container footer-grid">
-      <div>© 2026 OfferPSP · operated by offerpsp.com</div>
+      <div class="footer-identity">
+        <div>© 2026 OfferPSP · operated by offerpsp.com</div>
+        <div class="footer-social" role="navigation" aria-label="${ui.socialNav}">
+          <a href="https://www.instagram.com/offerpsp/" target="_blank" rel="noopener noreferrer" aria-label="OfferPSP on Instagram" title="OfferPSP on Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4.2"></circle><circle cx="17.4" cy="6.7" r="1" fill="currentColor" stroke="none"></circle></svg></a>
+          <a href="https://t.me/offerpsp" target="_blank" rel="noopener noreferrer" aria-label="OfferPSP on Telegram" title="OfferPSP on Telegram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3 3.8 9.7c-.9.4-.9 1.2.1 1.5l4.4 1.4 1.7 5.1c.3.9 1 .9 1.5.3l2.5-2.5 4.5 3.3c.8.5 1.4.2 1.6-.8L22 4.3c.2-1-.3-1.6-1-1.3Z"></path><path d="m8.3 12.6 9.4-6.1-7.7 8.4"></path></svg></a>
+          <a href="https://www.linkedin.com/in/borys-kononenko-offerpsp/" target="_blank" rel="noopener noreferrer" aria-label="Borys Kononenko on LinkedIn" title="Founder on LinkedIn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"></rect><path d="M8 10v7M8 7.3v.1M11.5 17v-7m0 3c0-1.7 1.2-3 2.8-3 1.5 0 2.7 1.1 2.7 3v4"></path></svg></a>
+        </div>
+      </div>
       <nav class="footer-links" aria-label="${ui.footerNav}"><a href="/">${ui.home}</a><a href="/privacy.html">${ui.privacy}</a><a href="/terms.html">${ui.terms}</a><a href="mailto:bizdev@offerpsp.com">${ui.contact}</a></nav>
     </div>
   </footer>
