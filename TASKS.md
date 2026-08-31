@@ -1,9 +1,71 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-08-31
+Updated: 2026-09-01
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
+
+## Social launch package — 2026-08-31
+
+Status: `VERIFIED` for local preparation and publication of package 1 on LinkedIn and Instagram.
+
+- [x] Reworked `docs/OFFERPSP-SOCIAL-LAUNCH.md` around the current private-matching stage and the
+  later transparent-marketplace direction without implying a public PSP catalogue, guaranteed
+  approval, existing clients or unverified partner scale.
+- [x] Defined LinkedIn founder profile as the initial B2B publishing surface, Instagram as the
+  visual/carousel surface and the current `@offerpsp` Telegram account as a direct contact rather
+  than a public content channel. X and Threads are reserved but remain excluded from the website
+  until their publishing roles are approved.
+- [x] Added verified 2026-08-31 social, Vercel and Search Console baseline values with source and
+  period, plus tested LinkedIn/Instagram UTM conventions that resolve to social attribution.
+- [x] Corrected the 1584×396 LinkedIn cover to the canonical `OfferPSP` / `offerpsp.com` branding
+  and rendered a matching PNG outside the left profile-photo overlay zone.
+- [x] Prepared final approval drafts for the first three LinkedIn/Instagram publications and a
+  six-slide 1080×1350 PNG/SVG carousel for publication 1. XML, renderer syntax, image dimensions
+  and social-attribution checks pass.
+- [x] Boris approved the exact publication 1 copy, tagged URL and carousel preview on 2026-08-31.
+- [x] Published and verified package 1 on 2026-08-31. LinkedIn post:
+  `https://www.linkedin.com/feed/update/urn:li:share:7500225994885128192/`. Instagram six-slide
+  carousel: `https://www.instagram.com/p/DctfVK8DGKt/`. The approved disclosure wording, LinkedIn
+  UTM and Instagram hashtags are present on the live posts.
+- [x] Updated the live Instagram business profile display name to `OfferPSP | PSP Matching`, replaced
+  the bio with the concise merchant/PSP positioning, added `bizdev@offerpsp.com` as the business
+  contact and hid the misleading `Financial Services` category label. The public profile and first
+  carousel were rechecked after saving; account recommendations remain enabled and Account Status
+  shows green checks for the visible content, reach and feature sections.
+- [x] Created and verified the public Threads profile `https://www.threads.com/@offerpsp` with the
+  Instagram profile image, display name `OfferPSP | PSP Matching`, canonical short bio and tagged
+  website link using `utm_source=threads`. The profile remains empty and is not linked from the site;
+  its badge is hidden from the public Instagram profile until Threads has an approved content role.
+- [x] Corrected the live LinkedIn founder profile to the canonical `Founder of OfferPSP` headline,
+  replaced the unverified-network claim with accurate build-and-verification wording and added the
+  tagged founder-profile website URL. The saved edit forms were re-read after submission.
+- [ ] Create the separate OfferPSP LinkedIn Company Page after the founder account has enough real
+  professional contacts. LinkedIn currently blocks page creation with `insufficient connections`;
+  do not bypass this by adding random contacts.
+- [x] Created and verified the public X profile `https://x.com/offerpsp` after Boris completed the
+  phone/SMS and password steps. Added the OfferPSP square logo, display name
+  `OfferPSP | PSP Matching`, canonical short bio and tagged website link. The profile has no posts,
+  followers or following and is not linked from the site. Email and phone discoverability are
+  disabled. The exact current recovery email remains `PARTIAL`: `bizdev@offerpsp.com` was added and
+  confirmed during setup, but a later independent read was blocked by X's password recheck.
+- [x] Created, rendered and uploaded the 1500×500 OfferPSP X cover. XML, renderer syntax, image
+  dimensions and `git diff --check` pass; the saved live profile was visually rechecked with the
+  avatar overlay and the cover copy remains readable.
+- [ ] Enable X two-factor authentication with Boris's authenticator app and retain the recovery
+  codes. The live security settings show SMS, authenticator app and security key disabled.
+- [x] Added and deployed the clean public bio URL `https://offerpsp.com/instagram`. Production
+  deployment `dpl_8pBHefXcfhqe1je2YVT9WmYETdti` is `READY`; the short path redirects to the
+  canonical Instagram UTM and resolves to the live landing page.
+- [x] Replaced the Instagram bio URL with `https://offerpsp.com/instagram`. The authenticated live
+  profile displays the clean path; the production redirect preserves canonical Instagram
+  attribution.
+- [ ] Enable Instagram two-factor authentication with Boris's authenticator app and retain the
+  recovery codes. The authenticated security screen confirms that 2FA is not currently configured.
+- [x] Prepared package 2 around a matchable merchant brief: final approval drafts for LinkedIn,
+  Instagram, X and Threads plus a seven-slide 1080×1350 Instagram PNG/SVG carousel. XML, renderer
+  syntax, image dimensions, platform text limits and `git diff --check` pass. Nothing was published.
+- [ ] Obtain Boris's approval of the exact package 2 copy and carousel before publishing anywhere.
 
 ## Organic acquisition foundation — 2026-08-31
 
