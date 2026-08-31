@@ -2,7 +2,8 @@
 
 Updated: 2026-08-26
 
-Owner and operator: offerpsp.com (Individual Entrepreneur, Georgia), trading as OfferPSP
+Owner and operator: Offerspsp.com (Individual Entrepreneur, Georgia), trading publicly as OfferPSP
+at `offerpsp.com`
 
 Scope: `/Users/borisboris/diskD/N8N/AIBot/offerpsp-landing`
 
@@ -48,8 +49,8 @@ Never report documentation, a checked task or a local test as proof of productio
 ## Product and commercial goal
 
 OfferPSP is a confidential B2B payment-matching, qualification and introduction platform
-operated by offerpsp.com. Brain Index may provide IT development support but is not the
-operator of the OfferPSP business.
+operated by Offerspsp.com and presented publicly at `offerpsp.com`. Brain Index may provide IT
+development support but is not the operator of the OfferPSP business.
 
 The canonical commercial direction and phased disclosure strategy are defined in
 `docs/OFFERPSP-BUSINESS-MODEL.md`. During the current supply-building stages, provider identity
