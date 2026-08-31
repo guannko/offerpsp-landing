@@ -72,13 +72,28 @@ const faqSchemaEntries = (html) => [...html.matchAll(
       answer: normalizeText(item.acceptedAnswer?.text),
     }));
 });
+const structuredDataNodes = (html) => [...html.matchAll(
+  /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
+)].flatMap((match) => {
+  const data = JSON.parse(match[1]);
+  return Array.isArray(data?.["@graph"]) ? data["@graph"] : [data];
+});
 
 const renderedPages = [home, terms, privacy, ...seoPages.map(renderPage)];
 const liveSocialProfiles = [
   "https://www.instagram.com/offerpsp/",
+  "https://x.com/offerpsp",
+  "https://www.threads.com/@offerpsp",
   "https://t.me/offerpsp",
   "https://www.linkedin.com/in/borys-kononenko-offerpsp/",
 ];
+const organizationProfiles = [
+  "https://www.instagram.com/offerpsp/",
+  "https://x.com/offerpsp",
+  "https://www.threads.com/@offerpsp",
+  "https://t.me/offerpsp",
+];
+const founderLinkedIn = "https://www.linkedin.com/in/borys-kononenko-offerpsp/";
 const scriptDirective = cspDirective("script-src");
 const styleDirective = cspDirective("style-src");
 assert.ok(scriptDirective, "CSP must define script-src");
@@ -96,8 +111,14 @@ for (const [index, renderedPage] of renderedPages.entries()) {
     assert.ok(renderedPage.includes(`href="${profileUrl}"`), `rendered page ${index + 1} must link to ${profileUrl}`);
   }
   assert.ok(renderedPage.includes('class="footer-social"'), `rendered page ${index + 1} must expose an accessible social profile group`);
-  assert.ok(!renderedPage.includes("x.com/offerpsp"), `rendered page ${index + 1} must not link to unfinished X profile`);
-  assert.ok(!renderedPage.includes("threads.com/@offerpsp"), `rendered page ${index + 1} must not link to unfinished Threads profile`);
+  const nodes = structuredDataNodes(renderedPage);
+  const organization = nodes.find((node) => node?.["@type"] === "Organization" && node.url === "https://offerpsp.com/");
+  assert.ok(organization, `rendered page ${index + 1} must identify the OfferPSP organization`);
+  assert.deepEqual(organization.sameAs, organizationProfiles, `rendered page ${index + 1} must expose every official brand profile in Organization sameAs`);
+  assert.deepEqual(organization.founder, { "@id": "https://offerpsp.com/#borys-kononenko" }, `rendered page ${index + 1} must connect the founder to OfferPSP`);
+  const founder = nodes.find((node) => node?.["@type"] === "Person" && node?.["@id"] === "https://offerpsp.com/#borys-kononenko");
+  assert.ok(founder, `rendered page ${index + 1} must identify the OfferPSP founder separately`);
+  assert.deepEqual(founder.sameAs, [founderLinkedIn], `rendered page ${index + 1} must attach LinkedIn to the founder, not to the brand`);
   const visibleFaq = visibleFaqEntries(renderedPage);
   if (visibleFaq.length === 0) continue;
   const schemaFaq = faqSchemaEntries(renderedPage);
@@ -106,6 +127,11 @@ for (const [index, renderedPage] of renderedPages.entries()) {
     visibleFaq,
     `rendered page ${index + 1} must include every visible FAQ question and answer in FAQPage JSON-LD`,
   );
+}
+
+assert.ok(home.includes('<meta name="twitter:site" content="@offerpsp">'), "home page must identify the official X account");
+for (const page of seoPages) {
+  assert.ok(renderPage(page).includes('<meta name="twitter:site" content="@offerpsp">'), `${page.slug} must identify the official X account`);
 }
 
 for (const [name, html] of [["home", home], ["privacy", privacy], ["terms", terms]]) {
@@ -254,7 +280,7 @@ for (const slug of [
   );
 }
 
-const attributionAsset = "/acquisition-attribution.js?v=20260827-1";
+const attributionAsset = "/acquisition-attribution.js?v=20260901-1";
 assert.ok(home.includes(attributionAsset), "home page must use a versioned acquisition attribution asset");
 assert.ok(generatorSource.includes(attributionAsset), "SEO pages must use a versioned acquisition attribution asset");
 

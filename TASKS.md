@@ -15,8 +15,8 @@ surfaces.
   approval, existing clients or unverified partner scale.
 - [x] Defined LinkedIn founder profile as the initial B2B publishing surface, Instagram as the
   visual/carousel surface and the current `@offerpsp` Telegram account as a direct contact rather
-  than a public content channel. X and Threads are reserved but remain excluded from the website
-  until their publishing roles are approved.
+  than a public content channel. X and Threads are approved secondary publishing surfaces after
+  their first verified publications.
 - [x] Added verified 2026-08-31 social, Vercel and Search Console baseline values with source and
   period, plus tested LinkedIn/Instagram UTM conventions that resolve to social attribution.
 - [x] Corrected the 1584×396 LinkedIn cover to the canonical `OfferPSP` / `offerpsp.com` branding
@@ -36,8 +36,8 @@ surfaces.
   shows green checks for the visible content, reach and feature sections.
 - [x] Created and verified the public Threads profile `https://www.threads.com/@offerpsp` with the
   Instagram profile image, display name `OfferPSP | PSP Matching`, canonical short bio and tagged
-  website link using `utm_source=threads`. Threads remains a secondary publishing surface and is not
-  yet linked from the site; its badge stays hidden from the public Instagram profile.
+  website link using `utm_source=threads`. Threads remains a secondary publishing surface; its
+  separate badge stays hidden from the public Instagram profile.
 - [x] Corrected the live LinkedIn founder profile to the canonical `Founder of OfferPSP` headline,
   replaced the unverified-network claim with accurate build-and-verification wording and added the
   tagged founder-profile website URL. The saved edit forms were re-read after submission.
@@ -47,8 +47,8 @@ surfaces.
 - [x] Created and verified the public X profile `https://x.com/offerpsp` after Boris completed the
   phone/SMS and password steps. Added the OfferPSP square logo, display name
   `OfferPSP | PSP Matching`, canonical short bio and tagged website link. At setup the profile had no
-  posts, followers or following and was not linked from the site. Email and phone discoverability
-  are disabled. The exact current recovery email remains `PARTIAL`: `bizdev@offerpsp.com` was added
+  posts, followers or following. Email and phone discoverability are disabled. The exact current
+  recovery email remains `PARTIAL`: `bizdev@offerpsp.com` was added
   and confirmed during setup, but a later independent read was blocked by X's password recheck.
 - [x] Created, rendered and uploaded the 1500×500 OfferPSP X cover. XML, renderer syntax, image
   dimensions and `git diff --check` pass; the saved live profile was visually rechecked with the
@@ -72,6 +72,20 @@ surfaces.
   `https://x.com/offerpsp/status/2094550165633782092`; Threads:
   `https://www.threads.com/@offerpsp/post/DcuJKC9igER`. The live text, Instagram caption and all seven
   carousel slides were rechecked after publication.
+- [x] Completed the public social identity integration on 2026-09-01. Every public page now links
+  Instagram, X, Threads, Telegram and the founder's LinkedIn profile in one responsive footer row.
+  Organization `sameAs` contains only the four official OfferPSP brand accounts; LinkedIn is
+  correctly represented through a separate founder `Person` node. Public service pages also expose
+  `twitter:site=@offerpsp`, while `llms.txt` lists the verified official profiles.
+- [x] Added Threads to the acquisition directory and bumped the immutable attribution asset to
+  `20260901-1`. Regression coverage verifies LinkedIn, Instagram, X and Threads as `social` while
+  retaining each platform identity and `organic_social` UTM medium.
+- [x] Published production deployment `dpl_2CZsm7aE1c9c3rAQDYvNbKjs8Xgz` (`READY`) and aliased it
+  to `https://offerpsp.com`. Live desktop and 390 px checks confirm five visible links in one row,
+  no horizontal overflow, the expected Organization/Person structured data and the new attribution
+  asset. Post-release audit run `43b1b147-a53f-4ae9-a69c-983135027f97` completed with technical
+  audit `4929690c-eff9-4529-a766-90a16a285d66`: 48/48 URLs succeeded, zero broken URLs and score 9.9;
+  the crawler now independently detects both X and Threads among the expected external links.
 
 ## Organic acquisition foundation — 2026-08-31
 

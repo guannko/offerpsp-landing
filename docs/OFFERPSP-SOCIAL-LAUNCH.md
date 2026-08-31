@@ -4,6 +4,11 @@ Updated: 2026-09-01
 
 Status: packages 1 and 2 published and verified on the approved social surfaces
 
+The public website integration is also live and verified as of 2026-09-01: all five approved
+profile/contact links are present across public pages, the four brand accounts are declared in
+Organization `sameAs`, the founder's LinkedIn is declared separately as a `Person`, and organic
+traffic from LinkedIn, Instagram, X and Threads resolves to the `social` attribution category.
+
 ## Purpose
 
 The first publications explain the current OfferPSP model without implying scale, existing clients,
@@ -28,11 +33,11 @@ Primary audiences:
 - **Telegram:** `@offerpsp` is currently a direct-contact account, not a public content channel.
   Keep it as a contact endpoint until Boris explicitly approves creating a separate public channel.
 - **Threads:** the public `@offerpsp` profile is a secondary text surface. Package 2 established its
-  first approved publication; keep it off the website and keep its Instagram badge hidden until a
-  consistent publishing cadence is established.
+  first approved publication. It is linked from the public website and declared as an official
+  OfferPSP profile in structured data; the separate Instagram badge may remain hidden.
 - **X:** the public `@offerpsp` profile is a secondary short-form text surface. Package 2 established
-  its first approved publication; keep it off the website until a consistent publishing cadence is
-  established.
+  its first approved publication. It is linked from the public website, declared as an official
+  OfferPSP profile in structured data and identified through `twitter:site` metadata.
 
 ## Canonical profile copy
 

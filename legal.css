@@ -63,7 +63,7 @@ th { color: var(--paper); background: var(--panel); }
 td { color: var(--muted); }
 strong { color: var(--paper); }
 footer { padding: 28px 0 44px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-top: 1px solid var(--line); color: #6f7480; font-size: 12px; }
-.footer-social { display: flex; flex-wrap: wrap; gap: 10px; }
+.footer-social { display: flex; flex-wrap: nowrap; gap: 10px; }
 .footer-social a {
   width: 40px;
   height: 40px;

@@ -26,6 +26,7 @@
   <meta property="og:image:alt" content="OfferPSP — The right PSP. Without the wrong introductions.">
 
   <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="@offerpsp">
   <meta name="twitter:title" content="Private PSP Matching for Merchants | OfferPSP">
   <meta name="twitter:description" content="One private payment brief, a focused shortlist and qualified PSP introductions matched to the merchant’s real operating profile.">
   <meta name="twitter:image" content="https://offerpsp.com/og-offerpsp.png">
@@ -43,12 +44,24 @@
         "email": "bizdev@offerpsp.com",
         "sameAs": [
           "https://www.instagram.com/offerpsp/",
+          "https://x.com/offerpsp",
+          "https://www.threads.com/@offerpsp",
           "https://t.me/offerpsp"
         ],
+        "founder": { "@id": "https://offerpsp.com/#borys-kononenko" },
         "brand": {
           "@type": "Brand",
           "name": "OfferPSP"
         }
+      },
+      {
+        "@type": "Person",
+        "@id": "https://offerpsp.com/#borys-kononenko",
+        "name": "Borys Kononenko",
+        "jobTitle": "Founder of OfferPSP",
+        "url": "https://www.linkedin.com/in/borys-kononenko-offerpsp/",
+        "sameAs": ["https://www.linkedin.com/in/borys-kononenko-offerpsp/"],
+        "worksFor": { "@id": "https://offerpsp.com/#organization" }
       },
       {
         "@type": "WebSite",
@@ -1592,7 +1605,7 @@
     .footer-social {
       margin-top: 22px;
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       gap: 10px;
     }
 
@@ -2388,6 +2401,12 @@
             <a href="https://www.instagram.com/offerpsp/" target="_blank" rel="noopener noreferrer" aria-label="OfferPSP on Instagram" title="OfferPSP on Instagram">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4.2"></circle><circle cx="17.4" cy="6.7" r="1" fill="currentColor" stroke="none"></circle></svg>
             </a>
+            <a href="https://x.com/offerpsp" target="_blank" rel="noopener noreferrer" aria-label="OfferPSP on X" title="OfferPSP on X">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 4 19 20"></path><path d="M19 4 5 20"></path></svg>
+            </a>
+            <a href="https://www.threads.com/@offerpsp" target="_blank" rel="noopener noreferrer" aria-label="OfferPSP on Threads" title="OfferPSP on Threads">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18.8 8.4C17.7 4.8 15.4 3 12 3c-4.8 0-8 3.5-8 9s3.2 9 8 9c4.3 0 7-2.3 7-6 0-3.3-2.3-5.3-5.8-5.3-3.1 0-5.2 1.5-5.2 3.8 0 2 1.6 3.4 3.8 3.4 2.9 0 4.4-2 4.4-4.8"></path></svg>
+            </a>
             <a href="https://t.me/offerpsp" target="_blank" rel="noopener noreferrer" aria-label="OfferPSP on Telegram" title="OfferPSP on Telegram">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3 3.8 9.7c-.9.4-.9 1.2.1 1.5l4.4 1.4 1.7 5.1c.3.9 1 .9 1.5.3l2.5-2.5 4.5 3.3c.8.5 1.4.2 1.6-.8L22 4.3c.2-1-.3-1.6-1-1.3Z"></path><path d="m8.3 12.6 9.4-6.1-7.7 8.4"></path></svg>
             </a>
@@ -2426,7 +2445,7 @@
 
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
-    import { buildLeadAttributionFields, collectAcquisitionAttribution } from "/acquisition-attribution.js?v=20260827-1";
+    import { buildLeadAttributionFields, collectAcquisitionAttribution } from "/acquisition-attribution.js?v=20260901-1";
 
     const LEAD_ENDPOINT = "https://annoris--n8n-make--xjvz9xynmzwk.code.run/webhook/offerpsp-lead-v1";
     const supabase = createClient(

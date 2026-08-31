@@ -37,6 +37,7 @@ const sourceDirectory = [
   { platform: "yahoo", category: "search", domains: ["search.yahoo.com", "yahoo.com"], aliases: ["yahoo"] },
   { platform: "yandex", category: "search", domains: ["yandex.com", "yandex.ru"], aliases: ["yandex"] },
   { platform: "linkedin", category: "social", domains: ["linkedin.com"], aliases: ["linkedin"] },
+  { platform: "threads", category: "social", domains: ["threads.com", "threads.net"], aliases: ["threads"] },
   { platform: "telegram", category: "social", domains: ["t.me", "telegram.org"], aliases: ["telegram", "tg"] },
   { platform: "x", category: "social", domains: ["x.com", "twitter.com"], aliases: ["x", "twitter"] },
   { platform: "facebook", category: "social", domains: ["facebook.com", "m.facebook.com"], aliases: ["facebook", "fb"] },

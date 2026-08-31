@@ -25,6 +25,21 @@ assert.equal(google.touch.source_platform, "google-ads");
 assert.equal(google.touch.gclid, "CaseSensitive-123");
 assert.equal(google.touch.referrer, "https://www.google.com/search");
 
+for (const [source, expectedPlatform] of [
+  ["linkedin", "linkedin"],
+  ["instagram", "instagram"],
+  ["x", "x"],
+  ["threads", "threads"],
+]) {
+  const social = buildAcquisitionTouch({
+    href: `https://offerpsp.com/?utm_source=${source}&utm_medium=organic_social&utm_campaign=social_launch_2026`,
+    capturedAt: "2026-09-01T10:00:00.000Z",
+  });
+  assert.equal(social.touch.source_category, "social", `${source} must be classified as social`);
+  assert.equal(social.touch.source_platform, expectedPlatform, `${source} must preserve its platform identity`);
+  assert.equal(social.touch.utm_medium, "organic_social", `${source} must preserve its campaign medium`);
+}
+
 const storage = memoryStorage();
 const first = collectAcquisitionAttribution({
   href: "https://offerpsp.com/cross-border-payment-matching.html?utm_source=google&utm_medium=cpc&wbraid=WB-1",
@@ -56,4 +71,4 @@ assert.equal(fields.affiliate_id, "agent-42");
 assert.equal(fields.affiliate_click_id, "click-99");
 assert.equal(fields.first_touch_at, "2026-08-27T11:00:00.000Z");
 
-process.stdout.write("PASS acquisition attribution preserves paid and affiliate first/last touch\n");
+process.stdout.write("PASS acquisition attribution preserves paid, affiliate and social first/last touch\n");
