@@ -7,7 +7,8 @@ Code or a passing local test is not evidence that production has been updated.
 
 ## Social launch package — 2026-08-31
 
-Status: `VERIFIED` for local preparation and publication of package 1 on LinkedIn and Instagram.
+Status: `VERIFIED` for preparation and publication of packages 1 and 2 across the approved social
+surfaces.
 
 - [x] Reworked `docs/OFFERPSP-SOCIAL-LAUNCH.md` around the current private-matching stage and the
   later transparent-marketplace direction without implying a public PSP catalogue, guaranteed
@@ -35,8 +36,8 @@ Status: `VERIFIED` for local preparation and publication of package 1 on LinkedI
   shows green checks for the visible content, reach and feature sections.
 - [x] Created and verified the public Threads profile `https://www.threads.com/@offerpsp` with the
   Instagram profile image, display name `OfferPSP | PSP Matching`, canonical short bio and tagged
-  website link using `utm_source=threads`. The profile remains empty and is not linked from the site;
-  its badge is hidden from the public Instagram profile until Threads has an approved content role.
+  website link using `utm_source=threads`. Threads remains a secondary publishing surface and is not
+  yet linked from the site; its badge stays hidden from the public Instagram profile.
 - [x] Corrected the live LinkedIn founder profile to the canonical `Founder of OfferPSP` headline,
   replaced the unverified-network claim with accurate build-and-verification wording and added the
   tagged founder-profile website URL. The saved edit forms were re-read after submission.
@@ -45,10 +46,10 @@ Status: `VERIFIED` for local preparation and publication of package 1 on LinkedI
   do not bypass this by adding random contacts.
 - [x] Created and verified the public X profile `https://x.com/offerpsp` after Boris completed the
   phone/SMS and password steps. Added the OfferPSP square logo, display name
-  `OfferPSP | PSP Matching`, canonical short bio and tagged website link. The profile has no posts,
-  followers or following and is not linked from the site. Email and phone discoverability are
-  disabled. The exact current recovery email remains `PARTIAL`: `bizdev@offerpsp.com` was added and
-  confirmed during setup, but a later independent read was blocked by X's password recheck.
+  `OfferPSP | PSP Matching`, canonical short bio and tagged website link. At setup the profile had no
+  posts, followers or following and was not linked from the site. Email and phone discoverability
+  are disabled. The exact current recovery email remains `PARTIAL`: `bizdev@offerpsp.com` was added
+  and confirmed during setup, but a later independent read was blocked by X's password recheck.
 - [x] Created, rendered and uploaded the 1500×500 OfferPSP X cover. XML, renderer syntax, image
   dimensions and `git diff --check` pass; the saved live profile was visually rechecked with the
   avatar overlay and the cover copy remains readable.
@@ -64,8 +65,13 @@ Status: `VERIFIED` for local preparation and publication of package 1 on LinkedI
   recovery codes. The authenticated security screen confirms that 2FA is not currently configured.
 - [x] Prepared package 2 around a matchable merchant brief: final approval drafts for LinkedIn,
   Instagram, X and Threads plus a seven-slide 1080×1350 Instagram PNG/SVG carousel. XML, renderer
-  syntax, image dimensions, platform text limits and `git diff --check` pass. Nothing was published.
-- [ ] Obtain Boris's approval of the exact package 2 copy and carousel before publishing anywhere.
+  syntax, image dimensions, platform text limits and `git diff --check` pass.
+- [x] Boris approved package 2 and it was published and verified on 2026-09-01. LinkedIn:
+  `https://www.linkedin.com/feed/update/urn:li:share:7500314105417998337/`; Instagram seven-slide
+  carousel: `https://www.instagram.com/p/DcuIyvjDB4E/`; X:
+  `https://x.com/offerpsp/status/2094550165633782092`; Threads:
+  `https://www.threads.com/@offerpsp/post/DcuJKC9igER`. The live text, Instagram caption and all seven
+  carousel slides were rechecked after publication.
 
 ## Organic acquisition foundation — 2026-08-31
 

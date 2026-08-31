@@ -2,7 +2,7 @@
 
 Updated: 2026-09-01
 
-Status: package 1 published and verified on LinkedIn and Instagram on 2026-08-31
+Status: packages 1 and 2 published and verified on the approved social surfaces
 
 ## Purpose
 
@@ -27,11 +27,12 @@ Primary audiences:
   slides, not generic stock imagery.
 - **Telegram:** `@offerpsp` is currently a direct-contact account, not a public content channel.
   Keep it as a contact endpoint until Boris explicitly approves creating a separate public channel.
-- **Threads:** the public `@offerpsp` profile is reserved and brand-aligned, but remains an empty
-  secondary surface until a separate publishing plan is approved. Keep it off the website and keep
-  its Instagram badge hidden for now.
-- **X:** the public `@offerpsp` profile is reserved and brand-aligned, but remains an empty secondary
-  surface until a separate publishing plan is approved. Keep it off the website for now.
+- **Threads:** the public `@offerpsp` profile is a secondary text surface. Package 2 established its
+  first approved publication; keep it off the website and keep its Instagram badge hidden until a
+  consistent publishing cadence is established.
+- **X:** the public `@offerpsp` profile is a secondary short-form text surface. Package 2 established
+  its first approved publication; keep it off the website until a consistent publishing cadence is
+  established.
 
 ## Canonical profile copy
 
@@ -280,13 +281,17 @@ before publication.
 1. Publication 1 copy and carousel visuals were approved and published on 2026-08-31:
    - LinkedIn: `https://www.linkedin.com/feed/update/urn:li:share:7500225994885128192/`
    - Instagram: `https://www.instagram.com/p/DctfVK8DGKt/`
-2. Capture the first 48–72 hours of impressions, profile visits, followers, link clicks and
-   attributed requests.
-3. Publish the merchant-brief checklist after two or three days.
+2. Publication 2 was approved and published on 2026-09-01:
+   - LinkedIn: `https://www.linkedin.com/feed/update/urn:li:share:7500314105417998337/`
+   - Instagram: `https://www.instagram.com/p/DcuIyvjDB4E/`
+   - X: `https://x.com/offerpsp/status/2094550165633782092`
+   - Threads: `https://www.threads.com/@offerpsp/post/DcuJKC9igER`
+3. Capture the first 48–72 hours of impressions, profile visits, followers, link clicks and
+   attributed requests for each package and surface.
 4. Publish the PSP-partner proposition after another two or three days.
 
-Publication 1 is complete. Future packages still require approval of their exact final text, tagged
-URL and visuals before external publication.
+Publications 1 and 2 are complete. Future packages still require approval of their exact final text,
+tagged URL and visuals before external publication.
 
 ## Asset inventory
 
