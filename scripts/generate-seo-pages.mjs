@@ -6,7 +6,7 @@ export const siteContentRevision = "2026-08-28";
 export const seoPages = [
   {
     slug: "psp-for-igaming",
-    modified: "2026-08-31",
+    modified: "2026-09-01",
     title: "PSP Matching for iGaming Businesses | OfferPSP",
     description: "Private PSP matching for licensed iGaming operators: deposits, payouts, GEOs and risk controls. Get qualified introductions without a public provider list.",
     kicker: "iGaming payment infrastructure",
@@ -32,16 +32,18 @@ export const seoPages = [
     checklistTitle: "Prepare the matching brief",
     checklist: ["Company and product URLs", "Licensing evidence and jurisdictions", "Player and entity GEOs", "Deposits, payouts and currencies", "Expected volume and ticket size", "Current PSP constraints and launch date"],
     faqs: [
+      ["What is an iGaming PSP?", "An iGaming PSP is a payment service provider willing and able to assess gaming merchants for specific entities, licences, player markets and payment flows. The label alone does not prove that a provider can onboard every operator or GEO."],
+      ["Is an iGaming payment gateway the same as a PSP?", "Not always. A gateway may supply the technical connection while a PSP or acquirer provides regulated payment services, underwriting and settlement. The contracting and funds-flow roles should be confirmed before integration."],
       ["Can OfferPSP guarantee that an iGaming merchant will be accepted?", "No. We reduce avoidable mismatches, but each provider independently reviews the merchant, licence, ownership, traffic, controls and operating model."],
       ["Do you work with unlicensed operators?", "A request may be reviewed, but provider availability depends on the lawful operating model and the requirements of each target jurisdiction. Missing or unclear licensing information is a material matching constraint."],
       ["Can one PSP cover every player GEO?", "Often not. Multi-GEO businesses may need a primary route, local alternatives and a resilient backup structure. The practical design depends on the entity, method and provider coverage."],
       ["Do you reveal your provider network publicly?", "No. Provider identities are shared only through a controlled introduction after the profile has been qualified and there is a plausible fit."]
     ],
-    related: ["high-risk-payment-provider", "cross-border-payment-matching", "payment-methods-by-geo"]
+    related: ["psp-onboarding-requirements", "how-to-compare-psp-offers", "high-risk-payment-processing-guide"]
   },
   {
     slug: "high-risk-payment-provider",
-    modified: "2026-08-31",
+    modified: "2026-09-01",
     title: "High-Risk PSP and Payment Provider Matching | OfferPSP",
     description: "Private high-risk PSP matching for complex online businesses: underwriting, routes and reserves. Get qualified introductions without a public provider list.",
     kicker: "Complex and higher-risk profiles",
@@ -68,11 +70,13 @@ export const seoPages = [
     checklist: ["Entity, owners and website", "Licence or regulatory position", "Products, fulfilment and traffic", "Customer and operating GEOs", "Processing history and disputes", "Required methods, currencies and settlement"],
     faqs: [
       ["What does high-risk payment processing mean?", "It is a broad industry label for profiles that providers assess as having elevated regulatory, fraud, dispute, reputational or operational exposure. The classification and appetite vary by provider."],
+      ["Why do PSPs reject high-risk merchants?", "Common reasons include an unsupported vertical or GEO, unclear licensing, incomplete ownership information, weak fulfilment evidence, high dispute exposure, unsuitable acquisition channels or a funds flow the provider cannot support."],
+      ["What documents does a high-risk PSP usually request?", "Requirements vary, but providers commonly review incorporation and ownership records, licences, product URLs, customer terms, policies, processing statements, dispute data, marketing sources and evidence of the complete funds flow."],
       ["Can OfferPSP help avoid compliance checks?", "No. A credible route requires complete and accurate information. Our role is to prepare a relevant introduction, not to circumvent due diligence."],
       ["Will every matched provider offer the same terms?", "No. Pricing, reserves, limits, settlement, required documents and permitted markets are provider-specific and remain subject to final review."],
       ["Can a declined merchant try another route?", "Potentially, if another provider has a genuinely different appetite or coverage. A previous decline should be disclosed where relevant, and the underlying reason must be understood rather than hidden."]
     ],
-    related: ["psp-for-igaming", "psp-for-forex", "payment-provider-for-ecommerce"]
+    related: ["high-risk-payment-processing-guide", "psp-onboarding-requirements", "how-to-compare-psp-offers"]
   },
   {
     slug: "cross-border-payment-matching",
@@ -236,7 +240,7 @@ export const seoPages = [
   },
   {
     slug: "psp-for-forex",
-    modified: "2026-08-31",
+    modified: "2026-09-01",
     title: "Forex PSP Matching for Licensed Brokers | OfferPSP",
     description: "Private PSP matching for licensed forex brokers: deposits, withdrawals and multi-GEO coverage. Get qualified introductions without a public provider list.",
     kicker: "Forex payment infrastructure",
@@ -264,6 +268,8 @@ export const seoPages = [
     checklistTitle: "Prepare the forex payment brief",
     checklist: ["Licence and regulated entities", "Trading brands, domains and product URLs", "Client and entity GEOs", "Deposit, withdrawal and currency flows", "Processing, dispute and refund evidence", "Acquisition model and promotion controls", "Volume, ticket size and launch timing", "Settlement bank and backup-route plan"],
     faqs: [
+      ["What is a forex PSP?", "A forex PSP is a payment service provider that can assess a licensed broker or trading platform for defined entities, client GEOs, deposit methods and withdrawal flows. Availability remains provider- and profile-specific."],
+      ["Is a forex payment gateway enough to accept deposits?", "A gateway can provide connectivity, but the merchant still needs an eligible PSP or acquirer, underwriting approval, settlement arrangements and support for the regulated customer funds flow."],
       ["Can OfferPSP guarantee onboarding for a forex broker?", "No. We reduce avoidable mismatches, but each provider makes its own compliance, underwriting and commercial decision."],
       ["Does one provider cover every forex market?", "Usually not. Coverage depends on the regulated entity, client location, method and currency, so multi-GEO businesses may need several compatible routes."],
       ["Can an unlicensed trading business be matched?", "Provider availability is materially constrained where licensing or the lawful basis for offering the product is missing or unclear."],
@@ -271,7 +277,7 @@ export const seoPages = [
       ["What evidence does a forex PSP usually review?", "Requirements vary, but common evidence includes licences, ownership, domains, client terms, acquisition controls, processing statements, disputes, refunds, source-of-funds controls and the complete deposit and withdrawal flow."]
     ],
     areaServed: ["Europe", "United Kingdom", "CIS", "Central Asia", "Middle East"],
-    related: ["payment-provider-europe", "payment-provider-cis-central-asia", "high-risk-payment-provider"]
+    related: ["psp-onboarding-requirements", "how-to-compare-psp-offers", "high-risk-payment-processing-guide"]
   },
   {
     slug: "payment-provider-europe",
@@ -548,7 +554,7 @@ export const seoPages = [
   },
   {
     slug: "psp-matching-process",
-    modified: "2026-08-31",
+    modified: "2026-09-01",
     title: "How PSP Matching Works | OfferPSP",
     description: "A practical four-step PSP matching process: prepare the merchant brief, screen provider fit, review a focused shortlist and arrange qualified introductions.",
     kicker: "PSP matching process",
@@ -580,7 +586,167 @@ export const seoPages = [
       ["What happens if the first provider declines?", "We record the reason where available, protect the provider’s identity and assess whether another genuinely compatible route exists. A decline is not hidden or relabelled as an approval."],
       ["Does a shortlist contain final commercial terms?", "No. It can include current indicative route information, but final pricing, limits, reserves, settlement and contractual terms are confirmed directly by the provider after due diligence."]
     ],
-    related: ["cross-border-payment-matching", "high-risk-payment-provider", "payment-methods-by-geo"]
+    related: ["psp-onboarding-requirements", "how-to-compare-psp-offers", "payment-gateway-vs-psp-vs-acquirer"]
+  },
+  {
+    slug: "how-to-compare-psp-offers",
+    pageType: "guide",
+    published: "2026-09-01",
+    modified: "2026-09-01",
+    title: "How to Compare PSP Offers and Payment Terms | OfferPSP",
+    description: "Compare PSP offers across fees, reserves, settlement, limits, methods and integration. Build a decision-ready brief before provider onboarding begins.",
+    kicker: "PSP offer comparison guide",
+    heading: "How to compare PSP offers beyond the headline rate.",
+    lead: "A lower PayIn percentage does not automatically create a better payment route. A useful PSP comparison tests the complete commercial, operational and underwriting package against the merchant’s real funds flow.",
+    boundary: "Stored or shared route information is indicative until the provider confirms availability and final commercial terms for the specific merchant. OfferPSP does not present private source economics publicly.",
+    sectionTitle: "The terms that make a PSP offer usable",
+    sectionIntro: "Compare like with like: the same entity, GEO, method, currency, traffic profile and payment flow.",
+    points: [
+      ["PayIn, PayOut and fixed fees", "Separate percentage fees, minimum charges, refund and chargeback fees, payout pricing, setup costs and any fixed transaction components."],
+      ["Reserve, settlement and currency", "Record rolling reserve percentage and duration, settlement schedule, minimum settlement, settlement currency, conversion method and transfer charges."],
+      ["Limits, methods and market coverage", "Confirm minimum and maximum ticket, monthly capacity, supported cards or local methods, customer GEOs, entity eligibility and permitted traffic types."],
+      ["Integration and operating support", "Compare API or redirect options, onboarding effort, webhooks, reporting, reconciliation, incident escalation and the provider’s change-management process."],
+      ["Underwriting conditions", "Identify the documents, licences, processing history, risk controls and traffic evidence the provider needs before treating the route as available."],
+      ["Resilience and exit constraints", "Check backup coverage, notice periods, termination conditions, held reserves, data portability and the operational effect of a paused route."]
+    ],
+    decisionTitle: "A practical PSP offer scorecard",
+    decisionIntro: "The winning offer is the route that remains compliant, cash-flow compatible and operable after the first transaction.",
+    decisionPoints: [
+      ["Eligibility", "Can this exact entity, vertical, customer GEO and traffic profile pass the provider’s current review?"],
+      ["Economics", "What is the combined cost after percentage, fixed, reserve, FX, settlement, refund and dispute components?"],
+      ["Operations", "Can finance, support and engineering reconcile, monitor and escalate the route without hidden manual work?"],
+      ["Resilience", "Does the merchant have a credible backup or migration plan if coverage, pricing or provider appetite changes?"]
+    ],
+    checklistTitle: "Fields to capture before comparing",
+    checklist: ["Entity, vertical and customer GEOs", "PayIn and PayOut fees", "Fixed, refund and dispute fees", "Reserve and settlement schedule", "Limits, methods and currencies", "Integration, reporting and support", "Underwriting evidence required", "Validity date and provider confirmation"],
+    faqs: [
+      ["What is the most important PSP fee?", "There is no single decisive fee. The useful comparison combines transaction pricing, fixed charges, reserve, settlement, FX, refunds, disputes and operating cost for the merchant’s expected flow."],
+      ["Can two PSP offers with the same rate be different?", "Yes. They may differ in eligible GEOs, methods, ticket limits, settlement, reserve, integration, support, risk appetite and which fees apply to refunds, disputes or payouts."],
+      ["Are PSP offer terms final before onboarding?", "Usually not. Indicative information helps screen fit, while final availability, pricing, limits and contractual terms are confirmed by the provider after reviewing the merchant."],
+      ["Should a merchant choose one PSP or several?", "That depends on market coverage, volume, methods, operational capacity and concentration risk. Redundancy is useful only when the merchant can maintain the integrations and operating controls."],
+      ["How does OfferPSP compare offers without publishing providers?", "We structure the merchant brief and route criteria privately, share indicative route information where appropriate and disclose a provider only after provider acceptance and a controlled introduction."]
+    ],
+    related: ["psp-matching-process", "psp-onboarding-requirements", "payment-methods-by-geo"]
+  },
+  {
+    slug: "psp-onboarding-requirements",
+    pageType: "guide",
+    published: "2026-09-01",
+    modified: "2026-09-01",
+    title: "PSP Onboarding Requirements: Merchant Checklist | OfferPSP",
+    description: "Prepare for PSP onboarding with a merchant checklist covering entity, ownership, licences, payment flows, processing evidence, risk controls and launch needs.",
+    kicker: "Merchant onboarding checklist",
+    heading: "PSP onboarding requirements: build a provider-ready merchant brief.",
+    lead: "A request that says only ‘we need a PSP’ cannot support a real underwriting decision. A provider-ready brief connects the legal entity, product, markets, payment flows, operating evidence and launch requirements in one coherent dossier.",
+    boundary: "This checklist is general preparation, not legal advice or a guarantee of approval. Each provider may request additional evidence and makes its own compliance and underwriting decision.",
+    sectionTitle: "What a PSP normally needs to understand",
+    sectionIntro: "The objective is not to send every available file. It is to present accurate evidence for the specific entity and payment flow under review.",
+    points: [
+      ["Company and ownership", "Legal name, registration, operating address, directors, beneficial owners, group structure, business bank details and the contracting entity."],
+      ["Product, website and customer journey", "Live domains, products or services, pricing, fulfilment, customer terms, refund path, support contacts and a clear description of how a payment is created."],
+      ["Licence and market access", "Licences, exemptions or other regulatory basis, issuing authority, authorised activities and the customer countries served by each entity."],
+      ["Payment and funds flow", "PayIn, PayOut, refunds and settlement mapped separately with currencies, methods, ticket sizes, beneficiaries and every party that receives or controls funds."],
+      ["Processing and risk evidence", "Current or historical statements, volume, approval rates where available, refunds, disputes, chargebacks, fraud controls and relevant prior provider constraints."],
+      ["Integration and launch plan", "API or redirect preference, platform, webhooks, reconciliation, required reporting, expected launch date and the internal owners for compliance, finance and engineering."]
+    ],
+    decisionTitle: "When the merchant dossier is ready for review",
+    decisionIntro: "Completeness means the documents and the operating story agree; a large attachment folder cannot compensate for contradictions.",
+    decisionPoints: [
+      ["The applicant is identifiable", "The entity, owners, domains, licences and bank relationship describe the same business applying for payment services."],
+      ["The requested route is specific", "Customer GEOs, currencies, methods, flows, volume and settlement requirements are prioritised rather than presented as global and unlimited."],
+      ["Material risk is disclosed", "Acquisition channels, fulfilment, disputes, restricted markets and prior constraints are explained instead of being left for provider due diligence to discover."],
+      ["The next decision is clear", "The provider can accept, decline or request named missing information without restarting the entire qualification conversation."]
+    ],
+    checklistTitle: "Merchant dossier checklist",
+    checklist: ["Company registry and ownership", "Product URLs and customer terms", "Licence or regulatory basis", "Target and operating GEOs", "Currencies, methods and flows", "Volume, ticket size and statements", "Risk, refund and dispute controls", "Integration and launch owners"],
+    faqs: [
+      ["What documents are required for PSP onboarding?", "Requirements vary, but a provider commonly requests corporate and ownership records, licences where relevant, product URLs, policies, bank evidence, payment-flow information and processing or risk history."],
+      ["How long does PSP onboarding take?", "There is no universal duration. Timing depends on profile complexity, document quality, provider workload, follow-up questions, integration and whether the submitted information is complete and internally consistent."],
+      ["Can a merchant apply without processing history?", "Potentially. A new business should state that clearly and provide realistic forecasts, product evidence, ownership, funding context and operational controls rather than inventing historical data."],
+      ["Should the merchant hide a previous PSP decline?", "No. Where relevant, the reason should be understood and disclosed accurately. Another provider may have different appetite, but concealing material history weakens the review."],
+      ["Does a complete dossier guarantee acceptance?", "No. It reduces avoidable clarification and makes the decision easier to evaluate, but the PSP retains full control of compliance, underwriting and final terms."]
+    ],
+    related: ["psp-matching-process", "how-to-compare-psp-offers", "payment-gateway-vs-psp-vs-acquirer"]
+  },
+  {
+    slug: "high-risk-payment-processing-guide",
+    pageType: "guide",
+    published: "2026-09-01",
+    modified: "2026-09-01",
+    title: "High-Risk Payment Processing Guide for Merchants | OfferPSP",
+    description: "Understand high-risk payment processing, PSP underwriting, reserves, settlement, disputes and onboarding evidence before requesting a provider introduction.",
+    kicker: "High-risk payment processing guide",
+    heading: "How high-risk payment processing works before provider approval.",
+    lead: "High risk is not one product or a permanent label. Providers assess a combination of vertical, entity, licence, customer geography, acquisition, fulfilment, transaction behaviour and operational control before deciding whether a payment route is supportable.",
+    boundary: "OfferPSP does not bypass compliance or process funds. This guide explains qualification factors; availability and final terms are determined independently by each provider.",
+    sectionTitle: "Why a merchant can be classified as high risk",
+    sectionIntro: "The provider evaluates expected exposure and its ability to monitor and support the complete operating model.",
+    points: [
+      ["Regulatory and vertical exposure", "Licensing, product permissions, restricted markets and the provider’s own risk appetite can narrow eligible routes even when the business is lawful."],
+      ["Disputes, refunds and fulfilment", "Long delivery periods, subscription cancellation, unclear descriptors, high chargebacks or weak refund handling can increase financial and operational exposure."],
+      ["Traffic and customer acquisition", "Affiliates, paid media, financial promotions, incentivised traffic and cross-border targeting must be controlled and consistent with the reviewed product."],
+      ["Funds flow and settlement", "Who receives customer funds, when fulfilment occurs, how refunds and payouts work, and where settlement lands all affect underwriting and reserve decisions."],
+      ["Evidence and operating controls", "Policies, processing statements, fraud prevention, transaction monitoring, customer support and named owners help a provider evaluate whether risks are manageable."],
+      ["Provider concentration", "A backup route may reduce dependency, but each integration must be approved, maintained and monitored rather than treated as an automatic failover."]
+    ],
+    decisionTitle: "What improves a high-risk PSP review",
+    decisionIntro: "The aim is not to make the business appear lower risk. It is to make the actual risk understandable and operationally controlled.",
+    decisionPoints: [
+      ["Accurate market scope", "Serve only the countries, products and customer groups supported by the entity’s lawful operating position and submitted provider brief."],
+      ["Traceable evidence", "Connect each important claim—licence, volume, dispute level, fulfilment or traffic source—to evidence a provider can review."],
+      ["Workable economics", "Test pricing, reserve, settlement and limits against cash flow instead of treating any approval as a usable commercial outcome."],
+      ["Ongoing controls", "Assign owners for monitoring, refunds, disputes, fraud, reporting and provider communication after onboarding."]
+    ],
+    checklistTitle: "Prepare for high-risk underwriting",
+    checklist: ["Entity, owners and regulated status", "Products, pricing and fulfilment", "Customer GEOs and traffic sources", "PayIn, PayOut and refund flow", "Processing and dispute history", "Fraud and monitoring controls", "Reserve and settlement tolerance", "Primary and backup operating plan"],
+    faqs: [
+      ["How does high-risk payment processing work?", "The merchant submits its operating and payment profile, the provider performs compliance and underwriting, commercial and reserve terms are assessed, and processing begins only after approval, contracting and integration."],
+      ["Why do high-risk merchants pay more?", "Providers may price for greater compliance workload, dispute exposure, fraud monitoring, reserve requirements or operational complexity. The exact components depend on the profile and provider."],
+      ["What is a rolling reserve?", "It is a portion of processed funds retained for an agreed period to cover potential refunds, disputes or other exposure. The percentage, duration and release conditions must be confirmed contractually."],
+      ["Can a high-risk merchant avoid chargebacks completely?", "No. Clear descriptors, customer support, fulfilment evidence, fraud controls and fast refunds may reduce avoidable disputes, but no legitimate provider can promise zero chargebacks."],
+      ["Can OfferPSP guarantee a high-risk merchant account?", "No. We help structure the case, compare relevant routes and coordinate a controlled introduction; the provider makes the final decision."]
+    ],
+    related: ["high-risk-payment-provider", "psp-onboarding-requirements", "how-to-compare-psp-offers"]
+  },
+  {
+    slug: "payment-gateway-vs-psp-vs-acquirer",
+    pageType: "guide",
+    published: "2026-09-01",
+    modified: "2026-09-01",
+    title: "Payment Gateway vs PSP vs Acquirer: B2B Guide | OfferPSP",
+    description: "Understand the difference between a payment gateway, PSP and acquirer, how their roles overlap, and what a merchant should confirm before choosing a route.",
+    kicker: "Payment infrastructure roles",
+    heading: "Payment gateway vs PSP vs acquirer: know who does what.",
+    lead: "Payment companies often combine several roles under one brand, which makes provider comparisons confusing. The useful question is not the label alone, but who supplies connectivity, underwriting, regulated payment services, settlement and operational support for the merchant’s route.",
+    boundary: "Commercial structures and regulatory roles vary by provider and jurisdiction. Confirm the contracting entities, responsibilities and funds flow in the actual agreement rather than relying on marketing labels.",
+    sectionTitle: "The roles behind a payment route",
+    sectionIntro: "One company may perform several roles, while another route may combine multiple specialists under separate contracts.",
+    points: [
+      ["Payment gateway", "The gateway commonly supplies checkout or API connectivity, securely transmits payment data and routes technical messages. It may not underwrite the merchant or settle funds."],
+      ["Payment service provider", "A PSP packages payment acceptance or related services for merchants and may combine gateway, acquiring access, local methods, risk tools, reporting and support."],
+      ["Acquirer", "The acquirer contracts for card acceptance, underwrites the merchant for that acquiring relationship and participates in clearing and settlement under card-scheme rules."],
+      ["Processor and orchestration layer", "A processor handles transaction messages and records; an orchestration platform may connect several providers, route transactions and centralise integration without replacing provider approval."],
+      ["Alternative payment provider", "Open Banking, A2A, wallets, vouchers and payout specialists may support non-card flows with their own eligibility, settlement and integration model."],
+      ["Merchant responsibilities", "The merchant still owns accurate onboarding information, lawful market access, customer terms, operational controls, reconciliation and compliance with its provider agreements."]
+    ],
+    decisionTitle: "Questions to ask before choosing the stack",
+    decisionIntro: "Resolve contractual and operating responsibility before comparing interface features or headline coverage.",
+    decisionPoints: [
+      ["Who underwrites the merchant?", "Identify the entity making the compliance and risk decision and whether separate approval is required for each route or method."],
+      ["Who holds and settles funds?", "Document the regulated party, settlement account, currencies, timing, reserves and what happens to funds during refunds or disputes."],
+      ["Who owns the integration?", "Confirm APIs, tokens, webhooks, reporting, support boundaries and whether the merchant can migrate or add a backup provider."],
+      ["Who handles incidents?", "Set escalation paths for failed payments, delayed settlements, reconciliation gaps, fraud events and provider-side changes."]
+    ],
+    checklistTitle: "Map the provider roles",
+    checklist: ["Contracting and regulated entities", "Merchant underwriting owner", "Gateway and API operator", "Acquirer or payment rail", "Settlement and reserve owner", "Risk, fraud and dispute tools", "Reporting and reconciliation", "Support and incident escalation"],
+    faqs: [
+      ["Is a PSP the same as a payment gateway?", "Not necessarily. A gateway commonly provides technical connectivity, while a PSP may bundle connectivity with payment services, methods, underwriting access, reporting and support."],
+      ["Is a PSP always an acquirer?", "No. Some PSPs are acquirers, while others connect merchants to one or more acquiring or payment partners. The contract and funds flow should identify the actual roles."],
+      ["Can a merchant use a gateway with several PSPs?", "Potentially. The gateway or orchestration layer must support the providers, token and data model, routing logic and operational reconciliation required by the merchant."],
+      ["Who decides whether a merchant is approved?", "The provider or acquiring entity responsible for the route makes the compliance and underwriting decision. A gateway or intermediary cannot guarantee that approval."],
+      ["How does OfferPSP help choose between these models?", "We structure the entity, GEO, method, currency, flow, integration and settlement requirements, then assess which provider roles and routes are relevant for a controlled introduction."]
+    ],
+    related: ["psp-matching-process", "payment-methods-by-geo", "how-to-compare-psp-offers"]
   }
 ];
 
@@ -595,6 +761,8 @@ const escapeHtml = (value) => String(value)
 const buildStructuredData = (page) => {
   const url = `https://offerpsp.com/${page.slug}.html`;
   const language = page.lang || "en";
+  const isGuide = page.pageType === "guide";
+  const primaryNodeId = `${url}#${isGuide ? "article" : "service"}`;
   const graph = [
     {
       "@type": "Organization",
@@ -624,14 +792,27 @@ const buildStructuredData = (page) => {
       name: page.title,
       description: page.description,
       isPartOf: { "@id": "https://offerpsp.com/#website" },
-      about: { "@id": `${url}#service` },
+      about: { "@id": primaryNodeId },
       breadcrumb: { "@id": `${url}#breadcrumb` },
       inLanguage: language,
       dateModified: page.modified || siteContentRevision
     },
-    {
+    isGuide ? {
+      "@type": "Article",
+      "@id": primaryNodeId,
+      headline: page.heading,
+      description: page.description,
+      url,
+      mainEntityOfPage: { "@id": `${url}#webpage` },
+      author: { "@id": "https://offerpsp.com/#organization" },
+      publisher: { "@id": "https://offerpsp.com/#organization" },
+      datePublished: page.published,
+      dateModified: page.modified || siteContentRevision,
+      inLanguage: language,
+      audience: { "@type": "BusinessAudience", audienceType: "B2B merchants and payment teams" }
+    } : {
       "@type": "Service",
-      "@id": `${url}#service`,
+      "@id": primaryNodeId,
       name: page.heading,
       serviceType: page.kicker,
       description: page.lead,
@@ -681,7 +862,7 @@ const buildStructuredData = (page) => {
 export const renderPage = (page) => {
   const canonical = `https://offerpsp.com/${page.slug}.html`;
   const language = page.lang || "en";
-  const ui = language === "ru" ? {
+  const baseUi = language === "ru" ? {
     skip: "Перейти к содержанию",
     primary: "Основная навигация",
     homeLabel: "Главная OfferPSP",
@@ -736,6 +917,17 @@ export const renderPage = (page) => {
     socialNav: "OfferPSP social profiles",
     backToTop: "Back to top"
   };
+  const ui = {
+    ...baseUi,
+    ...(page.pageType === "guide" ? {
+      evaluate: language === "ru" ? "Практическое руководство" : "Practical guidance",
+      inputs: language === "ru" ? "Чек-лист решения" : "Decision checklist",
+      related: language === "ru" ? "Следующие материалы" : "Continue with the service",
+      continueResearch: language === "ru" ? "Связанные руководства и услуги" : "Related guides and matching briefs",
+      qualification: language === "ru" ? "Применить руководство" : "Use the guide",
+      describe: language === "ru" ? "Превратите чек-лист в готовый платёжный бриф." : "Turn the checklist into a provider-ready payment brief."
+    } : {})
+  };
   const alternateLinks = (page.alternates || [])
     .map(([lang, href]) => `  <link rel="alternate" hreflang="${lang}" href="${href}">`)
     .join("\n");
@@ -772,6 +964,9 @@ export const renderPage = (page) => {
     const linkedPage = pageBySlug.get(slug);
     return `<a class="related-card" href="/${linkedPage.slug}.html"><span>${escapeHtml(linkedPage.kicker)}</span><strong>${escapeHtml(linkedPage.heading)}</strong></a>`;
   }).join("\n");
+  const guideMeta = page.pageType === "guide"
+    ? `<p class="guide-meta">Prepared and reviewed by OfferPSP · Updated <time datetime="${page.modified}">${page.modified}</time></p>`
+    : "";
 
   return `<!doctype html>
 <html lang="${language}">
@@ -820,6 +1015,7 @@ ${structuredData}
         <div>
           <div class="kicker">${escapeHtml(page.kicker)}</div>
           <h1>${escapeHtml(page.heading)}</h1>
+          ${guideMeta}
           <p class="hero-lead">${escapeHtml(page.lead)}</p>
           <a class="button" href="/#request">${ui.sendBrief}</a>
         </div>

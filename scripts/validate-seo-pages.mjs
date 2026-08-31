@@ -173,14 +173,50 @@ const strengthenedSlugs = [
 for (const slug of strengthenedSlugs) {
   assert.ok(home.includes(`href="/${slug}.html"`), `${slug} must be linked from the home page`);
   const page = seoPages.find((candidate) => candidate.slug === slug);
-  assert.equal(page.modified, "2026-08-31", `${slug} must record the substantive content update`);
+  assert.ok(page.modified, `${slug} must record the substantive content update`);
   assert.ok(page.decisionPoints?.length >= 4, `${slug} must include concrete decision checkpoints`);
   const rendered = renderPage(page);
   assert.ok(rendered.includes(page.decisionTitle), `${slug} must render its decision checkpoint section`);
   assert.ok(
-    sitemap.includes(`<loc>https://offerpsp.com/${slug}.html</loc>\n    <lastmod>2026-08-31</lastmod>`),
+    sitemap.includes(`<loc>https://offerpsp.com/${slug}.html</loc>\n    <lastmod>${page.modified}</lastmod>`),
     `${slug} sitemap lastmod must reflect the substantive content update`,
   );
+}
+
+const searchExpansionSlugs = [
+  "high-risk-payment-provider",
+  "psp-for-igaming",
+  "psp-for-forex",
+  "psp-matching-process",
+  "how-to-compare-psp-offers",
+  "psp-onboarding-requirements",
+  "high-risk-payment-processing-guide",
+  "payment-gateway-vs-psp-vs-acquirer",
+];
+
+for (const slug of searchExpansionSlugs) {
+  const page = seoPages.find((candidate) => candidate.slug === slug);
+  assert.ok(page, `${slug} must exist in the search-expansion cluster`);
+  assert.equal(page.modified, "2026-09-01", `${slug} must record the current search-expansion update`);
+  assert.ok(
+    sitemap.includes(`<loc>https://offerpsp.com/${slug}.html</loc>\n    <lastmod>2026-09-01</lastmod>`),
+    `${slug} sitemap lastmod must record the current search-expansion update`,
+  );
+}
+
+for (const slug of [
+  "how-to-compare-psp-offers",
+  "psp-onboarding-requirements",
+  "high-risk-payment-processing-guide",
+  "payment-gateway-vs-psp-vs-acquirer",
+]) {
+  const page = seoPages.find((candidate) => candidate.slug === slug);
+  const rendered = renderPage(page);
+  assert.equal(page.pageType, "guide", `${slug} must be identified as an editorial guide`);
+  assert.ok(home.includes(`href="/${slug}.html"`), `${slug} must have a descriptive inbound home-page link`);
+  assert.match(rendered, /"@type":\s*"Article"/, `${slug} must use Article structured data`);
+  assert.ok(rendered.includes("Prepared and reviewed by OfferPSP"), `${slug} must show its editorial owner`);
+  assert.ok(rendered.includes(`<time datetime="2026-09-01">2026-09-01</time>`), `${slug} must show its update date`);
 }
 
 for (const [slug, anchor] of [

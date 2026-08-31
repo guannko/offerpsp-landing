@@ -98,6 +98,33 @@ movement remains an external outcome that must be measured over the following we
 - [ ] Measure Google impressions, CTR, positions and indexing after the normal search-engine delay;
   deployment itself is not evidence of traffic or ranking growth.
 
+### Search-intent expansion — 2026-09-01
+
+Status: `VERIFIED` for implementation, production delivery and the fresh production crawl. Ranking
+and traffic movement remain external outcomes that must be measured after the search-engine delay.
+
+- [x] Expanded the existing iGaming, Forex and high-risk pages with question-led explanations for
+  the live and adjacent queries already visible in Search Console, and connected them to the
+  matching-process and decision-support content instead of creating overlapping doorway pages.
+- [x] Added four substantive guides: comparing PSP offers, PSP onboarding requirements, high-risk
+  payment processing and payment gateway vs PSP vs acquirer. Each page has unique merchant-facing
+  content, an editorial owner/update date, self-canonical, index/follow robots, Article + FAQ/HowTo
+  structured data and controlled matching boundaries.
+- [x] Added descriptive inbound links from the home page and related-page clusters, plus accurate
+  sitemap `lastmod` entries and complete `llms.txt` discovery links. Corrected `llms.txt` to
+  distinguish the legal operator `Offerspsp.com` from the public `offerpsp.com` brand domain.
+- [x] Root validation/build passed for 22 generated SEO pages, portal boundaries and attribution.
+  Desktop 1280 px and mobile 390 px visual checks found no horizontal overflow or broken images.
+- [x] Published production deployment `dpl_1wyqrtYG12B746beKuKdfjMEtwXC` (`READY`) and aliased it
+  to `https://offerpsp.com`. All four guide URLs return live indexable pages with their expected
+  title, H1, self-canonical and Article structured data; live sitemap and `llms.txt` contain them.
+- [x] Completed post-release SEO/GEO audit run `d7425f5f-ddff-4e18-a57a-918e8397d992` with technical
+  audit `7db32cf7-659e-47d5-b72c-1610752b8ba1`: 48/48 URLs succeeded, zero broken URLs, overall
+  score 9.9 and zero generated priorities. Search Console inspection completed for 25 URLs with no
+  failed inspections; its delayed data through 2026-08-29 still reports 18 indexed URLs.
+- [ ] Compare query breadth, impressions, CTR and position clusters after 3–6 weeks; do not treat
+  deployment or a successful URL inspection as evidence that Google has ranked the new pages.
+
 ## Full system control audit — 2026-08-31
 
 Status: `VERIFIED` for read-only production checks. Full evidence and remediation order:

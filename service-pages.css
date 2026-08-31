@@ -183,6 +183,18 @@ h1 {
   font-size: 19px;
 }
 
+.guide-meta {
+  margin: -10px 0 24px;
+  color: #8f95a3;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .035em;
+}
+
+.guide-meta time {
+  white-space: nowrap;
+}
+
 .boundary {
   padding: 26px;
   border: 1px solid var(--line-strong);

@@ -1,6 +1,6 @@
 # OfferPSP
 
-> OfferPSP is a private B2B payment infrastructure advisory, provider-matching and introduction service operated by offerpsp.com (Individual Entrepreneur, Georgia).
+> OfferPSP is a private B2B payment infrastructure advisory, provider-matching and introduction service operated by Offerspsp.com (Individual Entrepreneur, Georgia) and presented publicly at offerpsp.com.
 
 Official website: https://offerpsp.com/
 Contact: bizdev@offerpsp.com
@@ -32,6 +32,10 @@ OfferPSP does not publish its provider network, private routes, rates or custome
 
 - Home and service overview: https://offerpsp.com/
 - PSP matching process: https://offerpsp.com/psp-matching-process.html
+- How to compare PSP offers and payment terms: https://offerpsp.com/how-to-compare-psp-offers.html
+- PSP onboarding requirements and merchant checklist: https://offerpsp.com/psp-onboarding-requirements.html
+- High-risk payment processing guide: https://offerpsp.com/high-risk-payment-processing-guide.html
+- Payment gateway vs PSP vs acquirer guide: https://offerpsp.com/payment-gateway-vs-psp-vs-acquirer.html
 - PSP matching for licensed iGaming businesses: https://offerpsp.com/psp-for-igaming.html
 - PSP matching for licensed forex and trading platforms: https://offerpsp.com/psp-for-forex.html
 - High-risk PSP and payment provider matching: https://offerpsp.com/high-risk-payment-provider.html
