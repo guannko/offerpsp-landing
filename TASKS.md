@@ -5,6 +5,130 @@ Updated: 2026-09-01
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## Next social publication — 2026-09-02
+
+- [ ] 2026-09-02 at 18:30 Asia/Nicosia: publish the approved merchant-brief Reel on Instagram;
+  select the music from Instagram's licensed library immediately before publication.
+- [ ] Package 3: explain the value of OfferPSP for PSP partners — structured merchant dossiers,
+  provider-controlled review and controlled introductions without unqualified lead promises.
+- [ ] 2026-09-03 at 10:30 Asia/Nicosia: publish the approved main B2B version on the LinkedIn founder
+  profile.
+- [ ] 2026-09-04 at 18:30 Asia/Nicosia: publish the approved Instagram carousel.
+- [ ] 2026-09-04: publish approved short adaptations on X and Threads.
+- [ ] Before publication, show Boris one final package containing the exact text and Instagram
+  visuals; no repeated approval cycle is needed unless the content changes materially.
+
+## Radio Room mail organizer — 2026-09-01
+
+Status: `VERIFIED` in production.
+
+- [x] Extended the existing threaded mailbox with priority, flags, follow-up deadlines, staff
+  notes, tags and saved AI summaries without creating a second mail source of truth.
+- [x] Added working folders for overdue and flagged conversations, organizer-aware search and
+  operational sorting that surfaces flagged, urgent and overdue threads first.
+- [x] Added a compact thread organizer with quick follow-up presets and a staff-only update RPC.
+- [x] Added protected reusable email templates for provider outreach, offer-matrix requests,
+  partner follow-ups and merchant clarification. Templates remain editable and never auto-send.
+- [x] Added on-demand AIBot conversation summaries constrained to the selected thread and saved
+  back to its organizer record.
+- [x] Applied production migrations `20260901171048` and `20260901171530`. Verified seven organizer
+  columns, four active templates, three primary organizer indexes, an explicit deny policy for
+  direct template access and follow-up backfill for all four awaiting-reply threads.
+- [x] Deployed Vercel production deployment `dpl_F177dyNiH6rCLTr5GwXHKbzRCY4i`, `READY` and aliased
+  to `https://ops-7q4m2x9k8v3n.vercel.app`.
+- [x] Authenticated production smoke test on the branded OfferPSP test thread verified persistent
+  priority, flag, deadline, note and tags after full reload; saved AIBot summary generation;
+  editable follow-up template application without sending; overdue/flagged live counts; and final
+  cleanup restoring the test thread's original automatic follow-up with no smoke metadata left.
+- [x] Made the five compact queue counters actionable. `Новых` opens the dedicated unread folder;
+  `Ждём ответ`, `Просрочено`, `С флагом` and `Файлов` open their matching live queues, clear stale
+  search text and visibly retain the active filter. Production deployment
+  `dpl_24tVfUNKw3mcr7JDgjZ5cwc3jVbB` is `READY` and aliased to the staff URL. Authenticated browser
+  verification returned 4 awaiting-reply and 2 overdue threads, correct zero-result states for
+  unread/flagged/attachments, active pressed states and no browser log errors.
+
+## Radio Room retained trash — 2026-09-02
+
+Status: `VERIFIED` in production.
+
+- [x] Added a visible `Удалить` action to every active mail thread. It performs a reversible soft
+  delete and removes the conversation from all working folders without deleting messages immediately.
+- [x] Added a dedicated `Корзина` folder with its own live count, exact final-deletion date and a
+  `Восстановить` action that returns the thread to its previous workflow status.
+- [x] New inbound or outbound activity automatically restores a trashed thread, so a partner reply
+  cannot remain hidden until retention cleanup.
+- [x] Added a private purge function and active Supabase Cron job
+  `offerpsp-purge-email-trash` (`17 2 * * *`) that permanently deletes database thread/message rows
+  after 15 days. The purge function is not executable by anonymous or authenticated browser roles.
+- [x] Applied production migration `20260901204841` (`offerpsp_email_trash_retention`). A rollback-only
+  production transaction verified trash metadata, restore cleanup and 16-day purge with zero leaked
+  smoke rows. Production currently has 18 threads, zero in trash and zero stored mail attachments.
+- [x] Full isolated migration harness verified staff-only delete/restore, trash metrics, inbound-mail
+  recovery and scheduled purge. Control-integrity tests, lint, TypeScript and Vite build pass.
+- [x] Deployed staff production deployment `dpl_9Bpa4kor46iurkGDKYWynKufr57R`, `READY` and aliased to
+  `https://ops-7q4m2x9k8v3n.vercel.app`. HTTP returns 200 and the production bundle contains the
+  delete, retained-trash, expiry and restore controls.
+
+## Mail center workspace redesign — 2026-09-01
+
+Status: `VERIFIED` in production.
+
+- [x] Replaced the oversized five-card mail dashboard with a compact channel and action summary.
+- [x] Added explicit inbound/outbound direction, last-message excerpt, counterparty, time, unread count
+  and next-step status to every thread row.
+- [x] Rebuilt the selected thread as a chronological conversation: sender, recipients, direction,
+  timestamp and delivery/read state are visible for every message.
+- [x] The primary action now reflects the latest message: `Ответить` after an inbound message and
+  `Написать follow-up` after an outbound message.
+- [x] Moved entity linking into a collapsed secondary control so it no longer interrupts reading.
+- [x] Renamed the workspace to `Радиорубка` and established it as the Captain's Bridge mail and
+  communications center rather than a generic dashboard.
+- [x] Added real mail folders with live counts: active, inbox, sent, awaiting reply, follow-up,
+  attachments, closed, archive and all mail. Search now includes subject, counterparty and the
+  latest message text.
+- [x] Added a The Bat-inspired three-pane desktop layout: folders on the left, a dense thread list
+  in the middle and the selected conversation on the right. Narrower screens use a compact folder
+  selector without losing the same filters.
+- [x] Verified the live-data UI for inbound, outbound, reply, follow-up and compose states. Local
+  browser verification reported zero console errors; control-integrity tests, lint, production
+  build and `git diff --check` pass.
+- [x] Deployed final Vercel production deployment `dpl_HBd1gfLRfXcXDhBJ9MA53tzvz1bc` and aliased it to
+  `https://ops-7q4m2x9k8v3n.vercel.app`. An authenticated production smoke test verified the
+  `Радиорубка` page title and sidebar label, responsive folder selector, 4 current inbound threads,
+  7 current outbound threads and the wide folders / threads / selected-conversation layout with
+  zero console errors.
+
+## Existing email draft handoff — 2026-09-01
+
+Status: `VERIFIED` for production draft discovery, same-record editing and the staff-only database
+boundary. No real external email was sent during this verification.
+
+- [x] Added a `Готовы к отправке` list to Communications. Existing `draft` and `failed` records open
+  through `?draft=<id>` with their saved recipient, subject and body.
+- [x] Existing drafts are edited through the staff-only `update_offerpsp_email_draft` RPC and retain
+  their original ID; the UI explicitly states that a second draft will not be created.
+- [x] The send action now says `Отправить этот черновик` and continues through the existing
+  `bizdev@offerpsp.com` n8n/Brevo delivery path after updating the same record.
+- [x] Applied Supabase migration `20260901125455`. A rollback-only production regression verified
+  same-ID editing, thread/message synchronization, orphan-thread cleanup, denial for non-staff and
+  refusal to edit a sent draft; the test left zero temporary rows.
+- [x] Control-integrity tests, lint, platform build, full public build, migration harness and
+  `git diff --check` pass.
+- [x] Deployed Captain's Bridge production build
+  `https://ops-7q4m2x9k8v3n-33910sgj5-annoris.vercel.app` and aliased it to
+  `https://ops-7q4m2x9k8v3n.vercel.app`. The live authenticated Communications page shows drafts
+  `#7`, `#8` and `#9`; opening `#9` produced `communications?draft=9`, the saved message and the
+  same-record send button with zero browser console errors.
+- [x] Replaced the plain one-`div` n8n email body with the canonical responsive OfferPSP HTML shell
+  in active workflow `3NWUlQpDHlVMJcb9`, version `f00540f0-65e0-4c65-9efb-18fdf0ebc321`. The SMTP
+  node now sends both HTML and plain-text alternatives. Runtime validation reports 6 enabled nodes,
+  4 valid connections, zero errors and zero warnings.
+- [x] Sent one branded production test to `guannko@gmail.com` on 2026-09-01. Captain's Bridge records
+  `Отправлено · brevo`; Gmail received and rendered the dark OfferPSP header, pink accent, structured
+  paragraphs, clickable links, signature and BRAININDEX OÜ footer. The reproducible n8n source and
+  contract test live in `scripts/n8n-offerpsp-branded-email.js` and
+  `scripts/test-offerpsp-email-template.mjs`.
+
 ## Social launch package — 2026-08-31
 
 Status: `VERIFIED` for preparation and publication of packages 1 and 2 across the approved social
@@ -184,6 +308,29 @@ Initial evidence and ranking: `docs/PSP-PARTNER-PIPELINE-2026-08-31.md`.
   diligence before creating or updating partner cards.
 - [ ] Do not send applications or outreach until the remaining credential rotation and delivery
   smoke gates in the control audit are closed.
+
+### First-wave Cyprus and Open Banking outreach — 2026-09-01
+
+Status: `VERIFIED` for official-channel research, production database cleanup and internal draft
+preparation. No application, form or email has been sent.
+
+- [x] Corrected the production research cards for Unlimit, Ecommpay, Volt.io and Praxis Tech.
+  Removed Volt's unrelated `Sporting Chance` contact, preserved all four as `not_contacted` and
+  recorded the official partnership source and verification time.
+- [x] Added deduplicated production research cards for payabl., Yaspa, Noda and Sepaga EMI. The
+  cards distinguish a publicly confirmed partner model from the still-unagreed OfferPSP percentage
+  or fee.
+- [x] Re-read all eight cards through OfferPSP Operator after the database transaction. Each search
+  returns exactly one active record; no record was marked contacted.
+- [x] Prepared internal, unsent Captain's Bridge drafts for Noda (`7`), Praxis Tech (`8`) and
+  Sepaga EMI (`9`).
+- [x] Added `docs/OFFERPSP-PARTNER-OUTREACH-WAVE-1.md` with the commercial data request, exact
+  first-send order and tailored application copy for payabl., Unlimit, Ecommpay, Yaspa and Volt.
+- [ ] Submit payabl. first, only after Boris approves the exact action-time form contents. Record
+  the application reference and contact event immediately after successful submission.
+- [ ] Send or submit the remaining seven contacts one at a time after rechecking the current
+  timeline and preserving the confirmed referral economics, lead protection and offer-matrix
+  response as structured source data.
 
 ## Technical stabilization and isolated production — 2026-08-27
 
