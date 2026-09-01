@@ -105,13 +105,32 @@ export type EmailThread = {
   counterparty_type: "merchant" | "provider" | "casino" | "research_psp" | "subagent" | "general";
   counterparty_id?: string | null;
   lead_id?: string | null;
-  status: "open" | "awaiting_reply" | "follow_up" | "closed" | "archived";
+  status: "open" | "awaiting_reply" | "follow_up" | "closed" | "archived" | "trashed";
   unread_count: number;
   assigned_to?: string | null;
   last_message_at: string;
   tags?: string[];
+  priority?: "low" | "normal" | "high" | "urgent";
+  is_flagged?: boolean;
+  follow_up_at?: string | null;
+  organizer_notes?: string | null;
+  ai_summary?: string | null;
+  ai_summary_generated_at?: string | null;
+  last_organized_at?: string | null;
+  trashed_at?: string | null;
+  trashed_from_status?: "open" | "awaiting_reply" | "follow_up" | "closed" | "archived" | null;
   created_at?: string;
   updated_at?: string;
+};
+
+export type EmailTemplate = {
+  id: string;
+  template_code: string;
+  name: string;
+  category: "partnership" | "follow_up" | "offer_matrix" | "merchant" | "general";
+  language: "en" | "ru";
+  subject_template: string;
+  body_template: string;
 };
 
 export type EmailMessage = {
@@ -156,10 +175,11 @@ export type EmailAttachment = {
 };
 
 export type MailCenterSnapshot = {
-  metrics: { threads: number; unread: number; awaiting_reply: number; follow_up: number; attachments_to_review?: number };
+  metrics: { threads: number; unread: number; awaiting_reply: number; follow_up: number; overdue_follow_up?: number; flagged?: number; trash?: number; attachments_to_review?: number };
   threads: EmailThread[];
   messages: EmailMessage[];
   attachments: EmailAttachment[];
+  templates: EmailTemplate[];
 };
 
 export type TelegramLog = {

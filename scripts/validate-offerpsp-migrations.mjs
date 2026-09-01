@@ -12,7 +12,11 @@ if (!pgliteRoot) {
 
 const moduleUrl = pathToFileURL(resolve(pgliteRoot, "node_modules/@electric-sql/pglite/dist/index.js"));
 const { PGlite } = await import(moduleUrl.href);
-const db = new PGlite();
+const pgcryptoUrl = pathToFileURL(
+  resolve(pgliteRoot, "node_modules/@electric-sql/pglite/dist/contrib/pgcrypto.js"),
+);
+const { pgcrypto } = await import(pgcryptoUrl.href);
+const db = new PGlite({ extensions: { pgcrypto } });
 
 const STAFF_ID = "11111111-1111-4111-8111-111111111111";
 const CLIENT_ID = "22222222-2222-4222-8222-222222222222";
@@ -51,6 +55,9 @@ async function bootstrap() {
     create publication supabase_realtime;
     create schema auth;
     create schema storage;
+    create schema extensions;
+    create schema cron;
+    set search_path = public, extensions;
     create table auth.users (
       id uuid primary key,
       email text
@@ -89,6 +96,26 @@ async function bootstrap() {
       created_at timestamptz not null default now()
     );
     alter table storage.objects enable row level security;
+
+    create table cron.job (
+      jobid bigint generated always as identity primary key,
+      jobname text not null unique,
+      schedule text not null,
+      command text not null
+    );
+    create or replace function cron.schedule(p_jobname text, p_schedule text, p_command text)
+    returns bigint
+    language plpgsql
+    as $$
+    declare
+      v_jobid bigint;
+    begin
+      insert into cron.job(jobname, schedule, command)
+      values (p_jobname, p_schedule, p_command)
+      returning jobid into v_jobid;
+      return v_jobid;
+    end;
+    $$;
 
   `);
   const legacyTables = await readFile(
@@ -227,6 +254,14 @@ async function applyMigrations() {
     "20260827151000_offerpsp_lead_policy_initplan.sql",
     "20260827160000_offerpsp_contact_research_queue.sql",
     "20260827181354_offerpsp_acquisition_conversion_attribution.sql",
+    "20260828220000_offerpsp_experience_events.sql",
+    "20260828223000_offerpsp_experience_events_rls_ingest.sql",
+    "20260831010000_aibot_canonical_provider_search.sql",
+    "20260831013000_offerpsp_experience_event_policy_initplan.sql",
+    "20260901154500_offerpsp_existing_email_draft_send.sql",
+    "20260901164843_offerpsp_mail_organizer.sql",
+    "20260901171530_offerpsp_mail_organizer_advisor_hardening.sql",
+    "20260901185355_offerpsp_email_trash_retention.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -234,7 +269,10 @@ async function applyMigrations() {
   }
 
   for (const migrationName of migrationNames) {
-    const sql = await readFile(resolve(migrationsDirectory, migrationName), "utf8");
+    let sql = await readFile(resolve(migrationsDirectory, migrationName), "utf8");
+    if (migrationName === "20260901185355_offerpsp_email_trash_retention.sql") {
+      sql = sql.replace("create extension if not exists pg_cron with schema pg_catalog;", "-- pg_cron is stubbed by the local validator");
+    }
     try {
       await db.exec(sql);
       process.stdout.write(`PASS migration ${migrationName}\n`);
@@ -2797,10 +2835,13 @@ async function verifyMailCenter() {
     has_function_privilege('service_role', 'public.aibot_n8n_ingest_email(jsonb)', 'EXECUTE') as service_ingest,
     has_function_privilege('anon', 'public.aibot_n8n_ingest_email(jsonb)', 'EXECUTE') as anon_ingest,
     has_function_privilege('authenticated', 'public.get_offerpsp_mail_center(integer)', 'EXECUTE') as authenticated_read,
+    has_function_privilege('authenticated', 'public.update_offerpsp_email_draft(bigint,text,text,text)', 'EXECUTE') as authenticated_draft_update,
+    has_function_privilege('anon', 'public.update_offerpsp_email_draft(bigint,text,text,text)', 'EXECUTE') as anon_draft_update,
     has_table_privilege('authenticated', 'public.offerpsp_email_threads', 'SELECT') as authenticated_table_read,
     has_table_privilege('service_role', 'public.offerpsp_email_messages', 'SELECT,INSERT,UPDATE,DELETE') as service_messages`);
   const boundary = grants.rows[0];
   if (!boundary.service_ingest || boundary.anon_ingest || !boundary.authenticated_read
+      || !boundary.authenticated_draft_update || boundary.anon_draft_update
       || boundary.authenticated_table_read || !boundary.service_messages) {
     throw new Error("OfferPSP mail center grants do not match the RPC-only access model");
   }
@@ -2812,22 +2853,55 @@ async function verifyMailCenter() {
     [recipient, "Partnership request", "Outbound introduction"],
   );
   const draftId = Number(created.rows[0].value.id);
+
+  await setUser(OTHER_CLIENT_ID);
+  await expectQueryFailure(
+    "select public.update_offerpsp_email_draft($1, $2, $3, $4)",
+    [draftId, recipient, "Unauthorized edit", "Must fail"],
+    "OfferPSP staff access required",
+  );
+  await setUser(STAFF_ID);
+
+  const updatedRecipient = `mail-center-updated-${unique}@example.com`;
+  const edited = await query(
+    "select public.update_offerpsp_email_draft($1, $2, $3, $4) as value",
+    [draftId, updatedRecipient, "Updated partnership request", "Updated outbound introduction"],
+  );
+  if (Number(edited.rows[0].value.id) !== draftId || edited.rows[0].value.status !== "draft") {
+    throw new Error("Existing email draft edit did not preserve the original draft ID");
+  }
+  const staleThread = await query(
+    "select count(*)::integer as count from public.offerpsp_email_threads where participant_email = $1",
+    [recipient],
+  );
+  if (staleThread.rows[0].count !== 0) {
+    throw new Error("Editing an email draft left an orphaned previous-recipient thread");
+  }
   await query("select public.set_offerpsp_email_draft_status($1, 'sent')", [draftId]);
 
   const outbound = await query(`select t.id as thread_id, t.status, m.delivery_status
     from public.offerpsp_email_threads t
     join public.offerpsp_email_messages m on m.thread_id = t.id
-    where m.source_draft_id = $1`, [draftId]);
+    where m.source_draft_id = $1
+      and t.participant_email = $2
+      and m.subject = 'Updated partnership request'
+      and m.text_body = 'Updated outbound introduction'`, [draftId, updatedRecipient]);
   if (outbound.rows.length !== 1 || outbound.rows[0].status !== "awaiting_reply"
       || outbound.rows[0].delivery_status !== "sent") {
     throw new Error("Outgoing email was not synchronized into the threaded mailbox");
   }
 
+  await expectQueryFailure(
+    "select public.update_offerpsp_email_draft($1, $2, $3, $4)",
+    [draftId, updatedRecipient, "Duplicate send", "Must not reopen a sent message"],
+    "Only draft or failed email can be edited",
+  );
+
   const threadId = outbound.rows[0].thread_id;
   const inbound = await query("select public.aibot_n8n_ingest_email($1::jsonb) as value", [JSON.stringify({
-    from_email: `Partner <${recipient}>`,
+    from_email: `Partner <${updatedRecipient}>`,
     to: ["bizdev@offerpsp.com"],
-    subject: "Re: Partnership request",
+    subject: "Re: Updated partnership request",
     text: "Interested. Please send the details.",
     message_id: `<mail-center-${unique}@example.com>`,
     received_at: new Date().toISOString(),
@@ -2850,12 +2924,59 @@ async function verifyMailCenter() {
     throw new Error("Email thread read/follow-up state did not persist");
   }
 
+  const mailboxBeforeTrash = await query("select public.get_offerpsp_mail_center(200) as value");
+  await query("select public.set_offerpsp_email_thread_state($1, 'trashed', null)", [threadId]);
+  const trashed = await query("select status, trashed_at, trashed_from_status from public.offerpsp_email_threads where id = $1", [threadId]);
+  if (trashed.rows[0].status !== "trashed" || !trashed.rows[0].trashed_at
+      || trashed.rows[0].trashed_from_status !== "follow_up") {
+    throw new Error(`Email trash did not preserve the previous state: ${JSON.stringify(trashed.rows[0])}`);
+  }
+  const trashedMailbox = await query("select public.get_offerpsp_mail_center(200) as value");
+  if (Number(trashedMailbox.rows[0].value.metrics.trash) !== Number(mailboxBeforeTrash.rows[0].value.metrics.trash) + 1
+      || Number(trashedMailbox.rows[0].value.metrics.threads) !== Number(mailboxBeforeTrash.rows[0].value.metrics.threads) - 1
+      || !trashedMailbox.rows[0].value.threads.some((item) => item.id === threadId && item.status === "trashed")) {
+    throw new Error("Trash metrics or thread visibility are inconsistent");
+  }
+
+  await query("select public.set_offerpsp_email_thread_state($1, 'restore', null)", [threadId]);
+  const restored = await query("select status, trashed_at, trashed_from_status from public.offerpsp_email_threads where id = $1", [threadId]);
+  if (restored.rows[0].status !== "follow_up" || restored.rows[0].trashed_at !== null
+      || restored.rows[0].trashed_from_status !== null) {
+    throw new Error(`Email restore did not recover the previous state: ${JSON.stringify(restored.rows[0])}`);
+  }
+
+  await query("select public.set_offerpsp_email_thread_state($1, 'trashed', null)", [threadId]);
+  await query("select public.aibot_n8n_ingest_email($1::jsonb)", [JSON.stringify({
+    from_email: `Partner <${updatedRecipient}>`,
+    to: ["bizdev@offerpsp.com"],
+    subject: "Re: Updated partnership request",
+    text: "A new reply must restore this conversation.",
+    message_id: `<mail-center-trash-restore-${unique}@example.com>`,
+    received_at: new Date().toISOString(),
+  })]);
+  const autoRestored = await query("select status, trashed_at, trashed_from_status from public.offerpsp_email_threads where id = $1", [threadId]);
+  if (autoRestored.rows[0].status !== "open" || autoRestored.rows[0].trashed_at !== null
+      || autoRestored.rows[0].trashed_from_status !== null) {
+    throw new Error(`New inbound mail did not restore the trashed conversation: ${JSON.stringify(autoRestored.rows[0])}`);
+  }
+
+  await query("select public.set_offerpsp_email_thread_state($1, 'trashed', null)", [threadId]);
+  await query("update public.offerpsp_email_threads set trashed_at = now() - interval '16 days' where id = $1", [threadId]);
+  const purged = await query("select private.purge_offerpsp_email_trash() as value");
+  if (Number(purged.rows[0].value) !== 1) {
+    throw new Error(`Expired email trash was not purged: ${JSON.stringify(purged.rows[0])}`);
+  }
+  const cronJob = await query("select schedule, command from cron.job where jobname = 'offerpsp-purge-email-trash'");
+  if (cronJob.rows.length !== 1 || cronJob.rows[0].schedule !== "17 2 * * *"
+      || !cronJob.rows[0].command.includes("purge_offerpsp_email_trash")) {
+    throw new Error(`Email trash cleanup schedule is missing: ${JSON.stringify(cronJob.rows)}`);
+  }
+
   await setUser(OTHER_CLIENT_ID);
   await expectQueryFailure("select public.get_offerpsp_mail_center(20)", [], "OfferPSP staff access required");
   await setUser(STAFF_ID);
   await query("delete from public.email_drafts where id = $1", [draftId]);
-  await query("delete from public.offerpsp_email_threads where id = $1", [threadId]);
-  process.stdout.write("PASS threaded email inbox, reply grouping, state controls and staff isolation\n");
+  process.stdout.write("PASS threaded inbox, retained trash, automatic restore, scheduled purge and staff isolation\n");
 }
 
 async function verifyPrivateSourceStorage() {
