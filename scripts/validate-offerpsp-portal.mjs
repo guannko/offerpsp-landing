@@ -104,6 +104,12 @@ assert.match(htmlSource, /data-i18n="prepareTitle"/);
 assert.match(htmlSource, /data-open-support data-i18n="getSupport"/);
 assert.match(htmlSource, /id="supportDialog"/);
 assert.match(htmlSource, /id="supportMessageForm"/);
+assert.equal(
+  (htmlSource.match(/href="https:\/\/t\.me\/offerpsp"/g) || []).length,
+  2,
+  "Portal support links must point to the official OfferPSP Telegram",
+);
+assert.doesNotMatch(htmlSource, /t\.me\/Brain_Index/);
 assert.match(appSource, /rpc\("ensure_offerpsp_portal_support_conversation"\)/);
 assert.match(appSource, /MESSAGE_REFRESH_INTERVAL_MS = 3000/);
 assert.match(appSource, /refreshSupportMessages\(\)\.catch/);
