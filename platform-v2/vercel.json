@@ -1,0 +1,122 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/platform-modules.mjs": {
+      "includeFiles": "{rules/**,vendor/siteone-crawler/**}",
+      "maxDuration": 120
+    },
+    "api/search-index-sync.mjs": {
+      "maxDuration": 60
+    },
+    "api/extract-document.mjs": {
+      "maxDuration": 60
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/search-index-sync",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/seo-audit-scheduled",
+      "schedule": "0 6 * * 1"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/mcp",
+      "destination": "/api/platform-modules?module=mcp"
+    },
+    {
+      "source": "/offerpsp-actions-openapi.json",
+      "destination": "/api/platform-modules?module=gpt-actions-schema"
+    },
+    {
+      "source": "/actions/:action",
+      "destination": "/api/platform-modules?module=gpt-actions&action=:action"
+    },
+    {
+      "source": "/.well-known/oauth-protected-resource",
+      "destination": "/api/platform-modules?module=mcp-resource-metadata"
+    },
+    {
+      "source": "/.well-known/oauth-protected-resource/mcp",
+      "destination": "/api/platform-modules?module=mcp-resource-metadata"
+    },
+    {
+      "source": "/.well-known/oauth-authorization-server",
+      "destination": "/api/platform-modules?module=oauth-metadata"
+    },
+    {
+      "source": "/.well-known/openid-configuration",
+      "destination": "/api/platform-modules?module=oauth-metadata"
+    },
+    {
+      "source": "/oauth/register",
+      "destination": "/api/platform-modules?module=oauth-register"
+    },
+    {
+      "source": "/oauth/authorize",
+      "destination": "/api/platform-modules?module=oauth-authorize"
+    },
+    {
+      "source": "/oauth/token",
+      "destination": "/api/platform-modules?module=oauth-token"
+    },
+    {
+      "source": "/api/oauth/request",
+      "destination": "/api/platform-modules?module=oauth-request"
+    },
+    {
+      "source": "/api/oauth/decision",
+      "destination": "/api/platform-modules?module=oauth-decision"
+    },
+    {
+      "source": "/api/evaluate-rules",
+      "destination": "/api/platform-modules?module=evaluate-rules"
+    },
+    {
+      "source": "/api/module-health",
+      "destination": "/api/platform-modules?module=module-health"
+    },
+    {
+      "source": "/api/semantic-memory",
+      "destination": "/api/platform-modules?module=semantic-memory"
+    },
+    {
+      "source": "/api/seo-audit",
+      "destination": "/api/platform-modules?module=seo-audit"
+    },
+    {
+      "source": "/api/seo-audit-scheduled",
+      "destination": "/api/platform-modules?module=seo-audit-scheduled"
+    },
+    {
+      "source": "/api/seo-live-traffic",
+      "destination": "/api/platform-modules?module=seo-live-traffic"
+    },
+    {
+      "source": "/api/google-search-console",
+      "destination": "/api/platform-modules?module=google-search-console"
+    },
+    {
+      "source": "/api/bix-gateway-health",
+      "destination": "/api/platform-modules?module=bix-gateway-health"
+    },
+    {
+      "source": "/api/provider-offer-source",
+      "destination": "/api/platform-modules?module=provider-offer-source"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

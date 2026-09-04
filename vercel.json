@@ -1,0 +1,152 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "npm run build",
+  "outputDirectory": ".vercel-static",
+  "functions": {
+    "api/acquisition-event.mjs": {
+      "maxDuration": 10
+    },
+    "api/portal-notification.mjs": {
+      "maxDuration": 20
+    }
+  },
+  "redirects": [
+    {
+      "source": "/instagram",
+      "destination": "https://offerpsp.com/?utm_source=instagram&utm_medium=organic_social&utm_campaign=profile_2026&utm_content=bio",
+      "statusCode": 302
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        { "type": "host", "value": "offerspsp.com" }
+      ],
+      "destination": "https://offerpsp.com/:path*",
+      "statusCode": 301
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        { "type": "host", "value": "www.offerspsp.com" }
+      ],
+      "destination": "https://offerpsp.com/:path*",
+      "statusCode": 301
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        { "type": "host", "value": "www.offerpsp.com" }
+      ],
+      "destination": "https://offerpsp.com/:path*",
+      "statusCode": 301
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/_data/:path*",
+      "destination": "https://iceopurxqzqmwtcmwfzl.supabase.co/:path*"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/portal/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "private, no-store, max-age=0" }
+      ]
+    },
+    {
+      "source": "/portal/(.*).(js|css)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800" },
+        { "key": "Vercel-CDN-Cache-Control", "value": "public, max-age=604800, stale-while-revalidate=2592000" }
+      ]
+    },
+    {
+      "source": "/psp/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "private, no-store, max-age=0" }
+      ]
+    },
+    {
+      "source": "/psp/(.*).(js|css)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800" },
+        { "key": "Vercel-CDN-Cache-Control", "value": "public, max-age=604800, stale-while-revalidate=2592000" }
+      ]
+    },
+    {
+      "source": "/favicon.svg",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/brand/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" },
+        { "key": "Vercel-CDN-Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/service-pages.css",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800" },
+        { "key": "Vercel-CDN-Cache-Control", "value": "public, max-age=604800, stale-while-revalidate=2592000" }
+      ]
+    },
+    {
+      "source": "/acquisition-attribution.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" },
+        { "key": "Vercel-CDN-Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/(legal.css|contact-dialog.css|contact-dialog.js)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" },
+        { "key": "Vercel-CDN-Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/content-visuals.css",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" },
+        { "key": "Vercel-CDN-Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/content/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" },
+        { "key": "Vercel-CDN-Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/og-offerpsp.png",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800" },
+        { "key": "Vercel-CDN-Cache-Control", "value": "public, max-age=604800, stale-while-revalidate=2592000" }
+      ]
+    },
+    {
+      "source": "/(robots.txt|llms.txt|sitemap.xml)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=3600, stale-while-revalidate=86400" },
+        { "key": "Vercel-CDN-Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800" }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data:; font-src 'self' data:; style-src 'self' 'sha256-GRw66/22ZhVT/bp1EkdaTssD54dsbYBFO5C1u1RhQRs='; style-src-attr 'none'; script-src 'self' 'sha256-tLU5RBMHCDhVW/t+CL2XiCiC1j2P1M2vs2Jbo304tH8=' 'sha256-bhFZkYO7VBRNZjmGaR2YslX6Yvz6HztDKdOB5L/Ltt4=' https://cdn.jsdelivr.net; script-src-attr 'none'; connect-src 'self' https://iceopurxqzqmwtcmwfzl.supabase.co wss://iceopurxqzqmwtcmwfzl.supabase.co https://ops-7q4m2x9k8v3n.vercel.app https://annoris--n8n-make--xjvz9xynmzwk.code.run; upgrade-insecure-requests" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
+        { "key": "Access-Control-Allow-Origin", "value": "https://offerpsp.com" }
+      ]
+    }
+  ]
+}

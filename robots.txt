@@ -1,4 +1,9 @@
+# Public discovery is open to search engines and AI answer engines, including
+# Google, Bing/Copilot, ChatGPT, Gemini, Claude, Perplexity and other crawlers.
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /portal/
+Disallow: /api/
 
 Sitemap: https://offerpsp.com/sitemap.xml

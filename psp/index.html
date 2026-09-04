@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0b0e17">
+  <title>Кабинет PSP | OfferPSP</title>
+  <link rel="icon" href="/brand/offerpsp-favicon-32.png?v=20260816-1" type="image/png" sizes="32x32">
+  <link rel="stylesheet" href="/psp/styles.css?v=20260827-4">
+</head>
+<body>
+  <div class="ambient" aria-hidden="true"></div>
+
+  <main id="authView" class="auth-shell">
+    <section class="auth-card">
+      <a class="brand" href="/"><img src="/brand/offerpsp-logo-horizontal-transparent.png" alt="OfferPSP"></a>
+      <p class="eyebrow">Закрытый кабинет PSP</p>
+      <h1>Управляйте своими офферами.</h1>
+      <p class="muted">Войдите с email, на который команда OfferPSP выдала доступ.</p>
+      <form id="loginForm">
+        <label>Рабочий email<input id="emailInput" type="email" autocomplete="email" required placeholder="you@psp.com"></label>
+        <button id="loginButton" class="button primary" type="submit">Получить ссылку для входа</button>
+      </form>
+      <p id="authStatus" class="status" aria-live="polite"></p>
+      <p class="fine">Самостоятельная регистрация закрыта. Для доступа обратитесь к менеджеру OfferPSP.</p>
+    </section>
+  </main>
+
+  <main id="portalView" class="portal hidden">
+    <div class="portal-layout">
+      <aside class="portal-sidebar" aria-label="Навигация кабинета PSP">
+        <a class="brand sidebar-brand" href="/"><img src="/brand/offerpsp-logo-horizontal-transparent.png" alt="OfferPSP"></a>
+        <div class="sidebar-divider"></div>
+        <nav class="tabs" aria-label="Разделы кабинета">
+          <button class="active" data-tab="offers" type="button"><span class="nav-icon" aria-hidden="true">⌂</span><span>Обзор и офферы</span></button>
+          <button data-tab="profile" type="button"><span class="nav-icon" aria-hidden="true">◇</span><span>Профиль PSP</span></button>
+          <button data-tab="contacts" type="button"><span class="nav-icon" aria-hidden="true">◎</span><span>Команда</span></button>
+          <button data-tab="updates" type="button"><span class="nav-icon" aria-hidden="true">↗</span><span>Новости</span></button>
+          <button data-tab="new" type="button"><span class="nav-icon" aria-hidden="true">＋</span><span>Ручная форма</span></button>
+        </nav>
+        <div class="sidebar-help">
+          <span class="help-icon" aria-hidden="true">?</span>
+          <div><strong>Нужна помощь?</strong><span>Напишите менеджеру OfferPSP</span></div>
+        </div>
+        <div class="secure-note"><span aria-hidden="true"></span>Защищённый кабинет</div>
+      </aside>
+
+      <section class="workspace-frame">
+        <header class="topbar">
+          <div class="workspace-heading"><strong>Офферы и условия</strong><span>Кабинет поставщика платёжных решений</span></div>
+          <div class="top-actions"><span id="userEmail"></span><button id="signOutButton" class="button ghost" type="button">Выйти</button></div>
+        </header>
+        <div class="shell">
+      <section class="hero">
+        <div><p class="eyebrow">Кабинет PSP</p><h1 id="providerName">PSP workspace</h1><p id="providerMeta" class="muted"></p></div>
+        <div class="hero-actions"><select id="workspaceSelect" class="hidden" aria-label="Выберите PSP"></select><button id="freshnessButton" class="button secondary" type="button">Подтвердить актуальность</button><button id="uploadOfferButton" class="button primary" type="button">Загрузить оффер</button></div>
+      </section>
+      <div id="globalStatus" class="notice hidden" aria-live="polite"></div>
+      <section id="accessDenied" class="empty hidden"><h2>Доступ не назначен</h2><p>Этот аккаунт не связан ни с одним PSP. Напишите менеджеру OfferPSP.</p></section>
+      <div id="workspaceContent" class="hidden">
+        <section id="stats" class="stats"></section>
+
+        <section id="offersTab" class="tab-panel">
+          <div class="section-head"><div><p class="eyebrow">Главное действие</p><h2>Загрузите новые условия</h2></div><button id="newOfferButton" class="button ghost" type="button">Заполнить вручную</button></div>
+          <p class="section-copy">Вставьте сообщение как в Telegram или приложите PDF, Excel, CSV, DOCX либо изображение. Система сама выделит отдельные маршруты и подготовит их к проверке. Публикация возможна только после проверки OfferPSP.</p>
+          <div class="process-strip" aria-label="Как обрабатывается оффер">
+            <div><span>1</span><strong>Загрузите</strong><small>Текст или файл в привычном виде</small></div>
+            <div><span>2</span><strong>Проверьте разбор</strong><small>Система разделит GEO, ставки и лимиты</small></div>
+            <div><span>3</span><strong>Дождитесь проверки</strong><small>OfferPSP подтвердит публикацию</small></div>
+          </div>
+          <form id="sourceForm" class="composer">
+            <textarea id="sourceText" rows="10" aria-label="Текст оффера" placeholder="Вставьте сообщение PSP целиком — со всеми GEO, ставками, лимитами и settlement…"></textarea>
+            <div id="sourceFileCard" class="file-card hidden"></div>
+            <div class="composer-actions">
+              <label class="button ghost file-button">Прикрепить файл<input id="sourceFile" type="file" accept=".txt,.md,.csv,.tsv,.json,.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.tif,.tiff,.webp"></label>
+              <span class="muted">до 15 МБ</span>
+              <button id="sendSourceButton" class="button primary" type="submit">Отправить на разбор</button>
+            </div>
+          </form>
+          <div id="ingestionList" class="card-list"></div>
+          <div id="routeList" class="card-list"></div>
+          <div id="draftList" class="card-list"></div>
+        </section>
+
+        <section id="newTab" class="tab-panel hidden">
+          <div class="section-head"><div><p class="eyebrow">Черновик</p><h2 id="offerFormTitle">Новый оффер PSP</h2></div><button id="resetOfferButton" class="button ghost" type="button">Очистить</button></div>
+          <form id="offerForm" class="form-grid">
+            <input id="draftId" type="hidden">
+            <label class="span-2">Название оффера<input id="clientTitle" required placeholder="Brazil Pix PayIn"></label>
+            <label>Поток<select id="flow"><option value="payin">PayIn</option><option value="payout">PayOut</option><option value="both">PayIn + PayOut</option></select></label>
+            <label>Покрытие<select id="coverageMode"><option value="specific">Конкретные GEO</option><option value="regional">Регион</option><option value="allowlist">WW — только открытые GEO</option><option value="global_except">WW — кроме запрещённых GEO</option></select></label>
+            <label>GEO через запятую<input id="geos" placeholder="BR, MX"></label>
+            <label>Запрещённые GEO<input id="blockedGeos" placeholder="US, CA"></label>
+            <label>Валюты<input id="currencies" required placeholder="BRL, USD"></label>
+            <label>Методы оплаты<input id="methods" required placeholder="PIX, CARDS"></label>
+            <label>Карточные схемы<input id="cardBrands" placeholder="VISA, MASTERCARD"></label>
+            <label>Тип трафика<input id="trafficTypes" placeholder="FTD, RETENTION"></label>
+            <label>Разрешённые вертикали<input id="verticals" placeholder="IGAMING, FOREX"></label>
+            <label>Запрещённые вертикали<input id="prohibitedVerticals" placeholder="ADULT"></label>
+            <label>Интеграции<input id="integrations" placeholder="API, H2H"></label>
+            <label>Условия действуют с<input id="effectiveFrom" type="date"></label>
+            <label>Условия действуют до<input id="expiresAt" type="date"></label>
+            <label>Проверять актуальность каждые, дней<input id="freshnessDays" type="number" min="1" value="30"></label>
+            <label>Валюта оборота<input id="volumeCurrency" placeholder="EUR"></label>
+            <label>Минимальный месячный оборот<input id="minMonthlyVolume" type="number" min="0" step="0.01"></label>
+            <label>Максимальный месячный оборот<input id="maxMonthlyVolume" type="number" min="0" step="0.01"></label>
+            <fieldset class="span-2"><legend>Ставка PSP</legend><div class="form-grid compact"><label>PayIn, %<input id="payinPercent" type="number" min="0" step="0.0001"></label><label>PayIn фикс<input id="payinFixed" type="number" min="0" step="0.01"></label><label>PayOut, %<input id="payoutPercent" type="number" min="0" step="0.0001"></label><label>PayOut фикс<input id="payoutFixed" type="number" min="0" step="0.01"></label></div></fieldset>
+            <fieldset class="span-2"><legend>Лимит на транзакцию</legend><div class="form-grid compact"><label>Валюта<input id="limitCurrency" placeholder="BRL"></label><label>Минимум<input id="limitMin" type="number" min="0" step="0.01"></label><label>Максимум<input id="limitMax" type="number" min="0" step="0.01"></label></div></fieldset>
+            <fieldset class="span-2"><legend>Settlement</legend><div class="form-grid compact"><label>Валюта<input id="settlementCurrency" placeholder="USDT"></label><label>Период<input id="settlementPeriod" placeholder="T+1"></label><label>Комиссия, %<input id="settlementPercent" type="number" min="0" step="0.0001"></label></div></fieldset>
+            <label class="span-2">Риски и reserve<textarea id="riskNotes" rows="3" placeholder="Rolling reserve, chargeback rules, compliance requirements"></textarea></label>
+            <label class="span-2">Операционные условия<textarea id="operationalNotes" rows="4" placeholder="Рабочие часы, SLA, особенности подключения"></textarea></label>
+            <div class="span-2 form-actions"><button id="saveDraftButton" class="button secondary" type="submit">Сохранить черновик</button><button id="submitDraftButton" class="button primary" type="button">Отправить на проверку</button></div>
+          </form>
+        </section>
+
+        <section id="profileTab" class="tab-panel hidden">
+          <div class="section-head"><div><p class="eyebrow">Будущая карточка каталога</p><h2>Полный профиль PSP</h2></div></div>
+          <p class="section-copy">Заполняйте профиль уже сейчас. Пока он закрыт; при открытии витрины будут показаны только отдельно одобренные данные.</p>
+          <form id="profileForm" class="form-grid">
+            <label>Бренд<input id="brandName" required></label>
+            <label>Юридическое название<input id="legalName"></label>
+            <label>Сайт<input id="website" type="url" placeholder="https://"></label>
+            <label>Документация API<input id="apiDocsUrl" type="url" placeholder="https://"></label>
+            <label>Страна головного офиса<input id="headquartersCountry" placeholder="GB"></label>
+            <label>Год основания<input id="foundedYear" type="number" min="1900" max="2200"></label>
+            <label class="span-2">Описание компании<textarea id="companyDescription" rows="4"></textarea></label>
+            <label>Рабочие GEO<input id="operatingGeos" placeholder="BR, MX, UZ"></label>
+            <label>Валюты<input id="supportedCurrencies" placeholder="BRL, MXN, UZS"></label>
+            <label>Методы<input id="profilePaymentMethods" placeholder="PIX, P2P, CARDS"></label>
+            <label>Карточные схемы<input id="profileCardSchemes" placeholder="VISA, MASTERCARD, HUMO"></label>
+            <label>Вертикали<input id="supportedVerticals" placeholder="IGAMING, FOREX"></label>
+            <label>Запрещённые вертикали<input id="profileProhibitedVerticals" placeholder="..."></label>
+            <label>Интеграции<input id="profileIntegrations" placeholder="API, H2H, REDIRECT"></label>
+            <label>Settlement валюты<input id="settlementCurrencies" placeholder="USDT, USD, EUR"></label>
+            <label>Языки поддержки<input id="supportLanguages" placeholder="EN, RU, ES"></label>
+            <label>Обычный срок подключения<input id="onboardingSla" placeholder="3–5 рабочих дней"></label>
+            <label class="span-2">Лицензии<textarea id="licences" rows="4" placeholder="По одной на строку: юрисдикция | номер | ссылка"></textarea></label>
+            <label class="span-2">Compliance<textarea id="complianceSummary" rows="4" placeholder="Требования, ограничения, KYC/KYB"></textarea></label>
+            <label class="span-2">Что требуется для onboarding<textarea id="onboardingRequirements" rows="4"></textarea></label>
+            <label class="span-2">Будущее публичное описание<textarea id="publicSummary" rows="3" placeholder="Короткое описание для будущей витрины; сейчас не публикуется"></textarea></label>
+            <div class="span-2"><button class="button primary" type="submit">Сохранить профиль</button></div>
+          </form>
+          <p class="section-copy">Коммерческие договорённости с OfferPSP и внутренняя наценка хранятся отдельно и в этом кабинете не показываются.</p>
+        </section>
+
+        <section id="contactsTab" class="tab-panel hidden">
+          <div class="section-head"><div><p class="eyebrow">Рабочие контакты</p><h2>Команда PSP</h2></div></div>
+          <form id="contactForm" class="form-grid narrow">
+            <input id="contactId" type="hidden">
+            <label>Имя<input id="contactName" required></label>
+            <label>Должность<input id="contactRole"></label>
+            <label>Email<input id="contactEmail" type="email"></label>
+            <label>Telegram<input id="contactTelegram" placeholder="@username"></label>
+            <label>Телефон<input id="contactPhone"></label>
+            <label>Регион / timezone<input id="contactRegion"></label>
+            <label>Основной канал<select id="contactChannel"><option value="email">Email</option><option value="telegram">Telegram</option><option value="phone">Телефон</option><option value="other">Другой</option></select></label>
+            <label>Статус<select id="contactActive"><option value="true">Активен</option><option value="false">Неактивен</option></select></label>
+            <label class="span-2">Комментарий PSP<textarea id="contactNotes" rows="3"></textarea></label>
+            <div class="span-2 form-actions"><button id="resetContactButton" class="button ghost" type="button">Очистить</button><button class="button primary" type="submit">Сохранить контакт</button></div>
+          </form>
+          <div id="contactList" class="card-list"></div>
+        </section>
+
+        <section id="updatesTab" class="tab-panel hidden">
+          <div class="section-head"><div><p class="eyebrow">История компании</p><h2>Новости и изменения</h2></div></div>
+          <p class="section-copy">Сообщайте о новых GEO и методах, изменениях API, compliance или временных работах. Отправка создаёт запись на проверку, а не публичную новость.</p>
+          <form id="updateForm" class="form-grid narrow">
+            <input id="updateId" type="hidden">
+            <label>Тип<select id="updateType"><option value="general">Общее</option><option value="product">Продукт</option><option value="coverage">Покрытие</option><option value="pricing">Тарифы</option><option value="compliance">Compliance</option><option value="integration">Интеграция</option><option value="maintenance">Технические работы</option></select></label>
+            <label>Действует с<input id="updateEffectiveAt" type="datetime-local"></label>
+            <label class="span-2">Заголовок<input id="updateTitle" required></label>
+            <label class="span-2">Описание<textarea id="updateBody" rows="5" required></textarea></label>
+            <div class="span-2 form-actions"><button id="saveUpdateButton" class="button ghost" type="submit">Сохранить черновик</button><button id="submitUpdateButton" class="button primary" type="button">Отправить на проверку</button></div>
+          </form>
+          <div id="updateList" class="card-list"></div>
+        </section>
+      </div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script type="module" src="/psp/app.js?v=20260827-5"></script>
+</body>
+</html>

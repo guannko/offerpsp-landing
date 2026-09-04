@@ -1,0 +1,91 @@
+{
+  "name": "offerpsp-control-bridge",
+  "private": true,
+  "version": "2.3.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "test:pdf-extractor": "node scripts/test-pdf-extractor.mjs",
+    "test:offer-parser": "node scripts/test-offer-parser.mjs",
+    "test:provider-source": "node scripts/test-provider-offer-source.mjs",
+    "test:mailbox-poller": "node scripts/test-mailbox-poller.mjs",
+    "test:modules": "node scripts/test-platform-modules.mjs",
+    "test:control-integrity": "node scripts/test-control-integrity.mjs",
+    "test:pwa": "node scripts/test-pwa.mjs",
+    "test:siteone-audit": "node scripts/test-siteone-audit.mjs",
+    "test:bridges": "node scripts/test-integration-bridges.mjs",
+    "test:mcp": "node scripts/test-mcp-gateway.mjs && node scripts/test-offerpsp-oauth.mjs",
+    "test:bix-reserve": "node scripts/test-bix-reserve-foundation.mjs",
+    "test:seo-live-traffic": "node scripts/test-vercel-web-analytics.mjs",
+    "test:google-search-console": "node scripts/test-google-search-console.mjs",
+    "test:seo-audit-sources": "node scripts/test-seo-audit-sources.mjs"
+  },
+  "dependencies": {
+    "@fullcalendar/core": "^6.1.15",
+    "@fullcalendar/daygrid": "^6.1.15",
+    "@fullcalendar/interaction": "^6.1.15",
+    "@fullcalendar/list": "^6.1.15",
+    "@fullcalendar/react": "^6.1.15",
+    "@fullcalendar/timegrid": "^6.1.15",
+    "@gorules/zen-engine": "^0.54.0",
+    "@napi-rs/canvas": "^1.0.3",
+    "@react-jvectormap/core": "^1.0.4",
+    "@react-jvectormap/world": "^1.1.2",
+    "@supabase/supabase-js": "2.112.0",
+    "@vercel/functions": "^3.9.3",
+    "apexcharts": "^4.1.0",
+    "clsx": "^2.1.1",
+    "flatpickr": "^4.6.13",
+    "imapflow": "1.6.6",
+    "mailparser": "3.9.15",
+    "mammoth": "^1.12.0",
+    "meilisearch": "^0.60.0",
+    "mem0ai": "^3.1.6",
+    "pdfjs-dist": "^6.2.108",
+    "react": "^19.0.0",
+    "react-apexcharts": "^1.7.0",
+    "react-dnd": "^16.0.1",
+    "react-dnd-html5-backend": "^16.0.1",
+    "react-dom": "^19.0.0",
+    "react-dropzone": "^14.3.5",
+    "react-helmet-async": "^2.0.5",
+    "react-router": "^8.3.0",
+    "read-excel-file": "^9.3.5",
+    "tailwind-merge": "^3.0.1",
+    "tesseract.js": "^7.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.19.0",
+    "@tailwindcss/postcss": "^4.0.8",
+    "@types/react": "^19.0.12",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.19.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-plugin-react-refresh": "^0.4.18",
+    "globals": "^15.14.0",
+    "postcss": "^8.5.2",
+    "tailwindcss": "^4.0.8",
+    "typescript": "~5.7.2",
+    "typescript-eslint": "^8.22.0",
+    "vite": "^6.1.0",
+    "vite-plugin-svgr": "^4.3.0"
+  },
+  "overrides": {
+    "nanoid": "3.3.17",
+    "react-helmet-async": {
+      "react": "^16.8.0 || ^17 || ^18 || ^19"
+    },
+    "@react-jvectormap/core": {
+      "react": "^16.8.0 || ^17 || ^18 || ^19",
+      "react-dom": "^16.8.0 || ^17 || ^18 || ^19"
+    },
+    "@react-jvectormap/world": {
+      "react": "^16.8.0 || ^17 || ^18 || ^19",
+      "react-dom": "^16.8.0 || ^17 || ^18 || ^19"
+    }
+  }
+}

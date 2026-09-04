@@ -1,0 +1,65 @@
+# OfferPSP
+
+> OfferPSP is a private B2B payment infrastructure advisory, provider-matching and introduction service operated by Offerspsp.com (Individual Entrepreneur, Georgia) and presented publicly at offerpsp.com.
+
+Official website: https://offerpsp.com/
+Contact: bizdev@offerpsp.com
+
+## Official social profiles
+
+- Instagram: https://www.instagram.com/offerpsp/
+- X: https://x.com/offerpsp
+- Threads: https://www.threads.com/@offerpsp
+- Telegram contact: https://t.me/offerpsp
+- Founder on LinkedIn: https://www.linkedin.com/in/borys-kononenko-offerpsp/
+
+## What OfferPSP does
+
+- Collects a company's operating and payment requirements privately.
+- Evaluates relevant payment service providers and payment routes.
+- Prepares a focused shortlist for the requesting company.
+- Coordinates qualified introductions and merchant onboarding conversations.
+- Supports cross-border payment infrastructure research across Europe, CIS, the Middle East, Latin America and Asia-Pacific.
+
+## Businesses served
+
+- E-commerce businesses
+- Online marketplaces
+- SaaS and subscription businesses
+- Video game platforms and publishers
+- Digital entertainment and esports businesses
+- Other cross-border businesses
+
+## Important boundaries
+
+OfferPSP provides and charges for its own B2B research, qualification, matching and introduction services. It does not receive, hold, transfer or settle money belonging to merchants, providers or their customers. Provider availability, onboarding, due diligence and commercial terms are determined by independent providers.
+
+OfferPSP does not publish its provider network, private routes, rates or customer records. Requests are submitted through the private intake at https://offerpsp.com/#request.
+
+## Official pages
+
+- Home and service overview: https://offerpsp.com/
+- PSP matching process: https://offerpsp.com/psp-matching-process.html
+- How to compare PSP offers and payment terms: https://offerpsp.com/how-to-compare-psp-offers.html
+- PSP onboarding requirements and merchant checklist: https://offerpsp.com/psp-onboarding-requirements.html
+- High-risk payment processing guide: https://offerpsp.com/high-risk-payment-processing-guide.html
+- Payment gateway vs PSP vs acquirer guide: https://offerpsp.com/payment-gateway-vs-psp-vs-acquirer.html
+- PSP matching for licensed iGaming businesses: https://offerpsp.com/psp-for-igaming.html
+- PSP matching for licensed forex and trading platforms: https://offerpsp.com/psp-for-forex.html
+- High-risk PSP and payment provider matching: https://offerpsp.com/high-risk-payment-provider.html
+- E-commerce PSP and payment provider matching: https://offerpsp.com/payment-provider-for-ecommerce.html
+- PSP matching for video game studios, publishers and platforms: https://offerpsp.com/psp-for-video-games.html
+- Cross-border payment provider matching: https://offerpsp.com/cross-border-payment-matching.html
+- Payment provider matching in Europe: https://offerpsp.com/payment-provider-europe.html
+- Payment provider matching for CIS and Central Asia: https://offerpsp.com/payment-provider-cis-central-asia.html
+- Russian-language CIS and Central Asia payment matching: https://offerpsp.com/payment-provider-cis-central-asia-ru.html
+- PSP matching for SaaS and subscription businesses: https://offerpsp.com/psp-for-saas.html
+- PSP matching for online marketplaces: https://offerpsp.com/psp-for-marketplaces.html
+- PSP matching for compliant crypto businesses: https://offerpsp.com/psp-for-crypto-businesses.html
+- Payment provider matching in Latin America: https://offerpsp.com/payment-provider-latin-america.html
+- Payment provider matching across Asia-Pacific: https://offerpsp.com/payment-provider-asia-pacific.html
+- Payment provider matching in the Middle East: https://offerpsp.com/payment-provider-middle-east.html
+- Payment provider matching across African markets: https://offerpsp.com/payment-provider-africa.html
+- Payment method planning by GEO: https://offerpsp.com/payment-methods-by-geo.html
+- Privacy notice: https://offerpsp.com/privacy.html
+- Terms: https://offerpsp.com/terms.html
