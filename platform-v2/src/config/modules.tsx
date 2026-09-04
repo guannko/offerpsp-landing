@@ -61,7 +61,7 @@ export const platformModules: PlatformModule[] = [
   { id: "compliance", label: "Проверка лидов", shortLabel: "Compliance", path: "/compliance", icon: <TaskIcon />, enabled: featureFlags.compliance, group: "operations", badge: "PRO", requiresEntitlement: "pre_compliance" },
   { id: "matching", label: "Подбор решений", shortLabel: "Matching", path: "/matching", icon: <ShootingStarIcon />, enabled: featureFlags.matching, group: "operations" },
   { id: "dealDesk", label: "Сделки", shortLabel: "Сделки", path: "/deals", icon: <TaskIcon />, enabled: featureFlags.dealDesk, group: "operations" },
-  { id: "communications", label: "Коммуникации", shortLabel: "Связь", path: "/communications", icon: <ChatIcon />, enabled: featureFlags.communications, group: "growth" },
+  { id: "communications", label: "Радиорубка", shortLabel: "Почта", path: "/communications", icon: <ChatIcon />, enabled: featureFlags.communications, group: "growth" },
   { id: "tasks", label: "Задачи и календарь", shortLabel: "Задачи", path: "/operations", icon: <TaskIcon />, enabled: featureFlags.tasks, group: "growth" },
   { id: "agents", label: "Субагенты", shortLabel: "Агенты", path: "/agents", icon: <UserCircleIcon />, enabled: featureFlags.agents, group: "growth" },
   { id: "analytics", label: "Аналитика", shortLabel: "Аналитика", path: "/analytics", icon: <PieChartIcon />, enabled: featureFlags.analytics, group: "control" },
