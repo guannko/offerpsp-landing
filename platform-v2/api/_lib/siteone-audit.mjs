@@ -167,6 +167,7 @@ export function publicPageChecksFromEvidence(evidence) {
       canonical: String(page.canonical || "").slice(0, 1_000) || null,
       indexable: !/(?:^|[,\s])noindex(?:$|[,\s])/i.test(String(page.meta_robots || "")),
       structured_data_blocks: Number(page.json_ld_blocks || 0),
+      structured_data_types: Array.isArray(page.json_ld_types) ? page.json_ld_types.slice(0, 20) : [],
     }))
     .sort((left, right) => {
       const leftPath = new URL(left.url).pathname;
@@ -193,20 +194,36 @@ async function probeText(url, fetchImpl) {
 }
 
 export async function collectGeoSignals(fetchImpl = fetch) {
+  const sitemapUrl = "https://offerpsp.com/sitemap.xml";
   const [robots, llms, sitemap, homepage] = await Promise.all([
     probeText("https://offerpsp.com/robots.txt", fetchImpl),
     probeText("https://offerpsp.com/llms.txt", fetchImpl),
-    probeText("https://offerpsp.com/sitemap.xml", fetchImpl),
+    probeText(sitemapUrl, fetchImpl),
     probeText("https://offerpsp.com/", fetchImpl),
   ]);
   const aiBlocked = /user-agent:\s*(?:gptbot|chatgpt-user|claudebot|google-extended|perplexitybot)[\s\S]{0,300}?disallow:\s*\//i.test(robots.text);
   const structuredDataCount = (homepage.text.match(/application\/ld\+json/gi) || []).length;
+  const declaredSitemaps = [...robots.text.matchAll(/^\s*sitemap:\s*(\S+)\s*$/gim)]
+    .map((match) => match[1].trim());
+  const sitemapEntries = [...sitemap.text.matchAll(/<loc>\s*([^<]+?)\s*<\/loc>/gi)]
+    .map((match) => match[1].trim());
 
   return {
     checked_at: new Date().toISOString(),
-    robots_txt: { ok: robots.ok, status: robots.status, ai_crawlers_allowed: robots.ok && !aiBlocked },
+    robots_txt: {
+      ok: robots.ok,
+      status: robots.status,
+      ai_crawlers_allowed: robots.ok && !aiBlocked,
+      sitemap_urls: declaredSitemaps,
+    },
     llms_txt: { ok: llms.ok, status: llms.status, bytes: llms.bytes },
-    sitemap: { ok: sitemap.ok, status: sitemap.status },
+    sitemap: {
+      ok: sitemap.ok,
+      status: sitemap.status,
+      url: sitemapUrl,
+      urls: new Set(sitemapEntries).size,
+      declared_in_robots: declaredSitemaps.includes(sitemapUrl),
+    },
     structured_data: { ok: homepage.ok && structuredDataCount > 0, blocks: structuredDataCount },
   };
 }

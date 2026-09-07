@@ -80,14 +80,18 @@ assert.deepEqual(audit.metadata.skipped_urls, [
 assert.throws(() => normalizeSiteOneAudit({ crawler_error: "crawl failed" }), /crawl failed/);
 
 const responses = new Map([
-  ["https://offerpsp.com/robots.txt", "User-agent: *\nAllow: /"],
+  ["https://offerpsp.com/robots.txt", "User-agent: *\nAllow: /\nSitemap: https://offerpsp.com/sitemap.xml"],
   ["https://offerpsp.com/llms.txt", "# OfferPSP"],
-  ["https://offerpsp.com/sitemap.xml", "<urlset></urlset>"],
+  ["https://offerpsp.com/sitemap.xml", "<urlset><url><loc>https://offerpsp.com/</loc></url></urlset>"],
   ["https://offerpsp.com/", '<script type="application/ld+json">{}</script>'],
 ]);
 const geo = await collectGeoSignals(async (url) => new Response(responses.get(url), { status: 200 }));
 assert.equal(geo.robots_txt.ai_crawlers_allowed, true);
+assert.deepEqual(geo.robots_txt.sitemap_urls, ["https://offerpsp.com/sitemap.xml"]);
 assert.equal(geo.llms_txt.ok, true);
+assert.equal(geo.sitemap.url, "https://offerpsp.com/sitemap.xml");
+assert.equal(geo.sitemap.urls, 1);
+assert.equal(geo.sitemap.declared_in_robots, true);
 assert.equal(geo.structured_data.blocks, 1);
 
 let invokedBinary = "";
@@ -166,6 +170,7 @@ assert.equal(publicPageChecks.pages[0].url, "https://offerpsp.com/");
 assert.equal(publicPageChecks.pages[0].status, 200);
 assert.equal(publicPageChecks.pages[0].canonical, "https://offerpsp.com/");
 assert.equal(publicPageChecks.pages[0].indexable, true);
+assert.deepEqual(publicPageChecks.pages[0].structured_data_types, ["Organization", "Service"]);
 assert.equal(publicPageChecks.pages.find((page) => page.url.endsWith("/portal/"))?.indexable, false);
 assert.equal(evidence.pages[0].image_inventory.content_images, 0);
 assert.deepEqual(evidence.pages[0].hreflang_alternates, [{ hreflang: "en", href: "https://offerpsp.com/" }]);
@@ -270,6 +275,67 @@ const unsupportedStructuredData = normalizeSeoAgentAnalysis({ analysis: {
 assert.equal(unsupportedStructuredData.priorities.length, 0);
 assert.equal(unsupportedStructuredData.confidence, "medium");
 assert.match(unsupportedStructuredData.limitations.join(" "), /already declares Schema\.org types/i);
+
+const completeAcquisitionEvidence = {
+  ...evidence,
+  pages: [
+    ...evidence.pages,
+    {
+      url: "https://offerpsp.com/high-risk-payment-provider.html",
+      status: 200,
+      meta_robots: "index, follow",
+      json_ld_types: ["Organization", "WebSite", "WebPage", "Service", "BreadcrumbList", "FAQPage"],
+    },
+    {
+      url: "https://offerpsp.com/high-risk-payment-processing-guide.html",
+      status: 200,
+      meta_robots: "index, follow",
+      json_ld_types: ["Organization", "WebSite", "WebPage", "Article", "BreadcrumbList", "FAQPage"],
+    },
+  ],
+};
+const redundantSitemapAndSchema = normalizeSeoAgentAnalysis({ analysis: {
+  ...rawAgentAnalysis,
+  executive_summary: "Create the XML sitemap and expand structured data across the key pages.",
+  confidence: "high",
+  priorities: [{
+    priority: "P1",
+    area: "Technical",
+    title: "Создать и подключить XML-карту сайта",
+    evidence: "Sitemap status is 200, but its URL is not shown.",
+    recommendation: "Add sitemap.xml to robots.txt.",
+    affected_urls: ["https://offerpsp.com/"],
+  }, {
+    priority: "P2",
+    area: "GEO",
+    title: "Расширить структурированные данные для ответов ИИ",
+    evidence: "Article and BreadcrumbList are reportedly missing from internal pages.",
+    recommendation: "Add Article, BreadcrumbList, Service and FAQPage to all key pages.",
+    affected_urls: [
+      "https://offerpsp.com/high-risk-payment-provider.html",
+      "https://offerpsp.com/high-risk-payment-processing-guide.html",
+    ],
+  }],
+  quick_wins: ["Add sitemap.xml to robots.txt", "Add Article and BreadcrumbList structured data"],
+  geo_recommendations: ["Expand Schema.org structured data on all key pages"],
+} }, completeAcquisitionEvidence);
+assert.equal(redundantSitemapAndSchema.priorities.length, 0);
+assert.equal(redundantSitemapAndSchema.quick_wins.length, 0);
+assert.equal(redundantSitemapAndSchema.geo_recommendations.length, 0);
+assert.doesNotMatch(redundantSitemapAndSchema.executive_summary, /sitemap|structured data/i);
+assert.match(redundantSitemapAndSchema.limitations.join(" "), /explicitly declared in robots\.txt/i);
+assert.match(redundantSitemapAndSchema.limitations.join(" "), /Service for matching pages and Article for editorial guides/i);
+
+const redundantAuxiliarySchema = normalizeSeoAgentAnalysis({ analysis: {
+  ...rawAgentAnalysis,
+  executive_summary: "The live crawl is healthy.",
+  priorities: [],
+  quick_wins: [],
+  geo_recommendations: ["Добавить FAQ-разметку на все страницы с вопросами и ответами."],
+} }, completeAcquisitionEvidence);
+assert.equal(redundantAuxiliarySchema.priorities.length, 0);
+assert.equal(redundantAuxiliarySchema.geo_recommendations.length, 0);
+assert.match(redundantAuxiliarySchema.limitations.join(" "), /Service for matching pages and Article for editorial guides/i);
 
 const unsupportedNoindexMetadata = normalizeSeoAgentAnalysis({ analysis: {
   ...rawAgentAnalysis,

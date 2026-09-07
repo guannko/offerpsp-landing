@@ -43,7 +43,7 @@ export const seoPages = [
   },
   {
     slug: "high-risk-payment-provider",
-    modified: "2026-09-01",
+    modified: "2026-09-05",
     title: "High-Risk PSP and Payment Provider Matching | OfferPSP",
     description: "Private high-risk PSP matching for complex online businesses: underwriting, routes and reserves. Get qualified introductions without a public provider list.",
     kicker: "Complex and higher-risk profiles",
@@ -76,7 +76,13 @@ export const seoPages = [
       ["Will every matched provider offer the same terms?", "No. Pricing, reserves, limits, settlement, required documents and permitted markets are provider-specific and remain subject to final review."],
       ["Can a declined merchant try another route?", "Potentially, if another provider has a genuinely different appetite or coverage. A previous decline should be disclosed where relevant, and the underlying reason must be understood rather than hidden."]
     ],
-    related: ["high-risk-payment-processing-guide", "psp-onboarding-requirements", "how-to-compare-psp-offers"]
+    related: [
+      "high-risk-payment-processing-guide",
+      "psp-onboarding-requirements",
+      "how-to-compare-psp-offers",
+      "payment-provider-cis-central-asia",
+      "payment-provider-middle-east"
+    ]
   },
   {
     slug: "cross-border-payment-matching",
@@ -309,6 +315,7 @@ export const seoPages = [
   },
   {
     slug: "payment-provider-cis-central-asia",
+    modified: "2026-09-05",
     title: "Payment Providers for CIS & Central Asia | OfferPSP",
     description: "Payment provider matching for CIS and Central Asia: local rails, cards, currencies, cross-border settlement and profile-specific compliance screening.",
     kicker: "CIS and Central Asia payment coverage",
@@ -337,10 +344,11 @@ export const seoPages = [
       ["x-default", "https://offerpsp.com/payment-provider-cis-central-asia.html"]
     ],
     areaServed: ["Kazakhstan", "Uzbekistan", "Georgia", "Armenia", "Kyrgyzstan", "Azerbaijan", "Moldova"],
-    related: ["payment-provider-cis-central-asia-ru", "psp-for-forex", "cross-border-payment-matching"]
+    related: ["payment-provider-cis-central-asia-ru", "psp-for-forex", "cross-border-payment-matching", "high-risk-payment-provider"]
   },
   {
     slug: "payment-provider-cis-central-asia-ru",
+    modified: "2026-09-05",
     lang: "ru",
     title: "Платёжные провайдеры СНГ и Центральной Азии | OfferPSP",
     description: "Частный подбор платёжных провайдеров для СНГ и Центральной Азии: карты, локальные методы, валюты и выплаты. Получите релевантное предложение под ваш бизнес.",
@@ -370,7 +378,7 @@ export const seoPages = [
       ["x-default", "https://offerpsp.com/payment-provider-cis-central-asia.html"]
     ],
     areaServed: ["Казахстан", "Узбекистан", "Грузия", "Армения", "Кыргызстан", "Азербайджан", "Молдова"],
-    related: ["payment-provider-cis-central-asia", "psp-for-forex", "cross-border-payment-matching"]
+    related: ["payment-provider-cis-central-asia", "psp-for-forex", "cross-border-payment-matching", "high-risk-payment-provider"]
   },
   {
     slug: "psp-for-crypto-businesses",
@@ -482,7 +490,7 @@ export const seoPages = [
   },
   {
     slug: "payment-provider-middle-east",
-    modified: "2026-08-31",
+    modified: "2026-09-05",
     title: "Payment Provider Matching in the Middle East | OfferPSP",
     description: "Private PSP matching in the Middle East: cards, bank rails, wallets, currencies and settlement. Get a qualified provider introduction securely online.",
     kicker: "Middle East payment coverage",
@@ -514,7 +522,7 @@ export const seoPages = [
       ["Does OfferPSP handle local licensing?", "No. We record the regulatory position for matching. Licensing and legal advice remain with qualified advisers and the relevant authorities."]
     ],
     areaServed: ["United Arab Emirates", "Saudi Arabia", "Bahrain", "Qatar", "Kuwait", "Jordan"],
-    related: ["cross-border-payment-matching", "payment-methods-by-geo", "psp-for-crypto-businesses"]
+    related: ["cross-border-payment-matching", "payment-methods-by-geo", "psp-for-crypto-businesses", "high-risk-payment-provider"]
   },
   {
     slug: "payment-provider-africa",

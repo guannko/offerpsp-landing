@@ -343,6 +343,59 @@ function hasVerifiedStructuredDataTypes(evidence) {
   return pages.some((page) => Array.isArray(page.json_ld_types) && page.json_ld_types.length > 0);
 }
 
+function hasVerifiedSitemapSetup(evidence) {
+  const sitemap = evidence?.geo_signals?.sitemap;
+  return Boolean(
+    sitemap?.ok
+    && Number(sitemap.status) >= 200
+    && Number(sitemap.status) < 400
+    && Number(sitemap.urls) > 0
+    && sitemap.declared_in_robots === true
+  );
+}
+
+function claimsMissingSitemapSetup(item) {
+  const text = typeof item === "string"
+    ? item
+    : [item?.title, item?.evidence, item?.recommendation].join(" ");
+  return /(sitemap|xml[- ]?map|xml[- ]?карта|карт[аыу] сайта)/i.test(text)
+    && /(add|create|connect|declare|link|include|созда|подключ|объяв|добав|ссылк|включ)/i.test(text);
+}
+
+function isAcquisitionPage(page) {
+  if (!(page?.status >= 200 && page.status < 400)) return false;
+  if (/(?:^|[,\s])noindex(?:$|[,\s])/i.test(page.meta_robots || "")) return false;
+  try {
+    return !/^\/(?:$|privacy(?:\.html)?\/?$|terms(?:\.html)?\/?$)/i.test(new URL(page.url).pathname);
+  } catch {
+    return false;
+  }
+}
+
+function hasAppropriateAnswerSchema(page) {
+  const types = new Set(Array.isArray(page?.json_ld_types) ? page.json_ld_types : []);
+  return types.has("WebPage")
+    && types.has("BreadcrumbList")
+    && types.has("FAQPage")
+    && (types.has("Service") || types.has("Article"));
+}
+
+function claimsImplementedStructuredDataExpansion(item, evidence) {
+  const text = typeof item === "string"
+    ? item
+    : [item?.title, item?.evidence, item?.recommendation].join(" ");
+  if (!/(json-?ld|structured data|schema\.org|структурирован|размет)/i.test(text)) return false;
+  if (typeof item !== "string" && !/(article|breadcrumblist|breadcrumb|faq(?:page)?|service)/i.test(text)) return false;
+  if (!/(add|extend|expand|implement|добав|расшир|внедр|размет)/i.test(text)) return false;
+
+  const pages = Array.isArray(evidence?.pages) ? evidence.pages : [];
+  const affectedUrls = Array.isArray(item?.affected_urls) ? item.affected_urls : [];
+  const targets = affectedUrls.length > 0
+    ? affectedUrls.map((url) => pages.find((page) => page.url === url)).filter(isAcquisitionPage)
+    : pages.filter(isAcquisitionPage);
+  return targets.length > 0 && targets.every(hasAppropriateAnswerSchema);
+}
+
 function noindexPageUrls(evidence) {
   return new Set((Array.isArray(evidence?.pages) ? evidence.pages : [])
     .filter((page) => /(?:^|[,\s])noindex(?:$|[,\s])/i.test(page.meta_robots || ""))
@@ -615,6 +668,8 @@ function stripUnsupportedSummarySentences(summary, {
   llms,
   hreflang,
   noindex,
+  sitemap,
+  structuredData,
 }) {
   const sentences = String(summary || "").split(/(?<=[.!?])\s+/).filter(Boolean);
   const filtered = sentences.filter((sentence) => {
@@ -624,6 +679,8 @@ function stripUnsupportedSummarySentences(summary, {
     if (llms && /llms\.txt/i.test(sentence)) return false;
     if (hreflang && /hreflang/i.test(sentence)) return false;
     if (noindex && /noindex/i.test(sentence)) return false;
+    if (sitemap && /(sitemap|xml[- ]?карта|карт[аыу] сайта)/i.test(sentence)) return false;
+    if (structuredData && /(json-?ld|structured data|schema\.org|структурирован|микроразмет)/i.test(sentence)) return false;
     return true;
   });
   return clampText(filtered.join(" ") || "Техническое состояние сайта подтверждено живым crawl и проверкой production-ответов.", 1_200);
@@ -645,10 +702,16 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
   const verifiedBrotli = hasVerifiedBrotli(evidence);
   const noContentRasterImages = hasNoContentRasterImages(evidence);
   const verifiedStructuredDataTypes = hasVerifiedStructuredDataTypes(evidence);
+  const verifiedSitemapSetup = hasVerifiedSitemapSetup(evidence);
   const noindexUrls = noindexPageUrls(evidence);
   const indexedMetadataComplete = indexedPagesHaveMetaDescriptions(evidence);
   const verifiedLlmsCoverage = hasVerifiedLlmsCoverage(evidence);
   const summaryItem = { title: executiveSummary };
+  const auxiliaryRecommendations = [
+    summaryItem,
+    ...(Array.isArray(source.quick_wins) ? source.quick_wins : []),
+    ...(Array.isArray(source.geo_recommendations) ? source.geo_recommendations : []),
+  ];
   const removedUnsupportedSecurity = verifiedSecurity
     && (normalizedPriorities.some(claimsSecurityHeaderAction)
       || claimsMissingSecurityHeaders(summaryItem));
@@ -658,6 +721,10 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     && (normalizedPriorities.some(claimsMissingModernImages) || claimsMissingModernImages(summaryItem));
   const removedUnsupportedStructuredData = verifiedStructuredDataTypes
     && (normalizedPriorities.some(claimsMissingStructuredDataTypes) || claimsMissingStructuredDataTypes(summaryItem));
+  const removedExistingSitemapSetup = verifiedSitemapSetup
+    && [...normalizedPriorities, ...auxiliaryRecommendations].some(claimsMissingSitemapSetup);
+  const removedImplementedStructuredData = [...normalizedPriorities, ...auxiliaryRecommendations].some((item) =>
+    claimsImplementedStructuredDataExpansion(item, evidence));
   const removedNoindexMetadata = (indexedMetadataComplete && claimsMetadataChange(summaryItem))
     || normalizedPriorities.some((item) =>
       claimsMetadataChange(item) && targetsOnlySearchMetadataExcludedPages(item, noindexUrls))
@@ -686,6 +753,8 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     if (removedUnsupportedBrotli && claimsMissingBrotli(item)) return false;
     if (removedUnsupportedImages && claimsMissingModernImages(item)) return false;
     if (removedUnsupportedStructuredData && claimsMissingStructuredDataTypes(item)) return false;
+    if (removedExistingSitemapSetup && claimsMissingSitemapSetup(item)) return false;
+    if (removedImplementedStructuredData && claimsImplementedStructuredDataExpansion(item, evidence)) return false;
     if (claimsMetadataChange(item) && targetsOnlySearchMetadataExcludedPages(item, noindexUrls)) return false;
     if (removedUnsupportedLlms && claimsLlmsReview(item)) return false;
     if (claimsCreationOfExistingPage(item, evidence)) return false;
@@ -720,6 +789,12 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
   if (removedUnsupportedStructuredData) {
     limitations.unshift("Live JSON-LD already declares Schema.org types; recommendations claiming the type is unspecified were discarded.");
   }
+  if (removedExistingSitemapSetup) {
+    limitations.unshift("The live XML sitemap is available, contains canonical public URLs and is explicitly declared in robots.txt; duplicate setup recommendations were discarded.");
+  }
+  if (removedImplementedStructuredData) {
+    limitations.unshift("Acquisition pages already use WebPage, BreadcrumbList and FAQPage with Service for matching pages and Article for editorial guides; duplicate or semantically incorrect schema recommendations were discarded.");
+  }
   if (removedNoindexMetadata) {
     limitations.unshift("The portal is intentionally noindex and legal pages are not acquisition landing pages; unsupported search-snippet metadata recommendations for those surfaces were discarded.");
   }
@@ -748,6 +823,8 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     llms: removedUnsupportedLlms,
     hreflang: removedUnsupportedHreflang || removedImplementedHreflang,
     noindex: removedNoindexReview,
+    sitemap: removedExistingSitemapSetup,
+    structuredData: removedImplementedStructuredData,
   });
   const quickWins = Array.isArray(source.quick_wins) ? source.quick_wins.slice(0, 8).map((item) => clampText(item, 500)).filter(Boolean) : [];
 
@@ -758,7 +835,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     model: clampText(value?.model || source.model || "deepseek-chat", 120),
     generated_at: new Date().toISOString(),
     executive_summary: executiveSummary,
-    confidence: removedUnsupportedSecurity || removedUnsupportedBrotli || removedUnsupportedImages || removedUnsupportedStructuredData || removedNoindexMetadata || removedUnsupportedLlms || removedExistingPageCreation || removedNoindexReview || removedUnverifiableAggregate || removedBenignSkippedReview || removedUnsupportedHreflang || removedImplementedHreflang
+    confidence: removedUnsupportedSecurity || removedUnsupportedBrotli || removedUnsupportedImages || removedUnsupportedStructuredData || removedExistingSitemapSetup || removedImplementedStructuredData || removedNoindexMetadata || removedUnsupportedLlms || removedExistingPageCreation || removedNoindexReview || removedUnverifiableAggregate || removedBenignSkippedReview || removedUnsupportedHreflang || removedImplementedHreflang
       ? "medium"
       : (["high", "medium", "low"].includes(source.confidence) ? source.confidence : "medium"),
     priorities,
@@ -768,6 +845,8 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
       if (indexedMetadataComplete && /(meta[- _]?description|мета-описан)/i.test(item)) return false;
       if (removedUnsupportedSecurity && /(security|CSP|заголов)/i.test(item)) return false;
       if (removedUnsupportedLlms && /llms\.txt/i.test(item)) return false;
+      if (removedExistingSitemapSetup && /(sitemap|xml[- ]?карта|карт[аыу] сайта)/i.test(item)) return false;
+      if (removedImplementedStructuredData && claimsImplementedStructuredDataExpansion(item, evidence)) return false;
       if (evidence?.geo_signals?.robots_txt?.ai_crawlers_allowed && /robots\.txt/i.test(item)) return false;
       if (/hreflang/i.test(item) && !hreflangAdviceHasDiscoveredTarget(item, evidence)) return false;
       if (/(skipped|пропущенн)/i.test(item) && /(check|verify|провер)/i.test(item)) return false;
@@ -782,6 +861,8 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
       ? source.geo_recommendations.slice(0, 8).map((item) => clampText(item, 600)).filter((item) =>
         item
         && !(removedUnsupportedLlms && /llms\.txt/i.test(item))
+        && !(removedExistingSitemapSetup && /(sitemap|xml[- ]?карта|карт[аыу] сайта)/i.test(item))
+        && !(removedImplementedStructuredData && claimsImplementedStructuredDataExpansion(item, evidence))
         && !(evidence?.geo_signals?.robots_txt?.ai_crawlers_allowed && /(robots\.txt|GPTBot|ClaudeBot|AI[- ]crawler)/i.test(item))
         && !(/hreflang/i.test(item) && !hreflangAdviceHasDiscoveredTarget(item, evidence)))
       : [],

@@ -184,6 +184,18 @@ for (const page of seoPages) {
   }
 }
 
+for (const [sourceSlug, requiredRelatedSlugs] of [
+  ["high-risk-payment-provider", ["payment-provider-cis-central-asia", "payment-provider-middle-east"]],
+  ["payment-provider-cis-central-asia", ["high-risk-payment-provider"]],
+  ["payment-provider-cis-central-asia-ru", ["high-risk-payment-provider"]],
+  ["payment-provider-middle-east", ["high-risk-payment-provider"]],
+]) {
+  const sourcePage = seoPages.find((page) => page.slug === sourceSlug);
+  for (const requiredSlug of requiredRelatedSlugs) {
+    assert.ok(sourcePage.related.includes(requiredSlug), `${sourceSlug} must cross-link to ${requiredSlug}`);
+  }
+}
+
 const strengthenedSlugs = [
   "high-risk-payment-provider",
   "psp-for-igaming",
@@ -223,10 +235,10 @@ const searchExpansionSlugs = [
 for (const slug of searchExpansionSlugs) {
   const page = seoPages.find((candidate) => candidate.slug === slug);
   assert.ok(page, `${slug} must exist in the search-expansion cluster`);
-  assert.equal(page.modified, "2026-09-01", `${slug} must record the current search-expansion update`);
+  assert.ok(page.modified >= "2026-09-01", `${slug} must not predate the search-expansion update`);
   assert.ok(
-    sitemap.includes(`<loc>https://offerpsp.com/${slug}.html</loc>\n    <lastmod>2026-09-01</lastmod>`),
-    `${slug} sitemap lastmod must record the current search-expansion update`,
+    sitemap.includes(`<loc>https://offerpsp.com/${slug}.html</loc>\n    <lastmod>${page.modified}</lastmod>`),
+    `${slug} sitemap lastmod must match the current content update`,
   );
 }
 

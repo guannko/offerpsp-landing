@@ -92,6 +92,7 @@ type PublicPageCheck = {
   canonical?: string | null;
   indexable?: boolean;
   structured_data_blocks?: number;
+  structured_data_types?: string[];
 };
 type AuditSource = {
   id: string;
@@ -150,9 +151,9 @@ type TechnicalAudit = {
     };
     geo_signals?: {
       checked_at?: string;
-      robots_txt?: { ok?: boolean; status?: number; ai_crawlers_allowed?: boolean };
+      robots_txt?: { ok?: boolean; status?: number; ai_crawlers_allowed?: boolean; sitemap_urls?: string[] };
       llms_txt?: { ok?: boolean; status?: number; bytes?: number };
-      sitemap?: { ok?: boolean; status?: number };
+      sitemap?: { ok?: boolean; status?: number; url?: string; urls?: number; declared_in_robots?: boolean };
       structured_data?: { ok?: boolean; blocks?: number };
     };
     source_matrix?: AuditSourceMatrix;
@@ -455,6 +456,8 @@ export default function SeoGeoPage() {
   const agentPriorities = agent.priorities || [];
   const categoryScores = Object.entries(audit.category_scores || {});
   const geoSignals = audit.metadata?.geo_signals;
+  const sitemapUrlCount = geoSignals?.sitemap?.urls;
+  const sitemapDeclared = geoSignals?.sitemap?.declared_in_robots;
   const sourceMatrix = audit.metadata?.source_matrix;
   const auditSources = sourceMatrix?.sources || [];
   const referrers = (traffic?.referrers || []).map((row) => ({ ...row, key: row.key === "direct" ? "Прямой заход" : row.key }));
@@ -554,7 +557,7 @@ export default function SeoGeoPage() {
             const httpOk = httpStatus >= 200 && httpStatus < 400;
             return <tr key={page.url} className="border-b border-gray-100 last:border-0 dark:border-gray-800">
               <td className="px-3 py-4"><a href={page.url} target="_blank" rel="noreferrer" className="font-semibold text-gray-900 hover:text-brand-500 dark:text-white"><code className="text-xs">{shortPage(page.url)}</code></a>{page.title && <span className="mt-1 block max-w-[300px] truncate text-xs text-gray-400">{page.title}</span>}</td>
-              <td className="px-3 py-4"><strong className={httpOk ? "text-success-600 dark:text-success-400" : httpStatus ? "text-error-600" : "text-gray-400"}>{httpStatus ? `HTTP ${httpStatus}` : "Ожидает crawl"}</strong><span className="mt-1 block text-xs text-gray-400">{number(page.structured_data_blocks) ? `${number(page.structured_data_blocks)} JSON‑LD` : "schema —"}</span></td>
+              <td className="px-3 py-4"><strong className={httpOk ? "text-success-600 dark:text-success-400" : httpStatus ? "text-error-600" : "text-gray-400"}>{httpStatus ? `HTTP ${httpStatus}` : "Ожидает crawl"}</strong><span className="mt-1 block max-w-[240px] text-xs text-gray-400">{number(page.structured_data_blocks) ? `${number(page.structured_data_blocks)} JSON‑LD${page.structured_data_types?.length ? ` · ${page.structured_data_types.join(" · ")}` : ""}` : "schema —"}</span></td>
               <td className="px-3 py-4"><strong className={sameUrl(canonical, page.url) ? "text-success-600 dark:text-success-400" : canonical ? "text-warning-600" : "text-gray-400"}>{sameUrl(canonical, page.url) ? "Self" : canonical ? "Другой" : "—"}</strong>{canonical && !sameUrl(canonical, page.url) && <code className="mt-1 block max-w-[220px] truncate text-xs text-gray-400">{shortPage(canonical)}</code>}{inspection?.google_canonical && !sameUrl(inspection.google_canonical, canonical) && <code className="mt-1 block max-w-[220px] truncate text-xs text-gray-400">Google: {shortPage(inspection.google_canonical)}</code>}</td>
               <td className="px-3 py-4"><strong className={inspection?.verdict === "PASS" ? "text-success-600 dark:text-success-400" : inspection ? "text-warning-600" : "text-gray-400"}>{inspection?.verdict === "PASS" ? "В индексе" : inspection ? "Ожидает индекс" : "Нет данных"}</strong><span className="mt-1 block max-w-[220px] truncate text-xs text-gray-400">{inspection?.coverage_state || "—"}</span></td>
               <td className="px-3 py-4 text-xs text-gray-500">{dateTime(inspection?.last_crawl_time)}</td>
@@ -672,7 +675,7 @@ export default function SeoGeoPage() {
             {[
               ["AI‑краулеры", geoSignals.robots_txt?.ai_crawlers_allowed, "robots.txt"],
               ["llms.txt", geoSignals.llms_txt?.ok, `${number(geoSignals.llms_txt?.bytes)} байт`],
-              ["Sitemap", geoSignals.sitemap?.ok, `HTTP ${number(geoSignals.sitemap?.status) || "—"}`],
+              ["Sitemap", geoSignals.sitemap?.ok && sitemapDeclared !== false, `${shortPage(geoSignals.sitemap?.url || "/sitemap.xml")} · ${sitemapUrlCount === undefined ? "состав: новый аудит" : `${number(sitemapUrlCount)} URL`} · ${sitemapDeclared === true ? "robots.txt" : sitemapDeclared === false ? "нет в robots.txt" : "robots.txt: новый аудит"}`],
               ["Structured data", geoSignals.structured_data?.ok, `${number(geoSignals.structured_data?.blocks)} JSON‑LD`],
             ].map(([label, ok, hint]) => <div key={String(label)} className="rounded-xl border border-gray-200 p-3 dark:border-gray-800"><span className="block text-xs text-gray-400">{label}</span><strong className={`mt-1 block text-sm ${ok ? "text-success-600 dark:text-success-400" : "text-error-600"}`}>{ok ? "Доступно" : "Проблема"}</strong><span className="mt-1 block text-xs text-gray-400">{hint}</span></div>)}
           </div>
