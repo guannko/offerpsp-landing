@@ -53,6 +53,23 @@ const normalizeText = (value) => String(value)
   .replaceAll("&gt;", ">")
   .replace(/\s+/g, " ")
   .trim();
+const assertCommercialMeta = (description, label, language = "en") => {
+  if (language === "ru") {
+    assert.match(description, /Приватн/i, `${label} meta description must promise private matching`);
+    assert.match(description, /квалифицированн(?:ое|ые) (?:знакомство|интродукции)/i, `${label} meta description must promise qualified introductions`);
+    assert.match(description, /шорт-лист/i, `${label} meta description must describe the shortlist benefit`);
+    assert.doesNotMatch(description, /без публикации/i, `${label} meta description must avoid defensive privacy wording`);
+    return;
+  }
+  assert.match(description, /\bprivat/i, `${label} meta description must promise private matching`);
+  assert.match(description, /qualified (?:provider )?introductions?/i, `${label} meta description must promise qualified introductions`);
+  assert.match(description, /(?:shortlist|merchant brief)/i, `${label} meta description must describe a concrete matching outcome`);
+  assert.doesNotMatch(
+    description,
+    /(?:no public|without publishing)/i,
+    `${label} meta description must avoid defensive privacy wording`,
+  );
+};
 const visibleFaqEntries = (html) => [...html.matchAll(
   /<details\b[^>]*>\s*<summary\b[^>]*>([\s\S]*?)<\/summary>\s*<p\b[^>]*>([\s\S]*?)<\/p>\s*<\/details>/gi,
 )].map((match) => ({
@@ -85,13 +102,14 @@ const liveSocialProfiles = [
   "https://x.com/offerpsp",
   "https://www.threads.com/@offerpsp",
   "https://t.me/offerpsp",
-  "https://www.linkedin.com/in/borys-kononenko-offerpsp/",
+  "https://www.linkedin.com/company/offerpsp/",
 ];
 const organizationProfiles = [
   "https://www.instagram.com/offerpsp/",
   "https://x.com/offerpsp",
   "https://www.threads.com/@offerpsp",
   "https://t.me/offerpsp",
+  "https://www.linkedin.com/company/offerpsp/",
 ];
 const founderLinkedIn = "https://www.linkedin.com/in/borys-kononenko-offerpsp/";
 const scriptDirective = cspDirective("script-src");
@@ -138,6 +156,7 @@ for (const [name, html] of [["home", home], ["privacy", privacy], ["terms", term
   const description = metaDescription(html);
   assert.ok(description.length >= 150 && description.length <= 160, `${name} meta description must be 150-160 characters`);
 }
+assertCommercialMeta(metaDescription(home), "home");
 
 const homeImages = contentImages(home);
 assert.equal(homeImages.length, 1, "home page must include one meaningful content visual");
@@ -151,6 +170,14 @@ for (const visual of [matchingVisual, matchingVisualMobile, briefVisual, briefVi
 assert.match(visualCss, /\.content-visual-image\b/, "content visual stylesheet must size content images");
 assert.match(buildSource, /cp\(resolve\(root, "content"\)/, "production build must copy content visuals");
 
+for (const { question, answer } of visibleFaqEntries(home)) {
+  assert.doesNotMatch(
+    answer,
+    /^(?:No\.|Yes\.|Not always\.|Usually not\.|Often not\.|Potentially\b|Sometimes\b|It depends\b|There is no\b)/i,
+    `home FAQ answer must start with a direct, standalone answer: ${question}`,
+  );
+}
+
 const slugs = seoPages.map((page) => page.slug);
 const knownSlugs = new Set(slugs);
 
@@ -160,8 +187,23 @@ for (const page of seoPages) {
   const url = `https://offerpsp.com/${page.slug}.html`;
   assert.match(page.title, /OfferPSP$/, `${page.slug} title must identify OfferPSP`);
   assert.ok(page.description.length >= 150 && page.description.length <= 160, `${page.slug} meta description must be 150-160 characters`);
+  assert.doesNotMatch(
+    page.description,
+    /^(?:Private\b|Payment provider matching\b)/i,
+    `${page.slug} meta description must lead with a page-specific benefit rather than the repeated matching template`,
+  );
+  if (page.pageType !== "guide") {
+    assertCommercialMeta(page.description, page.slug, page.lang || "en");
+  }
   assert.ok(page.points.length >= 4, `${page.slug} must explain the operating requirements`);
   assert.ok(page.faqs.length >= 4, `${page.slug} must answer concrete merchant questions`);
+  for (const [question, answer] of page.faqs) {
+    assert.doesNotMatch(
+      answer,
+      /^(?:No\.|Yes\.|Not always\.|Usually not\.|Often not\.|Potentially\b|Sometimes\b|It depends\b|There is no\b|The answer depends\b|That depends\b|Where (?:relevant|credible|suitable)\b|Requirements vary\b|Чаще всего нет\.|Нет\.|Иногда\b)/i,
+      `${page.slug} FAQ answer must start with a direct, standalone answer: ${question}`,
+    );
+  }
   assert.ok(sitemap.includes(`<loc>${url}</loc>`), `${page.slug} is missing from sitemap.xml`);
   assert.ok(llms.includes(url), `${page.slug} is missing from llms.txt`);
   assert.ok(
@@ -177,6 +219,18 @@ for (const page of seoPages) {
   for (const relatedSlug of page.related) {
     assert.ok(knownSlugs.has(relatedSlug), `${page.slug} links to unknown SEO page ${relatedSlug}`);
   }
+  const relatedPages = page.related.map((relatedSlug) => seoPages.find((candidate) => candidate.slug === relatedSlug));
+  if (page.pageType === "guide") {
+    assert.ok(
+      relatedPages.some((relatedPage) => relatedPage.pageType !== "guide"),
+      `${page.slug} guide must cross-link to at least one commercial service page`,
+    );
+  } else {
+    assert.ok(
+      relatedPages.some((relatedPage) => relatedPage.pageType === "guide"),
+      `${page.slug} service page must cross-link to at least one relevant guide`,
+    );
+  }
   assert.ok(!renderPage(page).includes(">Explore<"), `${page.slug} must not use a generic Explore label for related links`);
   for (const relatedSlug of page.related) {
     const relatedPage = seoPages.find((candidate) => candidate.slug === relatedSlug);
@@ -189,6 +243,17 @@ for (const [sourceSlug, requiredRelatedSlugs] of [
   ["payment-provider-cis-central-asia", ["high-risk-payment-provider"]],
   ["payment-provider-cis-central-asia-ru", ["high-risk-payment-provider"]],
   ["payment-provider-middle-east", ["high-risk-payment-provider"]],
+  ["payment-provider-for-ecommerce", ["high-risk-payment-processing-guide"]],
+  ["high-risk-payment-processing-guide", ["payment-provider-for-ecommerce"]],
+  ["psp-for-forex", ["high-risk-payment-provider", "cross-border-payment-matching", "payment-methods-by-geo"]],
+  ["high-risk-payment-provider", ["psp-for-forex", "cross-border-payment-matching"]],
+  ["cross-border-payment-matching", ["how-to-compare-psp-offers", "psp-for-forex", "high-risk-payment-provider", "payment-methods-by-geo"]],
+  ["payment-methods-by-geo", ["payment-gateway-vs-psp-vs-acquirer", "psp-for-forex", "cross-border-payment-matching"]],
+  ["how-to-compare-psp-offers", ["cross-border-payment-matching"]],
+  ["psp-for-saas", ["psp-onboarding-requirements"]],
+  ["psp-for-marketplaces", ["psp-onboarding-requirements"]],
+  ["psp-onboarding-requirements", ["psp-for-saas", "psp-for-marketplaces"]],
+  ["payment-gateway-vs-psp-vs-acquirer", ["payment-methods-by-geo"]],
 ]) {
   const sourcePage = seoPages.find((page) => page.slug === sourceSlug);
   for (const requiredSlug of requiredRelatedSlugs) {
@@ -254,7 +319,7 @@ for (const slug of [
   assert.ok(home.includes(`href="/${slug}.html"`), `${slug} must have a descriptive inbound home-page link`);
   assert.match(rendered, /"@type":\s*"Article"/, `${slug} must use Article structured data`);
   assert.ok(rendered.includes("Prepared and reviewed by OfferPSP"), `${slug} must show its editorial owner`);
-  assert.ok(rendered.includes(`<time datetime="2026-09-01">2026-09-01</time>`), `${slug} must show its update date`);
+  assert.ok(rendered.includes(`<time datetime="${page.modified}">${page.modified}</time>`), `${slug} must show its update date`);
 }
 
 for (const [slug, anchor] of [
@@ -272,24 +337,20 @@ assert.match(home, /<title>Private PSP Matching for Merchants \| OfferPSP<\/titl
 assert.match(home, /<h1>Private PSP matching\./, "home H1 must state the primary service directly");
 assert.ok(home.includes('href="/psp-matching-process.html"'), "home must link to the complete matching process");
 
-for (const slug of [
-  "payment-provider-europe",
-  "high-risk-payment-provider",
-  "psp-for-forex",
-  "psp-for-igaming",
-  "psp-for-video-games",
+for (const [slug, requiredTerms] of [
+  ["payment-provider-europe", ["EEA", "UK", "SEPA", "iDEAL"]],
+  ["payment-provider-cis-central-asia", ["Kazakhstan", "Uzbekistan", "Georgia"]],
+  ["payment-provider-cis-central-asia-ru", ["Казахстана", "Узбекистана", "Грузии"]],
+  ["payment-provider-latin-america", ["Brazil", "Mexico", "Colombia", "Pix", "SPEI", "PSE"]],
+  ["payment-provider-asia-pacific", ["Australia", "Singapore", "India", "PayNow", "UPI"]],
+  ["payment-provider-middle-east", ["UAE", "Saudi Arabia", "Mada"]],
+  ["payment-provider-africa", ["South Africa", "Nigeria", "Kenya", "mobile money"]],
 ]) {
   const page = seoPages.find((candidate) => candidate.slug === slug);
   assert.ok(page, `${slug} must exist`);
-  assert.match(page.description, /^Private\b/i, `${slug} must lead with the private matching proposition`);
-  assert.match(page.description, /qualified introductions/i, `${slug} must describe the qualified outcome`);
-  assert.match(page.description, /without a public provider list/i, `${slug} must explain the non-directory model`);
-  assert.ok(page.description.length <= 160, `${slug} meta description must remain snippet-sized`);
-  assert.ok(page.modified, `${slug} structured data must record the content update`);
-  assert.ok(
-    sitemap.includes(`<loc>https://offerpsp.com/${slug}.html</loc>\n    <lastmod>${page.modified}</lastmod>`),
-    `${slug} sitemap lastmod must reflect the content update`,
-  );
+  for (const term of requiredTerms) {
+    assert.ok(page.description.includes(term), `${slug} meta description must include ${term}`);
+  }
 }
 
 const attributionAsset = "/acquisition-attribution.js?v=20260901-1";

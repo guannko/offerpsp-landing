@@ -55,3 +55,102 @@
   .contact-dialog-actions { grid-template-columns: 1fr; }
   .contact-dialog-action-wide { grid-column: auto; }
 }
+
+.concierge-launch {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 50px;
+  padding: 12px 18px;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 999px;
+  color: #f6f3ec;
+  background: #111522;
+  box-shadow: 0 16px 50px rgba(0,0,0,.34);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 780;
+  cursor: pointer;
+}
+
+.concierge-launch:hover,
+.concierge-launch:focus-visible { border-color: #ff7196; transform: translateY(-1px); }
+.concierge-launch-dot { width: 9px; height: 9px; border-radius: 50%; background: #47d18c; box-shadow: 0 0 0 4px rgba(71,209,140,.13); }
+
+.concierge-dialog {
+  width: min(calc(100% - 28px), 560px);
+  max-height: min(720px, calc(100dvh - 28px));
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #c9c2b4;
+  border-radius: 24px;
+  color: #191919;
+  background: #f5f1e8;
+  box-shadow: 0 28px 80px rgba(0,0,0,.38);
+}
+
+.concierge-dialog::backdrop { background: rgba(9,10,13,.64); }
+.concierge-card { display: grid; grid-template-rows: auto minmax(210px, 1fr) auto auto auto auto; max-height: min(720px, calc(100dvh - 28px)); padding: 0; }
+.concierge-head { position: relative; display: grid; grid-template-columns: 56px 1fr 46px; gap: 15px; align-items: center; padding: 24px; border-bottom: 1px solid #d5cfc2; background: #ece7dc; }
+.concierge-mark { display: grid; place-items: center; width: 56px; height: 56px; border: 2px solid #252525; border-radius: 12px; color: #202020; background: #faf7f0; font-size: 17px; font-weight: 900; letter-spacing: -.04em; }
+.concierge-head p { margin: 0 0 3px; color: #9f2145; font-size: 12px; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
+.concierge-head h2 { margin: 0; color: #171717; font-size: 26px; line-height: 1.1; letter-spacing: -.025em; }
+.concierge-head span { display: flex; align-items: center; gap: 7px; margin-top: 7px; color: #4d5158; font-size: 13px; }
+.concierge-head span i { width: 7px; height: 7px; border-radius: 50%; background: #47d18c; }
+.concierge-close { width: 46px; height: 46px; border: 1px solid #aaa397; border-radius: 50%; color: #202020; background: #f8f4ec; font: inherit; font-size: 25px; cursor: pointer; }
+.concierge-close:hover,
+.concierge-close:focus-visible { border-color: #202020; background: #ded8cc; }
+.concierge-log { overflow-y: auto; padding: 24px 24px 10px; background: #f7f3eb; }
+.concierge-message { width: fit-content; max-width: 92%; margin-bottom: 13px; padding: 15px 17px; border-radius: 8px; font-family: Georgia, "Times New Roman", serif; font-size: 17px; line-height: 1.58; white-space: pre-wrap; overflow-wrap: anywhere; }
+.concierge-message-assistant { border: 1px solid #c9c3b8; border-bottom-left-radius: 2px; color: #191919; background: #fffdf8; }
+.concierge-message-user { margin-left: auto; border-bottom-right-radius: 2px; color: #fffdf8; background: #292929; }
+.concierge-message.is-pending { color: #55585d; }
+.concierge-quick { display: flex; flex-wrap: wrap; gap: 9px; padding: 6px 24px 14px; background: #f7f3eb; }
+.concierge-quick button { flex: 0 1 auto; max-width: 100%; padding: 10px 14px; border: 1px solid #8e887d; border-radius: 999px; color: #222; background: #fffdf8; font: inherit; font-size: 14px; font-weight: 650; line-height: 1.3; white-space: normal; cursor: pointer; }
+.concierge-quick button:hover,
+.concierge-quick button:focus-visible { border-color: #202020; color: #111; background: #e8e2d7; }
+.concierge-form { padding: 14px 24px; border-top: 1px solid #d5cfc2; background: #ece7dc; }
+.concierge-input-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.concierge-input-row { display: grid; grid-template-columns: 1fr auto; gap: 9px; align-items: end; }
+.concierge-input-row textarea { min-height: 52px; max-height: 128px; resize: none; padding: 13px 15px; border: 1px solid #7f7a71; border-radius: 8px; outline: none; color: #161616; background: #fffdf8; font: inherit; font-size: 16px; line-height: 1.45; }
+.concierge-input-row textarea::placeholder { color: #676b70; opacity: 1; }
+.concierge-input-row textarea:focus { border-color: #171717; color: #161616; background: #fffdf8; box-shadow: 0 0 0 3px rgba(159,33,69,.16); }
+.concierge-input-row button { min-height: 52px; padding: 11px 17px; border: 1px solid #171717; border-radius: 8px; color: #fffdf8; background: #292929; font: inherit; font-size: 14px; font-weight: 850; cursor: pointer; }
+.concierge-input-row button:disabled { cursor: wait; opacity: .55; }
+.concierge-handoff { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 24px 12px; background: #ece7dc; }
+.concierge-handoff a,
+.concierge-handoff button { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 10px 12px; border: 1px solid #777269; border-radius: 8px; color: #202020; background: #fffdf8; font: inherit; font-size: 14px; font-weight: 800; text-align: center; text-decoration: none; cursor: pointer; }
+.concierge-handoff a { color: #fffdf8; border-color: #9f2145; background: #9f2145; }
+.concierge-handoff a:hover,
+.concierge-handoff a:focus-visible { background: #7f1736; }
+.concierge-handoff button:hover,
+.concierge-handoff button:focus-visible { border-color: #202020; background: #ded8cc; }
+.concierge-privacy { margin: 0; padding: 2px 24px 18px; color: #4d5158; background: #ece7dc; font-size: 12px; line-height: 1.45; }
+
+@media (max-width: 520px) {
+  .concierge-launch { right: 14px; bottom: 14px; min-width: 50px; padding: 12px 15px; }
+  .concierge-launch span:last-child { display: none; }
+  .concierge-dialog { width: calc(100% - 16px); max-height: calc(100dvh - 16px); border-radius: 20px; }
+  .concierge-card { max-height: calc(100dvh - 16px); }
+  .concierge-head { grid-template-columns: 50px 1fr 42px; gap: 11px; padding: 18px 16px; }
+  .concierge-mark { width: 50px; height: 50px; }
+  .concierge-head h2 { font-size: 23px; }
+  .concierge-log { min-height: 210px; padding: 18px 14px 8px; }
+  .concierge-message { max-width: 96%; font-size: 15px; }
+  .concierge-quick,
+  .concierge-form { padding-left: 14px; padding-right: 14px; }
+  .concierge-handoff { padding-left: 14px; padding-right: 14px; }
+  .concierge-privacy { padding-left: 14px; padding-right: 14px; }
+}
+
+@media (max-width: 390px) {
+  .concierge-handoff { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .concierge-launch { transition: none; }
+}

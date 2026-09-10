@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Private PSP Matching for Merchants | OfferPSP</title>
-  <meta name="description" content="Private PSP matching for merchants across iGaming, forex, e-commerce and complex GEOs. Share one payment brief and receive qualified introductions securely.">
+  <meta name="description" content="Find PSP routes across iGaming, forex, e-commerce and complex GEOs. Get a focused private shortlist and qualified introductions matched to your business.">
   <meta name="robots" content="index, follow">
   <meta name="theme-color" content="#080a13">
   <meta name="msvalidate.01" content="B779241D3C19FE18326F34280AC50CC4">
@@ -46,7 +46,8 @@
           "https://www.instagram.com/offerpsp/",
           "https://x.com/offerpsp",
           "https://www.threads.com/@offerpsp",
-          "https://t.me/offerpsp"
+          "https://t.me/offerpsp",
+          "https://www.linkedin.com/company/offerpsp/"
         ],
         "founder": { "@id": "https://offerpsp.com/#borys-kononenko" },
         "brand": {
@@ -105,17 +106,17 @@
           {
             "@type": "Question",
             "name": "Is OfferPSP itself a payment processor?",
-            "acceptedAnswer": { "@type": "Answer", "text": "No. OfferPSP is a B2B matching and introduction service. Payment services, underwriting, onboarding and final commercial terms are provided by independent PSPs." }
+            "acceptedAnswer": { "@type": "Answer", "text": "OfferPSP is not a payment processor. It is a B2B matching and introduction service; payment services, underwriting, onboarding and final commercial terms are provided by independent PSPs." }
           },
           {
             "@type": "Question",
             "name": "Do you publish your PSP partner list?",
-            "acceptedAnswer": { "@type": "Answer", "text": "No. The network is not used as a public directory. We share relevant names only when there is a plausible fit for the specific merchant profile." }
+            "acceptedAnswer": { "@type": "Answer", "text": "OfferPSP does not publish its PSP network as a public directory. We share relevant names only when there is a plausible fit for the specific merchant profile." }
           },
           {
             "@type": "Question",
             "name": "Can you guarantee approval?",
-            "acceptedAnswer": { "@type": "Answer", "text": "No responsible intermediary can. Each provider runs its own due diligence and risk assessment. Our role is to reduce obviously mismatched conversations before that process begins." }
+            "acceptedAnswer": { "@type": "Answer", "text": "OfferPSP cannot guarantee provider approval. Each provider runs its own due diligence and risk assessment; our role is to reduce clearly mismatched conversations before that process begins." }
           },
           {
             "@type": "Question",
@@ -149,9 +150,9 @@
     window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
   </script>
   <script defer src="/_vercel/insights/script.js"></script>
-  <link rel="stylesheet" href="/contact-dialog.css?v=20260828-1">
+  <link rel="stylesheet" href="/contact-dialog.css?v=20260907-5">
   <link rel="stylesheet" href="/content-visuals.css?v=20260828-1">
-  <script defer src="/contact-dialog.js?v=20260828-2"></script>
+  <script defer src="/contact-dialog.js?v=20260907-5"></script>
 
   <style>
     :root {
@@ -304,7 +305,7 @@
     .back-to-top {
       position: fixed;
       right: 24px;
-      bottom: 24px;
+      bottom: 84px;
       z-index: 90;
       width: 48px;
       height: 48px;
@@ -1938,6 +1939,11 @@
         width: 100%;
       }
 
+      .back-to-top {
+        right: 14px;
+        bottom: 76px;
+      }
+
       .footer-top,
       .footer-bottom {
         grid-template-columns: 1fr;
@@ -2271,15 +2277,15 @@
         <div class="faq-list reveal">
           <details>
             <summary>Is OfferPSP itself a payment processor?</summary>
-            <p>No. OfferPSP is a B2B matching and introduction service. Payment services, underwriting, onboarding and final commercial terms are provided by independent PSPs.</p>
+            <p>OfferPSP is not a payment processor. It is a B2B matching and introduction service; payment services, underwriting, onboarding and final commercial terms are provided by independent PSPs.</p>
           </details>
           <details>
             <summary>Do you publish your PSP partner list?</summary>
-            <p>No. The network is not used as a public directory. We share relevant names only when there is a plausible fit for the specific merchant profile.</p>
+            <p>OfferPSP does not publish its PSP network as a public directory. We share relevant names only when there is a plausible fit for the specific merchant profile.</p>
           </details>
           <details>
             <summary>Can you guarantee approval?</summary>
-            <p>No responsible intermediary can. Each provider runs its own due diligence and risk assessment. Our role is to reduce obviously mismatched conversations before that process begins.</p>
+            <p>OfferPSP cannot guarantee provider approval. Each provider runs its own due diligence and risk assessment; our role is to reduce clearly mismatched conversations before that process begins.</p>
           </details>
           <details>
             <summary>What information should we prepare?</summary>
@@ -2357,6 +2363,14 @@
                 <label for="geos">Target GEOs *</label>
                 <input id="geos" name="geos" type="text" maxlength="2000" required placeholder="Countries or regions you need to cover">
               </div>
+              <div class="field">
+                <label for="preferred_contact_time">Preferred contact time <span>(optional)</span></label>
+                <input id="preferred_contact_time" name="preferred_contact_time" type="datetime-local">
+              </div>
+              <div class="field field-full">
+                <label for="details">What would you like to discuss? <span>(optional)</span></label>
+                <textarea id="details" name="details" maxlength="3000" placeholder="Brief context for Boris and the OfferPSP team"></textarea>
+              </div>
               <div class="honeypot" aria-hidden="true">
                 <label for="website_url">Leave this field empty</label>
                 <input id="website_url" name="website_url" type="text" tabindex="-1" autocomplete="off">
@@ -2410,7 +2424,7 @@
             <a href="https://t.me/offerpsp" target="_blank" rel="noopener noreferrer" aria-label="OfferPSP on Telegram" title="OfferPSP on Telegram">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3 3.8 9.7c-.9.4-.9 1.2.1 1.5l4.4 1.4 1.7 5.1c.3.9 1 .9 1.5.3l2.5-2.5 4.5 3.3c.8.5 1.4.2 1.6-.8L22 4.3c.2-1-.3-1.6-1-1.3Z"></path><path d="m8.3 12.6 9.4-6.1-7.7 8.4"></path></svg>
             </a>
-            <a href="https://www.linkedin.com/in/borys-kononenko-offerpsp/" target="_blank" rel="noopener noreferrer" aria-label="Borys Kononenko on LinkedIn" title="Founder on LinkedIn">
+            <a href="https://www.linkedin.com/company/offerpsp/" target="_blank" rel="noopener noreferrer" aria-label="OfferPSP on LinkedIn" title="OfferPSP on LinkedIn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"></rect><path d="M8 10v7M8 7.3v.1M11.5 17v-7m0 3c0-1.7 1.2-3 2.8-3 1.5 0 2.7 1.1 2.7 3v4"></path></svg>
             </a>
           </div>
@@ -2538,6 +2552,16 @@
     const openLeadDialog = (trigger = null) => {
       leadDialogTrigger = trigger;
       closeMenu();
+      try {
+        const storedContext = sessionStorage.getItem("offerpsp_concierge_context");
+        const details = document.getElementById("details");
+        if (storedContext && details && !details.value) {
+          details.value = `Website concierge context:\n${storedContext}`.slice(0, 3000);
+          sessionStorage.removeItem("offerpsp_concierge_context");
+        }
+      } catch {
+        // Session storage can be unavailable in privacy-restricted browsers.
+      }
       if (!leadDialog.open) leadDialog.showModal();
       const placement = trigger?.dataset.analyticsPlacement || "direct_link";
       if (placement === "hero") trackExperienceEvent("hero_cta_click", placement);
@@ -2631,7 +2655,14 @@
       payload.monthly_volume = "";
       payload.methods = "";
       payload.telegram = "";
-      payload.details = "";
+      const preferredTime = String(formData.get("preferred_contact_time") || "").trim();
+      const preferredTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Not reported";
+      const submittedDetails = String(formData.get("details") || "").trim();
+      payload.details = [
+        submittedDetails,
+        preferredTime ? `Preferred contact time: ${preferredTime} (${preferredTimezone})` : "",
+      ].filter(Boolean).join("\n\n").slice(0, 4000);
+      delete payload.preferred_contact_time;
       payload.consent = formData.get("consent") === "on";
       Object.assign(payload, buildLeadAttributionFields(acquisition));
 

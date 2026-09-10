@@ -64,10 +64,15 @@ try {
   assert.equal(unsupported.statusCode, 400);
   assert.equal(calls.length, 1);
 
+  const concierge = responseRecorder();
+  await handler(request({ event_name: "concierge_open", flow_id: FLOW_ID, page_path: "/", placement: "floating_button" }, { "x-forwarded-for": "203.0.113.8" }), concierge);
+  assert.equal(concierge.statusCode, 202);
+  assert.equal(calls.length, 2);
+
   const foreignOrigin = responseRecorder();
   await handler(request({ event_name: "process_click", flow_id: FLOW_ID, page_path: "/" }, { origin: "https://example.com" }), foreignOrigin);
   assert.equal(foreignOrigin.statusCode, 403);
-  assert.equal(calls.length, 1);
+  assert.equal(calls.length, 2);
 
   console.log("PASS acquisition events accept only safe first-party funnel data");
 } finally {

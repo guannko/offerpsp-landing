@@ -333,7 +333,7 @@ details p { max-width: 760px; margin: -4px 40px 24px 0; color: var(--muted); }
 .back-to-top {
   position: fixed;
   right: 24px;
-  bottom: 24px;
+  bottom: 84px;
   z-index: 30;
   width: 48px;
   height: 48px;
@@ -366,5 +366,5 @@ details p { max-width: 760px; margin: -4px 40px 24px 0; color: var(--muted); }
   .checklist, .related-grid { grid-template-columns: 1fr; }
   .footer-grid { flex-direction: column; }
   .brand-logo { height: 44px; }
-  .back-to-top { right: 16px; bottom: 16px; }
+  .back-to-top { right: 14px; bottom: 76px; }
 }

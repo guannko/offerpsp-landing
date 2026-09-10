@@ -8,6 +8,9 @@ const EVENT_NAMES = new Set([
   "lead_submit_attempt",
   "lead_submit_success",
   "lead_submit_failure",
+  "concierge_open",
+  "concierge_message",
+  "concierge_handoff",
 ]);
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
