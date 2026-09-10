@@ -8,6 +8,9 @@
       "includeFiles": "{rules/**,vendor/siteone-crawler/**}",
       "maxDuration": 120
     },
+    "api/document-processing.mjs": {
+      "maxDuration": 120
+    },
     "api/search-index-sync.mjs": {
       "maxDuration": 60
     },
@@ -108,7 +111,15 @@
     },
     {
       "source": "/api/provider-offer-source",
-      "destination": "/api/platform-modules?module=provider-offer-source"
+      "destination": "/api/document-processing?module=provider-offer-source"
+    },
+    {
+      "source": "/api/poll-mailbox",
+      "destination": "/api/document-processing?module=poll-mailbox"
+    },
+    {
+      "source": "/api/extract-offer-pdf",
+      "destination": "/api/document-processing?module=extract-offer-pdf"
     },
     {
       "source": "/api/(.*)",

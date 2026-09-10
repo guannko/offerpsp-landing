@@ -34,7 +34,6 @@ import {
   probeRules,
 } from "./_lib/modules/gorules.mjs";
 import { probeSearch } from "./_lib/modules/meilisearch.mjs";
-import { providerOfferSourceHandler } from "./_lib/provider-offer-source.mjs";
 import { bixGatewayHealthHandler } from "./_lib/bix-gateway-health.mjs";
 import {
   getSemanticMemoryConfig,
@@ -304,7 +303,6 @@ const handlers = {
   "seo-live-traffic": seoLiveTraffic,
   "google-search-console": googleSearchConsole,
   "semantic-memory": semanticMemory,
-  "provider-offer-source": providerOfferSourceHandler,
   "bix-gateway-health": bixGatewayHealthHandler,
 };
 
@@ -313,7 +311,7 @@ export default async function handler(request, response) {
     const moduleName = String(request.query?.module || "");
     const moduleHandler = handlers[moduleName];
     if (!moduleHandler) throw new HttpError(404, "Unknown platform module endpoint");
-    if (["mcp", "mcp-resource-metadata", "gpt-actions", "gpt-actions-schema", "oauth-metadata", "oauth-register", "oauth-authorize", "oauth-token", "provider-offer-source", "bix-gateway-health"].includes(moduleName)) {
+    if (["mcp", "mcp-resource-metadata", "gpt-actions", "gpt-actions-schema", "oauth-metadata", "oauth-register", "oauth-authorize", "oauth-token", "bix-gateway-health"].includes(moduleName)) {
       return await moduleHandler(request, response);
     }
     if (moduleName === "seo-audit-scheduled") {

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { decodeBase64File, FileInputError } from "./_lib/file-input.mjs";
-import { extractPdfText } from "./_lib/pdf-text-extractor.mjs";
-import { convertWithDocling, getDoclingConfig } from "./_lib/modules/docling.mjs";
+import { decodeBase64File, FileInputError } from "./file-input.mjs";
+import { extractPdfText } from "./pdf-text-extractor.mjs";
+import { convertWithDocling, getDoclingConfig } from "./modules/docling.mjs";
 
 const MAX_PDF_BYTES = 15 * 1024 * 1024;
 
@@ -9,7 +9,8 @@ function sendJson(response, status, payload) {
   response.status(status).setHeader("Content-Type", "application/json; charset=utf-8");
   response.send(JSON.stringify(payload));
 }
-export default async function handler(request, response) {
+
+export async function extractOfferPdfHandler(request, response) {
   if (request.method !== "POST") {
     response.setHeader("Allow", "POST");
     return sendJson(response, 405, { error: "method_not_allowed" });
@@ -91,3 +92,5 @@ export default async function handler(request, response) {
     });
   }
 }
+
+export default extractOfferPdfHandler;

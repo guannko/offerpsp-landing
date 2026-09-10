@@ -1,4 +1,6 @@
+import { extractOfferPdfHandler } from "./_lib/extract-offer-pdf-handler.mjs";
 import { pollOfferPspMailbox } from "./_lib/mailbox-poller.mjs";
+import { providerOfferSourceHandler } from "./_lib/provider-offer-source.mjs";
 
 const json = (response, status, body) => {
   response.statusCode = status;
@@ -7,10 +9,8 @@ const json = (response, status, body) => {
   response.end(JSON.stringify(body));
 };
 
-export const config = { maxDuration: 60 };
-
-export default async function handler(request, response) {
-  if (!['GET', 'POST'].includes(request.method)) {
+async function pollMailboxHandler(request, response) {
+  if (!["GET", "POST"].includes(request.method)) {
     return json(response, 405, { success: false, error: "Method not allowed" });
   }
 
@@ -35,4 +35,19 @@ export default async function handler(request, response) {
     console.error("OfferPSP mailbox poll failed", { error: error?.message || "Unknown error" });
     return json(response, 502, { success: false, error: "Mailbox poll failed" });
   }
+}
+
+const handlers = {
+  "extract-offer-pdf": extractOfferPdfHandler,
+  "poll-mailbox": pollMailboxHandler,
+  "provider-offer-source": providerOfferSourceHandler,
+};
+
+export const config = { maxDuration: 120 };
+
+export default async function handler(request, response) {
+  const moduleName = String(request.query?.module || "");
+  const moduleHandler = handlers[moduleName];
+  if (!moduleHandler) return json(response, 404, { error: "Unknown document processing endpoint" });
+  return moduleHandler(request, response);
 }

@@ -12,6 +12,8 @@
     "test:offer-parser": "node scripts/test-offer-parser.mjs",
     "test:provider-source": "node scripts/test-provider-offer-source.mjs",
     "test:mailbox-poller": "node scripts/test-mailbox-poller.mjs",
+    "test:document-processing": "node scripts/test-document-processing-router.mjs",
+    "check:function-storage": "node scripts/check-function-storage.mjs",
     "test:modules": "node scripts/test-platform-modules.mjs",
     "test:control-integrity": "node scripts/test-control-integrity.mjs",
     "test:pwa": "node scripts/test-pwa.mjs",
