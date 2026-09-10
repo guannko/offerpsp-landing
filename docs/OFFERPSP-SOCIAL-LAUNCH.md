@@ -1,8 +1,12 @@
 # OfferPSP — social launch pack
 
-Updated: 2026-09-01
+Updated: 2026-09-07
 
-Status: packages 1 and 2 published and verified on the approved social surfaces
+Status: packages 1 and 2, including the publication 2 Instagram Reel adaptation, published and
+verified on the approved social surfaces
+
+The first native OfferPSP Company Page publication was published and verified on 2026-09-07:
+`https://www.linkedin.com/feed/update/urn:li:share:7502701110701420544/`.
 
 The public website integration is also live and verified as of 2026-09-01: all five approved
 profile/contact links are present across public pages, the four brand accounts are declared in
@@ -25,9 +29,10 @@ Primary audiences:
 - **Public brand:** `OfferPSP` — always one word with this capitalization.
 - **Legal operator:** `Offerspsp.com` (Individual Entrepreneur, Georgia). The public brand and
   canonical website remain `OfferPSP` and `offerpsp.com`.
-- **LinkedIn:** Boris's founder profile is the primary B2B publishing surface for the launch. A
-  separate OfferPSP Company Page is a later step and must not be implied to exist now. LinkedIn
-  currently blocks its creation because the founder account has insufficient connections.
+- **LinkedIn:** the public OfferPSP Company Page is the canonical brand surface:
+  `https://www.linkedin.com/company/offerpsp/`. Boris's founder profile remains the personal
+  amplification and relationship-building surface. New brand publications should originate from
+  the Company Page and may then be reposted by the founder with personal context.
 - **Instagram:** visual explanation and carousel surface. The launch uses concise educational
   slides, not generic stock imagery.
 - **Telegram:** `@offerpsp` is currently a direct-contact account, not a public content channel.
@@ -236,6 +241,48 @@ before publication.
 > Better input removes avoidable back-and-forth and helps a relevant provider decide whether to
 > review the merchant. It does not guarantee approval or final commercial terms.
 
+## Publication 2 — native video adaptations for X and Threads
+
+Status: approved, published and verified on 2026-09-04.
+
+- X: `https://x.com/offerpsp/status/2095848501737369727`
+- Threads: `https://www.threads.com/@offerpsp/post/Dc3WgfEk2Nt`
+
+Use the existing silent 15.5-second H.264 exports. Upload them natively rather than linking to the
+Instagram Reel:
+
+- X: `assets/video/post-02/offerpsp-merchant-brief-linkedin-clean.mp4` — 1080×1350, 30 fps;
+- Threads: `assets/video/post-02/offerpsp-merchant-brief-vertical-clean.mp4` — 1080×1920, 30 fps.
+
+### X — published video caption
+
+> A provider cannot assess a merchant from “GEO + vertical” alone.
+>
+> Entity, licence, currencies, methods, volume, ticket size, settlement, traffic and integration
+> timing all affect route fit.
+>
+> Structure the request before provider review.
+>
+> https://offerpsp.com/psp-matching-process.html?utm_source=x&utm_medium=organic_social&utm_campaign=social_launch_2026&utm_content=video_02_merchant_brief
+
+The X caption is 261 effective characters when the URL is counted as X's standard 23-character
+short link.
+
+### Threads — published video caption
+
+> What is missing from “We need a PSP”?
+>
+> Provider review needs context: entity, licence, GEOs, currencies, methods, volume, ticket size,
+> settlement, traffic and integration timing.
+>
+> OfferPSP structures the brief. If the provider accepts the merchant, we coordinate a controlled
+> introduction. Better input improves relevance, not approval.
+>
+> https://offerpsp.com/psp-matching-process.html?utm_source=threads&utm_medium=organic_social&utm_campaign=social_launch_2026&utm_content=video_02_merchant_brief
+
+The Threads caption is 497 characters including the full tagged URL, within the 500-character
+composer limit.
+
 ## Publication 3 — Why PSPs should talk to OfferPSP
 
 ### LinkedIn — final draft
@@ -291,9 +338,16 @@ before publication.
    - Instagram: `https://www.instagram.com/p/DcuIyvjDB4E/`
    - X: `https://x.com/offerpsp/status/2094550165633782092`
    - Threads: `https://www.threads.com/@offerpsp/post/DcuJKC9igER`
-3. Capture the first 48–72 hours of impressions, profile visits, followers, link clicks and
+3. The publication 2 merchant-brief Reel adaptation was published on Instagram on 2026-09-04:
+   - Reel: `https://www.instagram.com/p/Dc3Adh7sauS/`
+   - Music: `Ecklectic Music — Deep Summer (feat. Pancho Tomaselli)` from Instagram's licensed
+     music library.
+4. Native publication 2 video adaptations were published on 2026-09-04:
+   - X: `https://x.com/offerpsp/status/2095848501737369727`
+   - Threads: `https://www.threads.com/@offerpsp/post/Dc3WgfEk2Nt`
+5. Capture the first 48–72 hours of impressions, profile visits, followers, link clicks and
    attributed requests for each package and surface.
-4. Publish the PSP-partner proposition after another two or three days.
+6. Publish the PSP-partner proposition after another two or three days.
 
 Publications 1 and 2 are complete. Future packages still require approval of their exact final text,
 tagged URL and visuals before external publication.
@@ -306,6 +360,7 @@ tagged URL and visuals before external publication.
 - X cover PNG: `assets/x/offerpsp-x-cover.png`
 - Publication 1 Instagram carousel: `assets/instagram/post-01/`
 - Publication 2 Instagram carousel: `assets/instagram/post-02/`
+- Publication 2 merchant-brief Reel: `assets/video/post-02/`
 
 The LinkedIn cover is 1584×396 px and the X cover is 1500×500 px. Their primary copy sits outside
 the left profile-photo overlay zone, and all visible branding uses `OfferPSP` and `offerpsp.com`
