@@ -404,15 +404,16 @@ export async function executeOfferPspTool(name, args, { request, context, callId
   if (name === "create_task") {
     const title = clamp(input.title, 240);
     if (!title) throw new HttpError(400, "title is required");
-    const entityType = clamp(input.entity_type || (input.merchant_id ? "merchant" : "general"), 80);
     const entityId = clamp(input.entity_id || input.merchant_id || "", 120) || null;
+    const entityType = entityId ? clamp(input.entity_type || (input.merchant_id ? "merchant" : ""), 80) || null : null;
+    if (entityId && !entityType) throw new HttpError(400, "entity_type is required when entity_id is supplied");
     return audited(context, callId, { action_type: "mcp_create_task", description: title, entity_type: entityType, entity_id: entityId }, () => rpc(context, "save_offerpsp_task", {
       p_task_id: null,
       p_payload: {
         title, details: clamp(input.details, 3000) || null, status: "pending",
         priority: ["low", "normal", "high", "urgent"].includes(input.priority) ? input.priority : "normal",
         due_at: input.due_at || null, lead_id: input.merchant_id ? requireUuid(input.merchant_id, "merchant_id") : null,
-        entity_type: entityType, entity_id: entityId, source: "mcp",
+        entity_type: entityType, entity_id: entityId,
         metadata: { entrypoint: "codex_offerpsp_operator" },
       },
     }));

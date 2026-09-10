@@ -138,6 +138,12 @@ assert.equal(searched.payload.result.structuredContent.results[0].id, "merchant:
 const created = responseMock();
 await mcpHandler(request({ jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "create_task", arguments: { title: "Follow up" } } }), created);
 assert.equal(created.payload.result.structuredContent.title, "Follow up");
+const createTaskRpc = calls.find((entry) => entry.url.endsWith("/rpc/save_offerpsp_task"));
+const createTaskPayload = JSON.parse(createTaskRpc.init.body).p_payload;
+assert.equal(createTaskPayload.source, undefined, "save_offerpsp_task only accepts its documented payload fields");
+assert.equal(createTaskPayload.entity_type, null, "general tasks must not fake an entity link");
+assert.equal(createTaskPayload.entity_id, null, "general tasks must not fake an entity link");
+assert.equal(createTaskPayload.metadata.entrypoint, "codex_offerpsp_operator");
 assert.equal(calls.filter((entry) => entry.url.endsWith("/rpc/record_offerpsp_mcp_action")).length, 2);
 const auditCalls = calls.filter((entry) => entry.url.endsWith("/rpc/record_offerpsp_mcp_action"));
 for (const auditCall of auditCalls) {
