@@ -1125,7 +1125,7 @@ export function AnalyticsPage() {
 const moduleCopy: Record<string, { eyebrow: string; title: string; description: string; capabilities: string[] }> = {
   matching: { eyebrow: "Matching workbench", title: "Подбор решений", description: "Сопоставление запроса с конкретными маршрутами без раскрытия PSP клиенту.", capabilities: ["Hard gates: GEO, currency, method, flow", "PSP rate → OfferPSP margin → agent margin", "Ручное включение и исключение с причиной", "Preview Telegram‑оффера перед отправкой"] },
   deals: { eyebrow: "Deal desk", title: "Сделки", description: "Досье → PSP review → Telegram → Zoom → live processing.", capabilities: ["Очередь решений клиента", "Полное досье для PSP", "Раунды вопросов и решений", "Telegram, Zoom, won/lost"] },
-  communications: { eyebrow: "Omnichannel", title: "Коммуникации", description: "Переписка с мерчами, PSP и субагентами в контексте сделки.", capabilities: ["Клиентские сообщения", "Telegram уведомления", "Email delivery log", "Шаблоны и напоминания"] },
+  communications: { eyebrow: "Radio room", title: "Радиорубка", description: "Почта и партнёрские коммуникации с мерчами, PSP и субагентами в контексте сделки.", capabilities: ["Цепочки писем", "Telegram уведомления", "Email delivery log", "Шаблоны и напоминания"] },
   operations: { eyebrow: "Operations", title: "Задачи и календарь", description: "Общая очередь работы, сроки и автоматические follow‑ups.", capabilities: ["My tasks", "Просроченные действия", "SLA по этапам", "Календарь Zoom и проверок условий"] },
   integrations: { eyebrow: "System", title: "Интеграции", description: "Рабочее состояние внешних сервисов и автоматизаций.", capabilities: ["Supabase", "n8n", "Telegram", "Vercel и email"] },
 };

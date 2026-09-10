@@ -30,7 +30,7 @@ const statusLabels: Record<string, string> = {
   partner: "Партнёр", paused: "На паузе", rejected: "Отклонён", not_contacted: "Не связывались",
   researching: "Ищем контакт", ready: "Готов к контакту", contacted: "Связались", replied: "Ответил",
   negotiating: "Переговоры", pending: "Ожидает", done: "Выполнено", cancelled: "Отменено",
-  draft: "Черновик", sent: "Отправлено", open: "Открыта", awaiting_reply: "Ждём ответ",
+  draft: "Черновик", sending: "Отправляется", sent: "Отправлено", failed: "Ошибка отправки", open: "Открыта", awaiting_reply: "Ждём ответ",
   follow_up: "Нужен follow-up", closed: "Закрыта",
 };
 const casinoStatusOptions: QuickStatusOption[] = [

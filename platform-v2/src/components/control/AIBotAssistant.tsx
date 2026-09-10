@@ -22,7 +22,7 @@ const pageNames: Record<string, string> = {
   "/offers": "Офферы",
   "/compliance": "Проверка лидов",
   "/deals": "Сделки",
-  "/communications": "Коммуникации",
+  "/communications": "Радиорубка",
   "/operations": "Задачи и календарь",
   "/agents": "Субагенты",
   "/analytics": "Аналитика",
