@@ -175,6 +175,8 @@ async function fetchText(url, fetchImpl) {
     "strict-transport-security",
     "content-encoding",
     "cache-control",
+    "server",
+    "x-vercel-id",
   ].map((name) => [name, clampText(response.headers?.get?.(name), 1_000)]));
   return { ok: response.ok, status: response.status, text, headers };
 }
@@ -354,6 +356,22 @@ function hasVerifiedSitemapSetup(evidence) {
   );
 }
 
+function hasVerifiedVercelHosting(evidence) {
+  const pages = Array.isArray(evidence?.pages)
+    ? evidence.pages.filter((page) => page.status >= 200 && page.status < 400)
+    : [];
+  return pages.some((page) => /^vercel$/i.test(page.response_headers?.server || "")
+    || Boolean(page.response_headers?.["x-vercel-id"]));
+}
+
+function claimsIpv6Setup(item) {
+  const text = typeof item === "string"
+    ? item
+    : [item?.title, item?.evidence, item?.recommendation].join(" ");
+  return /(?:IPv6|AAAA)/i.test(text)
+    && /(add|configure|enable|missing|absent|unsupported|support|SEO|добав|настро|включ|отсутств|не поддерж|SEO|СЕО)/i.test(text);
+}
+
 function claimsMissingSitemapSetup(item) {
   const text = typeof item === "string"
     ? item
@@ -478,7 +496,10 @@ function claimsCreationOfExistingPage(item, evidence) {
     if (!(page.status >= 200 && page.status < 400)) return false;
     try {
       const path = new URL(page.url).pathname;
-      return path !== "/" && text.includes(path);
+      const pathWithoutLeadingSlash = path.replace(/^\//, "");
+      return path !== "/"
+        && (text.toLowerCase().includes(path.toLowerCase())
+          || text.toLowerCase().includes(pathWithoutLeadingSlash.toLowerCase()));
     } catch {
       return false;
     }
@@ -670,6 +691,7 @@ function stripUnsupportedSummarySentences(summary, {
   noindex,
   sitemap,
   structuredData,
+  ipv6,
 }) {
   const sentences = String(summary || "").split(/(?<=[.!?])\s+/).filter(Boolean);
   const filtered = sentences.filter((sentence) => {
@@ -681,6 +703,7 @@ function stripUnsupportedSummarySentences(summary, {
     if (noindex && /noindex/i.test(sentence)) return false;
     if (sitemap && /(sitemap|xml[- ]?карта|карт[аыу] сайта)/i.test(sentence)) return false;
     if (structuredData && /(json-?ld|structured data|schema\.org|структурирован|микроразмет)/i.test(sentence)) return false;
+    if (ipv6 && /(?:IPv6|AAAA)/i.test(sentence)) return false;
     return true;
   });
   return clampText(filtered.join(" ") || "Техническое состояние сайта подтверждено живым crawl и проверкой production-ответов.", 1_200);
@@ -703,6 +726,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
   const noContentRasterImages = hasNoContentRasterImages(evidence);
   const verifiedStructuredDataTypes = hasVerifiedStructuredDataTypes(evidence);
   const verifiedSitemapSetup = hasVerifiedSitemapSetup(evidence);
+  const verifiedVercelHosting = hasVerifiedVercelHosting(evidence);
   const noindexUrls = noindexPageUrls(evidence);
   const indexedMetadataComplete = indexedPagesHaveMetaDescriptions(evidence);
   const verifiedLlmsCoverage = hasVerifiedLlmsCoverage(evidence);
@@ -723,6 +747,8 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     && (normalizedPriorities.some(claimsMissingStructuredDataTypes) || claimsMissingStructuredDataTypes(summaryItem));
   const removedExistingSitemapSetup = verifiedSitemapSetup
     && [...normalizedPriorities, ...auxiliaryRecommendations].some(claimsMissingSitemapSetup);
+  const removedUnsupportedIpv6 = verifiedVercelHosting
+    && [...normalizedPriorities, ...auxiliaryRecommendations].some(claimsIpv6Setup);
   const removedImplementedStructuredData = [...normalizedPriorities, ...auxiliaryRecommendations].some((item) =>
     claimsImplementedStructuredDataExpansion(item, evidence));
   const removedNoindexMetadata = (indexedMetadataComplete && claimsMetadataChange(summaryItem))
@@ -754,6 +780,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     if (removedUnsupportedImages && claimsMissingModernImages(item)) return false;
     if (removedUnsupportedStructuredData && claimsMissingStructuredDataTypes(item)) return false;
     if (removedExistingSitemapSetup && claimsMissingSitemapSetup(item)) return false;
+    if (removedUnsupportedIpv6 && claimsIpv6Setup(item)) return false;
     if (removedImplementedStructuredData && claimsImplementedStructuredDataExpansion(item, evidence)) return false;
     if (claimsMetadataChange(item) && targetsOnlySearchMetadataExcludedPages(item, noindexUrls)) return false;
     if (removedUnsupportedLlms && claimsLlmsReview(item)) return false;
@@ -792,6 +819,9 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
   if (removedExistingSitemapSetup) {
     limitations.unshift("The live XML sitemap is available, contains canonical public URLs and is explicitly declared in robots.txt; duplicate setup recommendations were discarded.");
   }
+  if (removedUnsupportedIpv6) {
+    limitations.unshift("Vercel currently does not support IPv6 for custom domains; the missing AAAA record is an expected hosting-platform limitation, not an actionable SEO defect.");
+  }
   if (removedImplementedStructuredData) {
     limitations.unshift("Acquisition pages already use WebPage, BreadcrumbList and FAQPage with Service for matching pages and Article for editorial guides; duplicate or semantically incorrect schema recommendations were discarded.");
   }
@@ -825,6 +855,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     noindex: removedNoindexReview,
     sitemap: removedExistingSitemapSetup,
     structuredData: removedImplementedStructuredData,
+    ipv6: removedUnsupportedIpv6,
   });
   const quickWins = Array.isArray(source.quick_wins) ? source.quick_wins.slice(0, 8).map((item) => clampText(item, 500)).filter(Boolean) : [];
 
@@ -835,7 +866,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
     model: clampText(value?.model || source.model || "deepseek-chat", 120),
     generated_at: new Date().toISOString(),
     executive_summary: executiveSummary,
-    confidence: removedUnsupportedSecurity || removedUnsupportedBrotli || removedUnsupportedImages || removedUnsupportedStructuredData || removedExistingSitemapSetup || removedImplementedStructuredData || removedNoindexMetadata || removedUnsupportedLlms || removedExistingPageCreation || removedNoindexReview || removedUnverifiableAggregate || removedBenignSkippedReview || removedUnsupportedHreflang || removedImplementedHreflang
+    confidence: removedUnsupportedSecurity || removedUnsupportedBrotli || removedUnsupportedImages || removedUnsupportedStructuredData || removedExistingSitemapSetup || removedUnsupportedIpv6 || removedImplementedStructuredData || removedNoindexMetadata || removedUnsupportedLlms || removedExistingPageCreation || removedNoindexReview || removedUnverifiableAggregate || removedBenignSkippedReview || removedUnsupportedHreflang || removedImplementedHreflang
       ? "medium"
       : (["high", "medium", "low"].includes(source.confidence) ? source.confidence : "medium"),
     priorities,
@@ -846,6 +877,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
       if (removedUnsupportedSecurity && /(security|CSP|заголов)/i.test(item)) return false;
       if (removedUnsupportedLlms && /llms\.txt/i.test(item)) return false;
       if (removedExistingSitemapSetup && /(sitemap|xml[- ]?карта|карт[аыу] сайта)/i.test(item)) return false;
+      if (removedUnsupportedIpv6 && claimsIpv6Setup(item)) return false;
       if (removedImplementedStructuredData && claimsImplementedStructuredDataExpansion(item, evidence)) return false;
       if (evidence?.geo_signals?.robots_txt?.ai_crawlers_allowed && /robots\.txt/i.test(item)) return false;
       if (/hreflang/i.test(item) && !hreflangAdviceHasDiscoveredTarget(item, evidence)) return false;
@@ -862,6 +894,7 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
         item
         && !(removedUnsupportedLlms && /llms\.txt/i.test(item))
         && !(removedExistingSitemapSetup && /(sitemap|xml[- ]?карта|карт[аыу] сайта)/i.test(item))
+        && !(removedUnsupportedIpv6 && claimsIpv6Setup(item))
         && !(removedImplementedStructuredData && claimsImplementedStructuredDataExpansion(item, evidence))
         && !(evidence?.geo_signals?.robots_txt?.ai_crawlers_allowed && /(robots\.txt|GPTBot|ClaudeBot|AI[- ]crawler)/i.test(item))
         && !(/hreflang/i.test(item) && !hreflangAdviceHasDiscoveredTarget(item, evidence)))

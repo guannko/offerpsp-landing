@@ -144,6 +144,8 @@ const securityHeaders = {
   "referrer-policy": "strict-origin-when-cross-origin",
   "permissions-policy": "camera=()",
   "content-encoding": "br",
+  server: "Vercel",
+  "x-vercel-id": "fra1::test",
 };
 const evidence = await collectSeoAgentEvidence(agentAudit, async (url) => {
   if (url === "https://offerpsp.com/sitemap.xml") return new Response(sitemapXml, { status: 200, headers: securityHeaders });
@@ -610,6 +612,40 @@ assert.equal(unsupportedLlmsReview.geo_recommendations.length, 0);
 assert.doesNotMatch(unsupportedLlmsReview.limitations.join(" "), /No data about llms/i);
 assert.match(unsupportedLlmsReview.limitations.join(" "), /links every crawled indexable page/i);
 assert.doesNotMatch(unsupportedLlmsReview.executive_summary, /llms\.txt/i);
+
+const unsupportedExistingPrivacyPage = normalizeSeoAgentAnalysis({ analysis: {
+  ...rawAgentAnalysis,
+  priorities: [{
+    priority: "P2",
+    area: "SEO",
+    title: "Нет страницы с политикой конфиденциальности",
+    evidence: "В крауле отсутствует privacy.html, хотя ссылка присутствует на главной странице.",
+    recommendation: "Добавить страницу политики конфиденциальности и связать её с футером.",
+    affected_urls: ["https://offerpsp.com/"],
+  }],
+} }, evidence);
+assert.equal(unsupportedExistingPrivacyPage.priorities.length, 0);
+assert.match(unsupportedExistingPrivacyPage.limitations.join(" "), /successfully loaded were discarded/i);
+
+const unsupportedVercelIpv6 = normalizeSeoAgentAnalysis({ analysis: {
+  ...rawAgentAnalysis,
+  executive_summary: "IPv6 is missing and should be enabled for an SEO benefit.",
+  priorities: [{
+    priority: "P2",
+    area: "Technical",
+    title: "Отсутствует поддержка IPv6",
+    evidence: "SiteOne reports DNS IPv6 unavailable.",
+    recommendation: "Настроить AAAA в DNS и включить IPv6 на хостинге для SEO.",
+    affected_urls: ["https://offerpsp.com/"],
+  }],
+  quick_wins: ["Configure an AAAA record for IPv6"],
+  geo_recommendations: ["Enable IPv6 for search visibility"],
+} }, evidence);
+assert.equal(unsupportedVercelIpv6.priorities.length, 0);
+assert.equal(unsupportedVercelIpv6.quick_wins.length, 0);
+assert.equal(unsupportedVercelIpv6.geo_recommendations.length, 0);
+assert.doesNotMatch(unsupportedVercelIpv6.executive_summary, /IPv6|AAAA/i);
+assert.match(unsupportedVercelIpv6.limitations.join(" "), /Vercel currently does not support IPv6/i);
 
 let agentRequest = null;
 const agentResult = await runSeoGeoAgent(agentAudit, {
