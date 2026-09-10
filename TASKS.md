@@ -1,22 +1,205 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-09-01
+Updated: 2026-09-10
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
-## Next social publication — 2026-09-02
+## Russian metadata and core topic-cluster refinement — 2026-09-10
 
-- [ ] 2026-09-02 at 18:30 Asia/Nicosia: publish the approved merchant-brief Reel on Instagram;
-  select the music from Instagram's licensed library immediately before publication.
+Status: `VERIFIED` locally and committed in `7a38eb8`; not deployed.
+
+- [x] Confirmed that the audit's alleged spelling correction repeated the same word; there was no
+  literal typo. Replaced the jargon-heavy Russian meta copy with a 153-character, country-specific
+  description that promises a private shortlist and a qualified provider introduction in natural
+  Russian.
+- [x] Strengthened the core `forex ↔ high-risk ↔ cross-border ↔ payment methods` navigation paths
+  with descriptive generated links instead of adding generic or sitewide link lists.
+- [x] Added regression checks for the new topic-cluster paths and updated only the affected page
+  modification dates to `2026-09-10`.
+
+## Vercel function-storage stabilization — 2026-09-09
+
+Status: `PARTIAL`. Deployment cleanup and retention policy are `VERIFIED` in Vercel; the bundle
+consolidation is `VERIFIED` locally, committed in `56977ab` and is not deployed.
+
+- [x] Traced the 10.53 GB Functions Storage usage to repeated production deployments of the
+  `ops-7q4m2x9k8v3n` Captain's Bridge project, not to BTC Analyzer, databases or user files.
+- [x] Marked 109 obsolete deployments for deletion. Repointed the stale secondary technical alias
+  to the current production release, then removed its old protected deployment. Vercel now exposes
+  exactly 20 active production deployments, and all three project aliases resolve to the latest one.
+  Deleted successful builds remain recoverable for 30 days, so the usage chart will not fall until
+  Vercel permanently removes their associated resources.
+- [x] Reduced project retention from 30 days to one day for canceled/errored builds and one week for
+  preview/production builds. Vercel confirmed the saved policy.
+- [x] Consolidated PDF extraction, mailbox attachment processing and provider-source parsing into
+  one `document-processing` function while preserving the three public API paths through rewrites.
+  An apples-to-apples local Vercel build decreased from 170.5 MiB across 12 functions to 106.0 MiB
+  across 11 functions: 64.5 MiB / 37.8% less per deployment.
+- [x] Added a 120 MiB local function-storage budget check and documented clean, grouped Vercel
+  release rules in `AGENTS.md`. PDF, mailbox, provider-source, module, router, TypeScript and Vite
+  checks pass.
+- [x] Separated and committed the consolidation as `56977ab`. The fresh local function-storage
+  check reports 103.1 MiB across 11 functions against the 120 MiB budget.
+- [ ] Publish the consolidation in one grouped Captain's Bridge release. Inspect the remote Linux
+  function sizes and smoke-test all three preserved API routes before promoting the release.
+
+## Guide-to-service internal linking — 2026-09-09
+
+Status: `VERIFIED` in production.
+
+- [x] Expanded `Continue the research` links across all 22 SEO pages so every commercial service
+  page links to at least one relevant guide and every guide links back to commercial services.
+- [x] Added reciprocal topic paths for e-commerce and high-risk processing, cross-border payments
+  and PSP comparison, SaaS/marketplaces and onboarding, plus payment methods and infrastructure
+  roles.
+- [x] Preserved descriptive anchor copy based on each destination page's topic instead of generic
+  labels such as `Explore`.
+- [x] Added regression checks for the global guide/service rule and the key reciprocal pairs.
+- [x] Updated affected SEO-page and sitemap modification dates to `2026-09-09`.
+- [x] Full `npm run build` passes, including all 22 generated SEO pages and the complete regression
+  suite. The resulting graph contains 101 contextual links, with at least 4 per SEO page.
+- [x] Published Vercel production deployment `dpl_GBaCa2wSToyw5oEYm68wEwf3sHvo` and aliased it to
+  `https://offerpsp.com`. Live checks confirm reciprocal e-commerce/high-risk-guide links and
+  `2026-09-09` sitemap modification dates.
+
+## Benefit-led meta descriptions — 2026-09-08
+
+Status: `VERIFIED` in production.
+
+- [x] Replaced the defensive `no public merchant profile` / `without publishing` wording on the
+  home page and all 18 commercial SEO/GEO pages with a concrete benefit: a focused private
+  shortlist and qualified provider introductions.
+- [x] Kept page-specific buying signals, including vertical, underwriting, settlement, country and
+  payment-method terms such as Pix, SPEI, PSE, PayNow, UPI, Mada and mobile money.
+- [x] Kept every revised description within 150–155 characters and added regression guards that
+  require a concrete matching outcome while rejecting the old defensive wording.
+- [x] Full `npm run validate` and `npm run build` pass, including all 22 generated SEO pages,
+  portals, attribution and public-concierge regression checks.
+- [x] Published Vercel production deployment
+  `https://offerpsp-landing-6l4zteo1u-annoris.vercel.app`. Live HTML checks on the home page,
+  high-risk, Latin America and Russian CIS/Central Asia pages confirm the revised descriptions.
+
+## SiteOne IPv6 and privacy false positives — 2026-09-08
+
+Status: `VERIFIED` for production facts and local audit normalization; the audit-code change is
+committed in `dc5e465` and is not deployed.
+
+- [x] Verified the public privacy notice at `https://offerpsp.com/privacy.html`: HTTP 200, indexable
+  metadata, self-referencing canonical, full policy content and Vercel security headers.
+- [x] Verified that `privacy.html` is linked from the home-page footer and consent copy, listed in
+  `sitemap.xml`, exposed by `llms.txt` and covered by the existing public-site validators.
+- [x] Verified live DNS: the apex resolves through Vercel IPv4 and has no AAAA record. Vercel's
+  current custom-domain documentation states that IPv6 is not supported, so adding an arbitrary
+  AAAA record would be unsafe and the SiteOne notice is not an actionable SEO defect.
+- [x] Hardened SEO/GEO normalization locally: it now recognizes Vercel response evidence, removes
+  IPv6/AAAA setup recommendations for Vercel custom domains and recognizes an existing page when
+  an audit mentions its filename without a leading slash (for example `privacy.html`).
+- [x] Added exact regression cases for both supplied recommendations. SiteOne normalization tests,
+  platform lint and `git diff --check` pass.
+- [ ] Deploy the audit-normalization change only in a reviewed grouped Captain's Bridge release;
+  do not publish a standalone production build merely for this guard.
+
+## Qualified-merchant meta descriptions — 2026-09-08
+
+Status: `VERIFIED` in production.
+
+- [x] Reworked the home page and all 18 commercial SEO/GEO service pages so each description
+  retains its page-specific vertical, country or payment-method terms while stating private
+  matching, qualified introductions and that no public merchant profile is published.
+- [x] Kept the four editorial guides and the legal pages informational rather than forcing the
+  same commercial suffix into every search snippet.
+- [x] Kept every changed description within the existing 150–160-character contract and updated
+  affected sitemap `lastmod` values to `2026-09-08`.
+- [x] Added regression coverage for the three commercial-value signals on every service-page meta
+  description in English and Russian. Full validation and the assembled production build pass.
+- [x] Published production deployment
+  `https://offerpsp-landing-hchejoolz-annoris.vercel.app` and aliased it to
+  `https://offerpsp.com`. Live HTML checks confirm the new home and Europe descriptions, while the
+  live sitemap reports `2026-09-08` for both URLs.
+
+## Public website AI concierge — 2026-09-07
+
+Status: `VERIFIED` end to end in production.
+
+- [x] Added a public `Ask OfferPSP` concierge to the home, legal and generated SEO/GEO pages. It
+  explains the public service, preparation and partner-contact process in the visitor's language;
+  PSP/offer matching remains inside the private merchant workspace.
+- [x] Added a protected same-origin `/api/public-concierge` bridge with bounded input/history,
+  origin checks, per-IP rate limiting, no-store responses and a dedicated n8n webhook secret.
+  Browser messages and internal credentials never enter analytics or client-side source.
+- [x] Created and activated n8n workflow `XoEN9slU5gofsWQe`,
+  `OfferPSP | Public Website Concierge`, using the rotated managed Groq credential. The published
+  graph has 5 enabled nodes, 4 valid connections and zero validation errors or warnings.
+- [x] Enforced the public boundary in the model prompt: no staff tools, provider database, current
+  offers, commercial rates, provider recommendation, guaranteed approval or financial/legal
+  advice. A Russian production test asking for the PSP database and iGaming rates was refused and
+  routed to the private request flow.
+- [x] Added `Request a private match` and `Talk to Boris` handoffs. The human handoff opens the
+  existing lead form with optional preferred contact time and discussion context; it never submits
+  without the visitor completing and approving the form.
+- [x] Added first-party metadata-only funnel events `concierge_open`, `concierge_message` and
+  `concierge_handoff`; message text is not included in analytics.
+- [x] Production API returned HTTP 200 with a bounded public answer. Live browser QA verified the
+  floating launcher, dialogue, all quick questions, safety notice and human handoff form. Fixed a
+  clipped quick-question chip found during visual QA.
+- [x] Replaced the dark translucent treatment with a high-contrast e-reader treatment: opaque warm
+  paper, near-black 17 px serif answers, crisp controls, no backdrop blur and a white focused input.
+  Removed inherited section padding and moved `Back to top` 12 px above the concierge launcher on
+  desktop and mobile. Production geometry confirms zero overlap.
+- [x] Final public deployment `dpl_AYqDnQaURXFYsfTufB5H1X4adYTL` is `READY` and aliased to
+  `https://offerpsp.com`.
+
+## PSP partner outreach — wave 1 — 2026-09-08
+
+Status: `VERIFIED` for preparation; no external form or email was sent on 2026-09-07.
+
+- [x] Rechecked payabl., Unlimit and Ecommpay as `not_contacted`; no outbound timeline event or
+  duplicate partner application exists in the current OfferPSP records.
+- [x] Prepared the exact official channels, long/short tailored messages and commercial data
+  request in `docs/OFFERPSP-PARTNER-OUTREACH-WAVE-1.md`.
+- [x] Repaired the staff MCP task bridge so a general task no longer sends the unsupported `source`
+  field or an entity type without an entity ID. Regression tests pass; staff deployment
+  `dpl_6xQyt4s5DQFFDw5cDywwSHNQKZvP` is `READY` and the live task creation below succeeded.
+- [x] Created Captain's Bridge task `0d0c8961-1a67-4c34-9f76-2d5b6c9cdf27`, high priority, due
+  2026-09-08 09:30 Asia/Nicosia. Planned send window: 09:30–11:00, one company at a time in the
+  order payabl. → Unlimit → Ecommpay, with a final live form/timeline check before each submission.
+- [ ] Submit the three first-wave applications during the planned window and record each confirmed
+  send in the corresponding provider timeline before monitoring replies.
+
+## Next social publication — 2026-09-06
+
+- [x] 2026-09-04: published the approved merchant-brief Reel on Instagram:
+  `https://www.instagram.com/p/Dc3Adh7sauS/`. The live post shows the approved caption, branded
+  cover and the Instagram music track `Ecklectic Music — Deep Summer (feat. Pancho Tomaselli)`.
+- [x] 2026-09-04: published and verified the approved native merchant-brief video adaptations:
+  X `https://x.com/offerpsp/status/2095848501737369727` and Threads
+  `https://www.threads.com/@offerpsp/post/Dc3WgfEk2Nt`. Both use the existing silent 15.5-second
+  exports; X received 1080×1350 and Threads received 1080×1920.
+- [ ] X displayed its graduated-access notice after publication: the new account's content may
+  have limited visibility until X observes normal feed interaction. Do not use synthetic or mass
+  engagement; develop the account through selective relevant follows and genuine activity.
 - [ ] Package 3: explain the value of OfferPSP for PSP partners — structured merchant dossiers,
   provider-controlled review and controlled introductions without unqualified lead promises.
-- [ ] 2026-09-03 at 10:30 Asia/Nicosia: publish the approved main B2B version on the LinkedIn founder
-  profile.
-- [ ] 2026-09-04 at 18:30 Asia/Nicosia: publish the approved Instagram carousel.
-- [ ] 2026-09-04: publish approved short adaptations on X and Threads.
+- [ ] After approval, publish the main B2B version of package 3 on the LinkedIn founder profile.
+- [ ] 2026-09-06 at 18:30 Asia/Nicosia: publish the package 3 Instagram carousel if approved.
+- [ ] After the main publications and approval, publish package 3 short adaptations on X and Threads.
 - [ ] Before publication, show Boris one final package containing the exact text and Instagram
   visuals; no repeated approval cycle is needed unless the content changes materially.
+
+## Google Search Console freshness label — 2026-09-04
+
+Status: `VERIFIED` in production.
+
+- [x] Reworded both Google Search Console status labels to separate the last finalized data date
+  from the current API check time: `финальные данные по … · проверено …`.
+- [x] Confirmed through the live OfferPSP Operator response that the API was checked on 2026-09-04
+  and returned finalized performance data through 2026-09-01; no archived fallback was used.
+- [x] Platform lint, production build and `git diff --check` pass.
+- [x] Deployed Vercel production deployment `dpl_Apnb8Wyi7hvNu4B3eDThFm3aLceJ`, `READY` and aliased
+  to `https://ops-7q4m2x9k8v3n.vercel.app`.
+- [x] Authenticated production verification shows both new labels with finalized data through
+  2026-09-01 and a fresh API check on 2026-09-04 at 13:17 Asia/Nicosia.
 
 ## Radio Room mail organizer — 2026-09-01
 
@@ -165,9 +348,19 @@ surfaces.
 - [x] Corrected the live LinkedIn founder profile to the canonical `Founder of OfferPSP` headline,
   replaced the unverified-network claim with accurate build-and-verification wording and added the
   tagged founder-profile website URL. The saved edit forms were re-read after submission.
-- [ ] Create the separate OfferPSP LinkedIn Company Page after the founder account has enough real
-  professional contacts. LinkedIn currently blocks page creation with `insufficient connections`;
-  do not bypass this by adding random contacts.
+- [x] Created and configured the public OfferPSP LinkedIn Company Page:
+  `https://www.linkedin.com/company/offerpsp/`. Added the canonical brand name, logo, tagline,
+  website, Financial Services industry, company details, English About copy, specializations and
+  Tbilisi, Georgia as the legal-operator location. The founder's current experience is linked to
+  the official Company Page and displays the OfferPSP logo. The first native Company Page
+  publication was published and verified on 2026-09-07:
+  `https://www.linkedin.com/feed/update/urn:li:share:7502701110701420544/`. The page banner and
+  migration of publication 2 remain pending.
+- [x] Replaced the public-site LinkedIn footer destination with the official Company Page while
+  preserving the founder profile in the separate `Person` JSON-LD node. Root validation and build
+  pass. Production deployment `dpl_7b2F53ZW1URyJxHHsTxDEh1XJLPa` is `READY` and aliased to
+  `https://offerpsp.com`; live checks of the home, privacy and iGaming pages confirm the Company
+  Page in Organization/footer markup and the founder profile in Person structured data.
 - [x] Created and verified the public X profile `https://x.com/offerpsp` after Boris completed the
   phone/SMS and password steps. Added the OfferPSP square logo, display name
   `OfferPSP | PSP Matching`, canonical short bio and tagged website link. At setup the profile had no
@@ -326,6 +519,10 @@ preparation. No application, form or email has been sent.
   Sepaga EMI (`9`).
 - [x] Added `docs/OFFERPSP-PARTNER-OUTREACH-WAVE-1.md` with the commercial data request, exact
   first-send order and tailored application copy for payabl., Unlimit, Ecommpay, Yaspa and Volt.
+- [ ] Tuesday 2026-09-08, 09:30–11:00 Asia/Nicosia: action-time review and first outreach session
+  for payabl., Unlimit and Ecommpay. No reply-check task starts before a successful submission and
+  its contact event have been recorded. As of 2026-09-07, all eight wave-one research cards remain
+  `not_contacted`.
 - [ ] Submit payabl. first, only after Boris approves the exact action-time form contents. Record
   the application reference and contact event immediately after successful submission.
 - [ ] Send or submit the remaining seven contacts one at a time after rechecking the current
@@ -1922,7 +2119,49 @@ stay isolated behind feature modes until their own verification is complete.
   Task Runner execution `409454` completed successfully in 0.39 seconds. FitBot's next scheduled
   production run remains the final route-specific confirmation.
 
+### Answer-engine FAQ and CTR metadata refresh — 2026-09-07
+
+- [x] Rewrite FAQ answers across the home page and all 22 generated SEO/GEO pages so every one
+  of the 104 visible questions starts with a direct, standalone answer. Visible content and
+  `FAQPage` JSON-LD remain identical.
+- [x] Replace the repeated `Private PSP matching...` metadata pattern with 22 unique descriptions
+  of 150–160 characters. Regional pages now name concrete markets and methods, including
+  Brazil/Mexico/Colombia with Pix/SPEI/PSE, EEA/UK with SEPA/iDEAL, APAC with PayNow/UPI, Gulf
+  markets with Mada, and African markets with mobile money.
+- [x] Add regression checks that reject hedged FAQ openings and generic metadata templates, and
+  require the regional entities and payment methods in the corresponding descriptions.
+- [x] Update the home page and all 22 content-page sitemap revisions to `2026-09-07`. The sitemap
+  still exposes 25 canonical URLs; legal-page dates remain unchanged.
+- [x] Run the complete validation and production build successfully, then deploy production
+  `dpl_3kqB7pdLqE7zDtWcRx7xgzGmH82n` (`READY`, aliased to `https://offerpsp.com`). Fresh production
+  reads confirmed the updated home FAQ, LATAM metadata/FAQ JSON-LD and the 25-URL sitemap.
+- [ ] `BLOCKED`: rerun the independent SiteOne + SEO/GEO agent crawl after the OfferPSP Operator
+  OAuth connection is refreshed. The post-deploy audit call failed while refreshing the MCP OAuth
+  token; this is an audit-connection failure, not a site-build or deployment failure.
+
 ## Production safety rules
+
+### Telegram and Groq credential rotation — 2026-09-07
+
+- [x] Rotate the technical Telegram bot token for `@aibot_bix_bot`, create the replacement n8n
+  credential and migrate 35 Telegram nodes across 10 workflows. Published active graphs contain
+  no reference to the retired Telegram credential; a direct Telegram Bot API smoke test delivered
+  message `928` and it was verified in Telegram Web.
+- [x] Create a new Groq API key and managed n8n credential, scan all 60 workflows, and migrate all
+  nine references to the previous `Groq account` credential across five workflows. The draft and
+  published graphs of all affected active workflows contain zero old references.
+- [x] Replace three unavailable `llama-3.3-70b-versatile` model references with the currently
+  available `qwen/qwen3.8-27b`; a direct authenticated Groq API smoke test returned exactly
+  `OFFERPSP_GROQ_OK`. The separate FitBot key (`new bot 2026`) is not part of this OfferPSP
+  rotation and was not changed.
+- [x] Revoke the retired Groq API key `AIBot` after verifying its identity with an isolated
+  old-credential probe; only `AIBot` changed to one API call and a 2026-09-07 last-used date. The
+  temporary probe workflow was deactivated and deleted. After Boris's action-time approval, the
+  `AIBot` key and the retired Groq and Telegram n8n credentials were deleted. Post-cleanup checks
+  returned `ROTATION_OK` from Groq and identified `@aibot_bix_bot` through Telegram `getMe`.
+- [ ] Remove the unreferenced duplicate new Groq credential whose first creation response ID was
+  withheld by the public credential API. It contains the current key but no workflow references;
+  identify it in the n8n UI before deletion so the active credential is not removed by mistake.
 
 - Never treat local tests or documentation as proof of production state.
 - Do not apply production migrations from an uncommitted working tree.

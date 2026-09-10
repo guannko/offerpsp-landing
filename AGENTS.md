@@ -5,7 +5,14 @@ Updated: 2026-08-26
 Owner and operator: Offerspsp.com (Individual Entrepreneur, Georgia), trading publicly as OfferPSP
 at `offerpsp.com`
 
-Scope: `/Users/borisboris/diskD/N8N/AIBot/offerpsp-landing`
+Scope:
+
+- MacBook: `/Users/borisboris/diskD/N8N/AIBot/offerpsp-landing`
+- iMac: `/Volumes/D/diskD/N8N/AIBot/offerpsp-landing`
+
+Cross-machine operation follows `BIX-brain/CROSS-MACHINE-CONTINUITY.md` from
+the workspace root. Keep durable OfferPSP state in this file, `TASKS.md` and
+project documentation; do not rely on one host's local chat database.
 
 This file is the shared source of project instructions for Codex, Claude Code and other
 engineering agents. `CLAUDE.md` is only a loader for this file; do not maintain a second,
@@ -459,6 +466,19 @@ Before any future production change, also verify Git status, exact migration sta
 boundaries, n8n published versions and the Vercel deployment. Treat parser anomalies and missing
 extracted fields as non-blocking staff review notes. Publication remains an explicit staff decision
 based on the source document; never mutate production only to make an audit report look complete.
+
+### Vercel release hygiene
+
+- Never create repeated production deployments while debugging. Build and test locally, use at most
+  one protected preview when live infrastructure is required, then publish one grouped release.
+- Never deploy Captain's Bridge from a dirty worktree. Commit the exact release first and record the
+  commit, deployment ID and production aliases after verification.
+- Before publishing a backend change, run `vercel build --prod` from `platform-v2`, then run
+  `npm --prefix platform-v2 run check:function-storage` from the repository root. Do not publish if
+  the function-storage budget fails; remove duplicated native/parser dependencies or consolidate
+  compatible handlers.
+- Keep Vercel retention short enough for the release cadence while preserving Vercel's protected
+  recent production releases and active aliases. Do not preserve obsolete deployment aliases.
 
 ## Research references
 
