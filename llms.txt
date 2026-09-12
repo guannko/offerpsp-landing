@@ -37,6 +37,19 @@ OfferPSP provides and charges for its own B2B research, qualification, matching 
 
 OfferPSP does not publish its provider network, private routes, rates or customer records. Requests are submitted through the private intake at https://offerpsp.com/#request.
 
+## Illustrative merchant scenarios
+
+The profiles below are hypothetical matching briefs, not client case studies, provider-availability claims or promises of approval. They show the operating facts OfferPSP needs before researching a route. Provider identities, rates and margins remain private.
+
+- Licensed iGaming operator: Curaçao licence; target customers in Brazil, Mexico and Colombia; card deposits plus Pix, SPEI and PSE; player withdrawals required. The brief must separate deposit and payout flows, confirm the contracting entity and map each market to current provider appetite. Related page: https://offerpsp.com/psp-for-igaming.html
+- Forex broker: regulated entity; clients in the EEA and selected non-EEA markets; cards, bank transfers and withdrawals; multilingual acquisition. The brief must document licences, promotion controls, source-of-funds procedures, deposit-to-withdrawal logic and settlement requirements. Related page: https://offerpsp.com/psp-for-forex.html
+- European e-commerce merchant: EU entity; customers in Germany, the Netherlands and the United Kingdom; cards, iDEAL and SEPA; one-off purchases, refunds and recurring billing. The brief must distinguish checkout conversion needs from settlement, reconciliation and dispute operations. Related page: https://offerpsp.com/payment-provider-for-ecommerce.html
+- Online marketplace: Singapore entity; buyers and sellers across Southeast Asia; cards and PayNow for collection; SGD and USD seller payouts. The brief must define the platform's legal role, seller KYB, split or sequential settlement, refunds and reconciliation. Related page: https://offerpsp.com/psp-for-marketplaces.html
+- SaaS company: EU entity; global B2B subscribers; cards and bank debit; monthly and annual plans in EUR and USD. The brief must cover recurring mandates, failed-payment recovery, tax and invoicing dependencies, refunds and reporting. Related page: https://offerpsp.com/psp-for-saas.html
+- Cross-border merchant: UK entity; customers in Europe and Latin America; cards plus selected local bank and wallet methods; settlement in EUR and USD. The brief must map customer country, method, presentment currency, settlement currency, refund route and backup coverage separately. Related page: https://offerpsp.com/cross-border-payment-matching.html
+- Compliant crypto business: verified corporate and regulatory profile; customers in approved markets; card and bank funding with fiat settlement. The brief must document the exact product, registration or licence evidence, custody and funds flow, transaction monitoring and restricted GEOs. Related page: https://offerpsp.com/psp-for-crypto-businesses.html
+- African digital merchant: operating entity outside the customer markets; customers in Nigeria, Kenya and South Africa; cards, bank transfer and mobile money; local-currency collection with cross-border settlement. The brief must evaluate country-level method support, payout timing, FX, limits and reconciliation. Related page: https://offerpsp.com/payment-provider-africa.html
+
 ## Official pages
 
 - Home and service overview: https://offerpsp.com/

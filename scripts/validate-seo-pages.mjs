@@ -111,7 +111,34 @@ const organizationProfiles = [
   "https://t.me/offerpsp",
   "https://www.linkedin.com/company/offerpsp/",
 ];
+const organizationAreaServed = ["Europe", "CIS", "Central Asia", "Middle East", "Latin America", "Asia-Pacific", "Africa"];
+const organizationAddress = {
+  "@type": "PostalAddress",
+  addressLocality: "Tbilisi",
+  addressCountry: "Georgia",
+};
+const organizationContactPoint = {
+  "@type": "ContactPoint",
+  contactType: "business enquiries",
+  email: "bizdev@offerpsp.com",
+};
 const founderLinkedIn = "https://www.linkedin.com/in/borys-kononenko-offerpsp/";
+const illustrativeScenarioPages = [
+  "psp-for-igaming.html",
+  "psp-for-forex.html",
+  "payment-provider-for-ecommerce.html",
+  "psp-for-marketplaces.html",
+  "psp-for-saas.html",
+  "cross-border-payment-matching.html",
+  "psp-for-crypto-businesses.html",
+  "payment-provider-africa.html",
+];
+assert.ok(llms.includes("## Illustrative merchant scenarios"), "llms.txt must expose machine-readable illustrative merchant briefs");
+assert.match(llms, /hypothetical matching briefs, not client case studies/i, "llms.txt must not present illustrative scenarios as real clients");
+assert.match(llms, /Provider identities, rates and margins remain private/i, "llms.txt must preserve OfferPSP confidentiality boundaries");
+for (const pagePath of illustrativeScenarioPages) {
+  assert.ok(llms.includes(`https://offerpsp.com/${pagePath}`), `llms.txt scenarios must link to ${pagePath}`);
+}
 const scriptDirective = cspDirective("script-src");
 const styleDirective = cspDirective("style-src");
 assert.ok(scriptDirective, "CSP must define script-src");
@@ -132,6 +159,10 @@ for (const [index, renderedPage] of renderedPages.entries()) {
   const nodes = structuredDataNodes(renderedPage);
   const organization = nodes.find((node) => node?.["@type"] === "Organization" && node.url === "https://offerpsp.com/");
   assert.ok(organization, `rendered page ${index + 1} must identify the OfferPSP organization`);
+  assert.equal(organization.legalName, "Offerspsp.com (Individual Entrepreneur, Georgia)", `rendered page ${index + 1} must identify the legal operator`);
+  assert.deepEqual(organization.address, organizationAddress, `rendered page ${index + 1} must identify the operator location`);
+  assert.deepEqual(organization.contactPoint, organizationContactPoint, `rendered page ${index + 1} must expose the business contact`);
+  assert.deepEqual(organization.areaServed, organizationAreaServed, `rendered page ${index + 1} must expose the supported regions`);
   assert.deepEqual(organization.sameAs, organizationProfiles, `rendered page ${index + 1} must expose every official brand profile in Organization sameAs`);
   assert.deepEqual(organization.founder, { "@id": "https://offerpsp.com/#borys-kononenko" }, `rendered page ${index + 1} must connect the founder to OfferPSP`);
   const founder = nodes.find((node) => node?.["@type"] === "Person" && node?.["@id"] === "https://offerpsp.com/#borys-kononenko");

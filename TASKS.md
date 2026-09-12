@@ -1,9 +1,33 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-09-10
+Updated: 2026-09-12
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
+
+## Organization identity JSON-LD — 2026-09-12
+
+Status: `VERIFIED` locally; not deployed.
+
+- [x] Confirmed that all five official brand profiles were already present in Organization
+  `sameAs`; the supplied missing-`sameAs` finding was based on incomplete extracted properties.
+- [x] Added the public legal operator name, Tbilisi/Georgia postal identity, business-enquiries
+  contact point and supported regions to the Organization node on the home, legal and all 22
+  generated public content pages.
+- [x] Added regression checks that require the same Organization identity contract on every
+  rendered public page.
+
+## Machine-readable illustrative merchant scenarios — 2026-09-11
+
+Status: `VERIFIED` locally; not deployed.
+
+- [x] Kept the public home page and all visible service-page copy unchanged.
+- [x] Added eight hypothetical, non-client matching briefs to `llms.txt` for AI crawlers, covering
+  iGaming, forex, e-commerce, marketplaces, SaaS, cross-border, crypto and African payment needs.
+- [x] Each brief names concrete entity/GEO/method/flow inputs and links to its relevant public page
+  without exposing a PSP, rate, margin or claimed outcome.
+- [x] Added regression guards for the hypothetical-case disclaimer, confidentiality boundary and
+  all eight linked commercial pages.
 
 ## Russian metadata and core topic-cluster refinement — 2026-09-10
 
