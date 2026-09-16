@@ -26,12 +26,28 @@
 - Removed obsolete once-per-minute worker help text; event-driven execution has
   a 12-hour recovery sweep.
 
-## Remaining verification at time of writing
+## Production acceptance — 2026-09-16, 19:55 UTC
 
-- Web production release and authenticated visual check.
-- Actual Telegram callback -> result message, then repeat -> same draft/receipt.
-- Keep synthetic intake `34568765-2c28-42ad-9e1a-ab294f5ff132` clearly labelled;
-  archive it and cancel any test draft after verification. Never send it externally.
+- Web release commit `b0176ae`, deployment `dpl_7HMxiZ2LN63JxrtzC11XD8yaHTFe`
+  is READY, aliased to `https://ops-7q4m2x9k8v3n.vercel.app`. Built on Vercel Linux
+  from a clean detached worktree; no macOS prebuilt native dependencies uploaded.
+- Authenticated UI shows nine evidence cards, the actual draft receipt, all eight
+  screening checks, and the eight-event test history. No stale data shown on load.
+- Reopened assistant shows the end of the existing long history; manually scrolling
+  up, closing and reopening returns to the end again (visually checked in Brave).
+- Telegram executions `548374` and `548375`: first click creates draft 14, second
+  returns `replayed: true` and the same ID. Telegram confirmed result messages 972
+  and 973; Borys reported seeing the replay response. DB: one consumed action,
+  one action event, draft status `draft`, no external send.
+- Test cleanup: synthetic intake `34568765-2c28-42ad-9e1a-ab294f5ff132` archived,
+  its initial-response task and draft 14 cancelled through existing staff RPCs.
+  Final states verified. History retained; no destructive deletion of the lead.
+
+## Scope and remaining audit work
+
+- This verifies the reply-draft callback and replay, not every other bot command.
+- The display is a per-intake read-only evidence snapshot, not global infrastructure
+  logs or an automatic repair controller. Missing evidence remains explicit.
 - Supabase advisor flags the intentional authenticated SECURITY DEFINER surface;
   the new function additionally checks canonical staff identity and active membership.
   Separate existing notice: leaked-password protection is disabled (not changed here).
