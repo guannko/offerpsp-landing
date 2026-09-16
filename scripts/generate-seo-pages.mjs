@@ -6,7 +6,7 @@ export const siteContentRevision = "2026-09-09";
 export const seoPages = [
   {
     slug: "psp-for-igaming",
-    modified: "2026-09-09",
+    modified: "2026-09-15",
     title: "PSP Matching for iGaming Businesses | OfferPSP",
     description: "Match licensed iGaming routes by GEO, cards, bank methods, payouts and settlement. Get a focused private shortlist and qualified provider introductions.",
     kicker: "iGaming payment infrastructure",
@@ -37,13 +37,13 @@ export const seoPages = [
       ["Can OfferPSP guarantee that an iGaming merchant will be accepted?", "OfferPSP cannot guarantee that an iGaming merchant will be accepted. We reduce avoidable mismatches, but each provider independently reviews the merchant, licence, ownership, traffic, controls and operating model."],
       ["Do you work with unlicensed operators?", "OfferPSP can review an unlicensed operator only when its operating model is lawful in every target jurisdiction. Missing or unclear licensing information is a material matching constraint and may leave no credible provider route."],
       ["Can one PSP cover every player GEO?", "One PSP rarely covers every player GEO for a multi-market iGaming business. The business may need a primary route, local alternatives and a resilient backup structure depending on entity, method and provider coverage."],
-      ["Do you reveal your provider network publicly?", "OfferPSP does not publish its provider network. Provider identities are shared only through a controlled introduction after the profile has been qualified and there is a plausible fit."]
+      ["Do you reveal your provider network publicly?", "OfferPSP does not currently publish its provider network. Indicative route information can be shared after qualification, but provider identity is disclosed only after the provider accepts the merchant for review and OfferPSP coordinates a controlled introduction."]
     ],
     related: ["psp-onboarding-requirements", "how-to-compare-psp-offers", "high-risk-payment-processing-guide", "payment-methods-by-geo"]
   },
   {
     slug: "high-risk-payment-provider",
-    modified: "2026-09-10",
+    modified: "2026-09-15",
     title: "High-Risk PSP and Payment Provider Matching | OfferPSP",
     description: "Compare high-risk routes by vertical, licence, chargebacks, reserves and settlement. Get a focused private shortlist and qualified provider introductions.",
     kicker: "Complex and higher-risk profiles",
@@ -142,6 +142,7 @@ export const seoPages = [
   },
   {
     slug: "psp-for-marketplaces",
+    modified: "2026-09-13",
     title: "PSP Matching for Online Marketplaces | OfferPSP",
     description: "Compare marketplace routes for onboarding, split funds, payouts and reconciliation. Get a focused private shortlist and qualified provider introductions.",
     kicker: "Marketplace payment infrastructure",
@@ -168,7 +169,7 @@ export const seoPages = [
   },
   {
     slug: "payment-provider-for-ecommerce",
-    modified: "2026-09-09",
+    modified: "2026-09-15",
     title: "E-commerce PSP and Payment Provider Matching | OfferPSP",
     description: "Match e-commerce routes for cards, wallets, local methods, refunds and settlement. Get a focused private shortlist and qualified provider introductions.",
     kicker: "E-commerce payment infrastructure",
@@ -325,7 +326,7 @@ export const seoPages = [
     description: "Compare Kazakhstan, Uzbekistan, Georgia and CIS routes for cards, local rails and payouts. Get a focused private shortlist and qualified introductions.",
     kicker: "CIS and Central Asia payment coverage",
     heading: "Map viable payment routes for CIS and Central Asia.",
-    lead: "The region combines different currencies, banking systems, local methods and compliance constraints. OfferPSP maps the entity, customer countries, vertical and funds flow before assessing current provider routes.",
+    lead: "The region combines different currencies, banking systems, local methods and compliance constraints. OfferPSP maps the entity, customer countries, vertical and funds flow before assessing available route information.",
     boundary: "Coverage is country-, entity- and profile-specific. OfferPSP does not circumvent sanctions, licensing, KYC, AML or provider restrictions, and cannot promise availability in every market.",
     sectionTitle: "Regional matching needs precise country data",
     sectionIntro: "CIS and Central Asia should not be treated as one homogeneous payment market. Every priority country must be evaluated independently.",
@@ -341,7 +342,7 @@ export const seoPages = [
       ["Can one payment provider cover the whole CIS region?", "One payment provider rarely covers the whole CIS and Central Asia region. Availability differs by country, entity, vertical, method, currency and current compliance appetite."],
       ["Do you support sanctioned activity or prohibited markets?", "OfferPSP does not support sanctioned activity or prohibited markets. Matching never bypasses sanctions, laws, licensing or provider compliance requirements."],
       ["Can local methods be combined with international cards?", "Local payment methods can be combined with international cards when the structure is lawful and operationally manageable. The route may pair broad card coverage with local specialists."],
-      ["Is provider availability published publicly?", "OfferPSP does not publish live provider availability publicly. Current routes are shared through controlled qualification and introduction after the merchant profile has been reviewed."]
+      ["Is provider availability published publicly?", "OfferPSP does not publish live provider availability publicly. Indicative route information can be shared after qualification, but provider identity is disclosed only after the provider accepts the merchant for review and OfferPSP coordinates a controlled introduction."]
     ],
     alternates: [
       ["en", "https://offerpsp.com/payment-provider-cis-central-asia.html"],
@@ -353,13 +354,13 @@ export const seoPages = [
   },
   {
     slug: "payment-provider-cis-central-asia-ru",
-    modified: "2026-09-10",
+    modified: "2026-09-15",
     lang: "ru",
     title: "Платёжные провайдеры СНГ и Центральной Азии | OfferPSP",
     description: "Подбор PSP для Казахстана, Узбекистана, Грузии и СНГ: карты, валюты и выплаты. Получите приватный шорт-лист и квалифицированное знакомство с провайдером.",
     kicker: "Платежи в СНГ и Центральной Азии",
     heading: "Подберём платёжные маршруты для СНГ и Центральной Азии.",
-    lead: "В регионе различаются валюты, банковская инфраструктура, локальные методы и требования комплаенса. OfferPSP сначала фиксирует юридическое лицо, страны клиентов, вертикаль и движение средств, а затем проверяет актуальные варианты.",
+    lead: "В регионе различаются валюты, банковская инфраструктура, локальные методы и требования комплаенса. OfferPSP сначала фиксирует юридическое лицо, страны клиентов, вертикаль и движение средств, а затем оценивает доступную информацию по маршрутам.",
     boundary: "Доступность зависит от страны, юридического лица и профиля бизнеса. OfferPSP не обходит санкции, лицензирование, KYC, AML и ограничения провайдеров и не гарантирует подключение.",
     sectionTitle: "Каждая страна оценивается отдельно",
     sectionIntro: "СНГ и Центральная Азия — не единый платёжный рынок. Для полезного подбора нужна конкретика по каждой приоритетной стране.",
@@ -372,10 +373,10 @@ export const seoPages = [
     checklistTitle: "Подготовьте региональный платёжный бриф",
     checklist: ["Юридическое лицо и владельцы", "Приоритетные страны по отдельности", "Лицензии и статус продукта", "Методы приёма и выплат", "Валюты, оборот и средний чек", "Банк расчётов и комплаенс-контроли"],
     faqs: [
-      ["Можно ли одним провайдером закрыть весь регион?", "Один провайдер редко закрывает весь регион СНГ и Центральной Азии. Доступность различается по стране, компании, вертикали, методу, валюте и текущему риск-аппетиту провайдера."],
+      ["Можно ли одним провайдером закрыть весь регион?", "Один провайдер редко закрывает весь регион СНГ и Центральной Азии. Доступность различается по стране, компании, вертикали, методу, валюте и риск-аппетиту провайдера в момент рассмотрения."],
       ["Вы работаете с запрещёнными или санкционными схемами?", "OfferPSP не работает с запрещёнными или санкционными схемами. Подбор не обходит санкции, законы, лицензирование и требования комплаенса."],
       ["Можно совместить локальные методы и международные карты?", "Локальные методы можно сочетать с международными картами, если платёжная схема законна и управляема. Маршрут может объединять широкое карточное покрытие и локальных специалистов."],
-      ["Где посмотреть список ваших провайдеров?", "OfferPSP не публикует сеть провайдеров как открытый каталог. Актуальный маршрут раскрывается через контролируемый подбор после проверки профиля мерчанта."]
+      ["Где посмотреть список ваших провайдеров?", "OfferPSP пока не публикует сеть провайдеров как открытый каталог. После квалификации приватно показывается ориентировочная информация по маршруту. Имя PSP раскрывается только после того, как провайдер согласился рассмотреть мерчанта, а OfferPSP организовал контролируемое знакомство."]
     ],
     alternates: [
       ["en", "https://offerpsp.com/payment-provider-cis-central-asia.html"],
@@ -387,7 +388,7 @@ export const seoPages = [
   },
   {
     slug: "psp-for-crypto-businesses",
-    modified: "2026-09-09",
+    modified: "2026-09-13",
     title: "PSP Matching for Crypto Businesses | OfferPSP",
     description: "Match crypto routes for cards, bank transfers, fiat on-ramps, payouts and settlement. Get a focused private shortlist and qualified provider introductions.",
     kicker: "Crypto payment infrastructure",
@@ -423,12 +424,12 @@ export const seoPages = [
   },
   {
     slug: "payment-provider-latin-america",
-    modified: "2026-09-09",
+    modified: "2026-09-13",
     title: "Payment Provider Matching in Latin America | OfferPSP",
     description: "Find routes for Brazil, Mexico and Colombia with cards, Pix, SPEI, PSE and payouts. Get a focused private shortlist and qualified provider introductions.",
     kicker: "Latin America payment coverage",
     heading: "Match payment providers market by market in Latin America.",
-    lead: "Latin America combines domestic card schemes, instant bank methods, wallets, cash networks, local currencies and different settlement constraints. OfferPSP maps the merchant profile and priority countries before evaluating current routes.",
+    lead: "Latin America combines domestic card schemes, instant bank methods, wallets, cash networks, local currencies and different settlement constraints. OfferPSP maps the merchant profile and priority countries before evaluating available route information.",
     boundary: "Latin America is not one payment market. Method support, local acquiring, settlement and onboarding remain country-, entity-, vertical- and provider-specific.",
     sectionTitle: "Build a country-specific Latin America route",
     sectionIntro: "Brazil, Mexico, Colombia, Chile, Argentina and other markets require separate method, currency and compliance assumptions.",
@@ -459,13 +460,13 @@ export const seoPages = [
   },
   {
     slug: "payment-provider-asia-pacific",
-    modified: "2026-09-09",
+    modified: "2026-09-13",
     title: "Payment Provider Matching in Asia-Pacific | OfferPSP",
     description: "Compare Australia, Singapore, India and Southeast Asia routes with PayNow and UPI. Get a focused private shortlist and qualified provider introductions.",
     kicker: "Asia-Pacific payment coverage",
     heading: "Build payment coverage across distinct Asia-Pacific markets.",
     lead: "Asia-Pacific spans mature card markets, mobile wallets, real-time bank networks and highly local payment behaviour. OfferPSP converts the target-country plan into a provider brief instead of treating APAC as one coverage label.",
-    boundary: "APAC availability depends on the merchant entity, vertical, customer country, local rules and current provider contracts. Regional branding does not prove local acquiring or onboarding.",
+    boundary: "APAC availability depends on the merchant entity, vertical, customer country, local rules and provider confirmation at the time of review. Regional branding does not prove local acquiring or onboarding.",
     sectionTitle: "Evaluate APAC routes country by country",
     sectionIntro: "Australia, Singapore, Japan, South Korea, India and Southeast Asian markets require different method and operating assumptions.",
     points: [
@@ -495,7 +496,7 @@ export const seoPages = [
   },
   {
     slug: "payment-provider-middle-east",
-    modified: "2026-09-09",
+    modified: "2026-09-13",
     title: "Payment Provider Matching in the Middle East | OfferPSP",
     description: "Compare UAE and Saudi Arabia routes for cards, Mada, rails, wallets and settlement. Get a focused private shortlist and qualified provider introductions.",
     kicker: "Middle East payment coverage",
@@ -531,13 +532,13 @@ export const seoPages = [
   },
   {
     slug: "payment-provider-africa",
-    modified: "2026-09-09",
+    modified: "2026-09-13",
     title: "Payment Provider Matching in Africa | OfferPSP",
     description: "Compare South Africa, Nigeria, Kenya and Egypt routes for cards, mobile money and payouts. Get a focused private shortlist and qualified introductions.",
     kicker: "Africa payment coverage",
     heading: "Map payment providers across distinct African markets.",
     lead: "African payment markets combine cards, mobile money, bank transfers, local currencies and cross-border settlement constraints. OfferPSP turns priority countries and flows into a provider-matching brief.",
-    boundary: "Africa is not one payment market. Availability depends on country, entity, vertical, licences, method, currency and current provider appetite.",
+    boundary: "Africa is not one payment market. Availability depends on country, entity, vertical, licences, method, currency and provider appetite at the time of review.",
     sectionTitle: "Design country-level collection and payout routes",
     sectionIntro: "South Africa, Nigeria, Kenya, Egypt, Ghana and other markets require distinct method, treasury and compliance assumptions.",
     points: [
@@ -762,6 +763,255 @@ export const seoPages = [
     related: ["psp-matching-process", "payment-methods-by-geo", "how-to-compare-psp-offers", "psp-for-saas", "psp-for-marketplaces"]
   }
 ];
+
+const commercialDepthBySlug = {
+  "psp-for-igaming": {
+    title: "From licence evidence to an assessable gaming route",
+    intro: "A gaming payment brief should let a provider understand the regulated product, the movement of player funds and the operational controls without reconstructing the business from scattered documents. These checkpoints make the difference between a broad lead and a case that can enter provider review.",
+    columns: ["Review area", "Evidence to prepare", "Why it changes the route"],
+    criteria: [
+      ["Regulated perimeter", "Contracting entity, current licence evidence, player-facing domains, permitted products and target jurisdictions.", "A licence in one jurisdiction does not automatically permit acquisition or player activity in every requested market."],
+      ["Player money flow", "Deposit methods, withdrawal rules, closed-loop controls, payout timing, currencies and the parties that hold or move funds.", "A provider may support deposits but not the requested payout flow, or may require separate controls and limits."],
+      ["Acquisition and risk", "Traffic sources, affiliate controls, KYC, responsible-gaming procedures, fraud monitoring, chargebacks and processing history.", "Provider appetite depends on how players are acquired and controlled, not only on the vertical label."],
+      ["Operational readiness", "Integration owner, target launch date, monthly volume, average ticket, peak events, reconciliation and escalation contacts.", "A plausible route must be technically and operationally usable after compliance review."],
+    ],
+    briefTitle: "Example of an iGaming brief that can be reviewed",
+    briefIntro: "A useful example might describe a Curaçao-licensed operator, the exact licensed entity and domains, Brazilian and Mexican player acquisition, card deposits plus Pix or SPEI requirements, player withdrawals, expected monthly volume and the existing risk stack. It should also state what remains unconfirmed. OfferPSP can then compare the facts with available route information; provider identity is disclosed only after the provider accepts the merchant for review and a controlled introduction is coordinated.",
+    briefItems: [
+      ["Corporate pack", "Certificate of incorporation, ownership chart, directors, operating address and the bank account intended for settlement."],
+      ["Regulatory pack", "Licence record, authorised brands and domains, target-market analysis and the policies governing KYC, AML and responsible gaming."],
+      ["Processing pack", "Recent statements where available, volume and ticket assumptions, dispute ratios, deposit-to-withdrawal behaviour and requested limits."],
+      ["Technical pack", "Checkout and cashier flow, integration model, webhooks, token requirements, payout process, reconciliation files and launch dependencies."],
+    ],
+  },
+  "high-risk-payment-provider": {
+    title: "Evidence a high-risk provider can actually underwrite",
+    intro: "The phrase high risk is not a routing instruction. A provider needs to see why the profile is classified that way, which controls reduce the exposure and whether the proposed commercial structure remains viable for both sides.",
+    columns: ["Decision factor", "What the merchant should document", "Provider question"],
+    criteria: [
+      ["Product and fulfilment", "Exact products or services, delivery timing, cancellation and refund mechanics, customer support and contractual terms.", "Can the provider understand what the customer buys and how a complaint is resolved?"],
+      ["Regulatory position", "Licences, registrations, exemptions, legal opinions where appropriate and a country-by-country restricted-market policy.", "Is the activity lawful for this entity and for the customers the merchant intends to acquire?"],
+      ["Historical performance", "Processing statements, chargebacks, refunds, fraud losses, prior provider constraints and material compliance events.", "Does the evidence support the forecast, and have earlier problems been explained and remediated?"],
+      ["Cash-flow tolerance", "Requested limits, rolling reserve tolerance, settlement frequency, refund funding and working-capital constraints.", "Would an approval still produce a route the merchant can operate without a liquidity failure?"],
+    ],
+    briefTitle: "A defensible high-risk matching brief",
+    briefIntro: "The brief should separate facts, forecasts and open questions. It should never hide a previous decline, relabel a restricted vertical or present an aspirational licence as current. OfferPSP uses the disclosed profile to rule out obvious mismatches and prepare a controlled conversation; the provider performs its own due diligence and confirms availability and terms.",
+    briefItems: [
+      ["Business evidence", "Corporate records, beneficial ownership, product URLs, customer terms, refund policy, fulfilment evidence and support contacts."],
+      ["Risk evidence", "AML and fraud procedures, sanctions controls, marketing sources, dispute management, processing history and remediation records."],
+      ["Route request", "Customer GEOs, entity GEO, methods, currencies, PayIn and payout flows, settlement, volumes, average ticket and launch sequence."],
+      ["Decision record", "Known restrictions, assumptions requiring confirmation, provider questions and the internal owner responsible for each follow-up."],
+    ],
+  },
+  "payment-provider-for-ecommerce": {
+    title: "What e-commerce underwriting tests before approval",
+    intro: "A store is assessed as an operating business, not only as a checkout URL. Underwriting connects the legal entity, products, fulfilment, customer acquisition, historic payment performance and requested funds flow. A mismatch between those elements commonly returns the file for clarification or makes the requested route unusable.",
+    columns: ["Underwriting area", "Evidence to include", "Typical hold or decline trigger"],
+    criteria: [
+      ["Entity and ownership", "Incorporation record, directors, beneficial owners, operating address, settlement account and ownership chart.", "Names, addresses or ownership percentages conflict across documents, or the settlement account belongs to another entity."],
+      ["Store and fulfilment", "Live product pages, prices, customer terms, delivery evidence, refund policy, support contacts and supplier relationships where relevant.", "The provider cannot verify what is sold, when value is delivered or how a customer obtains a refund."],
+      ["Traffic and performance", "Acquisition channels, target countries, monthly volume, average ticket, refunds, disputes and recent processing statements where available.", "Forecasts are materially higher than evidence, traffic sources are unexplained or dispute history is omitted."],
+      ["Payment operations", "Cards and local methods by country, recurring logic, descriptors, authentication, currencies, settlement, refunds and reconciliation.", "The request names methods but does not show the customer journey, funds flow or operational owner."],
+    ],
+    briefTitle: "Illustrative e-commerce case for provider review",
+    briefIntro: "Consider a hypothetical EU company selling physical wellness products to Germany and France. The request states an expected monthly volume of EUR 80,000, a EUR 42 average ticket, 2% refunds and 0.6% disputes, with cards first and local methods evaluated by country. It includes delivery times, supplier evidence, customer terms, three recent processing statements and the intended EUR settlement account. These figures are an example of brief structure, not a client result or provider threshold.",
+    briefItems: [
+      ["Corporate file", "Entity extract, ownership chart, directors, IDs and address evidence, VAT or tax details and settlement-bank proof."],
+      ["Commerce file", "Product catalogue, supplier or inventory evidence, delivery countries and times, terms, privacy, returns and support workflow."],
+      ["Processing file", "Statements, volume and ticket calculation, refund and dispute ratios, fraud tooling, descriptors and any previous provider decision."],
+      ["Route file", "Country-method matrix, currencies, recurring or one-off flow, settlement preference, integration owner and launch sequence."],
+    ],
+    sources: [
+      ["Visa rules — merchant underwriting records", "https://usa.visa.com/dam/VCOM/download/about-visa/visa-rules-public.pdf"],
+      ["Mastercard — MATCH Pro onboarding due diligence", "https://www.mastercard.com/global/en/match-privacy-notice.html"],
+      ["FATF — beneficial ownership guidance", "https://www.fatf-gafi.org/en/publications/Fatfrecommendations/Guidance-Beneficial-Ownership-Transparency-Legal-Arrangements.html"],
+    ],
+  },
+  "payment-provider-cis-central-asia-ru": {
+    title: "Что андеррайтинг проверяет по странам СНГ и Центральной Азии",
+    intro: "Региональная формулировка не позволяет принять решение: провайдеру нужно отдельно увидеть юридическое лицо, страны клиентов, продукт, валюты, методы, движение средств и санкционные риски. Проверка строится вокруг фактической схемы, а не вокруг списка желаемых стран.",
+    columns: ["Область проверки", "Что приложить", "Причина паузы или отказа"],
+    criteria: [
+      ["Компания и владельцы", "Регистрационные документы, директора, конечные бенефициары, структура группы, адрес и счёт для расчётов.", "Документы противоречат друг другу, структура владения непрозрачна или счёт принадлежит другой компании."],
+      ["Страны и право работать", "Отдельная строка для Казахстана, Узбекистана, Грузии и других рынков: продукт, клиенты, лицензия или правовое основание.", "Запрос смешивает страны, не объясняет законность продукта либо затрагивает запрещённую территорию или сторону."],
+      ["Платёжная схема", "Для каждой страны: PayIn или payout, метод, валюта, средний чек, лимиты, возврат, расчёты и получатель средств.", "Указан только список методов без движения денег, назначения платежа и банковского маршрута."],
+      ["Риск и история", "Санкционный контроль, KYC/AML, источники трафика, мониторинг, возвраты, споры и выписки действующего процессинга.", "Профиль риска неполный, история скрыта или прогноз оборота не подтверждается данными."],
+    ],
+    briefTitle: "Условный пример регионального брифа",
+    briefIntro: "Гипотетический SaaS-бизнес с компанией в Казахстане может указать клиентов в Казахстане, Грузии и Узбекистане, оборот в эквиваленте USD 120 000 в месяц, средний чек USD 55, отдельные требования к KZT, GEL и USD, подписки, возвраты и расчётный счёт. К брифу прикладываются структура владения, продуктовые документы, санкционные контроли и три выписки процессинга. Это пример структуры, а не реальный кейс, обещание одобрения или тариф провайдера.",
+    briefItems: [
+      ["Корпоративный пакет", "Выписка компании, владельцы и директора, адрес, налоговый статус, группа компаний и подтверждение банковского счёта."],
+      ["Матрица стран", "Страна клиента, продукт, правовое основание, метод, валюта, PayIn или payout, объём, средний чек и приоритет запуска."],
+      ["Комплаенс-пакет", "KYC/AML, санкционный и PEP-контроль, мониторинг операций, источник средств и порядок эскалации."],
+      ["Операционный пакет", "Сайт и договоры, возвраты, споры, поддержка, интеграция, сверка, история процессинга и известные ограничения."],
+    ],
+    sources: [
+      ["FATF — проверка бенефициарных владельцев", "https://www.fatf-gafi.org/en/publications/Fatfrecommendations/Guidance-Beneficial-Ownership-Transparency-Legal-Arrangements.html"],
+      ["FATF — юрисдикции повышенного риска, февраль 2026", "https://www.fatf-gafi.org/en/publications/High-risk-and-other-monitored-jurisdictions/Call-for-action-february-2026.html"],
+      ["EBA — факторы риска и customer due diligence", "https://www.eba.europa.eu/sites/default/files/document_library/Publications/Guidelines/2021/963637/Final%20Report%20on%20Guidelines%20on%20revised%20ML%20TF%20Risk%20Factors.pdf"],
+    ],
+  },
+  "psp-for-marketplaces": {
+    title: "Turn the marketplace model into a provider decision table",
+    intro: "Two platforms can both call themselves marketplaces while requiring completely different regulated and technical arrangements. The provider must understand the legal role of the platform, who is onboarded, who receives customer money and how funds reach each seller before it can assess the route.",
+    columns: ["Marketplace question", "Minimum evidence", "Effect on provider selection"],
+    criteria: [
+      ["Who is the seller?", "Contracts and checkout copy showing whether the platform, a third-party seller or another entity sells to the buyer.", "This determines who may need the merchant account and who carries refund and dispute responsibility."],
+      ["Who receives funds?", "A step-by-step funds-flow diagram covering collection, fees, balances, reserves, refunds and final seller settlement.", "Holding or controlling third-party funds may require a marketplace-specific product and regulatory analysis."],
+      ["How are sellers verified?", "Seller categories, GEOs, KYB/KYC fields, beneficial-owner checks, sanctions screening and ongoing monitoring triggers.", "A provider must decide whether it can rely on the platform process or needs to perform parts of onboarding itself."],
+      ["How are payouts executed?", "Payout destinations, currencies, schedules, thresholds, reversals, failed-payment handling and beneficiary-name requirements.", "Card acceptance does not prove that the same provider supports the seller payout model."],
+      ["How is the ledger reconciled?", "Transaction IDs linking orders, collections, platform fees, refunds, disputes, adjustments and seller payouts.", "The route must support finance, audit and customer-support operations after launch."],
+    ],
+    briefTitle: "Documents for a marketplace provider review",
+    briefIntro: "A strong marketplace brief includes a diagram and sample records rather than relying on product terminology. For example, a Singapore platform serving buyers and sellers across Southeast Asia should identify the contracting entity, seller countries, seller categories, PayNow or card collection needs, SGD and USD payout requirements, platform fees, refund ownership and the exact reconciliation output required. Method availability and the platform's legal classification still require provider confirmation.",
+    briefItems: [
+      ["Corporate and contractual", "Platform entity, ownership, seller agreement, buyer terms, prohibited categories and the legal analysis supporting the operating role."],
+      ["Seller onboarding", "KYB/KYC workflow, document requirements, screening vendors, approval ownership, refresh cycles and termination controls."],
+      ["Money movement", "Collection, split or sequential settlement, platform commission, reserves, refund funding, dispute allocation and payout instructions."],
+      ["Technical controls", "API roles, submerchant identifiers, webhooks, ledger exports, access permissions, reconciliation and incident procedures."],
+      ["Operating forecast", "Seller count, buyer GEOs, currencies, expected volume, average ticket, payout frequency, seasonality and launch stages."],
+    ],
+  },
+  "psp-for-crypto-businesses": {
+    title: "Define the crypto activity before asking for fiat rails",
+    intro: "Crypto is not one provider category. An exchange, hosted wallet, brokerage, NFT platform, mining service and software company create different licensing, custody, transaction-monitoring and funds-flow questions. The matching brief must describe the actual activity rather than rely on the word crypto.",
+    columns: ["Review area", "Evidence to include", "Why providers distinguish it"],
+    criteria: [
+      ["Regulated activity", "Current registrations or licences, permitted services, operating entities, customer countries and restricted jurisdictions.", "The same brand may conduct regulated and unregulated activities through different entities."],
+      ["Custody and conversion", "Who controls wallets or private keys, where fiat becomes crypto, counterparties, liquidity providers and settlement accounts.", "Providers need to identify each regulated hand-off and the source and destination of funds."],
+      ["Financial-crime controls", "Customer due diligence, wallet screening, Travel Rule process where applicable, transaction monitoring and escalation ownership.", "A policy document alone is insufficient if the operating workflow and responsible teams are unclear."],
+      ["Payment use case", "Card purchase, bank transfer, payout, subscription or business-payment flow, including refunds, chargebacks and fiat settlement.", "A provider supporting one crypto-related flow may reject another or impose different limits and evidence requirements."],
+    ],
+    briefTitle: "What to place in the crypto payment dossier",
+    briefIntro: "Start with the exact product and regulated perimeter, then trace one representative transaction from customer initiation to final settlement. Include wallet and fiat counterparties, customer and entity GEOs, screening controls, expected volumes, average ticket and refund logic. FATF guidance applies a risk-based approach to virtual-asset activity, but local licensing and provider appetite remain jurisdiction- and profile-specific.",
+    briefItems: [
+      ["Licence file", "Regulator, licence or registration number, authorised services, covered entity, approved domains and any territorial limitations."],
+      ["Funds-flow file", "Customer, merchant, exchange or liquidity partner, wallet, bank and settlement steps with ownership at every stage."],
+      ["Control file", "KYC tiers, sanctions and wallet screening, transaction monitoring, source-of-funds triggers and suspicious-activity escalation."],
+      ["Commercial request", "Required methods, currencies, limits, settlement, reserves, integration model, forecast and existing processing evidence."],
+    ],
+    sources: [["FATF guidance for virtual assets and VASPs", "https://www.fatf-gafi.org/en/publications/Fatfrecommendations/Guidance-rba-virtual-assets.html"]],
+  },
+  "payment-provider-latin-america": {
+    title: "Country rails matter more than a Latin America label",
+    intro: "Brazil, Mexico and Colombia do not form one interchangeable payment route. A useful brief separates domestic customer demand, merchant entity, settlement currency and refund or payout operations for each country before comparing provider coverage.",
+    columns: ["Market and rail", "What it supports", "What still requires provider confirmation"],
+    criteria: [
+      ["Brazil — Pix", "Banco Central do Brasil describes Pix as an instant payment scheme for transfers between transactional accounts, available continuously.", "Merchant eligibility, collection model, refunds, reconciliation, local participation and cross-border settlement."],
+      ["Mexico — SPEI", "Banco de México operates SPEI for electronic transfers between accounts at participating Mexican financial institutions.", "The provider's access model, beneficiary requirements, MXN settlement, limits, refunds and merchant reporting."],
+      ["Colombia — PSE", "PSE supports online account-to-account payment initiation through Colombia's banking ecosystem.", "Merchant onboarding, supported banks, COP settlement, customer redirects, confirmation messages and refund operations."],
+      ["Cards and wallets", "International and domestic card acceptance may complement local bank rails across all three markets.", "Local versus cross-border acquiring, descriptors, authentication, chargebacks, tokenisation and settlement economics."],
+    ],
+    briefTitle: "Example Latin America route matrix",
+    briefIntro: "A merchant targeting Brazil, Mexico and Colombia should provide one row per country: customer location, entity, product, method, presentment currency, settlement currency, PayIn or payout purpose, monthly volume, average ticket, refund route and launch priority. A provider saying it covers Latin America is not evidence that every row is available for that merchant.",
+    briefItems: [
+      ["Brazil row", "Pix and card requirements, BRL presentment, settlement preference, refund flow, reconciliation identifiers and Brazilian customer support."],
+      ["Mexico row", "SPEI and card requirements, MXN flows, beneficiary setup, confirmation needs, refund handling and expected transaction profile."],
+      ["Colombia row", "PSE and card requirements, COP flows, customer redirect experience, payment confirmation, refunds and reporting."],
+      ["Regional controls", "Entity documents, ownership, product permissions, fraud controls, chargebacks, prohibited GEOs and operational escalation."],
+    ],
+    sources: [
+      ["Banco Central do Brasil — Pix", "https://www.bcb.gov.br/en/financialstability/pix_en"],
+      ["Banco de México — SPEI", "https://www.banxico.org.mx/services/interbanking-electronic-payme.html"],
+      ["ACH Colombia — PSE help centre", "https://www.achcolombia.com.co/centro-de-ayuda"],
+    ],
+  },
+  "payment-provider-asia-pacific": {
+    title: "Map APAC payment demand country by country",
+    intro: "APAC combines mature card markets, fast account-to-account infrastructure, domestic schemes and different regulatory entry points. Australia, Singapore and India therefore need separate rows in the payment brief even when one launch team manages the region.",
+    columns: ["Market and infrastructure", "Operating relevance", "Questions for the provider"],
+    criteria: [
+      ["Australia — NPP", "The Reserve Bank of Australia describes the New Payments Platform as 24/7 fast-payment infrastructure with near real-time funds availability.", "Can the provider support the merchant's collection or payout use case, required identifiers, reporting and settlement structure?"],
+      ["Singapore — PayNow", "PayNow enables SGD transfers through participating banks and major payment institutions using registered proxies and QR flows.", "Is the merchant eligible, how is the UEN or account configured, and how are refunds and reconciliation handled?"],
+      ["India — UPI", "NPCI describes UPI as an instant payment system connecting participating bank accounts through approved applications and payment flows.", "Does the proposed route support the entity, vertical, customer flow, local settlement, limits and required dispute operations?"],
+      ["Cards across APAC", "Cards may remain important for international customers, subscriptions and higher-value online purchases.", "Local acquiring, authentication, recurring support, card-on-file rules, settlement currency and chargeback operations vary by route."],
+    ],
+    briefTitle: "Example APAC launch sequence",
+    briefIntro: "Instead of requesting APAC coverage, a merchant can define Singapore first, Australia second and India only after its local operating model is ready. Each phase should name the legal entity, customer GEO, product, methods, currencies, PayIn or payout purpose, expected volume, average ticket, refund path and settlement preference. OfferPSP then researches the defined rows rather than treating a regional logo as proof of availability.",
+    briefItems: [
+      ["Singapore", "PayNow or cards, SGD customer flow, entity and UEN context, refund logic, reporting and settlement destination."],
+      ["Australia", "Cards or NPP-related use case, AUD flow, customer identifiers, reconciliation, payout needs and operational support hours."],
+      ["India", "UPI or cards, INR flow, local regulatory and entity position, transaction purpose, limits, refunds and settlement."],
+      ["Regional layer", "Shared checkout, orchestration, fraud tooling, token handling, treasury conversion, backup coverage and rollout ownership."],
+    ],
+    sources: [
+      ["Reserve Bank of Australia — New Payments Platform", "https://www.rba.gov.au/payments-and-infrastructure/new-payments-platform/index.html"],
+      ["Association of Banks in Singapore — PayNow", "https://www.abs.org.sg/e-payments/pay-now"],
+      ["NPCI — Unified Payments Interface", "https://www.npci.org.in/product/upi"],
+    ],
+  },
+  "payment-provider-middle-east": {
+    title: "Separate UAE and Saudi payment requirements",
+    intro: "Middle East coverage is not one route. A merchant entering the UAE and Saudi Arabia may need different entity, acquiring, domestic-card, bank-transfer, settlement and compliance arrangements. The brief should therefore be built at country and flow level.",
+    columns: ["Market requirement", "Evidence to prepare", "What must be confirmed"],
+    criteria: [
+      ["Saudi cards and Mada", "Product, Saudi customer flow, card mix, authentication, refund process and whether Mada e-commerce acceptance is required.", "Provider access to the domestic scheme, merchant eligibility, acquiring model, settlement, limits and vertical appetite."],
+      ["Saudi bank flows", "PayIn or payout purpose, beneficiary type, SAR amount profile, confirmation requirements and reconciliation identifiers.", "Supported bank rail, cut-off or real-time behaviour, local participation, payout eligibility and return handling."],
+      ["UAE acceptance", "Customer and entity GEO, cards or account-to-account need, AED presentment, subscription or one-off flow and refund path.", "Local versus cross-border acquiring, required licence or establishment, settlement currencies, authentication and reporting."],
+      ["Cross-border treasury", "Settlement destination, SAR and AED exposure, conversion preference, payout schedule, reserves and working-capital tolerance.", "FX basis, settlement timing, banking dependencies and whether funds can move through the proposed entity structure."],
+    ],
+    briefTitle: "Example Middle East provider brief",
+    briefIntro: "A useful request might describe a UAE entity selling a named digital service to customers in the UAE and Saudi Arabia, with separate forecasts for AED cards, SAR cards, Mada, refunds and any payout requirement. It should identify the planned settlement account, average ticket, monthly volume, recurring-payment need, launch order and regulatory basis. OfferPSP can research available route information, but the provider must confirm domestic-scheme access and final commercial terms.",
+    briefItems: [
+      ["Company file", "Entity, ownership, operating licences, website, product terms, target-country analysis and settlement bank details."],
+      ["Country matrix", "Separate UAE and Saudi rows for customer GEO, method, currency, volume, ticket, refunds, payouts and launch timing."],
+      ["Risk file", "Customer onboarding, sanctions screening, fraud controls, chargebacks, fulfilment evidence and prohibited markets."],
+      ["Technical file", "Checkout, authentication, token or recurring requirements, API ownership, webhooks, reports and reconciliation."],
+    ],
+    sources: [["Saudi Central Bank — Mada network", "https://rulebook.sama.gov.sa/en/new-identity-saudi-payment-network-mada"]],
+  },
+  "payment-provider-africa": {
+    title: "Build African coverage as a country-level method map",
+    intro: "Cards, bank transfer, instant-payment infrastructure and mobile money have different reach and operating models across African markets. South Africa, Nigeria and Kenya should be qualified separately rather than presented as one pan-African route.",
+    columns: ["Market and rail", "Relevant merchant question", "Provider confirmation needed"],
+    criteria: [
+      ["South Africa — PayShap and cards", "Is the customer flow a low-value account-to-account payment, an online card purchase, a payout or a combination?", "Merchant access, supported banks, limits, identifiers, refunds, reconciliation and ZAR settlement."],
+      ["Nigeria — NIP and cards", "Does the merchant need instant bank collection, beneficiary payouts, cards or another locally used flow?", "Entity and vertical eligibility, NIP access model, NGN settlement, beneficiary validation, returns and reporting."],
+      ["Kenya — mobile money", "Is the use case customer collection, till or bill payment, wallet disbursement, bank transfer or card acceptance?", "Supported operators, merchant identifiers, interoperability, limits, reversals, settlement and reconciliation."],
+      ["Cross-border settlement", "Where is the merchant entity and settlement account, and which currencies must be collected, converted and paid out?", "FX, reserve, timing, local participation, repatriation dependencies and provider banking partners."],
+    ],
+    briefTitle: "Example Africa payment matrix",
+    briefIntro: "A digital merchant can provide separate rows for South African customers paying in ZAR, Nigerian customers paying in NGN and Kenyan customers using mobile money. Each row should include method, purpose, volume, ticket, refund or reversal flow, settlement destination, launch priority and the entity offering the service. This avoids assuming that a provider's Africa coverage supports every local rail or payout requirement.",
+    briefItems: [
+      ["South Africa row", "PayShap-related or card requirement, ZAR flow, merchant eligibility, refund process, settlement and reconciliation."],
+      ["Nigeria row", "NIP-related bank flow or card need, NGN amounts, beneficiary rules, returns, settlement and transaction reporting."],
+      ["Kenya row", "Mobile-money collection or payout, operators, KES amounts, till or bill identifiers, reversals and settlement."],
+      ["Control layer", "Entity and ownership evidence, licences where applicable, product permissions, fraud controls, customer support and escalation."],
+    ],
+    sources: [
+      ["South African Reserve Bank — PayShap oversight", "https://www.resbank.co.za/content/dam/sarb/what-we-do/payments-and-settlements/regulation-oversight-and-supervision/regulatory-and-oversight-reports/NPSD%20Regulatory%20and%20Oversight%20Report%202022-2023.pdf"],
+      ["NIBSS — NIP definition and operating terms", "https://nibss-plc.com.ng/terms-of-use/"],
+      ["Central Bank of Kenya — National Payments System", "https://www.centralbank.go.ke/national-payments-system/"],
+    ],
+  },
+};
+
+const reviewProcessBySlug = {
+  "psp-for-igaming": {
+    title: "Common gaming brief failures and a realistic review sequence",
+    intro: "The ranges below are OfferPSP planning estimates, not a provider SLA. A complete brief may be screened for obvious fit in 1–2 business days; an interested provider may need roughly 3–10 business days for an initial review. Full due diligence, contracting and technical launch often require 3–8 weeks, and regulated multi-country cases can take longer. The clock pauses when evidence or provider answers are missing.",
+    mistakes: ["Licence, entity and player-facing domain do not match.", "Deposits are described but withdrawal controls and payout ownership are absent.", "Affiliate traffic, disputes or earlier provider decisions are omitted."],
+    accelerators: ["One indexed data room with current corporate, licence and policy documents.", "Separate country rows for players, methods, currencies, deposits and withdrawals.", "A named owner who answers underwriting questions and records every open point."],
+  },
+  "high-risk-payment-provider": {
+    title: "Why high-risk files stall and what improves the decision",
+    intro: "OfferPSP uses 1–2 business days as a planning range for brief completeness and 3–10 business days for an initial provider fit review when the file is ready. Enhanced due diligence, contracting and integration commonly need 3–8 weeks or more. This is not a provider SLA: the provider controls its queue, requests, approval and final timetable, and may decline at any stage.",
+    mistakes: ["The vertical is softened or a previous decline and dispute history are hidden.", "Forecast volume has no statements, traffic plan or calculation behind it.", "The merchant requests fast settlement without showing refund funding and reserve tolerance."],
+    accelerators: ["Separate verified facts, forecasts and unresolved assumptions in the first submission.", "Provide ownership, licensing, product, funds-flow and processing evidence together.", "Answer enhanced-due-diligence questions through one accountable contact."],
+  },
+  "payment-provider-for-ecommerce": {
+    title: "Frequent e-commerce brief mistakes and decision timing",
+    intro: "For planning, OfferPSP allows 1–2 business days to check brief completeness and approximately 3–10 business days for an initial provider review after a complete submission. Full due diligence, contracting and integration may take 2–6 weeks for a documented case and longer where products, countries or ownership require enhanced review. This is not a provider SLA or an approval promise.",
+    mistakes: ["The live store lacks clear delivery, refund, privacy or customer-support information.", "Requested volume, ticket and countries do not match statements or acquisition plans.", "A long method list replaces a country-by-country checkout and settlement flow."],
+    accelerators: ["Use matching names and addresses across corporate documents, website and bank evidence.", "Provide recent processing statements and explain refunds, disputes and abnormal months.", "Prioritise launch countries and methods instead of asking for worldwide coverage."],
+  },
+  "payment-provider-cis-central-asia-ru": {
+    title: "Частые ошибки в брифе и сроки решения",
+    intro: "Для планирования OfferPSP закладывает 1–2 рабочих дня на проверку полноты брифа и примерно 3–10 рабочих дней на первичную оценку провайдером после передачи полного пакета. Комплаенс, договор и интеграция документированного профиля могут занять 2–6 недель, а сложная международная или регулируемая схема — дольше. Это не SLA и не гарантия одобрения: сроки определяет провайдер.",
+    mistakes: ["Страны клиентов, компания и банк расчётов смешаны в одной региональной формулировке.", "Нет структуры владельцев, правового основания, истории процессинга или объяснения прошлых отказов.", "Запрошены методы и валюты, но не описаны PayIn, payout, возврат и получатель средств."],
+    accelerators: ["Единая нумерованная папка с актуальными документами и таблицей открытых вопросов.", "Отдельная строка брифа для каждой страны, валюты, метода и платёжного потока.", "Один ответственный контакт и быстрые, непротиворечивые ответы на запросы комплаенса."],
+  },
+};
 
 const pageBySlug = new Map(seoPages.map((page) => [page.slug, page]));
 
@@ -993,6 +1243,50 @@ export const renderPage = (page) => {
         </div>
       </div>
     </section>` : "";
+  const commercialDepth = commercialDepthBySlug[page.slug];
+  const commercialDepthSection = commercialDepth ? `
+    <section class="content-section alt commercial-depth" id="provider-review-detail">
+      <div class="container">
+        <div class="kicker">${language === "ru" ? "Практическая детализация" : "Practical detail"}</div>
+        <h2>${escapeHtml(commercialDepth.title)}</h2>
+        <p class="section-intro commercial-depth-intro">${escapeHtml(commercialDepth.intro)}</p>
+        <div class="criteria-table-wrap">
+          <table class="criteria-table">
+            <thead><tr>${commercialDepth.columns.map((column) => `<th scope="col">${escapeHtml(column)}</th>`).join("")}</tr></thead>
+            <tbody>${commercialDepth.criteria.map((row) => `<tr>${row.map((cell, index) => `<${index === 0 ? "th scope=\"row\"" : "td"}>${escapeHtml(cell)}</${index === 0 ? "th" : "td"}>`).join("")}</tr>`).join("")}</tbody>
+          </table>
+        </div>
+        <div class="depth-brief">
+          <div><div class="kicker">${language === "ru" ? "Пример брифа" : "Brief example"}</div><h3>${escapeHtml(commercialDepth.briefTitle)}</h3><p>${escapeHtml(commercialDepth.briefIntro)}</p></div>
+          <div class="points">${commercialDepth.briefItems.map(([title, text], index) => `
+            <article class="point">
+              <div class="point-index">B${index + 1}</div>
+              <div><h3>${escapeHtml(title)}</h3><p>${escapeHtml(text)}</p></div>
+            </article>`).join("")}
+          </div>
+        </div>
+        ${commercialDepth.sources?.length ? `<p class="source-note"><strong>${language === "ru" ? "Первичные источники:" : "Primary references:"}</strong> ${commercialDepth.sources.map(([label, href]) => `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`).join(" · ")}. ${language === "ru" ? "Источники описывают требования или инфраструктуру, но не подтверждают доступность маршрута для конкретного мерчанта." : "These references describe the named infrastructure or regulatory framework; they do not confirm a provider route for a particular merchant."}</p>` : ""}
+      </div>
+    </section>` : "";
+  const reviewProcess = reviewProcessBySlug[page.slug];
+  const reviewProcessSection = reviewProcess ? `
+    <section class="content-section review-process" id="review-timing-and-errors">
+      <div class="container">
+        <div class="kicker">${language === "ru" ? "Процесс рассмотрения" : "Review process"}</div>
+        <h2>${escapeHtml(reviewProcess.title)}</h2>
+        <p class="section-intro review-process-intro">${escapeHtml(reviewProcess.intro)}</p>
+        <div class="review-process-grid">
+          <article class="review-card">
+            <h3>${language === "ru" ? "Частые ошибки в брифе" : "Common brief mistakes"}</h3>
+            <ul>${reviewProcess.mistakes.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+          </article>
+          <article class="review-card">
+            <h3>${language === "ru" ? "Что ускоряет решение провайдера" : "What speeds up the provider decision"}</h3>
+            <ul>${reviewProcess.accelerators.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+          </article>
+        </div>
+      </div>
+    </section>` : "";
   const faqs = page.faqs.map(([question, answer]) => `
             <details>
               <summary>${escapeHtml(question)}</summary>
@@ -1020,7 +1314,7 @@ ${alternateLinks}
   <link rel="icon" href="/brand/offerpsp-favicon-32.png?v=20260816-1" type="image/png" sizes="32x32">
   <link rel="icon" href="/brand/offerpsp-favicon-48.png?v=20260816-1" type="image/png" sizes="48x48">
   <link rel="apple-touch-icon" href="/brand/offerpsp-apple-touch-icon-180.png?v=20260816-1" sizes="180x180">
-  <link rel="stylesheet" href="/service-pages.css?v=20260907-1">
+  <link rel="stylesheet" href="/service-pages.css?v=20260915-1">
   <link rel="stylesheet" href="/content-visuals.css?v=20260828-1">
   <link rel="stylesheet" href="/contact-dialog.css?v=20260907-5">
   <meta property="og:type" content="website">
@@ -1068,7 +1362,7 @@ ${structuredData}
             <source media="(max-width: 680px)" srcset="/content/payment-brief-map-mobile.svg?v=20260828-1">
             <img class="content-visual-image" src="/content/payment-brief-map.svg?v=20260828-1" width="1200" height="620" loading="lazy" decoding="async" alt="${language === "ru" ? "Схема брифа для подбора PSP: юридическое лицо, лицензии, страны клиентов, методы, валюты, риски, оборот и расчёты." : `Payment provider matching brief for ${escapeHtml(page.kicker)}: entity, licences, customer GEOs, methods, currencies, risk, volume and settlement.`}">
           </picture>
-          <figcaption>${language === "ru" ? "Единый платёжный бриф связывает профиль бизнеса с актуальными требованиями и подходящими маршрутами." : "One payment brief connects the operating profile with current provider requirements and relevant routes."}</figcaption>
+          <figcaption>${language === "ru" ? "Единый платёжный бриф связывает профиль бизнеса с доступной информацией по маршрутам и критериями проверки." : "One payment brief connects the operating profile with available route information and review criteria."}</figcaption>
         </figure>
       </div>
     </section>
@@ -1080,6 +1374,8 @@ ${structuredData}
       </div>
     </section>
 ${decisionSection}
+${commercialDepthSection}
+${reviewProcessSection}
     <section class="content-section${decisionPoints ? " alt" : ""}">
       <div class="container section-grid">
         <div><div class="kicker">${ui.inputs}</div><h2>${escapeHtml(page.checklistTitle)}</h2><p class="section-intro">${ui.inputHelp}</p></div>

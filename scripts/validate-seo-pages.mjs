@@ -328,6 +328,67 @@ const searchExpansionSlugs = [
   "payment-gateway-vs-psp-vs-acquirer",
 ];
 
+const commercialDepthSlugs = [
+  "psp-for-igaming",
+  "high-risk-payment-provider",
+  "payment-provider-for-ecommerce",
+  "payment-provider-cis-central-asia-ru",
+  "psp-for-marketplaces",
+  "psp-for-crypto-businesses",
+  "payment-provider-latin-america",
+  "payment-provider-asia-pacific",
+  "payment-provider-middle-east",
+  "payment-provider-africa",
+];
+
+const reviewProcessSlugs = [
+  "psp-for-igaming",
+  "high-risk-payment-provider",
+  "payment-provider-for-ecommerce",
+  "payment-provider-cis-central-asia-ru",
+];
+
+const visibleMainWordCount = (html) => {
+  const main = html.match(/<main[^>]*>([\s\S]*?)<\/main>/i)?.[1] || "";
+  return main
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&[a-z#0-9]+;/gi, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+};
+
+for (const slug of commercialDepthSlugs) {
+  const page = seoPages.find((candidate) => candidate.slug === slug);
+  const rendered = renderPage(page);
+  assert.ok(rendered.includes('id="provider-review-detail"'), `${slug} must render its practical commercial-depth section`);
+  assert.ok(rendered.includes('class="criteria-table"'), `${slug} must render a provider decision table`);
+  assert.ok(visibleMainWordCount(rendered) >= 900, `${slug} must contain at least 900 useful words in main content`);
+  assert.ok(visibleMainWordCount(rendered) <= 1400, `${slug} main content must stay within the 1400-word editorial ceiling`);
+  assert.ok(!/current provider (?:terms|routes|requirements|contracts)/i.test(rendered), `${slug} must not imply that stored provider information is current`);
+}
+
+const disclosureCopy = renderPage(seoPages.find((candidate) => candidate.slug === "psp-for-igaming"));
+assert.ok(
+  disclosureCopy.includes("provider identity is disclosed only after the provider accepts the merchant for review"),
+  "provider identity disclosure must remain gated by provider acceptance",
+);
+
+for (const legalFile of [privacy, terms]) {
+  assert.ok(!legalFile.includes('id="provider-review-detail"'), "legal pages must not be padded with commercial SEO sections");
+}
+
+for (const slug of reviewProcessSlugs) {
+  const page = seoPages.find((candidate) => candidate.slug === slug);
+  const rendered = renderPage(page);
+  assert.ok(rendered.includes('id="review-timing-and-errors"'), `${slug} must explain timing, brief mistakes and decision accelerators`);
+  assert.ok(/1–2 (?:business days|рабочих дня)/.test(rendered), `${slug} must include a bounded brief-review planning range`);
+  assert.ok(/3–10 (?:business days|рабочих дней)/.test(rendered), `${slug} must include a bounded provider-review planning range`);
+  assert.ok(/not a provider SLA|не SLA/i.test(rendered), `${slug} must label timing as a planning estimate rather than a provider promise`);
+}
+
 for (const slug of searchExpansionSlugs) {
   const page = seoPages.find((candidate) => candidate.slug === slug);
   assert.ok(page, `${slug} must exist in the search-expansion cluster`);

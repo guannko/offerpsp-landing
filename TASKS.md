@@ -1,9 +1,35 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-09-12
+Updated: 2026-09-15
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
+
+## Commercial-page content depth — 2026-09-15
+
+Status: `VERIFIED` locally; not deployed.
+
+- [x] Expanded ten priority commercial pages with decision tables, provider-review evidence,
+  concrete merchant-brief examples and country/method detail: iGaming, high-risk, e-commerce,
+  marketplaces, crypto, CIS/Central Asia RU, Latin America, Asia-Pacific, Middle East and Africa.
+- [x] Kept the additions within 902–1219 words of main-page content rather than applying a fixed
+  word-count target to legal or unrelated pages.
+- [x] Added dedicated review-process sections to iGaming, high-risk, e-commerce and CIS/Central
+  Asia RU: typical hold/decline reasons, document checks, illustrative non-client scenarios,
+  planning ranges, common brief mistakes and the actions that speed up a provider decision.
+- [x] Labelled all timing ranges as OfferPSP planning estimates rather than provider SLAs or
+  approval promises; complex and enhanced-due-diligence cases may take longer.
+- [x] Linked country and method statements to primary sources including central banks, payment
+  infrastructure operators and FATF, with an explicit warning that a reference does not prove
+  merchant eligibility or route availability.
+- [x] Preserved the controlled-introduction boundary: indicative route information may be shared
+  after qualification, while provider identity remains gated by provider acceptance.
+- [x] Updated sitemap dates only for materially changed pages and added regression guards for
+  content depth, timing disclaimers, legal-page exclusion, stale-information wording and
+  disclosure timing.
+- [x] Full `npm run validate`, `npm run build` and `git diff --check` pass. Desktop visual review of
+  the generated Middle East table and brief section confirms the layout; mobile tables use bounded
+  horizontal overflow.
 
 ## Organization identity JSON-LD — 2026-09-12
 
