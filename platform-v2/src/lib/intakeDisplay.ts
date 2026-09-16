@@ -1,0 +1,63 @@
+import type { IntakeSnapshot } from './intakeObservability';
+
+const labels: Record<string, string> = {
+  new: 'Новая', qualifying: 'Уточнение данных', shared: 'Предложения переданы',
+  closed: 'Закрыта', archived: 'В архиве', won: 'Успешно завершена', lost: 'Закрыта без сделки',
+  pending: 'Ожидает обработки', screening: 'Идёт проверка', manual_review: 'Нужна ручная проверка',
+  needs_info: 'Нужны данные', hold: 'На паузе', rejected: 'Отклонена', spam: 'Спам', cleared: 'Допущена',
+  completed: 'Выполнено', done: 'Выполнено', cancelled: 'Отменено', failed: 'Ошибка',
+  expired: 'Срок действия истёк', inactive: 'Заявка неактивна', queued: 'В очереди',
+  unknown: 'Не подтверждено', warning: 'Нужно внимание', pass: 'Проверка пройдена',
+  passed: 'Проверка пройдена', fail: 'Проверка не пройдена', not_ready: 'Пока не готово',
+};
+export const intakeStatusName = (value?: string | null) => value ? labels[value] || value : 'Статус не указан';
+export function intakeClock(value?: string | null) {
+  if (!value || !Number.isFinite(Date.parse(value))) return null;
+  const date = new Date(value);
+  return {
+    day: new Intl.DateTimeFormat('ru-RU', { timeZone: 'Asia/Nicosia', day: '2-digit', month: '2-digit', year: 'numeric' }).format(date),
+    time: new Intl.DateTimeFormat('ru-RU', { timeZone: 'Asia/Nicosia', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).format(date),
+  };
+}
+const events: Record<string, [string, string]> = {
+  lead_submitted: ['Заявка поступила', 'Данные заявителя сохранены в рубке.'],
+  intake_task_created: ['Создана задача первого ответа', 'Система добавила задачу для сотрудника.'],
+  lead_intelligence_available: ['Заявка доступна для проверки', 'Это подготовка к проверке, а не её результат.'],
+  pre_compliance_screened: ['Автопроверка завершена', 'Результаты сохранены. Допуск мерчанта — отдельное решение.'],
+  telegram_intake_card_reserved: ['Начата отправка в Telegram', 'Система зарезервировала отправку уведомления.'],
+  telegram_intake_card_sent: ['Карточка доставлена в Telegram', 'Telegram подтвердил приём сообщения.'],
+  email_draft_created: ['Создан черновик письма', 'Создание черновика не означает отправку письма.'],
+  telegram_intake_action: ['Обработана кнопка Telegram', 'Результат действия сохранён.'],
+};
+export function intakeEventText(event: IntakeSnapshot['events'][number]) {
+  const known = events[event.activity_type];
+  return { title: known?.[0] || event.title, detail: event.detail || known?.[1] || '' };
+}
+export function chronologicalIntakeEvents(items: IntakeSnapshot['events']) {
+  return [...items].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
+}
+export function intakeNow(s: IntakeSnapshot) {
+  if (s.lead.record_state === 'archived') return { title: 'Заявка в архиве', detail: 'История сохранена. Архив не означает, что все этапы были выполнены.', target: 'activity' };
+  if (['closed', 'won', 'lost', 'spam'].includes(s.lead.status)) return { title: intakeStatusName(s.lead.status), detail: 'Обработка завершена или ограничена. Результаты отдельных действий — ниже.', target: 'activity' };
+  if (s.actions.some(a => a.outcome === 'failed')) return { title: 'Есть ошибка действия', detail: 'Откройте результаты кнопок: там сохранена причина.', target: 'callbacks' };
+  if (s.screening && ['pending', 'screening'].includes(s.screening.status)) {
+    const stale = s.screening.status === 'screening' && (!s.screening.lease_until || Date.parse(s.screening.lease_until) < Date.parse(s.observed_at));
+    return { title: stale ? 'Проверка не завершена вовремя' : intakeStatusName(s.screening.status), detail: stale ? 'Время обработки истекло. Нужна проверка восстановления.' : 'Завершение ещё не подтверждено.', target: 'screening' };
+  }
+  if (s.screening && ['manual_review', 'needs_info', 'hold', 'rejected', 'spam'].includes(s.screening.status)) return { title: intakeStatusName(s.screening.status), detail: s.screening.summary || 'Проверьте результаты и примите решение в карточке мерчанта.', target: 'decision' };
+  if (s.screening?.status === 'cleared') return { title: 'Мерчант допущен', detail: 'Можно перейти к подбору решений. Допуск не означает согласие платёжного провайдера.', target: 'matching' };
+  return { title: 'Ход обработки не подтверждён', detail: 'Смотрите сохранённые события. Отсутствие записи не считается успешным выполнением.', target: 'activity' };
+}
+export function intakeDestination(key: string, leadId: string) {
+  const root = `/merchants/${encodeURIComponent(leadId)}`;
+  const targets: Record<string, { label: string; href: string }> = {
+    task: { label: 'Открыть задачи мерчанта', href: `${root}?tab=tasks` },
+    screening: { label: 'Открыть проверку мерчанта', href: `${root}?tab=compliance` },
+    decision: { label: 'Проверить досье и решение', href: `${root}?tab=compliance` },
+    matching: { label: 'Открыть подбор решений', href: `${root}?tab=matching` },
+    workspace: { label: 'Открыть кабинет клиента', href: `${root}?tab=preview` },
+    email: { label: 'Открыть переписку мерчанта', href: `${root}?tab=communications` },
+    activity: { label: 'Открыть историю мерчанта', href: `${root}?tab=activity` },
+  };
+  return targets[key] || null;
+}
