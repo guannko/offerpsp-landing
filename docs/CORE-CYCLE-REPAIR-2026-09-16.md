@@ -239,3 +239,63 @@ The new code is local only, not left in a server draft or active graph.
    card → safe repeated callback → persisted result. No real merchant sends or provider disclosure.
 7. One clean, reviewed release. Supabase migration, n8n publication and Vercel rollout must be
    explicitly tracked; never use an active workflow update as draft staging again.
+
+## Production cutover completed — 2026-09-16, 16:48 UTC
+
+This section supersedes earlier local-only statements; it does not mark the full autopilot done.
+
+- Application commit: `08e5b18f240d9da19d0bf534805b48ecb72c8f5a`. Production deployment:
+  `dpl_GYiAfo5DB9piRxRDECmH48RuFgDh`, URL
+  `https://ops-7q4m2x9k8v3n-cq5qlo471-annoris.vercel.app`, promoted to
+  `https://ops-7q4m2x9k8v3n.vercel.app`.
+- Migration applied through Supabase MCP to dedicated OfferPSP: ledger version `20260916164115`,
+  name `offerpsp_intake_screening_queue`, content from local `20260916141150` candidate. Keep the
+  source/ledger mapping explicit; a future CLI migration push must reconcile it, not apply twice.
+- Paused the old worker after its last run finished and DB showed zero running cases. Preserved
+  its graph for rollback. New active worker `MzGIqCRwEUEp2K8C`, published version
+  `023c667a-eb06-4172-831e-fb6a2e102535`, disabled manual trigger, one-minute schedule,
+  one job per request, 120-second execution timeout. Existing error handler is bound; live failure
+  delivery was not deliberately triggered. Credential `8RpsZmF0Ud6EE3iK` contains a dedicated
+  header token restricted to the staff domain. No secret is recorded here.
+- On deployed HTTPS: GET 405, missing authorization 401, unsupported action 400. Valid worker
+  token with an unknown run returns `stale_or_cancelled`; claim excludes archived pending intake.
+  New RPCs deny anon/authenticated; service role alone can run them. Old unfenced record RPC is
+  revoked for every external role.
+- Real production scheduled E2E (not an isolated database): execution `546622`, lead
+  `aef2b8a5-b0c8-4688-a5f8-126ec0f25e50`, run `2d495307-914f-49ae-96a5-8fbb2cd23a51`.
+  The explicitly synthetic record used an `.invalid` mailbox, no ad consent/click identifiers,
+  no intake webhook or recipient. It fetched the public OfferPSP website (200) and RDAP (466 days),
+  persisted eight checks and one activity, and returned `completed` / manual review. Replayed
+  through the production endpoint: `already_completed`, still eight checks/one activity/one attempt.
+  Closed and archived the canary after visual verification; retained evidence, sent no messages.
+- Authenticated Brave UI: compliance queue → synthetic dossier shows actual source links, missing
+  fields, unknown risk, null authenticity/commercial value, and human decision controls. The
+  compliance view is reached from the dedicated queue; it is not a visible merchant tab.
+- Subsequent scheduled runs `546630`, `546642` succeeded without claiming another job.
+  OfferPSP Operator health at 16:48 UTC confirmed staff OAuth, gateways, GoRules and search.
+  Email/Telegram gateway availability is not proof of delivery.
+
+### Packaging failure caught before promotion
+
+The first protected candidate `dpl_5u68cBDtexmEWTfMLZok9wfYtJtv` passed macOS build/tests but
+failed Linux cold start: missing `@gorules/zen-engine-linux-arm64-gnu`. Isolated Linux artifact
+testing also reproduced missing canvas binding. The production alias remained on its old release.
+
+Rebuilt with official Node 24 Debian Linux image (digest
+`sha256:2fe369e969550cde8e867afc3fe370b260140cab4a23d467074295b42163d553`). The initial Linux
+output included both glibc and musl natives, exceeding the budget at 142.9 MiB. Added specific
+`excludeFiles` rules for unused musl packages; no budget increase, no application dependency
+removal. Final 11 functions: 106.2 MiB total, platform-modules 69.6 MiB, document-processing
+35.5 MiB. All isolated Linux function imports, GoRules tests and PDF extraction passed.
+
+The failed candidate was deleted after successful promotion. The previous working release remains
+available. No third deployment was made. The new bundle-startup guard must accompany future
+prebuilt releases. Local unit/queue/handler suite: 48 passed; lint passed.
+
+### Remaining limitations
+
+This is evidence preparation for new merchant intake, not verified KYB/licensing/sanctions checks.
+Generic licence-related wording on a site can still appear as an explicitly unverified quotation;
+improve relevance before presenting it as a substantive licence claim. Historical staff-reviewed
+cases were deliberately not overwritten or re-scored. Research-registry jobs, operator task/SLA,
+Telegram callback authorization/replay and mailbox freshness remain separate unfinished work.
