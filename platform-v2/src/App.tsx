@@ -12,6 +12,7 @@ const ProviderWorkspace = lazy(() => import("./pages/ProviderWorkspace"));
 const AgentWorkspace = lazy(() => import("./pages/AgentWorkspace"));
 const CompliancePage = lazy(() => import("./pages/CompliancePage"));
 const SeoGeoPage = lazy(() => import("./pages/SeoGeoPage"));
+const SystemActions = lazy(() => import("./pages/SystemActions"));
 const platformPage = <T extends keyof typeof import("./pages/Platform")>(name: T) =>
   lazy(() => import("./pages/Platform").then((module) => ({ default: module[name] })));
 const captainPage = <T extends keyof typeof import("./pages/CaptainPages")>(name: T) =>
@@ -55,6 +56,7 @@ export default function App() {
       <Route path="/intelligence" element={<Navigate to="/casinos" replace/>}/>
       <Route path="/communications" element={<CommunicationsWorkspace/>}/>
       <Route path="/operations" element={<TasksWorkspace/>}/>
+      <Route path="/system-actions" element={<SystemActions/>}/>
       <Route path="/agents" element={<AgentsPage/>}/>
       <Route path="/agents/:agentId" element={<AgentWorkspace/>}/>
       <Route path="/analytics" element={<AnalyticsPage/>}/>

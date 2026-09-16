@@ -54,4 +54,7 @@ test('n8n Code sources execute without imports; all new callbacks bypass languag
   assert.deepEqual(guardConnections()['Telegram Trigger'].main[0][0].node,'Authorize Telegram operator');
   assert.ok(!JSON.stringify(nodes).includes('iGaming Agent'));
   assert.equal(buildIntakeNotificationNodes(credentials).find(n=>n.name==='Send operator intake card').retryOnFail,false);
+  const keyboard=buildIntakeNotificationNodes(credentials).find(n=>n.name==='Send operator intake card').parameters.inlineKeyboard;
+  assert.equal(typeof keyboard,'object');assert.equal(keyboard.rows.length,6);
+  assert.ok(keyboard.rows.every(row=>row.row.buttons.length===1));
 });

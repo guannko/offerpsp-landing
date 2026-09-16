@@ -63,7 +63,12 @@ const http=(name,id,credential,rpc,jsonBody,position)=>({name,id,position,type:'
     options:{timeout:15000,redirect:{redirect:{followRedirects:false}}}},credentials:{supabaseApi:credential},onError:'stopWorkflow'});
 const code=(name,id,jsCode,position)=>({name,id,position,type:'n8n-nodes-base.code',typeVersion:2,parameters:{jsCode}});
 const link=node=>({node,type:'main',index:0});
-const keyboard="={{ { rows: ($json.inline_keyboard || []).map(row => ({ row: { buttons: row.map(button => ({ text: button.text, additionalFields: button.callback_data ? { callback_data: button.callback_data } : { url: button.url } })) } })) } }}";
+// fixedCollection must remain an object. A root expression is passed through as
+// a string by this Telegram node version, silently producing an empty keyboard.
+const keyboard={rows:Array.from({length:6},(_,index)=>({row:{buttons:[{
+  text:`={{ $json.inline_keyboard[${index}][0].text }}`,
+  additionalFields:index===0?{url:'={{ $json.inline_keyboard[0][0].url }}'}:{callback_data:`={{ $json.inline_keyboard[${index}][0].callback_data }}`},
+}]}}))};
 export function buildTelegramGuardNodes({databaseCredential,telegramCredential}) {
   return [
     http('Authorize Telegram operator','offerpsp-authorize-tg',databaseCredential,'authorize_offerpsp_telegram_operator',

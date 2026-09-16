@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router";
 import { useControlBridge } from "../../context/ControlBridgeContext";
 import { supabase } from "../../lib/supabase";
@@ -26,6 +26,7 @@ const pageNames: Record<string, string> = {
   "/operations": "Задачи и календарь",
   "/agents": "Субагенты",
   "/analytics": "Аналитика",
+  "/system-actions": "Действия системы",
   "/seo-geo": "SEO / GEO",
   "/integrations": "Интеграции",
 };
@@ -50,7 +51,7 @@ export default function AIBotAssistant() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
-  const endRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [offerFile, setOfferFile] = useState<File | null>(null);
@@ -105,8 +106,15 @@ export default function AIBotAssistant() {
   useEffect(() => {
     if (!storageKey) return;
     localStorage.setItem(storageKey, JSON.stringify(messages.slice(-40)));
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, storageKey]);
+
+  // The transcript is unmounted while closed. Scroll its own container after every
+  // reopen as well as new content; do not scroll the page behind the assistant.
+  useLayoutEffect(() => {
+    if (open && messagesRef.current) {
+      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+    }
+  }, [open, messages, pending, error, uploadOpen]);
 
   async function sendMessage(message: string) {
     const clean = message.trim();
@@ -253,7 +261,7 @@ export default function AIBotAssistant() {
             <button type="button" onClick={() => setOpen(false)} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Закрыть AIBot"><CloseIcon className="size-5" /></button>
           </header>
 
-          <div className="min-h-[280px] flex-1 space-y-3 overflow-y-auto bg-gray-50 px-4 py-4 sm:max-h-[58vh] dark:bg-gray-900">
+          <div ref={messagesRef} data-testid="aibot-transcript" className="min-h-0 max-h-[58vh] flex-1 space-y-3 overflow-y-auto bg-gray-50 px-4 py-4 dark:bg-gray-900">
             {messages.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-4 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300">
                 <p className="font-semibold text-gray-900 dark:text-white">Рабочий агент Captain's Bridge</p>
@@ -276,7 +284,6 @@ export default function AIBotAssistant() {
             ))}
             {pending ? <div className="text-sm text-gray-500">Обрабатываю…</div> : null}
             {error ? <div className="rounded-xl bg-error-50 p-3 text-sm text-error-600 dark:bg-error-950/30">{error}</div> : null}
-            <div ref={endRef} />
           </div>
 
           {uploadOpen ? <div className="border-t border-gray-100 bg-white p-3 dark:border-gray-800 dark:bg-gray-950">
