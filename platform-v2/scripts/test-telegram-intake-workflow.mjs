@@ -32,6 +32,18 @@ test('legacy unguarded external-send buttons cannot reach SMTP or LLM send path'
     assert.equal(acceptTelegramUpdate(update(action),{authorized:true}),null);
   assert.ok(acceptTelegramUpdate(update('bulk_confirm_'+id),{authorized:true}));
 });
+test('production structured flags render their title; lists disclose omitted items',()=>{
+  const c=renderIntakeCard({...sample,screening:{red_flags:[],yellow_flags:[{key:'website_evidence_unavailable',title:'Сайт не проверен; требуется повторная или ручная проверка'}],missing:['Сайт','Методы','Объём','Валюты','PayIn / PayOut','Лицензия','Юрлицо']}});
+  assert.match(c.text,/Флаги: Сайт не проверен; требуется повторная или ручная проверка/);
+  assert.doesNotMatch(c.text,/\[object Object\]/);
+  assert.match(c.text,/ещё 2 пункта — в рубке/);
+});
+test('malformed flags stay explicit and structured titles remain HTML-safe',()=>{
+  const c=renderIntakeCard({...sample,screening:{red_flags:{unexpected:true},yellow_flags:[{title:'<b>Unsafe</b>'},{key:'unknown'},null],missing:[]}});
+  assert.match(c.text,/&lt;b&gt;Unsafe&lt;\/b&gt;/);
+  assert.match(c.text,/формат не распознан — проверьте в рубке/);
+  assert.doesNotMatch(c.text,/\[object Object\]|<b>/);
+});
 test('n8n Code sources execute without imports; all new callbacks bypass language model',()=>{
   const nodes=buildTelegramGuardNodes(credentials),render=buildIntakeNotificationNodes(credentials).find(n=>n.name==='Render operator intake card');
   const result=vm.runInNewContext(`(function(){${render.parameters.jsCode}})()`,{$input:{first:()=>({json:sample})}});

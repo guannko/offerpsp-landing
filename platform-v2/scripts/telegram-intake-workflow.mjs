@@ -4,7 +4,17 @@ export function renderIntakeCard(card) {
   if(card.outcome!=='ready') return null;
   if(!UUID.test(card.lead?.id)||!/^[1-9][0-9]*$/.test(card.chat_id)) throw new Error('Invalid intake identity');
   const text=(v,max=200)=>String(v??'не указано').replace(/[\u0000-\u001f\u007f]/g,' ').slice(0,max);
-  const list=v=>Array.isArray(v)&&v.length?v.slice(0,5).map(x=>text(x,160)).join('; '):'нет сохранённого списка';
+  const entries=v=>v==null?[]:Array.isArray(v)?v:[v];
+  const list=v=>{
+    const items=entries(v);
+    if(!items.length) return 'нет сохранённого списка';
+    const labels=items.slice(0,5).map(x=>{
+      const label=typeof x==='string'?x:typeof x?.title==='string'?x.title:null;
+      return label?.trim()?text(label,160):'формат не распознан — проверьте в рубке';
+    });
+    if(items.length>5) labels.push(`ещё ${items.length-5} ${new Intl.PluralRules('ru').select(items.length-5)==='one'?'пункт':new Intl.PluralRules('ru').select(items.length-5)==='few'?'пункта':'пунктов'} — в рубке`);
+    return labels.join('; ');
+  };
   const c=card.screening||{},t=card.task||{};
   const due=t.due_at&&Number.isFinite(Date.parse(t.due_at))?new Intl.DateTimeFormat('ru-RU',{timeZone:'Asia/Nicosia',dateStyle:'short',timeStyle:'short'}).format(new Date(t.due_at))+' (Кипр)':'не назначен';
   const url=`https://ops-7q4m2x9k8v3n.vercel.app/merchants/${card.lead.id}`;
@@ -17,7 +27,7 @@ export function renderIntakeCard(card) {
     '',`Автопроверка: ${text(c.status||'ожидается')}`,
     `Полнота: ${typeof c.completeness==='number'?c.completeness+'%':'ещё не рассчитана'}`,
     `Риск: ${text(c.risk||'не определён')}`,
-    `Флаги: ${list([...(c.red_flags||[]),...(c.yellow_flags||[])])}`,
+    `Флаги: ${list([...entries(c.red_flags),...entries(c.yellow_flags)])}`,
     `Нужно уточнить: ${list(c.missing)}`,
     `ЛК: ${card.workspace_ready?'создан':'создание не подтверждено'}`,
     `Сохранённых matching-кандидатов: ${Number(card.match_count)||0}`,

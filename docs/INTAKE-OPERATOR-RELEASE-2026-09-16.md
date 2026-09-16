@@ -80,6 +80,19 @@ The old UI text about minute polling remains pending the next grouped app releas
 
 ## Still pending / limits
 
+### Card formatting follow-up
+
+Borys confirmed the actual message and exposed a renderer defect: production flags are
+`{key,title}` objects, while the initial renderer assumed strings. The defect was reproduced
+before the fix. The renderer now selects bounded titles, HTML-escapes them, labels unknown
+formats explicitly and reports omitted list items (the canary has seven missing fields, not five).
+Seven renderer/guard tests and targeted ESLint pass. Published worker version
+`fdb0db17-ff54-43a5-9e27-296873aafffc` was read back: only the renderer changed semantically,
+connections and all other nodes stayed unchanged. Its published Code source was executed locally
+against the actual saved execution `547732` payload and produced the expected flag title and
+`ещё 2 пункта — в рубке`. No message was resent or edited; the existing Telegram card remains
+unchanged. Real-user button validation is still pending.
+
 - Borys's actual Telegram double-click and visual usefulness confirmation were requested; not
   yet observed at report time. Leave the clearly labelled synthetic lead/task temporarily active
   for that check, then close/archive it and any synthetic drafts. Never count it as a customer.
