@@ -112,6 +112,7 @@ try {
     if (scheduled) {
       workflow.nodes.find((node) => node.id === "manual").disabled = false;
       workflow.nodes.find((node) => node.id === "schedule").disabled = true;
+      workflow.nodes.find((node) => node.id === "event").disabled = true;
       delete workflow.settings.errorWorkflow;
     }
     workflow.id = "screeningHttpE2E";
@@ -124,14 +125,17 @@ try {
     await docker(["exec", n8n, "n8n", "import:credentials", "--input=/tmp/test-credential.json"], "", 60000);
     await docker(["exec", n8n, "n8n", "import:workflow", "--input=/tmp/test-workflow.json"], "", 60000);
     await seed("00000000-0000-4000-8000-000000000012");
+    if (scheduled) await seed("00000000-0000-4000-8000-000000000013");
     const before = events.length;
     const result = await docker(["exec", n8n, "n8n", "execute", "--id=screeningHttpE2E", "--rawOutput"], "", 90000);
     assert.ok(result.includes('"completed"'), "n8n execution did not return completed receipt");
     assert.ok(events.slice(before).some((event) => event.outcome === "completed"), "n8n never completed the HTTP run");
-    assert.equal(collections, 2);
-    assert.equal(await psql("select count(*) from public.offerpsp_lead_activities where activity_type='pre_compliance_screened'"), "2");
-    assert.equal(await psql("select count(*) from private.offerpsp_compliance_checks"), "16");
-    console.log("PASS actual n8n graph: credential → claim → process → verified receipt; second synthetic job saved");
+    const expected = scheduled ? 3 : 2;
+    assert.equal(collections, expected);
+    assert.equal(await psql("select count(*) from public.offerpsp_lead_activities where activity_type='pre_compliance_screened'"), String(expected));
+    assert.equal(await psql("select count(*) from private.offerpsp_compliance_checks"), String(expected * 8));
+    if (scheduled) assert.deepEqual(events.at(-1).jobs, [], 'Drain must terminate on empty queue');
+    console.log("PASS actual n8n graph: credential → claim → process → verified receipt; all queued jobs drained and empty queue stops");
   }
   console.log("VERIFIED isolated transport test; production untouched. PostgREST/Vercel and live n8n remain separate release checks.");
 } finally {

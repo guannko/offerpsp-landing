@@ -1,0 +1,200 @@
+{
+  "name": "OfferPSP | Safe Company Screening v2",
+  "nodes": [
+    {
+      "id": "manual",
+      "name": "Manual test only",
+      "disabled": true,
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "schedule",
+      "name": "Every minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        180
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "claim",
+      "name": "Claim one run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "retryOnFail": false,
+      "onError": "stopWorkflow",
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ops-7q4m2x9k8v3n.vercel.app/api/platform-modules?module=company-screening-worker",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"action\":\"claim\"}",
+        "options": {
+          "timeout": 45000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "8RpsZmF0Ud6EE3iK",
+          "name": "OfferPSP Screening Worker v2 — 2026-09-16"
+        }
+      }
+    },
+    {
+      "id": "expand",
+      "name": "Expand run IDs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const jobs = $input.first().json.jobs;\nif (!Array.isArray(jobs) || jobs.length > 1) throw new Error('Invalid claim receipt');\nreturn jobs.map(({lead_id, run_id}) => ({json:{lead_id,run_id}}));"
+      }
+    },
+    {
+      "id": "process",
+      "name": "Process claimed run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "onError": "stopWorkflow",
+      "position": [
+        720,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ops-7q4m2x9k8v3n.vercel.app/api/platform-modules?module=company-screening-worker",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({action:\"process\",lead_id:$json.lead_id,run_id:$json.run_id}) }}",
+        "options": {
+          "timeout": 45000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "8RpsZmF0Ud6EE3iK",
+          "name": "OfferPSP Screening Worker v2 — 2026-09-16"
+        }
+      }
+    },
+    {
+      "id": "receipt",
+      "name": "Verify result receipt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const receipt = $input.first().json;\nif (!['completed','already_completed','stale_or_cancelled','in_progress','module_disabled'].includes(receipt.outcome)) throw new Error('Missing screening receipt');\nif (['in_progress','module_disabled'].includes(receipt.outcome)) throw new Error('Screening not completed: ' + receipt.outcome);\nreturn [{json:{...receipt, completed:['completed','already_completed'].includes(receipt.outcome)}}];"
+      }
+    }
+  ],
+  "connections": {
+    "Manual test only": {
+      "main": [
+        [
+          {
+            "node": "Claim one run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every minute": {
+      "main": [
+        [
+          {
+            "node": "Claim one run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim one run": {
+      "main": [
+        [
+          {
+            "node": "Expand run IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand run IDs": {
+      "main": [
+        [
+          {
+            "node": "Process claimed run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process claimed run": {
+      "main": [
+        [
+          {
+            "node": "Verify result receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "executionTimeout": 120,
+    "errorWorkflow": "mFbs3T3vi2Qo2ZUY",
+    "timezone": "Asia/Nicosia",
+    "executionOrder": "v1"
+  }
+}

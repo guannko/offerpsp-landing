@@ -226,7 +226,8 @@ Important n8n workflows to verify by live ID and active version:
 
 - inbound lead form: `ealRZcZzCLKAv6S5`;
 - portal message notification: `tqd52vrcJ3gO9Le9`;
-- pre-compliance: `MzGIqCRwEUEp2K8C` (one-minute safe screening worker, released 2026-09-16);
+- pre-compliance: `MzGIqCRwEUEp2K8C` (event-driven queue worker with a 12-hour recovery sweep);
+  authenticated event ingress `mrTCGINWgtcZXZW0` accepts 60-second signed wake-up tickets;
   legacy `wiEFFDaHd3uaJoJi` is inactive and retained for coordinated rollback;
 - offer intake queue: `GOhHiyw8pNrBZeHy`;
 - offer parser worker: `MLDnePB4WW3jzX4S`;

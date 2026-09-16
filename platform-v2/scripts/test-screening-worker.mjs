@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createCompanyScreeningWorker } from "../api/_lib/company-screening-worker.mjs";
 import platformModules from "../api/platform-modules.mjs";
-import { buildScreeningWorkflow } from "./screening-workflow.mjs";
+import { buildScreeningWorkflow, buildScreeningEventIngress } from "./screening-workflow.mjs";
 
 const token = "test-only-not-a-credential".repeat(2);
 const env = { OFFERPSP_SCREENING_WORKER_ENABLED: "true", OFFERPSP_SCREENING_WORKER_TOKEN: token };
@@ -100,15 +100,31 @@ test("inactive workflow contains no raw secrets/sends/website fetch; pending rec
   assert.throws(() => verify({ first: () => ({ json: {} }) }), /Missing screening receipt/);
 });
 
-test("scheduled workflow is inactive until cutover, bounded to one per minute and routes failures", () => {
+test("event worker drains available work, recovers every 12 hours and routes failures", () => {
   const args = { endpoint: "https://staff.test/api/platform-modules?module=company-screening-worker", credential: { id: "offline-fixture", name: "Test" }, scheduled: true };
   assert.throws(() => buildScreeningWorkflow(args), /error workflow/);
   const workflow = buildScreeningWorkflow({ ...args, errorWorkflow: "verified-error-handler" });
   assert.equal(workflow.active, false);
   assert.equal(workflow.settings.errorWorkflow, "verified-error-handler");
   assert.equal(workflow.nodes.find((n) => n.id === "manual").disabled, true);
-  assert.equal(workflow.nodes.find((n) => n.id === "schedule").parameters.rule.interval[0].minutesInterval, 1);
+  assert.deepEqual(workflow.nodes.find((n) => n.id === "schedule").parameters.rule.interval[0], { field: "hours", hoursInterval: 12 });
+  assert.equal(workflow.nodes.find((n) => n.id === "event").type, "n8n-nodes-base.executeWorkflowTrigger");
+  assert.equal(workflow.connections["Verify result receipt"].main[0][0].node, "Claim one run");
+  assert.equal(workflow.settings.executionTimeout, 900);
   const verify = new Function("$input", workflow.nodes.find((n) => n.id === "receipt").parameters.jsCode);
   for (const outcome of ["in_progress", "module_disabled"]) assert.throws(() => verify({ first: () => ({ json: { outcome } }) }), /not completed/);
   assert.equal(verify({ first: () => ({ json: { outcome: "completed" } }) })[0].json.completed, true);
+});
+
+test("event ingress authenticates, never persists headers and passes only a fixed wake-up", () => {
+  const workflow = buildScreeningEventIngress({ credential: { id: "test", name: "Test" }, workerId: "worker", errorWorkflow: "errors" });
+  assert.equal(workflow.active, false);
+  assert.equal(workflow.nodes[0].parameters.authentication, "jwtAuth");
+  assert.equal(workflow.settings.saveDataSuccessExecution, "none");
+  assert.equal(workflow.settings.saveDataErrorExecution, "none");
+  assert.equal(workflow.settings.saveManualExecutions, false);
+  assert.equal(workflow.settings.saveExecutionProgress, false);
+  const sanitize = new Function(workflow.nodes[1].parameters.jsCode);
+  assert.deepEqual(sanitize(), [{ json: { source: "database_event" } }]);
+  assert.equal(workflow.nodes[2].parameters.options.waitForSubWorkflow, false);
 });
