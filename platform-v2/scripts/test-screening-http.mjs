@@ -106,7 +106,14 @@ try {
     const version = await docker(["exec", n8n, "n8n", "--version"]);
     console.log(`Isolated n8n version: ${version}`);
     const credential = { id: "testScreeningOnly", name: "Ephemeral screening test", type: "httpHeaderAuth", data: { name: "Authorization", value: `Bearer ${token}` } };
-    const workflow = buildScreeningWorkflow({ endpoint: "https://isolated.invalid/api/platform-modules?module=company-screening-worker", credential });
+    const scheduled = process.argv.includes("--scheduled");
+    const workflow = buildScreeningWorkflow({ endpoint: "https://isolated.invalid/api/platform-modules?module=company-screening-worker", credential, scheduled, ...(scheduled ? { errorWorkflow: "isolated-error-fixture" } : {}) });
+    // Execute the scheduled graph's exact processing path without activating a timer or alerts.
+    if (scheduled) {
+      workflow.nodes.find((node) => node.id === "manual").disabled = false;
+      workflow.nodes.find((node) => node.id === "schedule").disabled = true;
+      delete workflow.settings.errorWorkflow;
+    }
     workflow.id = "screeningHttpE2E";
     // Docker Desktop's host gateway reaches the loopback listener. Production graph stays HTTPS.
     for (const node of workflow.nodes) if (node.type.endsWith(".httpRequest")) node.parameters.url = endpoint.replace("127.0.0.1", "host.docker.internal");

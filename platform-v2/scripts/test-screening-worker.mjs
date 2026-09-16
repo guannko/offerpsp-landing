@@ -99,3 +99,16 @@ test("inactive workflow contains no raw secrets/sends/website fetch; pending rec
   assert.equal(verify({ first: () => ({ json: { outcome: "completed" } }) })[0].json.completed, true);
   assert.throws(() => verify({ first: () => ({ json: {} }) }), /Missing screening receipt/);
 });
+
+test("scheduled workflow is inactive until cutover, bounded to one per minute and routes failures", () => {
+  const args = { endpoint: "https://staff.test/api/platform-modules?module=company-screening-worker", credential: { id: "offline-fixture", name: "Test" }, scheduled: true };
+  assert.throws(() => buildScreeningWorkflow(args), /error workflow/);
+  const workflow = buildScreeningWorkflow({ ...args, errorWorkflow: "verified-error-handler" });
+  assert.equal(workflow.active, false);
+  assert.equal(workflow.settings.errorWorkflow, "verified-error-handler");
+  assert.equal(workflow.nodes.find((n) => n.id === "manual").disabled, true);
+  assert.equal(workflow.nodes.find((n) => n.id === "schedule").parameters.rule.interval[0].minutesInterval, 1);
+  const verify = new Function("$input", workflow.nodes.find((n) => n.id === "receipt").parameters.jsCode);
+  for (const outcome of ["in_progress", "module_disabled"]) assert.throws(() => verify({ first: () => ({ json: { outcome } }) }), /not completed/);
+  assert.equal(verify({ first: () => ({ json: { outcome: "completed" } }) })[0].json.completed, true);
+});
