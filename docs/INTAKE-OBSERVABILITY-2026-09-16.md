@@ -45,6 +45,18 @@
 
 ## Scope and remaining audit work
 
+### Readability revision
+
+- Release `a2dbd86`, deployment `dpl_AL8a3qypLGa3A5N1TsKuJDtv9MzU` READY on the
+  existing production alias. Presentation only; no schema or workflow changes.
+- Single chronological journal; 18px body, 24px primary time, 16px date/labels.
+  Current state and expandable attention list precede history. Detailed checks,
+  button receipts and raw technical evidence are retained under disclosures.
+- Attention links target the same merchant's implemented compliance/tasks/matching/
+  communications/preview tabs. Telegram diagnostics open and focus local evidence.
+- 31 tests and build/lint passed. Browser visual acceptance for this revision is
+  not claimed; user can review the updated existing page.
+
 - This verifies the reply-draft callback and replay, not every other bot command.
 - The display is a per-intake read-only evidence snapshot, not global infrastructure
   logs or an automatic repair controller. Missing evidence remains explicit.
