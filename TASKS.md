@@ -1,13 +1,13 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-09-15
+Updated: 2026-09-16
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
-## Commercial-page content depth — 2026-09-15
+## Commercial-page content depth — 2026-09-16
 
-Status: `VERIFIED` locally; not deployed.
+Status: `VERIFIED` in production.
 
 - [x] Expanded ten priority commercial pages with decision tables, provider-review evidence,
   concrete merchant-brief examples and country/method detail: iGaming, high-risk, e-commerce,
@@ -30,10 +30,14 @@ Status: `VERIFIED` locally; not deployed.
 - [x] Full `npm run validate`, `npm run build` and `git diff --check` pass. Desktop visual review of
   the generated Middle East table and brief section confirms the layout; mobile tables use bounded
   horizontal overflow.
+- [x] Published commit `3f34faf` as Vercel production deployment
+  `dpl_4zzrDhZB2TK98QA3PTt1pGZdLXNN`. Live checks confirm HTTP 200, the expected content sections,
+  933–1219 main-content words on the four priority pages, `2026-09-15` sitemap dates and the
+  organization JSON-LD on `https://offerpsp.com`.
 
 ## Organization identity JSON-LD — 2026-09-12
 
-Status: `VERIFIED` locally; not deployed.
+Status: `VERIFIED` in production deployment `dpl_4zzrDhZB2TK98QA3PTt1pGZdLXNN`.
 
 - [x] Confirmed that all five official brand profiles were already present in Organization
   `sameAs`; the supplied missing-`sameAs` finding was based on incomplete extracted properties.
@@ -45,7 +49,7 @@ Status: `VERIFIED` locally; not deployed.
 
 ## Machine-readable illustrative merchant scenarios — 2026-09-11
 
-Status: `VERIFIED` locally; not deployed.
+Status: `VERIFIED` in production deployment `dpl_4zzrDhZB2TK98QA3PTt1pGZdLXNN`.
 
 - [x] Kept the public home page and all visible service-page copy unchanged.
 - [x] Added eight hypothetical, non-client matching briefs to `llms.txt` for AI crawlers, covering
