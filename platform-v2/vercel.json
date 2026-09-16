@@ -6,9 +6,11 @@
   "functions": {
     "api/platform-modules.mjs": {
       "includeFiles": "{rules/**,vendor/siteone-crawler/**}",
+      "excludeFiles": "node_modules/@gorules/zen-engine-linux-*-musl/**",
       "maxDuration": 120
     },
     "api/document-processing.mjs": {
+      "excludeFiles": "node_modules/@napi-rs/canvas-linux-*-musl/**",
       "maxDuration": 120
     },
     "api/search-index-sync.mjs": {
