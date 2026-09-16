@@ -18,6 +18,8 @@
     "test:control-integrity": "node scripts/test-control-integrity.mjs",
     "test:company-screening": "node --test scripts/test-company-screening.mjs scripts/test-screening-queue.mjs scripts/test-safe-evidence-fetch.mjs scripts/test-screening-worker.mjs scripts/test-screening-events.mjs",
     "test:screening-concurrency": "node scripts/test-screening-postgres.mjs",
+    "test:intake-autopilot": "node --test scripts/test-intake-actions.mjs scripts/test-telegram-intake-workflow.mjs",
+    "test:intake-concurrency": "node scripts/test-intake-actions-postgres.mjs",
     "test:screening-http": "node scripts/test-screening-http.mjs",
     "test:screening-n8n": "node scripts/test-screening-http.mjs --n8n",
     "test:pwa": "node scripts/test-pwa.mjs",

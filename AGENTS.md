@@ -225,6 +225,12 @@ Domain policy:
 Important n8n workflows to verify by live ID and active version:
 
 - inbound lead form: `ealRZcZzCLKAv6S5`;
+- operator intake card: `lpKqreuYkSkkyZgQ`, asynchronously dispatched by intake;
+  uses `offerpsp_tasks` (one `intake_response_v1` task per lead), private Telegram staff bindings,
+  opaque single-action tokens and durable receipts. Does not send merchant email. The Telegram
+  ingress in the shared AIBot authorizes the sender before processing; legacy unguarded SMTP/model
+  send callbacks are blocked, while staff web sending remains available. Reserved deliveries
+  without a Telegram receipt are uncertain: inspect history before retrying, never blind-resend.
 - portal message notification: `tqd52vrcJ3gO9Le9`;
 - pre-compliance: `MzGIqCRwEUEp2K8C` (event-driven queue worker with a 12-hour recovery sweep);
   authenticated event ingress `mrTCGINWgtcZXZW0` accepts 60-second signed wake-up tickets;
