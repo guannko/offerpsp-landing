@@ -7,6 +7,7 @@ import {
   staffSupabaseRequest,
 } from "./_lib/staff-auth.mjs";
 import { waitUntil } from "@vercel/functions";
+import { companyScreeningWorkerHandler } from "./_lib/company-screening-worker.mjs";
 import { collectGeoSignals, normalizeSiteOneAudit, publicPageChecksFromEvidence } from "./_lib/siteone-audit.mjs";
 import { mcpResourceMetadataHandler, offerPspMcpHandler } from "./_lib/offerpsp-mcp-http.mjs";
 import { offerPspActionHandler, offerPspActionsSchemaHandler } from "./_lib/offerpsp-actions.mjs";
@@ -300,6 +301,7 @@ const handlers = {
   "oauth-decision": oauthDecisionHandler,
   "seo-audit": seoAudit,
   "seo-audit-scheduled": seoAuditScheduled,
+  "company-screening-worker": companyScreeningWorkerHandler,
   "seo-live-traffic": seoLiveTraffic,
   "google-search-console": googleSearchConsole,
   "semantic-memory": semanticMemory,
@@ -314,7 +316,7 @@ export default async function handler(request, response) {
     if (["mcp", "mcp-resource-metadata", "gpt-actions", "gpt-actions-schema", "oauth-metadata", "oauth-register", "oauth-authorize", "oauth-token", "bix-gateway-health"].includes(moduleName)) {
       return await moduleHandler(request, response);
     }
-    if (moduleName === "seo-audit-scheduled") {
+    if (moduleName === "seo-audit-scheduled" || moduleName === "company-screening-worker") {
       return await moduleHandler(request, response);
     }
     const staffContext = await requireOfferPspStaff(request);

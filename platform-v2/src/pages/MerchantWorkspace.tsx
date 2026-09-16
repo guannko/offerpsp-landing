@@ -225,6 +225,7 @@ export default function MerchantWorkspace() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  const [screeningRefreshError, setScreeningRefreshError] = useState(false);
   const entityWorkspace = useEntityWorkspace("merchant", leadId);
 
   const loadWorkspace = useCallback(async () => {
@@ -262,6 +263,31 @@ export default function MerchantWorkspace() {
     const requestedTab = normalizeTab(searchParams.get("tab"));
     if (requestedTab) setTab(requestedTab);
   }, [searchParams]);
+
+  const screeningInProgress = ["pending", "screening"].includes(complianceWorkspace?.case.case_status || "");
+  useEffect(() => {
+    setScreeningRefreshError(false);
+    if (!leadId || !screeningInProgress) return;
+    let cancelled = false;
+    let inFlight = false;
+    const poll = async () => {
+      if (inFlight || document.hidden) return;
+      inFlight = true;
+      try {
+        const result = await supabase.rpc("get_offerpsp_pre_compliance_case", { p_lead_id: leadId });
+        if (cancelled) return;
+        if (result.error) throw result.error;
+        if (result.data?.case) setComplianceWorkspace(result.data as ComplianceWorkspace);
+        setScreeningRefreshError(false);
+      } catch {
+        if (!cancelled) setScreeningRefreshError(true);
+      } finally {
+        inFlight = false;
+      }
+    };
+    const timer = window.setInterval(() => { void poll(); }, 15_000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [leadId, screeningInProgress]);
 
   const latest = shortlists[0];
   const publishedRoutes = useMemo(() => {
@@ -465,7 +491,7 @@ export default function MerchantWorkspace() {
     await runAction("compliance-screening", async () => {
       const result = await supabase.rpc("queue_offerpsp_pre_compliance_screening", { p_lead_id: leadId });
       return { error: result.error };
-    }, "Проверка запущена. Результаты обычно появляются в течение пяти минут.");
+    }, "Проверка поставлена в очередь. Worker проверяет очередь раз в 15 минут; результат появится после обработки. Постановка в очередь ещё не означает завершение проверки.");
   }
 
   if (bridgeLoading) return <SkeletonPage />;
@@ -488,6 +514,7 @@ export default function MerchantWorkspace() {
 
     {message && <div className={`mb-5 rounded-xl border px-4 py-3 text-sm ${message.tone === "error" ? "border-error-200 bg-error-50 text-error-700 dark:border-error-500/20 dark:bg-error-500/10 dark:text-error-300" : "border-success-200 bg-success-50 text-success-700 dark:border-success-500/20 dark:bg-success-500/10 dark:text-success-300"}`}>{message.text}</div>}
     {entityWorkspace.error && <ErrorBanner message={entityWorkspace.error}/>}
+    {screeningRefreshError && <ErrorBanner message="Не удалось обновить результат проверки. Повторим запрос автоматически; последнее досье сохранено на экране."/>}
 
     <div className="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-800 dark:bg-gray-900 lg:flex-wrap lg:overflow-visible">
       {tabs.map((item) => <button key={item.id} onClick={() => setTab(item.id)} className={`whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium ${tab === item.id ? "bg-brand-500 text-white" : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"}`}>{item.label}</button>)}
@@ -570,7 +597,7 @@ function CompliancePanel({ workspace, busy, onRun, onSave }: {
       </Panel>
       <Panel>
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Проверки и доказательства</h3>
-        <div className="mt-4 space-y-3">{workspace.checks?.length ? workspace.checks.map((check) => <div key={check.id} className="rounded-xl border border-gray-200 p-4 dark:border-gray-800"><div className="flex items-start justify-between gap-3"><div><strong className="text-sm text-gray-900 dark:text-white">{check.title}</strong><p className="mt-1 text-sm text-gray-500">{check.detail || check.check_key}</p>{check.source_url && <a href={check.source_url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-semibold text-brand-500">Открыть источник ↗</a>}</div><StatusPill status={check.check_status}/></div></div>) : <div className="rounded-xl border border-dashed border-gray-200 p-6 text-center dark:border-gray-800"><h4 className="font-semibold text-gray-900 dark:text-white">Автопроверка ещё не запускалась</h4><p className="mx-auto mt-2 max-w-xl text-sm text-gray-500">Нажмите кнопку ниже — система соберёт сигналы по домену, сайту, email, сети, лицензии, санкциям и репутации. Обычно это занимает до пяти минут.</p><button onClick={onRun} disabled={busy === "compliance-screening"} className="mt-4 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy === "compliance-screening" ? "Запускаю…" : "Запустить автопроверку"}</button></div>}</div>
+        <div className="mt-4 space-y-3">{workspace.checks?.length ? workspace.checks.map((check) => <div key={check.id} className="rounded-xl border border-gray-200 p-4 dark:border-gray-800"><div className="flex items-start justify-between gap-3"><div><strong className="text-sm text-gray-900 dark:text-white">{check.title}</strong><p className="mt-1 text-sm text-gray-500">{check.detail || check.check_key}</p>{check.source_url && <a href={check.source_url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-semibold text-brand-500">Открыть источник ↗</a>}</div><StatusPill status={check.check_status}/></div></div>) : <div className="rounded-xl border border-dashed border-gray-200 p-6 text-center dark:border-gray-800"><h4 className="font-semibold text-gray-900 dark:text-white">Нет результатов автопроверки</h4><p className="mx-auto mt-2 max-w-xl text-sm text-gray-500">Проверка собирает доступные факты о сайте, домене и почте. Worker проверяет очередь раз в 15 минут. Лицензия, санкции и репутация не считаются подтверждёнными без отдельных источников и ручной проверки.</p><button onClick={onRun} disabled={busy === "compliance-screening"} className="mt-4 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy === "compliance-screening" ? "Ставлю в очередь…" : "Запустить автопроверку"}</button></div>}</div>
       </Panel>
       {!!workspace.decisions?.length && <Panel><h3 className="text-lg font-semibold text-gray-900 dark:text-white">История решений</h3><div className="mt-4 divide-y divide-gray-100 dark:divide-gray-800">{workspace.decisions.map((decision) => <div key={decision.id} className="py-3"><div className="flex items-center justify-between gap-3"><StatusPill status={decision.decision}/><span className="text-xs text-gray-400">{new Date(decision.created_at).toLocaleString("ru-RU")}</span></div><p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{decision.notes || `Классификация: ${decision.classification}`}</p></div>)}</div></Panel>}
     </div>

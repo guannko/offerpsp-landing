@@ -310,6 +310,12 @@ result nodes remain enabled because webhook-initiated searches still report resu
 
 Do not assume that a workflow is active merely because it exists.
 
+On 2026-09-16, `n8n_update_partial_workflow` on the active Pre-Compliance workflow
+republished the edited graph immediately, even without an `activateWorkflow` operation.
+Treat updates to active workflows as production writes, not draft-only staging. Prepare and test
+changes locally or in an explicitly isolated inactive test workflow; compare `mode=active` after
+every write. Keep a rollback snapshot and verify the restored published graph when rolling back.
+
 ## Technical map
 
 - Captain's Bridge React/TypeScript frontend: `platform-v2/`
