@@ -5,6 +5,25 @@ Updated: 2026-09-17
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+### Screening rerun cooldown — production 2026-09-17
+
+- `VERIFIED`: a staff repeat click while a merchant screening is pending/running reuses the
+  current run and does not emit another pending transition. After completion, the authoritative
+  RPC blocks another run for five minutes and returns the remaining cooldown.
+- Captain's Bridge disables both screening buttons while work is active and during cooldown,
+  displays `Проверка выполняется…` / `Повтор через N мин`, polls active work every two seconds and
+  no longer exposes the internal durable dispatch as a customer-facing “queue”. The same bundle is
+  used by the browser and installed app.
+- Local evidence: 84/84 screening tests, lint and production build passed. Production deployment
+  `dpl_41JiYzuvneVx3QSQtUq15iRHnH9b` is READY and aliased to the staff URL; the live bundle contains
+  the new status/cooldown strings. Production has zero active pending/running merchant screenings.
+- Supabase recorded migrations `20260917195052 offerpsp_screening_rerun_cooldown` and
+  `20260917195114 offerpsp_screening_rerun_cooldown_runtime_fix`. The second immediately replaced a
+  `v_now()` typo in the first applied definition before any verification/customer action. The live
+  function is confirmed free of that call, keeps the original staff-only grants and contains the
+  five-minute guard. Local canonical source is
+  `20260917201500_offerpsp_screening_rerun_cooldown.sql`.
+
 ## New-merchant Telegram autopilot
 
 ### Company-audit evidence contract — production 2026-09-17
