@@ -17,6 +17,27 @@ type ResearchWorkspace = {
   email_messages: EmailMessage[];
   audit: AuditEntry[];
 };
+type EvidenceLevel = "verified" | "observed" | "claimed" | "inferred" | "computed" | "unavailable" | "not_checked";
+type ScreeningCheck = { check_key: string; status: string; title: string; detail: string; source_url?: string | null; checked_at?: string | null; evidence_level?: EvidenceLevel; source_type?: string };
+type AuditCoverage = {
+  status?: string;
+  critical_confirmed?: number;
+  critical_total?: number;
+  limitations?: string[];
+};
+type ScreeningResult = {
+  summary?: string;
+  screened_at?: string;
+  completeness_score?: number | null;
+  missing_information?: string[];
+  checks?: ScreeningCheck[];
+  source_links?: { kind: string; url: string }[];
+  audit_level?: string;
+  decision_status?: string;
+  audit_coverage?: AuditCoverage;
+};
+type ScreeningJob = { id: string; status: string; queued_reason: string; queued_at: string; started_at?: string | null; completed_at?: string | null; failed_at?: string | null; skipped_at?: string | null; attempts: number; last_error_code?: string | null; result?: ScreeningResult | null };
+type ResearchScreening = { active_job?: ScreeningJob | null; latest_job?: ScreeningJob | null; latest_completed?: ScreeningJob | null; result_current?: boolean };
 type WorkspaceTab = "overview" | "edit" | "notes" | "tasks" | "mail" | "history";
 
 const inputClass = "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:text-white";
@@ -32,6 +53,34 @@ const statusLabels: Record<string, string> = {
   negotiating: "Переговоры", pending: "Ожидает", done: "Выполнено", cancelled: "Отменено",
   draft: "Черновик", sending: "Отправляется", sent: "Отправлено", failed: "Ошибка отправки", open: "Открыта", awaiting_reply: "Ждём ответ",
   follow_up: "Нужен follow-up", closed: "Закрыта",
+  running: "Собираются факты", completed: "Сбор фактов завершён", skipped: "Пропущено",
+};
+const evidenceLabels: Record<EvidenceLevel, string> = {
+  verified: "Подтверждено идентификаторами",
+  observed: "Наблюдаемый факт",
+  claimed: "Заявление компании",
+  inferred: "Предположение",
+  computed: "Расчёт системы",
+  unavailable: "Источник недоступен",
+  not_checked: "Не проверено",
+};
+const sourceTypeLabels: Record<string, string> = {
+  company_website: "Сайт компании",
+  rdap_registry: "Реестр домена RDAP",
+  system_comparison: "Сопоставление данных",
+  company_website_and_submission: "Сайт + анкета",
+  submitted_data: "Данные анкеты",
+  gleif_lei_registry: "GLEIF / Global LEI Index",
+  mga_authorisation: "Malta Gaming Authority",
+  cga_certificate: "Curaçao Gaming Authority",
+  ukgc_register: "UK Gambling Commission",
+  gibraltar_gambling_register: "Gibraltar Gambling Division",
+  iom_gsc_register: "Isle of Man Gambling Supervision Commission",
+  kahnawake_permit_holders: "Kahnawà:ke Gaming Commission",
+  swedish_gambling_register: "Swedish Gambling Authority",
+  ontario_igo_directory: "Ontario: AGCO + iGaming Ontario",
+  official_sanctions_lists: "Официальные санкционные списки",
+  none: "Источник отсутствует",
 };
 const casinoStatusOptions: QuickStatusOption[] = [
   { value: "not_contacted", label: "Новый" },
@@ -95,6 +144,43 @@ function OverviewPanel({ title, count, action, onOpen, children }: { title: stri
   </section>;
 }
 
+function ScreeningPanel({ screening, busy, archived, onQueue }: { screening: ResearchScreening; busy: boolean; archived: boolean; onQueue: () => void }) {
+  const active = screening.active_job;
+  const latest = screening.latest_job;
+  const completed = screening.latest_completed;
+  const result = completed?.result;
+  const displayed = active || latest;
+  const status = displayed?.status || "not_started";
+  const statusText = status === "not_started" ? "Ещё не запускалась" : statusLabels[status] || status;
+  const timestamp = displayed?.completed_at || displayed?.failed_at || displayed?.skipped_at || displayed?.started_at || displayed?.queued_at;
+  const tone = status === "completed" && screening.result_current ? "border-brand-200 bg-brand-50/60" :
+    status === "failed" ? "border-error-200 bg-error-50/60" : "border-warning-200 bg-warning-50/60";
+  return <section className={`rounded-2xl border p-5 ${tone} dark:bg-white/[0.03]`}>
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-gray-500">Аудит компании · открытые источники</p>
+        <div className="mt-2 flex flex-wrap items-center gap-3"><h3 className="text-xl font-bold text-gray-950 dark:text-white">{statusText}</h3>{completed && !screening.result_current && <span className="rounded-full bg-warning-100 px-3 py-1 text-xs font-bold text-warning-800">Результат устарел</span>}</div>
+        <p className="mt-2 text-base font-semibold text-gray-700 dark:text-gray-200">{timestamp ? dateTime(timestamp) : "Запусков пока не было"}</p>
+      </div>
+      <button type="button" disabled={busy || archived || Boolean(active)} onClick={onQueue} className="rounded-xl bg-brand-500 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">{active ? "Проверка уже в очереди" : completed ? "Перепроверить" : "Запустить проверку"}</button>
+    </div>
+    {active?.last_error_code && <p className="mt-4 rounded-xl bg-white/80 px-4 py-3 text-sm font-semibold text-warning-800">Предыдущая попытка не завершилась: {active.last_error_code}. Система поставила проверку на безопасный повтор.</p>}
+    {latest?.status === "failed" && <p className="mt-4 rounded-xl bg-white/80 px-4 py-3 text-sm font-semibold text-error-700">Проверка не завершена: {latest.last_error_code || "техническая ошибка"}. Предыдущий результат сохранён.</p>}
+    {latest?.status === "skipped" && <p className="mt-4 rounded-xl bg-white/80 px-4 py-3 text-sm font-semibold text-warning-800">Запуск остановлен: {latest.last_error_code || "данные изменились или запись недоступна"}.</p>}
+    {result && <div className="mt-5 space-y-4">
+      <p className="text-sm leading-6 text-gray-800 dark:text-gray-200">{result.summary}</p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-xl bg-white/80 p-4 dark:bg-gray-950/40"><span className="text-xs font-bold uppercase tracking-wide text-gray-400">Полнота анкеты</span><p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{result.completeness_score ?? "—"}%</p><p className="mt-1 text-xs leading-5 text-gray-500">Заполненность, не достоверность</p></div>
+        <div className="rounded-xl bg-white/80 p-4 dark:bg-gray-950/40"><span className="text-xs font-bold uppercase tracking-wide text-gray-400">Критически подтверждено</span><p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{result.audit_coverage?.critical_confirmed ?? 0} / {result.audit_coverage?.critical_total ?? "—"}</p><p className="mt-1 text-xs leading-5 text-gray-500">Только независимые подтверждения</p></div>
+        <div className="rounded-xl bg-white/80 p-4 dark:bg-gray-950/40"><span className="text-xs font-bold uppercase tracking-wide text-gray-400">Сбор выполнен</span><p className="mt-1 text-base font-bold text-gray-900 dark:text-white">{dateTime(result.screened_at || completed?.completed_at)}</p></div>
+      </div>
+      {Boolean(result.audit_coverage?.limitations?.length) && <details open className="rounded-xl border border-warning-200 bg-warning-50/80 p-4 dark:bg-warning-950/20"><summary className="cursor-pointer text-sm font-bold text-warning-900 dark:text-warning-200">Что не проверено · {result.audit_coverage?.limitations?.length}</summary><ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-warning-900 dark:text-warning-200">{result.audit_coverage?.limitations?.map((item)=><li key={item}>{item}</li>)}</ul></details>}
+      {Boolean(result.missing_information?.length) && <details className="rounded-xl bg-white/80 p-4 dark:bg-gray-950/40"><summary className="cursor-pointer text-sm font-bold text-gray-900 dark:text-white">Что требует внимания · {result.missing_information?.length}</summary><ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-gray-700 dark:text-gray-300">{result.missing_information?.map((item)=><li key={item}>{item}</li>)}</ul></details>}
+      {Boolean(result.checks?.length) && <details className="rounded-xl bg-white/80 p-4 dark:bg-gray-950/40"><summary className="cursor-pointer text-sm font-bold text-gray-900 dark:text-white">Факты и источники · {result.checks?.length}</summary><div className="mt-3 space-y-3">{result.checks?.map((check)=><article key={check.check_key} className="border-t border-gray-200 pt-3 first:border-0 first:pt-0 dark:border-gray-700"><div className="flex flex-wrap items-center justify-between gap-2"><strong className="text-sm text-gray-900 dark:text-white">{check.title}</strong><span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-bold text-gray-600 dark:bg-white/10 dark:text-gray-200">{evidenceLabels[check.evidence_level || "not_checked"]}</span></div><p className="mt-1 text-sm leading-6 text-gray-700 dark:text-gray-300">{check.detail}</p><p className="mt-1 text-xs font-semibold text-gray-500">Источник: {sourceTypeLabels[check.source_type || "none"] || check.source_type}</p>{check.source_url && <a href={check.source_url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-sm font-semibold text-brand-600 hover:underline">Открыть источник →</a>}</article>)}</div></details>}
+    </div>}
+    <p className="mt-4 text-sm font-semibold leading-6 text-gray-600 dark:text-gray-300">Результат всегда требует ручного решения. Наблюдение сайта, заявление компании и независимое подтверждение показаны раздельно.</p>
+  </section>;
+}
+
 export default function ResearchEntityEditor({ entityType, record, onClose, onSaved }: {
   entityType: EntityType;
   record?: ResearchRecord | null;
@@ -118,6 +204,7 @@ export default function ResearchEntityEditor({ entityType, record, onClose, onSa
   const [message, setMessage] = useState<{ error?: boolean; text: string } | null>(null);
   const [tab, setTab] = useState<WorkspaceTab>(record ? "overview" : "edit");
   const [workspace, setWorkspace] = useState<ResearchWorkspace>({ notes: [], tasks: [], email_drafts: [], email_threads: [], email_messages: [], audit: [] });
+  const [screening, setScreening] = useState<ResearchScreening>({});
   const [workspaceLoading, setWorkspaceLoading] = useState(false);
   const [noteBody, setNoteBody] = useState("");
   const [taskTitle, setTaskTitle] = useState("");
@@ -135,16 +222,27 @@ export default function ResearchEntityEditor({ entityType, record, onClose, onSa
   const loadWorkspace = useCallback(async () => {
     if (!record) return;
     setWorkspaceLoading(true);
-    const result = await supabase.rpc("get_offerpsp_research_workspace", {
-      p_entity_type: entityType,
-      p_record_id: record.id,
-    });
+    const [result, screeningResult] = await Promise.all([
+      supabase.rpc("get_offerpsp_research_workspace", { p_entity_type: entityType, p_record_id: record.id }),
+      supabase.rpc("get_offerpsp_research_screening", { p_entity_type: entityType, p_entity_id: record.id }),
+    ]);
     if (result.error) setMessage({ error: true, text: result.error.message });
     else setWorkspace({ notes: [], tasks: [], email_drafts: [], email_threads: [], email_messages: [], audit: [], ...((result.data || {}) as Partial<ResearchWorkspace>) });
+    if (screeningResult.error) setMessage({ error: true, text: screeningResult.error.message });
+    else setScreening((screeningResult.data || {}) as ResearchScreening);
     setWorkspaceLoading(false);
   }, [entityType, record]);
 
   useEffect(() => { void loadWorkspace(); }, [loadWorkspace]);
+
+  async function queueScreening() {
+    if (!record || archived || screening.active_job) return;
+    setBusy(true); setMessage(null);
+    const result = await supabase.rpc("queue_offerpsp_research_screening", { p_entity_type: entityType, p_entity_id: record.id });
+    if (result.error) setMessage({ error: true, text: result.error.message });
+    else { setMessage({ text: "Проверка поставлена в очередь. Клиентам ничего не отправляется." }); await loadWorkspace(); }
+    setBusy(false);
+  }
 
   async function copyValue(value: string) {
     try {
@@ -303,6 +401,7 @@ export default function ResearchEntityEditor({ entityType, record, onClose, onSa
             {entityType === "psp" && <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600 dark:bg-white/5 dark:text-gray-300">{statusLabels[String(draft.provider_status || "research")] || text(draft.provider_status)}</span>}
             <span className={`rounded-full px-3 py-1 text-xs font-semibold ${archived ? "bg-error-50 text-error-600" : "bg-success-50 text-success-700"}`}>{statusLabels[String(record?.record_state || "active")] || text(record?.record_state)}</span>
           </div>
+          <ScreeningPanel screening={screening} busy={busy} archived={archived} onQueue={() => void queueScreening()}/>
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.8fr)]">
             <Section title="Основная информация">
               <Detail label="Название" value={draft.name}/>

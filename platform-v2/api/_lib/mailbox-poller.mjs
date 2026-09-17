@@ -6,6 +6,7 @@ import { prepareOfferEmailAttachments } from "./offer-email-attachments.mjs";
 const DEFAULT_BATCH_LIMIT = 25;
 const MAX_BATCH_LIMIT = 50;
 const PROCESSED_FLAG = "$OfferPSPIngested";
+const INGEST_PATH = "/functions/v1/offerpsp-ingest-email";
 
 const addressList = (addressObject) =>
   (addressObject?.value || [])
@@ -66,10 +67,36 @@ export async function parseMailboxMessage({ source, uid, uidValidity }) {
   };
 }
 
+export const resolveMailboxIngestUrl = ({ ingestUrl, supabaseUrl }) => {
+  if (!ingestUrl) throw new Error("Mailbox poller is missing configuration: ingestUrl");
+  let configured;
+  try {
+    configured = new URL(ingestUrl);
+  } catch {
+    throw new Error("Mailbox ingest URL is invalid");
+  }
+  if (configured.protocol !== "https:" || configured.pathname.replace(/\/$/, "") !== INGEST_PATH) {
+    throw new Error("Mailbox ingest URL must use HTTPS and the OfferPSP ingest function path");
+  }
+  if (!supabaseUrl) return configured.toString();
+
+  let canonical;
+  try {
+    canonical = new URL(supabaseUrl);
+  } catch {
+    throw new Error("Canonical Supabase URL is invalid");
+  }
+  if (canonical.protocol !== "https:" || configured.origin !== canonical.origin) {
+    throw new Error("Mailbox ingest URL does not match the canonical Supabase project");
+  }
+  return configured.toString();
+};
+
 const assertConfig = (config) => {
-  const required = ["imapPassword", "ingestUrl", "ingestToken"];
+  const required = ["imapPassword", "ingestToken"];
   const missing = required.filter((key) => !config[key]);
   if (missing.length) throw new Error(`Mailbox poller is missing configuration: ${missing.join(", ")}`);
+  return resolveMailboxIngestUrl(config);
 };
 
 export async function ingestMailboxPayload(payload, config, fetchImpl = fetch) {
@@ -89,7 +116,8 @@ export async function ingestMailboxPayload(payload, config, fetchImpl = fetch) {
 }
 
 export async function pollOfferPspMailbox(config, dependencies = {}) {
-  assertConfig(config);
+  const ingestUrl = assertConfig(config);
+  const resolvedConfig = { ...config, ingestUrl };
   const ImapClient = dependencies.ImapClient || ImapFlow;
   const parseMessage = dependencies.parseMessage || parseMailboxMessage;
   const ingestPayload = dependencies.ingestPayload || ingestMailboxPayload;
@@ -127,7 +155,7 @@ export async function pollOfferPspMailbox(config, dependencies = {}) {
           const message = await client.fetchOne(uid, { source: true }, { uid: true });
           if (!message?.source) throw new Error("IMAP message source is empty");
           const payload = await parseMessage({ source: message.source, uid, uidValidity });
-          const result = await ingestPayload(payload, config);
+          const result = await ingestPayload(payload, resolvedConfig);
           await client.messageFlagsAdd(uid, [PROCESSED_FLAG], { uid: true });
           if (result?.duplicate) summary.duplicates += 1;
           else summary.ingested += 1;

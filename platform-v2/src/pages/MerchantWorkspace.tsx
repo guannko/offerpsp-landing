@@ -452,20 +452,25 @@ export default function MerchantWorkspace() {
       const response = await fetch("/api/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.data.session?.access_token || ""}` },
-        body: JSON.stringify({ to: lead.work_email, subject, body, lead_id: lead.lead_id }),
+        body: JSON.stringify({ to: lead.work_email, subject, body, lead_id: lead.lead_id, draft_id: draftId }),
       });
       const result = await response.json().catch(() => ({}));
+      if (result.delivery_uncertain === true) {
+        await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]);
+        setMessage({ tone: "error", text: `Shortlist опубликован в ЛК, но статус email требует сверки: ${result.error || "повторная отправка заблокирована"}` });
+        setTab("communications");
+        setBusy(null);
+        return;
+      }
       if (!response.ok || result.success !== true) throw new Error(result.error || result.message || "Email sender returned an error");
-      const sentState = await supabase.rpc("set_offerpsp_email_draft_status", { p_draft_id: draftId, p_status: "sent" });
       await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]);
-      setMessage(sentState.error
-        ? { tone: "error", text: `Shortlist отправлен в ЛК и email доставлен на ${lead.work_email}, но статус в почтовом центре не записан: ${sentState.error.message}` }
-        : { tone: "success", text: `Shortlist отправлен в ЛК и на ${lead.work_email}; доставка записана в почтовом центре.` });
+      setMessage(result.warning
+        ? { tone: "error", text: `Shortlist отправлен в ЛК и email доставлен на ${lead.work_email}, но требуется техническая проверка: ${result.warning}` }
+        : { tone: "success", text: `Shortlist отправлен в ЛК и на ${lead.work_email}; доставка записана в почтовом центре и IMAP Sent.` });
       setTab("communications");
     } catch (error) {
-      const failedState = await supabase.rpc("set_offerpsp_email_draft_status", { p_draft_id: draftId, p_status: "failed" });
       await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]);
-      setMessage({ tone: "error", text: `Shortlist опубликован в ЛК, но email не отправлен: ${error instanceof Error ? error.message : "неизвестная ошибка"}${failedState.error ? `. Статус ошибки не записан: ${failedState.error.message}` : ""}` });
+      setMessage({ tone: "error", text: `Shortlist опубликован в ЛК, но отправка email требует проверки: ${error instanceof Error ? error.message : "неизвестная ошибка"}. Автоматический повтор не выполнялся.` });
     }
     setBusy(null);
   }

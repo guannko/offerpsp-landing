@@ -57,6 +57,8 @@ async function bootstrap() {
     create schema storage;
     create schema extensions;
     create schema cron;
+    create schema net;
+    create schema vault;
     set search_path = public, extensions;
     create table auth.users (
       id uuid primary key,
@@ -116,6 +118,41 @@ async function bootstrap() {
       return v_jobid;
     end;
     $$;
+
+    create table vault.secrets (
+      id uuid primary key default gen_random_uuid(),
+      secret text,
+      name text,
+      description text
+    );
+    create view vault.decrypted_secrets as
+      select id, secret as decrypted_secret from vault.secrets;
+    create or replace function vault.create_secret(p_secret text, p_name text, p_description text)
+    returns uuid
+    language plpgsql
+    as $$
+    declare v_id uuid;
+    begin
+      insert into vault.secrets(secret, name, description)
+      values (p_secret, p_name, p_description)
+      returning id into v_id;
+      return v_id;
+    end;
+    $$;
+    create or replace function vault.update_secret(p_id uuid, p_secret text)
+    returns void
+    language sql
+    as $$
+      update vault.secrets set secret = p_secret where id = p_id;
+    $$;
+    create or replace function net.http_post(
+      url text,
+      body jsonb,
+      headers jsonb,
+      timeout_milliseconds integer
+    ) returns bigint
+    language sql
+    as $$ select 1::bigint $$;
 
   `);
   const legacyTables = await readFile(
@@ -262,6 +299,22 @@ async function applyMigrations() {
     "20260901164843_offerpsp_mail_organizer.sql",
     "20260901171530_offerpsp_mail_organizer_advisor_hardening.sql",
     "20260901185355_offerpsp_email_trash_retention.sql",
+    "20260916141150_offerpsp_intake_screening_queue.sql",
+    "20260916181143_offerpsp_screening_events.sql",
+    "20260916181313_offerpsp_screening_event_transport_acl.sql",
+    "20260916181803_offerpsp_screening_event_tickets.sql",
+    "20260916182014_offerpsp_screening_ticket_encoding.sql",
+    "20260916185027_offerpsp_intake_operator_tasks.sql",
+    "20260916185028_offerpsp_telegram_intake_actions.sql",
+    "20260916190145_offerpsp_intake_terminal_guards.sql",
+    "20260916194807_offerpsp_intake_observability.sql",
+    "20260916203638_offerpsp_research_screening_jobs.sql",
+    "20260916203639_offerpsp_research_screening_events.sql",
+    "20260917101500_offerpsp_email_delivery_receipt.sql",
+    "20260917150000_offerpsp_intake_auto_reply.sql",
+    "20260917153500_offerpsp_intake_auto_reply_alignment.sql",
+    "20260917155000_offerpsp_intake_auto_reply_trigger_visibility.sql",
+    "20260917160500_offerpsp_intake_auto_reply_completed_receipt.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -272,6 +325,9 @@ async function applyMigrations() {
     let sql = await readFile(resolve(migrationsDirectory, migrationName), "utf8");
     if (migrationName === "20260901185355_offerpsp_email_trash_retention.sql") {
       sql = sql.replace("create extension if not exists pg_cron with schema pg_catalog;", "-- pg_cron is stubbed by the local validator");
+    }
+    if (migrationName === "20260916181143_offerpsp_screening_events.sql") {
+      sql = sql.replace("create extension if not exists pg_net with schema extensions;", "-- pg_net is stubbed by the local validator");
     }
     try {
       await db.exec(sql);

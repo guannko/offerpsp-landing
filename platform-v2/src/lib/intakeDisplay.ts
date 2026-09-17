@@ -9,6 +9,7 @@ const labels: Record<string, string> = {
   expired: 'Срок действия истёк', inactive: 'Заявка неактивна', queued: 'В очереди',
   unknown: 'Не подтверждено', warning: 'Нужно внимание', pass: 'Проверка пройдена',
   passed: 'Проверка пройдена', fail: 'Проверка не пройдена', not_ready: 'Пока не готово',
+  sent: 'Отправлено', claimed: 'Отправляется', review_required: 'Нужна проверка', uncertain: 'Доставка не подтверждена',
 };
 export const intakeStatusName = (value?: string | null) => value ? labels[value] || value : 'Статус не указан';
 export function intakeClock(value?: string | null) {
@@ -28,6 +29,11 @@ const events: Record<string, [string, string]> = {
   telegram_intake_card_sent: ['Карточка доставлена в Telegram', 'Telegram подтвердил приём сообщения.'],
   email_draft_created: ['Создан черновик письма', 'Создание черновика не означает отправку письма.'],
   telegram_intake_action: ['Обработана кнопка Telegram', 'Результат действия сохранён.'],
+  intake_auto_reply_ready: ['Автоответ прошёл защитные проверки', 'Подготовлен только разрешённый тип первого ответа.'],
+  intake_auto_reply_review_required: ['Автоответ остановлен', 'Защитная проверка требует участия сотрудника.'],
+  intake_auto_reply_claimed: ['Начата отправка первого ответа', 'Письмо зарезервировано от повторной отправки.'],
+  intake_auto_reply_sent: ['Первый ответ отправлен', 'Доставка записана в канонический почтовый журнал.'],
+  intake_auto_reply_uncertain: ['Доставка первого ответа не подтверждена', 'Повторная отправка заблокирована до сверки.'],
 };
 export function intakeEventText(event: IntakeSnapshot['events'][number]) {
   const known = events[event.activity_type];
@@ -40,6 +46,9 @@ export function intakeNow(s: IntakeSnapshot) {
   if (s.lead.record_state === 'archived') return { title: 'Заявка в архиве', detail: 'История сохранена. Архив не означает, что все этапы были выполнены.', target: 'activity' };
   if (['closed', 'won', 'lost', 'spam'].includes(s.lead.status)) return { title: intakeStatusName(s.lead.status), detail: 'Обработка завершена или ограничена. Результаты отдельных действий — ниже.', target: 'activity' };
   if (s.actions.some(a => a.outcome === 'failed')) return { title: 'Есть ошибка действия', detail: 'Откройте результаты кнопок: там сохранена причина.', target: 'callbacks' };
+  if (s.auto_reply?.status === 'uncertain') return { title: 'Нужно сверить доставку письма', detail: 'SMTP-результат неоднозначен. Автоматический повтор заблокирован.', target: 'email' };
+  if (s.auto_reply?.status === 'review_required') return { title: 'Первый ответ требует проверки', detail: 'Автоматическая отправка остановлена защитной проверкой. Причина указана ниже.', target: 'email' };
+  if (s.auto_reply?.status === 'claimed' || s.auto_reply?.status === 'queued') return { title: 'Готовится первый ответ', detail: 'Система обрабатывает разрешённый автоматический ответ.', target: 'email' };
   if (s.screening && ['pending', 'screening'].includes(s.screening.status)) {
     const stale = s.screening.status === 'screening' && (!s.screening.lease_until || Date.parse(s.screening.lease_until) < Date.parse(s.observed_at));
     return { title: stale ? 'Проверка не завершена вовремя' : intakeStatusName(s.screening.status), detail: stale ? 'Время обработки истекло. Нужна проверка восстановления.' : 'Завершение ещё не подтверждено.', target: 'screening' };

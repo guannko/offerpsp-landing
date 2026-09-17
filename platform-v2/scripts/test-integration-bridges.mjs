@@ -35,6 +35,8 @@ try {
   configure();
 
   let calls = [];
+  let completionAttempts = 0;
+  let senderShouldFail = false;
   globalThis.fetch = async (url, init = {}) => {
     calls.push({ url: String(url), init });
     if (String(url).endsWith("/auth/v1/user")) return Response.json({ id: "staff-id", email: "staff@example.test" });
@@ -44,16 +46,68 @@ try {
       { key: "email", enabled: true, configuration: {} },
       { key: "telegram", enabled: true, configuration: {} },
     ]);
+    if (String(url).endsWith("/rpc/begin_offerpsp_email_delivery")) return Response.json({
+      success: true,
+      send_allowed: true,
+      state: "claimed",
+      attempt_id: "11111111-1111-4111-8111-111111111111",
+      to_email: "merchant@example.test",
+      subject: "Canonical subject",
+      body: "Canonical body",
+      lead_internal_id: null,
+    });
+    if (String(url).endsWith("/rpc/complete_offerpsp_email_delivery")) {
+      completionAttempts += 1;
+      if (completionAttempts < 3) throw new Error("temporary journal outage");
+      return Response.json({ success: true });
+    }
+    if (String(url).endsWith("/rpc/mark_offerpsp_email_delivery_uncertain")) return Response.json({ success: true, state: "uncertain" });
     if (String(url).endsWith("/rpc/record_offerpsp_telegram_message")) return Response.json({ success: true });
-    if (String(url).includes("/webhook/email")) return Response.json({ success: true });
+    if (String(url).includes("/webhook/email")) return senderShouldFail
+      ? Response.json({ success: false, message: "SMTP outcome unavailable" }, { status: 502 })
+      : Response.json({ success: true });
     if (String(url).includes("/webhook/telegram")) return Response.json({ success: true, message_id: 42 });
     throw new Error(`Unexpected URL ${url}`);
   };
 
   const emailResponse = responseRecorder();
-  await emailHandler(request({ to: "merchant@example.test", subject: "Subject", body: "Body" }), emailResponse);
-  assert.equal(emailResponse.statusCode, 200);
+  await emailHandler(request({ to: "merchant@example.test", subject: "Subject", body: "Body", draft_id: 17 }), emailResponse);
+  assert.equal(emailResponse.statusCode, 207);
+  assert.equal(emailResponse.body.success, true);
+  assert.equal(emailResponse.body.journal_recorded, true);
+  assert.match(emailResponse.body.warning, /IMAP Sent copy/i);
+  assert.equal(completionAttempts, 3);
   assert.equal(calls.find((call) => call.url.endsWith("/webhook/email")).init.headers["x-captain-secret"], "bridge-secret");
+  assert.deepEqual(JSON.parse(calls.find((call) => call.url.endsWith("/webhook/email")).init.body), {
+    to: "merchant@example.test",
+    subject: "Canonical subject",
+    body: "Canonical body",
+    from_name: "OfferPSP",
+    from_email: "bizdev@offerpsp.com",
+    reply_to: "bizdev@offerpsp.com",
+    lead_id: null,
+    draft_id: 17,
+    delivery_attempt_id: "11111111-1111-4111-8111-111111111111",
+  });
+  assert.deepEqual(JSON.parse(calls.find((call) => call.url.endsWith("/rpc/complete_offerpsp_email_delivery")).init.body), {
+    p_draft_id: 17,
+    p_attempt_id: "11111111-1111-4111-8111-111111111111",
+    p_external_message_id: null,
+    p_provider: "smtp",
+    p_archive_status: "failed",
+    p_archive_error: "SMTP response did not include Message-ID",
+  });
+
+  calls = [];
+  senderShouldFail = true;
+  const uncertainEmailResponse = responseRecorder();
+  await emailHandler(request({ to: "ignored@example.test", subject: "Ignored", body: "Ignored", draft_id: 18 }), uncertainEmailResponse);
+  assert.equal(uncertainEmailResponse.statusCode, 502);
+  assert.equal(uncertainEmailResponse.body.delivery_uncertain, true);
+  assert.match(uncertainEmailResponse.body.error, /not retried automatically/i);
+  assert.equal(calls.filter((call) => call.url.endsWith("/rpc/mark_offerpsp_email_delivery_uncertain")).length, 1);
+  assert.equal(calls.filter((call) => call.url.endsWith("/rpc/complete_offerpsp_email_delivery")).length, 0);
+  senderShouldFail = false;
 
   calls = [];
   const telegramResponse = responseRecorder();

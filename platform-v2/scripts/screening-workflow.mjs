@@ -5,9 +5,9 @@ export function buildScreeningWorkflow({ endpoint, credential, scheduled = false
   if (url.protocol !== "https:" || url.username || url.password || url.searchParams.get("module") !== "company-screening-worker") throw new Error("Protected screening endpoint required");
   if (!credential?.id || !credential?.name) throw new Error("Verified worker credential reference required");
   if (scheduled && !errorWorkflow) throw new Error("Scheduled screening requires a verified error workflow");
-  const http = (name, id, x, jsonBody, retry) => ({
+  const http = (name, id, x, jsonBody, retry, y = 0) => ({
     // 4.3 supports all required options and can execute on the verified n8n 1.117.2 baseline.
-    name, id, position: [x, 0], type: "n8n-nodes-base.httpRequest", typeVersion: 4.3,
+    name, id, position: [x, y], type: "n8n-nodes-base.httpRequest", typeVersion: 4.3,
     parameters: { method: "POST", url: url.href, authentication: "genericCredentialType", genericAuthType: "httpHeaderAuth",
       sendBody: true, specifyBody: "json", jsonBody,
       options: { timeout: 45000, redirect: { redirect: { followRedirects: false } } } },
@@ -28,19 +28,28 @@ export function buildScreeningWorkflow({ endpoint, credential, scheduled = false
       { id: "expand", name: "Expand run IDs", type: "n8n-nodes-base.code", typeVersion: 2, position: [480, 0], parameters: { jsCode: "const jobs = $input.first().json.jobs;\nif (!Array.isArray(jobs) || jobs.length > 1) throw new Error('Invalid claim receipt');\nreturn jobs.map(({lead_id, run_id}) => ({json:{lead_id,run_id}}));" } },
       http("Process claimed run", "process", 720, '={{ JSON.stringify({action:"process",lead_id:$json.lead_id,run_id:$json.run_id}) }}', true),
       { id: "receipt", name: "Verify result receipt", type: "n8n-nodes-base.code", typeVersion: 2, position: [960, 0], parameters: { jsCode: "const receipt = $input.first().json;\nif (!['completed','already_completed','stale_or_cancelled','in_progress','module_disabled'].includes(receipt.outcome)) throw new Error('Missing screening receipt');\n" + (scheduled ? "if (['in_progress','module_disabled'].includes(receipt.outcome)) throw new Error('Screening not completed: ' + receipt.outcome);\n" : "") + "return [{json:{...receipt, completed:['completed','already_completed'].includes(receipt.outcome)}}];" } },
+      ...(scheduled ? [http("Recover one auto reply", "recover-auto-reply", 1200, '{"action":"recover_auto_reply"}', false)] : []),
+      http("Claim one research run", "claim-research", 240, '{"action":"claim_research"}', false, 320),
+      { id: "expand-research", name: "Expand research run IDs", type: "n8n-nodes-base.code", typeVersion: 2, position: [480, 320], parameters: { jsCode: "const jobs = $input.first().json.jobs;\nif (!Array.isArray(jobs) || jobs.length > 1) throw new Error('Invalid research claim receipt');\nreturn jobs.map(({job_id, run_id}) => ({json:{job_id,run_id}}));" } },
+      http("Process claimed research run", "process-research", 720, '={{ JSON.stringify({action:"process_research",job_id:$json.job_id,run_id:$json.run_id}) }}', true, 320),
+      { id: "receipt-research", name: "Verify research result receipt", type: "n8n-nodes-base.code", typeVersion: 2, position: [960, 320], parameters: { jsCode: "const receipt = $input.first().json;\nif (!['completed','already_completed','stale_or_cancelled','in_progress','module_disabled','retry_queued','failed'].includes(receipt.outcome)) throw new Error('Missing research screening receipt');\nreturn [{json:{...receipt, completed:['completed','already_completed'].includes(receipt.outcome)}}];" } },
     ],
     connections: {
-      "Manual test only": { main: [[{ node: "Claim one run", type: "main", index: 0 }]] },
+      "Manual test only": { main: [[{ node: "Claim one run", type: "main", index: 0 }, { node: "Claim one research run", type: "main", index: 0 }]] },
       ...(scheduled ? {
-        "Recovery every 12 hours": { main: [[{ node: "Claim one run", type: "main", index: 0 }]] },
-        "Queue event": { main: [[{ node: "Claim one run", type: "main", index: 0 }]] },
+        "Recovery every 12 hours": { main: [[{ node: "Claim one run", type: "main", index: 0 }, { node: "Claim one research run", type: "main", index: 0 }, { node: "Recover one auto reply", type: "main", index: 0 }]] },
+        "Queue event": { main: [[{ node: "Claim one run", type: "main", index: 0 }, { node: "Claim one research run", type: "main", index: 0 }]] },
         // Drain available work, not just one case per 12 hours. Empty claims emit no items and stop.
         // Execution deadline provides a hard bound; timeout routes to the existing error handler.
-        "Verify result receipt": { main: [[{ node: "Claim one run", type: "main", index: 0 }]] },
+        "Verify result receipt": { main: [[{ node: "Claim one run", type: "main", index: 0 }, { node: "Recover one auto reply", type: "main", index: 0 }]] },
+        "Verify research result receipt": { main: [[{ node: "Claim one research run", type: "main", index: 0 }]] },
       } : {}),
       "Claim one run": { main: [[{ node: "Expand run IDs", type: "main", index: 0 }]] },
       "Expand run IDs": { main: [[{ node: "Process claimed run", type: "main", index: 0 }]] },
       "Process claimed run": { main: [[{ node: "Verify result receipt", type: "main", index: 0 }]] },
+      "Claim one research run": { main: [[{ node: "Expand research run IDs", type: "main", index: 0 }]] },
+      "Expand research run IDs": { main: [[{ node: "Process claimed research run", type: "main", index: 0 }]] },
+      "Process claimed research run": { main: [[{ node: "Verify research result receipt", type: "main", index: 0 }]] },
     },
   };
 }

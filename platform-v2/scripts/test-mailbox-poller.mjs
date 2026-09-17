@@ -1,5 +1,27 @@
 import assert from "node:assert/strict";
-import { parseMailboxMessage, pollOfferPspMailbox } from "../api/_lib/mailbox-poller.mjs";
+import { parseMailboxMessage, pollOfferPspMailbox, resolveMailboxIngestUrl } from "../api/_lib/mailbox-poller.mjs";
+
+assert.equal(
+  resolveMailboxIngestUrl({
+    ingestUrl: "https://canonical.supabase.co/functions/v1/offerpsp-ingest-email",
+    supabaseUrl: "https://canonical.supabase.co",
+  }),
+  "https://canonical.supabase.co/functions/v1/offerpsp-ingest-email",
+);
+assert.throws(
+  () => resolveMailboxIngestUrl({
+    ingestUrl: "https://legacy.supabase.co/functions/v1/offerpsp-ingest-email",
+    supabaseUrl: "https://canonical.supabase.co",
+  }),
+  /does not match the canonical Supabase project/,
+);
+assert.throws(
+  () => resolveMailboxIngestUrl({
+    ingestUrl: "http://canonical.supabase.co/functions/v1/offerpsp-ingest-email",
+    supabaseUrl: "https://canonical.supabase.co",
+  }),
+  /must use HTTPS/,
+);
 
 const source = Buffer.from([
   "From: Partner <partner@example.com>",

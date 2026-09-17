@@ -249,7 +249,10 @@ export function CommunicationsWorkspace() {
 
   useEffect(() => {
     const rawDraftId = searchParams.get("draft");
-    if (!rawDraftId) return;
+    if (!rawDraftId) {
+      if (section !== "compose" && activeDraftId !== null) setActiveDraftId(null);
+      return;
+    }
     const requestedDraftId = Number(rawDraftId);
     if (!Number.isInteger(requestedDraftId) || requestedDraftId <= 0) {
       setMessage({ error: true, text: "Некорректный ID черновика." });
@@ -273,13 +276,12 @@ export function CommunicationsWorkspace() {
     setLeadId(/^[0-9a-f-]{36}$/i.test(requestedDraft.lead_internal_id || "") ? requestedDraft.lead_internal_id || "" : "");
     setMessage({ text: `Черновик #${requestedDraft.id} открыт для проверки.` });
     setSection("compose");
-  }, [activeDraftId, captainsBridge.email_drafts, ready, searchParams]);
+  }, [activeDraftId, captainsBridge.email_drafts, ready, searchParams, section]);
 
   function closeDraft() {
     const next = new URLSearchParams(searchParams);
     next.delete("draft");
     setSearchParams(next, { replace: true });
-    setActiveDraftId(null);
     setTo(""); setSubject(""); setBody(""); setLeadId("");
     setSection("mail");
   }
@@ -306,19 +308,25 @@ export function CommunicationsWorkspace() {
     if (sendingState.error) { setMessage({ error: true, text: `Черновик создан, но отправка остановлена: статус не записан (${sendingState.error.message}).` }); setBusy(false); return; }
     const session = await supabase.auth.getSession();
     try {
-      const response = await fetch("/api/send-email", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.data.session?.access_token || ""}` }, body: JSON.stringify({ to, subject, body, lead_id: leadId || null }) });
+      const response = await fetch("/api/send-email", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.data.session?.access_token || ""}` }, body: JSON.stringify({ to, subject, body, lead_id: leadId || null, draft_id: draftId }) });
       const result = await response.json().catch(() => ({}));
+      if (result.delivery_uncertain === true) {
+        setMessage({ error: true, text: `Статус доставки требует сверки: ${result.error || "письмо не будет отправлено повторно автоматически"}` });
+        await refresh();
+        if (returnToThread) setSection("mail");
+        setBusy(false);
+        return;
+      }
       if (!response.ok || !result.success) throw new Error(result.error || result.message || "Email sender returned an error");
-      const sentState = await supabase.rpc("set_offerpsp_email_draft_status", { p_draft_id: draftId, p_status: "sent" });
-      setMessage(sentState.error
-        ? { error: true, text: `Письмо доставлено на ${to}, но статус в почтовом центре не записан: ${sentState.error.message}` }
-        : { text: `Письмо отправлено на ${to} и записано в почтовом центре.` });
-      if (!sentState.error && activeDraftId !== null) closeDraft();
-      else if (!sentState.error) { setSubject(""); setBody(""); }
+      const deliveryWarning = typeof result.warning === "string" && result.warning ? result.warning : null;
+      setMessage(deliveryWarning
+        ? { error: true, text: `Письмо отправлено на ${to}, но требуется техническая проверка: ${deliveryWarning}` }
+        : { text: `Письмо отправлено на ${to}, записано в почтовом центре и сохранено в IMAP Sent.` });
+      if (activeDraftId !== null) closeDraft();
+      else { setSubject(""); setBody(""); }
     } catch (error) {
-      const failedState = await supabase.rpc("set_offerpsp_email_draft_status", { p_draft_id: draftId, p_status: "failed" });
       const deliveryError = error instanceof Error ? error.message : "Не удалось отправить письмо";
-      setMessage({ error: true, text: failedState.error ? `${deliveryError}. Статус ошибки также не записан: ${failedState.error.message}` : deliveryError });
+      setMessage({ error: true, text: `${deliveryError}. Повторная отправка не выполнялась; проверьте статус черновика перед новой попыткой.` });
     }
     await refresh();
     if (returnToThread) setSection("mail");

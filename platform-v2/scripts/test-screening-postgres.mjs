@@ -58,7 +58,7 @@ try {
   const receipts = await Promise.all([psql(complete), psql(complete)]);
   assert.deepEqual(receipts.map((s) => JSON.parse(s).outcome).sort(), ["already_completed", "completed"]);
   assert.equal(await psql("select count(*) from public.offerpsp_lead_activities where activity_type='pre_compliance_screened'"), "1");
-  assert.equal(await psql("select count(*) from private.offerpsp_compliance_checks"), "8");
+  assert.equal(await psql("select count(*) from private.offerpsp_compliance_checks"), "10");
   console.log("PASS concurrent completion: one receipt/activity and eight checks");
   console.log("VERIFIED isolated PostgreSQL 15 concurrency; production untouched");
 } finally {

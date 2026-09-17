@@ -5,7 +5,7 @@ import { createServer } from "node:http";
 import { initializeScreeningFixture } from "./screening-test-fixture.mjs";
 import { buildScreeningWorkflow } from "./screening-workflow.mjs";
 import { createCompanyScreeningWorker } from "../api/_lib/company-screening-worker.mjs";
-import { processClaimedCompany } from "../api/_lib/company-screening-runner.mjs";
+import { processClaimedCompany, processClaimedResearch } from "../api/_lib/company-screening-runner.mjs";
 
 // Real HTTP + PostgreSQL + public evidence collection. No production secrets or writes.
 // Optional local n8n executes the same generated graph with test-only loopback transport.
@@ -43,13 +43,20 @@ try {
   assert.ok(ready, "PostgreSQL not ready");
   await initializeScreeningFixture({ exec: psql });
   const seed = (id) => psql(`insert into public.offerpsp_leads(lead_id,company,company_url) values ('${id}','Synthetic HTTP Test','https://protocol-s.com/'); insert into private.offerpsp_compliance_cases(lead_id) values ('${id}');`);
+  const seedResearch = () => psql("insert into public.psp_providers(name,website,supported_countries) values ('Synthetic Research PSP','https://protocol-s.com/',array['EU']) returning id");
   const lead = "00000000-0000-4000-8000-000000000011";
   await seed(lead);
   const quote = (value) => `'${String(value).replaceAll("'", "''")}'`;
-  const rpcNames = new Set(["claim_offerpsp_pre_compliance_jobs", "begin_offerpsp_pre_compliance_run", "complete_offerpsp_pre_compliance_run"]);
+  const rpcNames = new Set(["claim_offerpsp_pre_compliance_jobs", "begin_offerpsp_pre_compliance_run", "complete_offerpsp_pre_compliance_run", "claim_offerpsp_research_screening_jobs", "begin_offerpsp_research_screening_run", "complete_offerpsp_research_screening_run", "fail_offerpsp_research_screening_run"]);
   const rpc = async (name, args) => {
     assert.ok(rpcNames.has(name));
-    const values = name.startsWith("claim_") ? "1" : `${quote(args.p_lead_id)}::uuid,${quote(args.p_run_id)}::uuid${name.startsWith("complete_") ? `,${quote(JSON.stringify(args.p_payload))}::jsonb` : ""}`;
+    let values;
+    if (name.startsWith("claim_")) values = "1";
+    else if (name.includes("research_screening")) {
+      values = `${quote(args.p_job_id)}::uuid,${quote(args.p_run_id)}::uuid`;
+      if (name.startsWith("complete_")) values += `,${quote(JSON.stringify(args.p_payload))}::jsonb`;
+      if (name.startsWith("fail_")) values += `,${quote(args.p_error_code)}`;
+    } else values = `${quote(args.p_lead_id)}::uuid,${quote(args.p_run_id)}::uuid${name.startsWith("complete_") ? `,${quote(JSON.stringify(args.p_payload))}::jsonb` : ""}`;
     // Fresh connection for each RPC, with the same server-role claim used by PostgREST.
     return JSON.parse(await psql(`set "request.jwt.claim.role"='service_role'; select public.${name}(${values});`));
   };
@@ -60,6 +67,7 @@ try {
   const handler = createCompanyScreeningWorker({
     env: { OFFERPSP_SCREENING_WORKER_ENABLED: "true", OFFERPSP_SCREENING_WORKER_TOKEN: token }, rpc,
     processJob: (job, options) => { collections++; return processClaimedCompany(job, options); },
+    processResearchJob: (job, options) => { collections++; return processClaimedResearch(job, options); },
   });
   server = createServer(async (request, response) => {
     response.status = (code) => { response.statusCode = code; return response; };
@@ -98,8 +106,17 @@ try {
   assert.equal(replay.body.outcome, "already_completed");
   assert.equal(collections, 1);
   assert.equal(await psql("select count(*) from public.offerpsp_lead_activities where activity_type='pre_compliance_screened'"), "1");
-  assert.equal(await psql("select count(*) from private.offerpsp_compliance_checks"), "8");
+  assert.equal(await psql("select count(*) from private.offerpsp_compliance_checks"), "10");
   console.log("PASS HTTP replay: no second collection, activity or check set");
+  await seedResearch();
+  const researchClaim = await post({ action: "claim_research" });
+  assert.equal(researchClaim.status, 200);
+  assert.deepEqual(Object.keys(researchClaim.body.jobs[0]).sort(), ["job_id", "run_id"]);
+  const researchCompleted = await post({ action: "process_research", ...researchClaim.body.jobs[0] });
+  assert.equal(researchCompleted.body.outcome, "completed");
+  assert.equal(await psql("select count(*) from private.offerpsp_research_screening_jobs where status='completed' and result->>'risk_level'='unknown'"), "1");
+  assert.equal(collections, 2);
+  console.log("PASS real HTTP research registry → saved preliminary evidence; no merchant lead created");
   if (withN8n) {
     const n8n = await docker(["run", "--pull=never", "--rm", "-d", "--tmpfs", "/home/node/.n8n:uid=1000,gid=1000,mode=0700", "--env", "N8N_DIAGNOSTICS_ENABLED=false", "--env", "N8N_VERSION_NOTIFICATIONS_ENABLED=false", "--env", "N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true", "--env", "N8N_RUNNERS_ENABLED=false", "--entrypoint", "node", "--name", `offerpsp-http-n8n-${randomUUID()}`, "n8nio/n8n:latest", "-e", "setInterval(()=>{},10000)"]);
     assert.match(n8n, /^[0-9a-f]{64}$/); containers.push(n8n);
@@ -125,15 +142,17 @@ try {
     await docker(["exec", n8n, "n8n", "import:credentials", "--input=/tmp/test-credential.json"], "", 60000);
     await docker(["exec", n8n, "n8n", "import:workflow", "--input=/tmp/test-workflow.json"], "", 60000);
     await seed("00000000-0000-4000-8000-000000000012");
-    if (scheduled) await seed("00000000-0000-4000-8000-000000000013");
+    await seedResearch();
+    if (scheduled) { await seed("00000000-0000-4000-8000-000000000013"); await seedResearch(); }
     const before = events.length;
     const result = await docker(["exec", n8n, "n8n", "execute", "--id=screeningHttpE2E", "--rawOutput"], "", 90000);
     assert.ok(result.includes('"completed"'), "n8n execution did not return completed receipt");
     assert.ok(events.slice(before).some((event) => event.outcome === "completed"), "n8n never completed the HTTP run");
-    const expected = scheduled ? 3 : 2;
-    assert.equal(collections, expected);
-    assert.equal(await psql("select count(*) from public.offerpsp_lead_activities where activity_type='pre_compliance_screened'"), String(expected));
-    assert.equal(await psql("select count(*) from private.offerpsp_compliance_checks"), String(expected * 8));
+    const expectedEach = scheduled ? 3 : 2;
+    assert.equal(collections, expectedEach * 2);
+    assert.equal(await psql("select count(*) from public.offerpsp_lead_activities where activity_type='pre_compliance_screened'"), String(expectedEach));
+    assert.equal(await psql("select count(*) from private.offerpsp_compliance_checks"), String(expectedEach * 11));
+    assert.equal(await psql("select count(*) from private.offerpsp_research_screening_jobs where status='completed'"), String(expectedEach));
     if (scheduled) assert.deepEqual(events.at(-1).jobs, [], 'Drain must terminate on empty queue');
     console.log("PASS actual n8n graph: credential → claim → process → verified receipt; all queued jobs drained and empty queue stops");
   }

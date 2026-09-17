@@ -96,7 +96,7 @@ test("completion writes real evidence once; replay cannot create a second activi
     assert.equal(row.screening_completed_run_id, job.run_id);
     assert.equal(row.authenticity_score, null);
     assert.equal(row.screening_run_id, null);
-    assert.equal((await db.query("select count(*)::int n from private.offerpsp_compliance_checks")).rows[0].n, 8);
+    assert.equal((await db.query("select count(*)::int n from private.offerpsp_compliance_checks")).rows[0].n, 11);
     assert.equal((await db.query("select count(*)::int n from public.offerpsp_lead_activities")).rows[0].n, 1);
   } finally { await db.close(); }
 });
@@ -177,7 +177,7 @@ test("a persistence error rolls back all evidence and receipt; the same run can 
     assert.equal((await complete(db, job)).outcome, "completed");
   } finally { await db.close(); }
 });
-test("isolated pipeline: claim → public evidence boundary → eight checks → one fenced completion", async () => {
+test("isolated pipeline: claim → public evidence boundary → eleven checks → one fenced completion", async () => {
   const db = await fixture();
   try {
     const id = await add(db);
@@ -196,9 +196,9 @@ test("isolated pipeline: claim → public evidence boundary → eight checks →
     assert.equal(result.outcome, "completed");
     assert.equal(calls.length, 2);
     const checks = (await db.query("select check_key,check_status from private.offerpsp_compliance_checks")).rows;
-    assert.equal(checks.length, 8);
+    assert.equal(checks.length, 11);
     assert.equal(checks.find((check) => check.check_key === "website").check_status, "passed");
-    assert.equal(checks.find((check) => check.check_key === "sanctions_adverse_media").check_status, "unknown");
+    assert.equal(checks.find((check) => check.check_key === "sanctions_screen").check_status, "unknown");
     assert.equal((await db.query("select status from public.offerpsp_leads")).rows[0].status, "new");
   } finally { await db.close(); }
 });
@@ -273,7 +273,7 @@ test("rollback refuses active runs, then restores original RPC privileges withou
     await db.exec(rollback);
     assert.equal((await db.query("select has_function_privilege('service_role','public.record_offerpsp_pre_compliance_screening(uuid,jsonb)','EXECUTE') allowed")).rows[0].allowed, true);
     assert.equal((await db.query("select has_function_privilege('service_role','public.complete_offerpsp_pre_compliance_run(uuid,uuid,jsonb)','EXECUTE') allowed")).rows[0].allowed, false);
-    assert.equal((await db.query("select count(*)::int n from private.offerpsp_compliance_checks")).rows[0].n, 8);
+    assert.equal((await db.query("select count(*)::int n from private.offerpsp_compliance_checks")).rows[0].n, 11);
     assert.equal((await db.query("select count(*)::int n from public.offerpsp_lead_activities")).rows[0].n, 1);
     await add(db);
     assert.deepEqual(await claim(db), []); // Original post-selection/manual-only claim policy.

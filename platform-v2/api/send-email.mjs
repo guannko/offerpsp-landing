@@ -1,7 +1,19 @@
+import { deliverClaimedEmail } from "./_lib/email-delivery.mjs";
+
 const json = (response, status, body) => {
   response.statusCode = status;
   response.setHeader("Content-Type", "application/json; charset=utf-8");
   response.end(JSON.stringify(body));
+};
+
+const rpc = async ({ supabaseUrl, supabaseKey, authorization, name, body }) => {
+  const response = await fetch(`${supabaseUrl}/rest/v1/rpc/${name}`, {
+    method: "POST",
+    headers: { apikey: supabaseKey, Authorization: authorization, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const result = await response.json().catch(() => ({}));
+  return { ok: response.ok, status: response.status, result };
 };
 
 export default async function handler(request, response) {
@@ -29,15 +41,49 @@ export default async function handler(request, response) {
   if (!emailSettings?.enabled) return json(response, 409, { success: false, error: "Email channel is disabled in integration settings" });
 
   const body = typeof request.body === "string" ? JSON.parse(request.body || "{}") : (request.body || {});
-  const to = String(body.to || "").trim().toLowerCase();
-  const subject = String(body.subject || "").trim();
-  const emailBody = String(body.body || "").trim();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to) || !subject || !emailBody) return json(response, 400, { success: false, error: "Valid recipient, subject and body are required" });
-  if (subject.length > 240 || emailBody.length > 50000) return json(response, 400, { success: false, error: "Email is too large" });
+  const draftId = Number(body.draft_id);
+  if (!Number.isSafeInteger(draftId) || draftId <= 0) return json(response, 400, { success: false, error: "Valid draft ID is required" });
+
+  const claim = await rpc({
+    supabaseUrl,
+    supabaseKey,
+    authorization,
+    name: "begin_offerpsp_email_delivery",
+    body: { p_draft_id: draftId },
+  });
+  if (!claim.ok || claim.result?.success === false) {
+    return json(response, claim.status >= 400 ? claim.status : 409, { success: false, error: claim.result?.message || claim.result?.error || "Email delivery claim failed" });
+  }
+  if (claim.result?.already_sent === true) {
+    return json(response, 200, {
+      success: true,
+      already_sent: true,
+      to: null,
+      message_id: claim.result.external_message_id || null,
+      warning: null,
+    });
+  }
+  if (claim.result?.send_allowed !== true) {
+    return json(response, 409, {
+      success: false,
+      delivery_uncertain: true,
+      error: "This email delivery is already in progress or requires reconciliation. It was not sent again.",
+      state: claim.result?.state || "claimed",
+    });
+  }
 
   const configuration = emailSettings.configuration || {};
-  const delivery = await fetch(senderUrl, { method: "POST", headers: { "Content-Type": "application/json", "x-captain-secret": webhookSecret }, body: JSON.stringify({ to, subject, body: emailBody, from_name: configuration.from_name || "OfferPSP", from_email: configuration.from_email || "bizdev@offerpsp.com", reply_to: configuration.reply_to || "bizdev@offerpsp.com", lead_id: body.lead_id || null }) });
-  const result = await delivery.json().catch(() => ({}));
-  if (!delivery.ok || result.success === false) return json(response, 502, { success: false, error: result.message || "Email sender failed" });
-  return json(response, 200, { success: true, to });
+  const delivered = await deliverClaimedEmail({
+    claim: claim.result,
+    draftId,
+    configuration,
+    callRpc: async (name, body) => {
+      const result = await rpc({ supabaseUrl, supabaseKey, authorization, name, body });
+      if (!result.ok) throw new Error(result.result?.message || result.result?.error || `Delivery journal returned HTTP ${result.status}`);
+      return result.result;
+    },
+    completeRpc: "complete_offerpsp_email_delivery",
+    uncertainRpc: "mark_offerpsp_email_delivery_uncertain",
+  });
+  return json(response, delivered.status, delivered.body);
 }

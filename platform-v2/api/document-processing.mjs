@@ -27,6 +27,7 @@ async function pollMailboxHandler(request, response) {
       imapPassword: process.env.OFFERPSP_IMAP_PASSWORD,
       ingestUrl: process.env.OFFERPSP_MAIL_INGEST_URL,
       ingestToken: process.env.OFFERPSP_MAIL_INGEST_TOKEN,
+      supabaseUrl: process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
       batchLimit: process.env.OFFERPSP_MAILBOX_BATCH_LIMIT || "10",
       runtimeBudgetMs: "45000",
     });
