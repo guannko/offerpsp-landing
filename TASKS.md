@@ -1,9 +1,261 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-09-16
+Updated: 2026-09-17
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
+
+## New-merchant Telegram autopilot
+
+### Company-audit evidence contract — production 2026-09-17
+
+- `VERIFIED`: the research-company job/UI package is released to production. Additive migrations
+  `20260917172639` and `20260917172647` created the private queue, fenced RPCs and signed event
+  dispatch. Existing casino/PSP rows were not backfilled.
+- The report now separates observed facts, company claims, system inferences, calculations,
+  unavailable sources and checks that were not performed. Search snippets and company-controlled
+  pages cannot become independent verification.
+- A 100% complete submitted questionnaire remains `manual_review_required` when official identity,
+  licence, authority, sanctions or adverse-media evidence is absent. The UI shows critical coverage
+  and unperformed checks before the detailed evidence and no longer labels preliminary collection
+  simply as `Проверено`.
+- The durable evidence standard is recorded in `docs/COMPANY-AUDIT-EVIDENCE-CONTRACT.md`. A truly
+  complete audit still requires national company registries, regulator/licence, broader
+  sanctions/PEP and adverse-media adapters.
+- `PARTIAL` coverage: production `public-evidence-v5` includes fixed-origin GLEIF, MGA, CGA, UKGC,
+  Gibraltar, Isle of Man GSC, Kahnawà:ke, Swedish Gambling Authority and iGaming Ontario adapters,
+  plus exact-name screening against the official UN Security Council Consolidated List. GLEIF
+  verifies only a fully corroborated active record where both legal name and registration number
+  match. A sanctions hit always creates manual identity resolution; no hit is not clearance.
+  All adapters are server-only and enabled in production. MGA and CGA
+  require their official dynamic certificate URL; UKGC joins the official business, licence and
+  domain files and verifies only an active remote licence with all three identifiers matching.
+  UKGC `White Label` domain records are accepted only when the same account also has the exact
+  legal name and an active remote licence; that relationship remains explicit in the evidence.
+  Isle of Man, Sweden and Ontario require exact active/current legal-name and domain matches.
+  Ontario is labelled as the combined AGCO registration and iGaming Ontario operating agreement,
+  not as a licence number. Gibraltar remains candidate-only because its main register does not
+  bind the holder to a player-facing domain or publish a licence number. Kahnawà:ke remains
+  candidate-only while the official permit-holder page is explicitly dated September 2023.
+  Legacy research `license` text is parsed only for supported licence numbers and official dynamic
+  certificate URLs, so old free-text rows can enter the same strict verification path without
+  being treated as verified merely because they contain a claim.
+- Live proof: GLEIF returned a verified identifier match for a known fixture; the current
+  UN XML returned no exact match for the benign fixture and returned `QDe.004` for the known-listed
+  control. Official regulator controls returned MGA `Suspended` (not verified), CGA `Active`
+  (verified) and UKGC `Active Remote` (verified). A second production smoke completed five new
+  regulator controls once each: Isle of Man, Sweden and Ontario were narrowly verified;
+  Gibraltar and Kahnawà:ke were retained as review candidates with their source limitations.
+  Production smoke also verified a current CGA
+  certificate as `verified_identifier_match` and correctly treated a stale CGA certificate as
+  `not_found`, without outreach, matching or merchant-account creation.
+- Local evidence: 83/83 company-screening tests, 19/19 research worker tests plus isolated
+  PostgreSQL concurrency/lifecycle checks, lint and production build pass. Vercel deployment
+  `dpl_J5MMU2eY9Tc5jiCJjLENM5UmhQAt` from release commit `c5b3994` is READY; active n8n worker version
+  `947f3ca3-caad-4df2-a3c2-11a4dbd825cb` has 12 nodes and validates with zero errors. Four smoke
+  jobs from the initial release and five new regulator jobs completed once; zero new regulator
+  jobs remain pending/running, and all synthetic source rows were archived. The Linux prebuilt
+  release started all 11 isolated Node 24 function bundles and passed the 109.8 MiB storage budget.
+
+### Automatic first response — production verified 2026-09-17, 17:49 Cyprus
+
+- `VERIFIED`: a new public intake is screened by the event-driven worker and, only after the
+  fenced completion receipt exists, receives one immediate server-side first response. No Mac,
+  Thunderbird UI or 12-hour recovery sweep is required for the normal path.
+- The only unattended message shapes are a receipt acknowledgement or an exact checklist of
+  canonical missing facts. High/critical risk, red flags, duplicate identity, invalid consent or
+  recipient, stale screening, prior outbound mail, unknown checklist labels and disabled
+  integrations all fail closed into staff review.
+- Production proof: screening workflow `MzGIqCRwEUEp2K8C`, execution `557002`, lead
+  `09f951d7-97f7-4b32-8f0f-e3d44d686bff`, draft `17`, one outbound journal row and Message-ID
+  `<65f7260b-44e5-5b8c-80f2-5521362da61b@offerpsp.com>`. The response completed in about nine
+  seconds and the internal response task moved to `done`.
+- Mailbox proof: IMAP archive status `archived`; poller execution `557007` scanned one INBOX
+  message and recorded it as the same already-known Message-ID (`duplicates: 1`, `failed: 0`).
+  Captain's Bridge therefore keeps one canonical message instead of a second inbound copy.
+- Delivery is transactional and replay-safe: SMTP/provider acceptance, Message-ID, IMAP Sent copy,
+  draft, action history and final receipt share one delivery attempt ID. Ambiguous delivery is
+  marked `uncertain` and is never blindly resent.
+- SQL alignment migrations `offerpsp_intake_auto_reply_alignment`,
+  `offerpsp_intake_auto_reply_trigger_visibility` and
+  `offerpsp_intake_auto_reply_completed_receipt` are applied. The latter waits for the completed
+  screening run/result, not the intermediate `manual_review` update.
+- Local verification: 6/6 message-policy tests and the PostgreSQL contract passed; bridge tests,
+  58/58 screening tests, 22/22 intake tests, lint and build passed. The complete migration chain
+  applies all five new mail migrations and then reaches the pre-existing unrelated grant-boundary
+  assertion.
+- No second Vercel deployment was created for the SQL alignment, avoiding another large function
+  bundle. The grouped production deployment remains
+  `dpl_51JApfE9LSqZyMhsNgLWE25X3MtC` (`READY`, production alias active).
+- All controlled synthetic leads from this verification are closed and archived; the successful
+  mail journal remains as audit evidence.
+
+### Keyboard, chat reopening and evidence display — 2026-09-16, 19:55 UTC
+
+- Readability follow-up: `a2dbd86` / `dpl_AL8a3qypLGa3A5N1TsKuJDtv9MzU` READY.
+  Chronological large-type journal replaces the card grid; attention items link to
+  exact merchant tabs or expand local evidence. 31 tests passed; Borys accepted the
+  chronological display and clickable attention actions.
+
+- `VERIFIED`: six Telegram buttons now visible; fixed the n8n fixedCollection root
+  expression bug. Real clicks `548374`/`548375` created one draft and replayed it;
+  Borys confirmed the result message. No client email sent.
+- `VERIFIED`: `/system-actions` deployed with staff-only evidence RPC; real UI shows
+  steps, reasons, checks and history. Reopening assistant returns to latest message.
+- Release `b0176ae`, Vercel `dpl_7HMxiZ2LN63JxrtzC11XD8yaHTFe` READY; 26 tests,
+  lint and build passed. Test lead archived, test task/draft cancelled, history kept.
+- Scope and detailed evidence: `docs/INTAKE-OBSERVABILITY-2026-09-16.md`.
+
+### Operator task and Telegram card — 2026-09-16, 18:58 UTC
+
+- `VERIFIED`: new intakes create one `intake_response_v1` task in the existing task system,
+  with an editable internal 24-hour response target. No historical backfill; human due dates
+  and completed tasks survive retries. Lifecycle cancellation reuses existing logic.
+- `VERIFIED`: private Telegram staff binding and sender guard deployed to the shared AIBot.
+  New opaque-token callbacks prepare drafts/queue screening/inspect matching/postpone a task;
+  they do not send client messages. Atomic receipts prevent repeated mutations.
+- `VERIFIED`: asynchronous card worker `lpKqreuYkSkkyZgQ`, actual execution `547732`,
+  Telegram message `971`; replay `547752` stopped before sending. No Vercel redeployment.
+- 20 new local tests, 34 including screening regressions, real concurrent PostgreSQL tests,
+  production rolled-back assertions and lint passed. Private tables deny client access.
+- Legacy direct/generic email-send buttons are blocked pending a proper immutable one-time
+  send confirmation; staff web email sending remains unchanged.
+- `VERIFIED`: Borys completed the visual/double-click check; the same saved draft was returned on
+  replay and no client message was sent by the button. Synthetic lead
+  `34568765-2c28-42ad-9e1a-ab294f5ff132` was subsequently closed and archived with history kept.
+- Next: timed reminders and card refresh, other intake sources, stronger duplicate detection
+  and research/matching orchestration. A deadline change is not yet an automatic reminder send.
+- Evidence, limits and rollback: `docs/INTAKE-OPERATOR-RELEASE-2026-09-16.md`.
+
+### Event-driven screening — 2026-09-16, 18:24 UTC
+
+- `VERIFIED`: replaced minute polling with database pending-case events and a 12-hour
+  recovery sweep. Active worker `MzGIqCRwEUEp2K8C`, version
+  `6e337e5c-ce0b-4164-b9e5-4fe296c681d9`; event ingress `mrTCGINWgtcZXZW0`.
+- Applies to inserts and explicit requeue transitions from every intake surface. Duplicate
+  pending updates, worker claims/results, archived/terminal leads and human decisions do not
+  produce loops. The worker drains eligible queued work until empty, with a 900-second ceiling.
+- Delivery proof: pg_net request 1 HTTP 200 → integrated execution 547354 success;
+  post-cutover execution 547375 success. Missing/expired JWT rejected (401/403), valid accepted.
+- Signing key stays in Vault/n8n credentials; only 60-second JWT tickets enter pg_net. Hosted
+  pg_net ACL revocations were ineffective (platform-owned objects), not falsely reported fixed.
+- 53 local tests passed; isolated real n8n + PostgreSQL processed two pending jobs and stopped
+  on empty queue. No new production merchant, outbound email or Telegram test message.
+- Small cleanup blocked: n8n credential delete returned `DELETE method not allowed` for unused
+  intermediate Header Auth credential `BnoY1T18zPA9fbD7`; no active ingress references it.
+- Vercel was NOT redeployed for this workflow/SQL change. The old minute-cadence UI help text
+  still needs correction in the next grouped app release; do not create a deployment for text alone.
+- Next product stage remains one operator task/SLA per intake and authenticated, replay-safe
+  Telegram actions. Those features are NOT completed by this screening release.
+- Evidence/rollback: `docs/SCREENING-EVENT-RELEASE-2026-09-16.md`.
+
+Status: `VERIFIED` for intake screening, operator task/card, action display and bounded automatic
+first response. Matching, provider review, controlled introduction and later commercial stages
+remain separate work; this status does not claim that the entire OfferPSP lifecycle is automated.
+
+### Production screening cutover — 2026-09-16
+
+This section supersedes the local-only release statuses in the historical passes below.
+
+- `VERIFIED`: release `08e5b18f240d9da19d0bf534805b48ecb72c8f5a`, Vercel deployment
+  `dpl_GYiAfo5DB9piRxRDECmH48RuFgDh`, promoted to the staff production address.
+- Queue SQL applied to `iceopurxqzqmwtcmwfzl`; server migration version `20260916164115`,
+  name `offerpsp_intake_screening_queue`. Source file retains timestamp `20260916141150`;
+  reconcile this mapping before any future CLI migration push (do not apply twice).
+- Old workflow `wiEFFDaHd3uaJoJi` is inactive and retained for rollback. New workflow
+  `MzGIqCRwEUEp2K8C` is active, version `023c667a-eb06-4172-831e-fb6a2e102535`, one claim
+  per minute, 120-second execution ceiling, bound to existing error workflow `mFbs3T3vi2Qo2ZUY`.
+- Dedicated worker credential installed; server-only token, ID-only requests. Anonymous and
+  authenticated client roles cannot invoke the worker RPCs; old unfenced completion is revoked.
+- Actual scheduled execution `546622`: one synthetic intake → live HTTPS website/RDAP → eight
+  persisted checks → exactly one completion activity → manual review. Website HTTP 200,
+  RDAP age 466 days. Production replay returned `already_completed`, counts remained 8/1.
+- Authenticated UI verified through compliance queue → dossier: sources, missing fields,
+  unknown risk and no invented authenticity/commercial scores. No real merchant re-screened,
+  no email, Telegram message, client offer or provider disclosure sent by this test.
+- Synthetic lead `aef2b8a5-b0c8-4688-a5f8-126ec0f25e50` closed and archived after verification.
+  Evidence retained for audit; it is not a customer. Later scheduled empty runs also succeeded.
+- Packaging issue caught before alias promotion: macOS prebuilt native packages cannot run on
+  Linux. Rebuilt in Linux; excluded unused musl packages. All 11 isolated function imports and
+  GoRules/PDF tests passed; final storage 106.2 MiB. Failed unpromoted deployment
+  `dpl_5u68cBDtexmEWTfMLZok9wfYtJtv` removed; previous working deployment retained.
+- Operator OAuth, n8n/email/Telegram gateways, GoRules, search and live analytics responded after
+  release. These health checks do not prove outbound message delivery. Error workflow binding
+  is verified, but no intentional production failure/Telegram alert was generated.
+- Remaining scope: research-registry audit jobs, actionable Telegram callbacks and replay
+  authorization, one task/SLA per intake, mailbox freshness. Full autopilot is NOT complete.
+
+### Core-cycle repair pass — 2026-09-16
+
+- Priority confirmed by Borys: company audits, dossier, internal matching, tasks, operator bot
+  and reliable action history. Defer automatic Telegram groups, Zoom and subagent commissions.
+- Live evidence: the screening claim RPC waits for client selection or manual request;
+  the active worker runs every 15 minutes and performs only three shallow checks.
+- Local candidate: background claim accepts new active non-terminal leads, respects the module
+  switch, preserves staff-reviewed cases, and sends structured dossier fields to the worker.
+  Migration `20260916141150_offerpsp_intake_screening_queue.sql` is NOT applied.
+- Local evidence preparation replaces invented authenticity/commercial scores with null,
+  separates website claims from verified identity/licence, records gaps and explicit unknowns.
+  It is not a full regulator/sanctions/adverse-media investigation.
+- Local UI: poll pending/running screening, correct the five-minute promise, and render unknown
+  risk neutrally rather than green. Build/lint and 47 screening/handler/isolated-Postgres tests pass.
+- Second local pass: public-IP/DNS-pinned evidence fetch, redirect/body/deadline bounds; actual
+  read-only HTTP 200 smoke verified. Claimed-run UUID/lease, snapshot fencing, idempotent completion,
+  three-attempt ceiling and duplicate-click reuse implemented in the unapplied migration.
+  The isolated collection-to-persistence scenario passes; concurrent production-like DB and UI
+  tests are still pending. No production changes in this second pass.
+- n8n staging attempt unexpectedly republished immediately. Rolled back; active graph matches
+  the prior graph exactly, now version `06ba8709-bb04-4352-8fc4-f5ee3221d370`.
+  Execution `545574` claimed zero jobs. No new worker remains published.
+- Production release is pending authenticated integration of the safe fetcher/runner and E2E. Do not apply
+  the queue migration on its own. New research-registry cards need a separate explicit job
+  linkage; saving a card currently only saves fields and history.
+  Candidate migration revokes the old unfenced completion RPC: pause/drain and replace the old
+  worker together with the API/DB release, not one component at a time.
+- Third local pass: dedicated-token worker integrated into existing consolidated API, disabled
+  by default; ID-only inputs, DB-loaded snapshot, atomic dispatch/replay receipts. Local handler-to-
+  SQL E2E passes. Three concurrent-worker scenarios pass on isolated PostgreSQL 15; test container
+  removed. Inactive n8n graph builder validated (0 errors, 3 intentional fail-closed warnings),
+  not installed/published. Production-definition rollback SQL tested without deleting evidence.
+  Remaining release work: clean commit/build/storage check, isolated deployed E2E, dedicated
+  credential binding, pause/drain old worker and coordinated cutover. No production change yet.
+- Follow-up security work: callback authorization/replay guard, dedicated OfferPSP task runner,
+  mailbox freshness. Antarex bulk replacement still requires Borys's exact preview approval.
+- Fourth pass: real loopback HTTP → protected handler → isolated PostgreSQL 15 → public website
+  collection → persisted result and replay passed. Unauthorized and extra-input requests do not
+  consume a job. A real isolated n8n 1.117.2 execution also passed: two synthetic leads total,
+  16 checks and two history entries. HTTP node pinned to compatible 4.3 after execution exposed
+  unsupported 4.5 in the local image. Temporary containers/DBs/credentials removed. This harness
+  uses a psql RPC adapter, not deployed PostgREST/Vercel; production cutover remains pending.
+- Release preflight: Vercel build passes on Node 24.19.0, 11 functions / 103.7 MiB, within budget.
+  Verified current production deployment and unchanged n8n active version; rollback RPC definitions
+  and grants still match live DB. Scoped mailparser/xmldom/js-yaml/postcss/nanoid updates reduce
+  npm audit from 8 high findings to 0 known findings. Mailbox/document/parser/regression tests and
+  lint pass. No migration, deployment, credential provisioning or live workflow change performed.
+- Scoped release candidate saved in local commit `8caf58980f3509a81d85208308971939777b3ca3`
+  (not pushed/deployed). Repeated real isolated HTTP/PostgreSQL/n8n execution on Node 24 passes
+  after dependency updates; temporary containers removed. Existing unrelated handoff/signature
+  work and this mixed status journal remain outside that commit.
+
+- [x] Run a lightweight post-intake review for every valid non-spam lead: duplicate detection,
+  company/site identity, real vertical, site availability and dossier completeness.
+- [x] Enrich only evidence-backed dossier fields and preserve sources; never infer licences,
+  volumes, payment needs or approval status.
+- [x] Produce an internal quality/risk summary, missing-information checklist and proposed next
+  action without exposing provider identities or current offers to the merchant.
+- [ ] Create an operator task and response SLA, then schedule reminders until the lead is reviewed
+  or moved to a terminal state.
+- [x] Replace the passive Telegram notice with an actionable lead card and deterministic inline
+  callbacks backed by the same protected APIs/RPCs as Captain's Bridge: open merchant, run deeper
+  screening, inspect internal matching, prepare a missing-data request, prepare a reply and set a
+  follow-up reminder.
+- [x] Send the bounded receipt/missing-information first response automatically after independent
+  policy gates. Continue requiring staff control for provider disclosure, bespoke/commercial
+  messages, merchant rejection, archive and every action outside that narrow contract.
+- [x] Journal every bot action, callback result and failure with the lead ID and operator identity;
+  keep retries idempotent so duplicate Telegram callbacks cannot repeat an external action.
+- [ ] Add validation plus controlled end-to-end tests for a valid lead, duplicate, spam, partial
+  dossier, callback retry, failed screening and failed notification.
 
 ## Commercial-page content depth — 2026-09-16
 
