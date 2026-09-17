@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const migration = await readFile(new URL("../../supabase/migrations/20260916141150_offerpsp_intake_screening_queue.sql", import.meta.url), "utf8");
+const cooldownMigration = await readFile(new URL("../../supabase/migrations/20260917201500_offerpsp_screening_rerun_cooldown.sql", import.meta.url), "utf8");
 const researchMigration = await readFile(new URL("../../supabase/migrations/20260916203638_offerpsp_research_screening_jobs.sql", import.meta.url), "utf8");
 const base = await readFile(new URL("../../supabase/migrations/20260806123857_offerpsp_pre_compliance_module.sql", import.meta.url), "utf8");
 const helpers = await readFile(new URL("../../supabase/migrations/20260731_offerpsp_private_supply.sql", import.meta.url), "utf8");
@@ -40,5 +41,6 @@ export async function initializeScreeningFixture(db) {
   await db.exec(definition(base, "create or replace function public.record_offerpsp_pre_compliance_screening", "\n$$;"));
   await db.exec(review.slice(0, review.indexOf("-- Cases already screened")));
   await db.exec(migration);
+  await db.exec(cooldownMigration);
   await db.exec(researchMigration);
 }

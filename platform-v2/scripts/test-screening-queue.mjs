@@ -147,13 +147,33 @@ test("staff repeat-click queues once, does not reset a running lease, and cannot
     await assert.rejects(queue(), /staff access required/);
     await db.exec("select set_config('test.staff','true',false)");
     assert.equal((await queue()).outcome, "queued");
-    assert.equal((await queue()).outcome, "already_queued");
+    assert.equal((await queue()).outcome, "already_running");
     const [job] = await claim(db);
-    assert.equal((await queue()).outcome, "already_queued");
+    assert.equal((await queue()).outcome, "already_running");
     assert.equal((await db.query("select screening_run_id from private.offerpsp_compliance_cases")).rows[0].screening_run_id, job.run_id);
     await db.query("update private.offerpsp_compliance_cases set case_status='hold' where lead_id=$1", [id]);
     await assert.rejects(queue(), /explicitly reopened/);
     assert.equal((await db.query("select count(*)::int n from public.offerpsp_lead_activities")).rows[0].n, 1);
+  } finally { await db.close(); }
+});
+test("a completed screening cannot be started again during the five-minute cooldown", async () => {
+  const db = await fixture();
+  try {
+    const id = await add(db, { caseStatus: "manual_review" });
+    await db.exec("select set_config('test.staff','true',false)");
+    const queue = async () => (await db.query("select public.queue_offerpsp_pre_compliance_screening($1) result", [id])).rows[0].result;
+    assert.equal((await queue()).outcome, "queued");
+    const [job] = await claim(db);
+    assert.equal((await complete(db, job)).outcome, "completed");
+
+    const cooldown = await queue();
+    assert.equal(cooldown.outcome, "cooldown");
+    assert.ok(cooldown.retry_after_seconds > 0 && cooldown.retry_after_seconds <= 300);
+    assert.equal((await db.query("select count(*)::int n from public.offerpsp_lead_activities where activity_type='pre_compliance_requested'")).rows[0].n, 1);
+
+    await db.query("update private.offerpsp_compliance_cases set last_screened_at=now()-interval '6 minutes' where lead_id=$1", [id]);
+    assert.equal((await queue()).outcome, "queued");
+    assert.equal((await db.query("select count(*)::int n from public.offerpsp_lead_activities where activity_type='pre_compliance_requested'")).rows[0].n, 2);
   } finally { await db.close(); }
 });
 test("old unfenced worker endpoint is revoked, new endpoint denies clients, modern JWT claims work", async () => {

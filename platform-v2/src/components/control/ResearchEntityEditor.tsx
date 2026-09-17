@@ -240,7 +240,7 @@ export default function ResearchEntityEditor({ entityType, record, onClose, onSa
     setBusy(true); setMessage(null);
     const result = await supabase.rpc("queue_offerpsp_research_screening", { p_entity_type: entityType, p_entity_id: record.id });
     if (result.error) setMessage({ error: true, text: result.error.message });
-    else { setMessage({ text: "Проверка поставлена в очередь. Клиентам ничего не отправляется." }); await loadWorkspace(); }
+    else { setMessage({ text: "Проверка запущена. Результат появится после завершения; клиентам ничего не отправляется." }); await loadWorkspace(); }
     setBusy(false);
   }
 

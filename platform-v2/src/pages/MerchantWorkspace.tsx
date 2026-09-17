@@ -104,6 +104,15 @@ type ComplianceWorkspace = {
   decisions?: Array<{ id: string; decision: string; classification: string; notes?: string | null; created_at: string }>;
 };
 
+type ScreeningRequestReceipt = {
+  outcome?: "queued" | "already_running" | "cooldown" | string;
+  status?: string;
+  retry_after_at?: string;
+  retry_after_seconds?: number;
+};
+
+const SCREENING_RERUN_COOLDOWN_MS = 5 * 60 * 1000;
+
 type Tab = "overview" | "compliance" | "company" | "profile" | "contacts" | "matching" | "preview" | "deal" | "communications" | "documents" | "tasks" | "activity";
 
 const tabs: Array<{ id: Tab; label: string }> = [
@@ -226,6 +235,7 @@ export default function MerchantWorkspace() {
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [screeningRefreshError, setScreeningRefreshError] = useState(false);
+  const [screeningNow, setScreeningNow] = useState(() => Date.now());
   const entityWorkspace = useEntityWorkspace("merchant", leadId);
 
   const loadWorkspace = useCallback(async () => {
@@ -265,6 +275,28 @@ export default function MerchantWorkspace() {
   }, [searchParams]);
 
   const screeningInProgress = ["pending", "screening"].includes(complianceWorkspace?.case.case_status || "");
+  const lastScreenedAt = Date.parse(complianceWorkspace?.case.last_screened_at || "");
+  const screeningCooldownUntil = Number.isFinite(lastScreenedAt) ? lastScreenedAt + SCREENING_RERUN_COOLDOWN_MS : 0;
+  const screeningCooldownRemaining = Math.max(0, screeningCooldownUntil - screeningNow);
+  const screeningCooldownMinutes = Math.max(1, Math.ceil(screeningCooldownRemaining / 60_000));
+  const screeningActionDisabled = busy === "compliance-screening" || screeningInProgress || screeningCooldownRemaining > 0;
+  const screeningButtonLabel = busy === "compliance-screening" || screeningInProgress
+    ? "Проверка выполняется…"
+    : screeningCooldownRemaining > 0
+      ? `Повтор через ${screeningCooldownMinutes} мин`
+      : "Запустить автопроверку";
+
+  useEffect(() => {
+    setScreeningNow(Date.now());
+    if (screeningCooldownUntil <= Date.now()) return;
+    const timer = window.setInterval(() => {
+      const now = Date.now();
+      setScreeningNow(now);
+      if (now >= screeningCooldownUntil) window.clearInterval(timer);
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [screeningCooldownUntil]);
+
   useEffect(() => {
     setScreeningRefreshError(false);
     if (!leadId || !screeningInProgress) return;
@@ -285,7 +317,7 @@ export default function MerchantWorkspace() {
         inFlight = false;
       }
     };
-    const timer = window.setInterval(() => { void poll(); }, 15_000);
+    const timer = window.setInterval(() => { void poll(); }, 2_000);
     return () => { cancelled = true; window.clearInterval(timer); };
   }, [leadId, screeningInProgress]);
 
@@ -491,12 +523,28 @@ export default function MerchantWorkspace() {
   }
 
   async function requestComplianceScreening() {
-    if (!leadId) return;
+    if (!leadId || screeningActionDisabled) return;
     setTab("compliance");
-    await runAction("compliance-screening", async () => {
-      const result = await supabase.rpc("queue_offerpsp_pre_compliance_screening", { p_lead_id: leadId });
-      return { error: result.error };
-    }, "Проверка поставлена в очередь. Обработка запускается событием; страховочная проверка очереди — раз в 12 часов. Результат появится после обработки. Постановка в очередь ещё не означает завершение проверки.");
+    setBusy("compliance-screening");
+    setMessage(null);
+    const result = await supabase.rpc("queue_offerpsp_pre_compliance_screening", { p_lead_id: leadId });
+    if (result.error) {
+      setMessage({ tone: "error", text: result.error.message });
+      setBusy(null);
+      return;
+    }
+    const receipt = result.data && typeof result.data === "object" ? result.data as ScreeningRequestReceipt : null;
+    await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]);
+    setScreeningNow(Date.now());
+    if (receipt?.outcome === "cooldown") {
+      const seconds = Math.max(1, Number(receipt.retry_after_seconds) || 1);
+      setMessage({ tone: "success", text: `Проверка недавно завершена. Повторный запуск будет доступен через ${Math.max(1, Math.ceil(seconds / 60))} мин.` });
+    } else if (receipt?.outcome === "already_running") {
+      setMessage({ tone: "success", text: "Проверка уже выполняется. Новое событие не создано; результат обновится автоматически." });
+    } else {
+      setMessage({ tone: "success", text: "Проверка запущена. Статус и результат обновятся автоматически; повторный запуск будет доступен через 5 минут после завершения." });
+    }
+    setBusy(null);
   }
 
   if (bridgeLoading) return <SkeletonPage />;
@@ -513,7 +561,7 @@ export default function MerchantWorkspace() {
       <div className="flex flex-wrap gap-2">
         <button onClick={() => void Promise.all([loadWorkspace(), entityWorkspace.refresh()])} disabled={loading || entityWorkspace.loading || Boolean(busy)} className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-brand-300 hover:text-brand-500 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300">Обновить</button>
         <VisibilityToggleButton hidden={lead.record_state === "archived"} busy={busy === "merchant-visibility"} onToggle={changeMerchantVisibility}/>
-        <button onClick={() => void requestComplianceScreening()} disabled={busy === "compliance-screening"} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50">{busy === "compliance-screening" ? "Запускаю…" : "Запустить автопроверку"}</button>
+        <button onClick={() => void requestComplianceScreening()} disabled={screeningActionDisabled} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50">{screeningButtonLabel}</button>
       </div>
     </div>
 
@@ -526,7 +574,7 @@ export default function MerchantWorkspace() {
     </div>
 
     {loading ? <SkeletonPage/> : tab === "compliance"
-        ? <CompliancePanel workspace={complianceWorkspace} busy={busy} onRun={() => void requestComplianceScreening()} onSave={(input) => void saveComplianceDecision(input)}/>
+        ? <CompliancePanel workspace={complianceWorkspace} busy={busy} runDisabled={screeningActionDisabled} runLabel={screeningButtonLabel} onRun={() => void requestComplianceScreening()} onSave={(input) => void saveComplianceDecision(input)}/>
       : tab === "company" || tab === "overview"
         ? <div className="space-y-6"><Overview lead={lead} matches={matches} shortlist={latest}/><MerchantCompanyWorkspace leadId={lead.lead_id} onChanged={async () => { await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]); }}/></div>
       : tab === "profile"
@@ -561,9 +609,11 @@ export default function MerchantWorkspace() {
   </>;
 }
 
-function CompliancePanel({ workspace, busy, onRun, onSave }: {
+function CompliancePanel({ workspace, busy, runDisabled, runLabel, onRun, onSave }: {
   workspace: ComplianceWorkspace | null;
   busy: string | null;
+  runDisabled: boolean;
+  runLabel: string;
   onRun: () => void;
   onSave: (input: { decision: string; classification: string; notes: string; summary: string; missing: string[] }) => void;
 }) {
@@ -602,7 +652,7 @@ function CompliancePanel({ workspace, busy, onRun, onSave }: {
       </Panel>
       <Panel>
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Проверки и доказательства</h3>
-        <div className="mt-4 space-y-3">{workspace.checks?.length ? workspace.checks.map((check) => <div key={check.id} className="rounded-xl border border-gray-200 p-4 dark:border-gray-800"><div className="flex items-start justify-between gap-3"><div><strong className="text-sm text-gray-900 dark:text-white">{check.title}</strong><p className="mt-1 text-sm text-gray-500">{check.detail || check.check_key}</p>{check.source_url && <a href={check.source_url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-semibold text-brand-500">Открыть источник ↗</a>}</div><StatusPill status={check.check_status}/></div></div>) : <div className="rounded-xl border border-dashed border-gray-200 p-6 text-center dark:border-gray-800"><h4 className="font-semibold text-gray-900 dark:text-white">Нет результатов автопроверки</h4><p className="mx-auto mt-2 max-w-xl text-sm text-gray-500">Проверка собирает доступные факты о сайте, домене и почте. Обработка запускается событием; страховочная проверка очереди — раз в 12 часов. Лицензия, санкции и репутация не считаются подтверждёнными без отдельных источников и ручной проверки.</p><button onClick={onRun} disabled={busy === "compliance-screening"} className="mt-4 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy === "compliance-screening" ? "Ставлю в очередь…" : "Запустить автопроверку"}</button></div>}</div>
+        <div className="mt-4 space-y-3">{workspace.checks?.length ? workspace.checks.map((check) => <div key={check.id} className="rounded-xl border border-gray-200 p-4 dark:border-gray-800"><div className="flex items-start justify-between gap-3"><div><strong className="text-sm text-gray-900 dark:text-white">{check.title}</strong><p className="mt-1 text-sm text-gray-500">{check.detail || check.check_key}</p>{check.source_url && <a href={check.source_url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-semibold text-brand-500">Открыть источник ↗</a>}</div><StatusPill status={check.check_status}/></div></div>) : <div className="rounded-xl border border-dashed border-gray-200 p-6 text-center dark:border-gray-800"><h4 className="font-semibold text-gray-900 dark:text-white">Нет результатов автопроверки</h4><p className="mx-auto mt-2 max-w-xl text-sm text-gray-500">После запуска система сразу собирает доступные факты о сайте, домене и официальных источниках. Если событие потеряется из-за временного сбоя, его подхватит страховочный запуск. Лицензия, санкции и репутация не считаются подтверждёнными без отдельных источников и ручной проверки.</p><button onClick={onRun} disabled={runDisabled} className="mt-4 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{runLabel}</button></div>}</div>
       </Panel>
       {!!workspace.decisions?.length && <Panel><h3 className="text-lg font-semibold text-gray-900 dark:text-white">История решений</h3><div className="mt-4 divide-y divide-gray-100 dark:divide-gray-800">{workspace.decisions.map((decision) => <div key={decision.id} className="py-3"><div className="flex items-center justify-between gap-3"><StatusPill status={decision.decision}/><span className="text-xs text-gray-400">{new Date(decision.created_at).toLocaleString("ru-RU")}</span></div><p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{decision.notes || `Классификация: ${decision.classification}`}</p></div>)}</div></Panel>}
     </div>
