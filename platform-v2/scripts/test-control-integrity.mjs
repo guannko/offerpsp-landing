@@ -20,8 +20,8 @@ const [captain, merchant, integrations, platform, modules, ui, context, seoGeo] 
 assert.match(captain, /Вернуть в непрочитанные/);
 assert.match(captain, /p_mark_read: markRead/);
 assert.match(captain, /p_mark_read: null/);
-assert.match(captain, /Письмо доставлено[^\n]+статус в почтовом центре не записан/);
-assert.match(merchant, /email доставлен[^\n]+статус в почтовом центре не записан/);
+assert.match(captain, /Письмо отправлено[^\n]+требуется техническая проверка/);
+assert.match(merchant, /email доставлен[^\n]+требуется техническая проверка/);
 assert.match(captain, /update_offerpsp_email_draft/);
 assert.match(captain, /Редактируется существующая запись — новый черновик создан не будет/);
 assert.match(captain, /activeDraft\?"Отправить этот черновик":"Отправить письмо"/);
