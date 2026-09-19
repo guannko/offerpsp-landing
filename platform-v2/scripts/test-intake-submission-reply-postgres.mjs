@@ -9,6 +9,9 @@ const submissionB = "30000000-0000-4000-8000-000000000002";
 const submissionReview = "30000000-0000-4000-8000-000000000003";
 const submissionBlocked = "30000000-0000-4000-8000-000000000004";
 const migration = await readFile(new URL("../../supabase/migrations/20260919143000_offerpsp_submission_auto_reply.sql", import.meta.url), "utf8");
+const observabilityMarker = "create or replace function public.get_offerpsp_intake_observability";
+const replyMigration = migration.slice(0, migration.indexOf(observabilityMarker));
+assert.ok(replyMigration.length > 0 && replyMigration.length < migration.length);
 const rows = async (sql, args = []) => (await db.query(sql, args)).rows;
 
 try {
@@ -74,7 +77,7 @@ try {
     select set_config('request.jwt.claim.role','service_role',false);
     select set_config('request.jwt.claims','{"role":"service_role"}',false);
   `);
-  await db.exec(migration);
+  await db.exec(replyMigration);
 
   const insertSubmission = async (id, email, disposition = "merged", source = "offerpsp.com") => db.query(`
     insert into private.offerpsp_intake_submissions(

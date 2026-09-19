@@ -13,6 +13,10 @@ export function buildIntakeSubmissionReplyDispatch({endpoint,credential}) {
       options:{timeout:45000,redirect:{redirect:{followRedirects:false}}}},
     credentials:{httpHeaderAuth:credential}};
 }
+export function buildFreshIntakeGate() {
+  return {id:'offerpsp-fresh-intake-gate',name:'Continue only fresh intake',type:'n8n-nodes-base.code',typeVersion:2,
+    position:[1050,80],parameters:{jsCode:"const item=$input.first();\nreturn item.json.replayed===true?[]:$input.all();"}};
+}
 export function renderCompanyIntakeNotification(saved,original) {
   const result=saved&&typeof saved==='object'&&!Array.isArray(saved)?saved:{};
   const lead={...(original||{}),...result};

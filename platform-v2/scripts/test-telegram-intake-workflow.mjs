@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import vm from 'node:vm';
-import {renderIntakeCard,renderCompanyIntakeNotification,companyIntakeNotificationCode,COMPANY_INTAKE_RPC_URL,COMPANY_INTAKE_RPC_BODY,acceptTelegramUpdate,buildTelegramGuardNodes,buildIntakeNotificationNodes,buildIntakeSubmissionReplyDispatch,guardConnections} from './telegram-intake-workflow.mjs';
+import {renderIntakeCard,renderCompanyIntakeNotification,companyIntakeNotificationCode,COMPANY_INTAKE_RPC_URL,COMPANY_INTAKE_RPC_BODY,acceptTelegramUpdate,buildTelegramGuardNodes,buildIntakeNotificationNodes,buildIntakeSubmissionReplyDispatch,buildFreshIntakeGate,guardConnections} from './telegram-intake-workflow.mjs';
 const id='10000000-0000-4000-8000-000000000001';
 const credentials={databaseCredential:{id:'test-db',name:'Isolated DB'},telegramCredential:{id:'test-tg',name:'Isolated Telegram'}};
 const update=data=>({callback_query:{id:'callback',from:{id:123,is_bot:false},message:{chat:{id:123,type:'private'}},data}});
@@ -87,6 +87,15 @@ test('submission acknowledgement dispatch sends only the opaque submission id to
   assert.equal(node.onError,'continueRegularOutput');
   assert.equal(node.retryOnFail,false);
   assert.throws(()=>buildIntakeSubmissionReplyDispatch({endpoint:'http://unsafe.test/?module=company-screening-worker',credential:{id:'x',name:'x'}}),/Protected/);
+});
+test('exact intake replay stops every downstream notification and acknowledgement side effect',()=>{
+  const gate=buildFreshIntakeGate();
+  const run=(json)=>vm.runInNewContext(`(function(){${gate.parameters.jsCode}})()`,{
+    $input:{first:()=>({json}),all:()=>[{json}]},
+  });
+  assert.deepEqual(Array.from(run({replayed:true})),[]);
+  assert.equal(run({replayed:false})[0].json.replayed,false);
+  assert.equal(run({lead_id:id})[0].json.lead_id,id);
 });
 test('malformed flags stay explicit and structured titles remain HTML-safe',()=>{
   const c=renderIntakeCard({...sample,screening:{red_flags:{unexpected:true},yellow_flags:[{title:'<b>Unsafe</b>'},{key:'unknown'},null],missing:[]}});
