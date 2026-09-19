@@ -4,7 +4,7 @@ export type IntakeSnapshot = {
   screening: null | { status: string; updated_at: string; started_at: string | null; finished_at: string | null; attempts: number; lease_until: string | null; missing: string[] | null; summary: string | null; risk: string | null; checks: {key: string; title: string; status: string; detail: string | null}[] };
   task: null | { status: string; due_at: string; created_at: string };
   telegram: null | { status: string; started_at: string; finished_at: string | null };
-  auto_reply: null | { status: string; reply_class: string | null; reason_code: string | null; draft_id: number | null; created_at: string; updated_at: string; claimed_at: string | null; sent_at: string | null };
+  auto_reply: null | { submission_id?: string | null; status: string; reply_class: string | null; reason_code: string | null; draft_id: number | null; created_at: string; updated_at: string; claimed_at: string | null; sent_at: string | null };
   actions: { action: string; at: string; outcome: string; message: string | null; error_code: string | null }[];
   match_count: number;
   events: { id: string; created_at: string; actor_type: string; activity_type: string; title: string; detail: string | null; outcome: string | null }[];

@@ -97,8 +97,13 @@ test('follow-up changes existing task once; double click keeps the same due date
 test('client roles cannot call RPCs or read tokens/bindings; service body checks also fail closed',()=>withDb(async db=>{
   for(const role of ['anon','authenticated']) {
     const [p]=await rows(db,`select has_function_privilege($1,'public.execute_offerpsp_telegram_intake_action(uuid,text,text)','execute') f,
-      has_table_privilege($1,'private.offerpsp_telegram_intake_actions','select') t`,[role]);
-    assert.deepEqual(p,{f:false,t:false});
+      has_function_privilege($1,'public.claim_offerpsp_telegram_intake_card_v2(uuid,text)','execute') c,
+      has_function_privilege($1,'public.complete_offerpsp_telegram_intake_card_refresh(uuid,text,text,uuid,text)','execute') r,
+      has_function_privilege($1,'public.claim_offerpsp_stuck_intake_alert()','execute') a,
+      has_function_privilege($1,'public.complete_offerpsp_stuck_intake_alert(uuid,uuid,text)','execute') x,
+      has_table_privilege($1,'private.offerpsp_telegram_intake_actions','select') t,
+      has_table_privilege($1,'private.offerpsp_stuck_intake_alerts','select') s`,[role]);
+    assert.deepEqual(p,{f:false,c:false,r:false,a:false,x:false,t:false,s:false});
   }
   await db.exec("select set_config('request.jwt.claims','{\"role\":\"authenticated\"}',false)");
   await assert.rejects(db.query('select public.authorize_offerpsp_telegram_operator($1,$1)',[chat]),/Transport service/);
@@ -111,6 +116,57 @@ test('notification retry never sends another card; receipt records once and reje
   assert.equal((await complete('321')).outcome,'recorded');assert.equal((await complete('321')).outcome,'already_recorded');
   await assert.rejects(complete('322'),/Conflicting delivery/);
   assert.equal((await rows(db,"select * from public.offerpsp_lead_activities where activity_type='telegram_intake_card_sent'")).length,1);
+}));
+test('live card sends once, edits the same Telegram message and skips unchanged state',()=>withDb(async db=>{
+  const id=await addIntake(db);
+  const claim=async(reason='test')=>(await rows(db,'select public.claim_offerpsp_telegram_intake_card_v2($1,$2) r',[id,reason]))[0].r;
+  const initial=await claim('initial');
+  assert.equal(initial.delivery_mode,'send');assert.match(initial.content_hash,/^[0-9a-f]{32}$/);
+  assert.equal((await claim('duplicate')).outcome,'already_reserved');
+  const sent=(await rows(db,'select public.complete_offerpsp_telegram_intake_card_v2($1,$2,$3,$4) r',[id,chat,'321',initial.content_hash]))[0].r;
+  assert.deepEqual(sent,{outcome:'recorded',revision:1});
+  assert.equal((await claim('unchanged')).outcome,'unchanged');
+
+  await db.query("insert into private.offerpsp_compliance_cases(lead_id,case_status,completeness_score,risk_level,last_screened_at,missing_information) values($1,'manual_review',55,'unknown',now(),array['Website'])",[id]);
+  await db.query("insert into private.offerpsp_intake_auto_replies(lead_id,source_hash,reply_class,status,reason_code) values($1,'fixture','acknowledgement','review_required','missing_verified_domain')",[id]);
+  const refresh=await claim('screening_completed');
+  assert.equal(refresh.delivery_mode,'edit');assert.equal(refresh.message_id,'321');assert.equal(refresh.revision,2);
+  assert.match(refresh.refresh_token,/^[0-9a-f-]{36}$/);assert.equal(refresh.auto_reply.status,'review_required');
+  const duplicate=await claim('same_state');assert.equal(duplicate.outcome,'already_reserved');
+  const completed=(await rows(db,'select public.complete_offerpsp_telegram_intake_card_refresh($1,$2,$3,$4,$5) r',[id,chat,'321',refresh.refresh_token,refresh.content_hash]))[0].r;
+  assert.deepEqual(completed,{outcome:'recorded',revision:2});
+  assert.equal((await claim('unchanged_after_edit')).outcome,'unchanged');
+  const [delivery]=await rows(db,'select status,message_id,revision,refresh_status from private.offerpsp_telegram_intake_deliveries where lead_id=$1',[id]);
+  assert.deepEqual(delivery,{status:'sent',message_id:'321',revision:2,refresh_status:'idle'});
+  assert.equal((await rows(db,"select * from public.offerpsp_lead_activities where activity_type='telegram_intake_card_sent'")).length,1);
+  assert.equal((await rows(db,"select * from public.offerpsp_lead_activities where activity_type='telegram_intake_card_refreshed'")).length,1);
+}));
+test('stuck-intake alerts claim once, record a durable receipt and resolve when work clears',()=>withDb(async db=>{
+  const id=await addIntake(db);
+  await db.query("update public.offerpsp_tasks set due_at=now()-interval '2 hours' where lead_id=$1",[id]);
+  const claim=async()=> (await rows(db,'select public.claim_offerpsp_stuck_intake_alert() r'))[0].r;
+  const first=await claim();
+  assert.equal(first.outcome,'ready');assert.equal(first.alert_kind,'task_overdue');assert.equal(first.lead_id,id);
+  assert.equal((await claim()).outcome,'empty');
+  const complete=(await rows(db,'select public.complete_offerpsp_stuck_intake_alert($1,$2,$3) r',[id,first.claim_token,'777']))[0].r;
+  assert.deepEqual(complete,{outcome:'recorded',lead_id:id,notification_count:1});
+  assert.equal((await claim()).outcome,'empty');
+  assert.equal((await rows(db,"select * from public.offerpsp_lead_activities where activity_type='stuck_intake_alert_sent'")).length,1);
+
+  await db.query("update public.offerpsp_tasks set status='done',completed_at=now() where lead_id=$1",[id]);
+  assert.equal((await claim()).outcome,'empty');
+  assert.equal((await rows(db,'select status from private.offerpsp_stuck_intake_alerts where lead_id=$1',[id]))[0].status,'resolved');
+}));
+test('used button receipt survives refresh while the updated card receives a fresh token',()=>withDb(async db=>{
+  const id=await addIntake(db),before=await card(db,id),oldToken=before.actions.reply_draft;
+  const first=await click(db,oldToken);assert.equal(first.outcome,'completed');
+  const after=await card(db,id),newToken=after.actions.reply_draft;
+  assert.notEqual(newToken,oldToken);
+  const replay=await click(db,oldToken);assert.equal(replay.replayed,true);assert.equal(replay.draft_id,first.draft_id);
+  const fresh=await click(db,newToken);assert.equal(fresh.outcome,'completed');
+  assert.equal((await rows(db,'select * from public.email_drafts')).length,2);
+  assert.equal((await rows(db,"select * from private.offerpsp_telegram_intake_actions where lead_id=$1 and action='reply_draft'",[id])).length,2);
+  assert.equal((await rows(db,"select * from private.offerpsp_telegram_intake_actions where lead_id=$1 and action='reply_draft' and active",[id])).length,0);
 }));
 test('failed draft operation rolls back partial state, restores identity and stores a redacted failure receipt',()=>withDb(async db=>{
   const id=await addIntake(db),c=await card(db,id);

@@ -21,6 +21,9 @@ export function intakeClock(value?: string | null) {
   };
 }
 const events: Record<string, [string, string]> = {
+  company_intake_created: ['Создана карточка компании', 'Первая заявка компании сохранена как основная карточка.'],
+  company_contact_intake_merged: ['Добавлен новый менеджер компании', 'Контакт надёжно сопоставлен с существующей карточкой; отдельная карточка не создана.'],
+  company_contact_intake_review_required: ['Нужно подтвердить связь с компанией', 'Новая карточка не создана и доступ контакту не выдан до ручной проверки.'],
   lead_submitted: ['Заявка поступила', 'Данные заявителя сохранены в рубке.'],
   intake_task_created: ['Создана задача первого ответа', 'Система добавила задачу для сотрудника.'],
   lead_intelligence_available: ['Заявка доступна для проверки', 'Это подготовка к проверке, а не её результат.'],
@@ -34,6 +37,10 @@ const events: Record<string, [string, string]> = {
   intake_auto_reply_claimed: ['Начата отправка первого ответа', 'Письмо зарезервировано от повторной отправки.'],
   intake_auto_reply_sent: ['Первый ответ отправлен', 'Доставка записана в канонический почтовый журнал.'],
   intake_auto_reply_uncertain: ['Доставка первого ответа не подтверждена', 'Повторная отправка заблокирована до сверки.'],
+  intake_submission_reply_review_required: ['Автоответ новому контакту остановлен', 'Защитная проверка требует участия сотрудника.'],
+  intake_submission_reply_claimed: ['Начата отправка ответа новому контакту', 'Письмо зарезервировано от повторной отправки.'],
+  intake_submission_reply_sent: ['Новый контакт получил подтверждение', 'Доставка записана отдельно для этого обращения.'],
+  intake_submission_reply_uncertain: ['Доставка ответа новому контакту не подтверждена', 'Повторная отправка заблокирована до сверки.'],
 };
 export function intakeEventText(event: IntakeSnapshot['events'][number]) {
   const known = events[event.activity_type];

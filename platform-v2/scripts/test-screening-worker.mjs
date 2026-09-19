@@ -2,13 +2,14 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createCompanyScreeningWorker } from "../api/_lib/company-screening-worker.mjs";
 import platformModules from "../api/platform-modules.mjs";
-import { buildScreeningWorkflow, buildScreeningEventIngress } from "./screening-workflow.mjs";
+import { buildScreeningWorkflow, buildScreeningEventIngress, renderStuckIntakeAlert } from "./screening-workflow.mjs";
 
 const token = "test-only-not-a-credential".repeat(2);
 const env = { OFFERPSP_SCREENING_WORKER_ENABLED: "true", OFFERPSP_SCREENING_WORKER_TOKEN: token };
 const lead_id = "00000000-0000-4000-8000-000000000001";
 const run_id = "00000000-0000-4000-8000-000000000002";
 const job_id = "00000000-0000-4000-8000-000000000003";
+const submission_id = "00000000-0000-4000-8000-000000000004";
 const noAutoReply = async () => ({ outcome: "review_required", reason_code: "test_fixture" });
 export async function invoke(worker, body, overrides = {}) {
   const response = { headers: {}, setHeader(k, v) { this.headers[k] = v; }, status(s) { this.code = s; return this; }, json(b) { this.body = b; return this; } };
@@ -120,6 +121,30 @@ test("recovery processes one durable queued reply and an empty queue is a no-op"
   assert.deepEqual((await invoke(worker, { action: "recover_auto_reply" })).body, { lead_id, outcome: "sent" });
   assert.deepEqual((await invoke(worker, { action: "recover_auto_reply" })).body, { outcome: "empty" });
 });
+test("submission reply is processed immediately by opaque submission id", async () => {
+  const worker = createCompanyScreeningWorker({
+    env,
+    rpc: async () => { throw new Error("Submission processor owns its RPCs"); },
+    processSubmissionReply: async (id) => ({ outcome: "sent", submission_id: id, lead_id }),
+  });
+  const result = await invoke(worker, { action: "process_submission_reply", submission_id });
+  assert.equal(result.code, 200);
+  assert.deepEqual(result.body, { outcome: "sent", submission_id, lead_id });
+});
+test("12-hour recovery claims one submission reply without blind retry", async () => {
+  let pending = true;
+  const worker = createCompanyScreeningWorker({
+    env,
+    rpc: async (name) => {
+      assert.equal(name, "claim_offerpsp_pending_intake_submission_reply");
+      if (pending) { pending = false; return { outcome: "claimed", submission_id, lead_id }; }
+      return { outcome: "empty" };
+    },
+    processSubmissionReply: async (id) => ({ outcome: "sent", submission_id: id, lead_id }),
+  });
+  assert.deepEqual((await invoke(worker, { action: "recover_submission_reply" })).body, { submission_id, lead_id, outcome: "sent" });
+  assert.deepEqual((await invoke(worker, { action: "recover_submission_reply" })).body, { outcome: "empty" });
+});
 test("unknown receipts, identity mismatches and RPC errors fail closed without disclosing details", async () => {
   for (const rpc of [async () => ({ outcome: "success" }), async () => ({ outcome: "acquired", job: { lead_id: run_id, run_id } }), async () => { throw new Error("secret/private details"); }]) {
     const result = await invoke(createCompanyScreeningWorker({ env, rpc }), { action: "process", lead_id, run_id });
@@ -171,6 +196,7 @@ test("event worker drains available work, recovers every 12 hours and routes fai
   assert.equal(workflow.settings.errorWorkflow, "verified-error-handler");
   assert.equal(workflow.nodes.find((n) => n.id === "manual").disabled, true);
   assert.deepEqual(workflow.nodes.find((n) => n.id === "schedule").parameters.rule.interval[0], { field: "hours", hoursInterval: 12 });
+  assert.equal(workflow.nodes.find((n) => n.id === "recover-submission-reply").parameters.jsonBody, '{"action":"recover_submission_reply"}');
   assert.equal(workflow.nodes.find((n) => n.id === "event").type, "n8n-nodes-base.executeWorkflowTrigger");
   assert.equal(workflow.connections["Verify result receipt"].main[0][0].node, "Claim one run");
   assert.equal(workflow.connections["Verify research result receipt"].main[0][0].node, "Claim one research run");
@@ -178,6 +204,58 @@ test("event worker drains available work, recovers every 12 hours and routes fai
   const verify = new Function("$input", workflow.nodes.find((n) => n.id === "receipt").parameters.jsCode);
   for (const outcome of ["in_progress", "module_disabled"]) assert.throws(() => verify({ first: () => ({ json: { outcome } }) }), /not completed/);
   assert.equal(verify({ first: () => ({ json: { outcome: "completed" } }) })[0].json.completed, true);
+});
+
+test("completed screening and recovered first reply refresh the same operator card", () => {
+  const workflow = buildScreeningWorkflow({
+    endpoint: "https://staff.test/api/platform-modules?module=company-screening-worker",
+    credential: { id: "offline-fixture", name: "Test" },
+    scheduled: true,
+    errorWorkflow: "verified-error-handler",
+    operatorCardWorkerId: "operator-card-worker",
+  });
+  const refresh = workflow.nodes.find((node) => node.id === "refresh-card");
+  assert.equal(refresh.parameters.workflowId.value, "operator-card-worker");
+  assert.deepEqual(refresh.parameters.workflowInputs.value, { lead_id: "={{ $json.lead_id }}", reason: "screening_completed" });
+  assert.equal(refresh.parameters.options.waitForSubWorkflow, false);
+  assert.equal(workflow.connections["Verify result receipt"].main[0].at(-1).node, "Refresh operator card");
+  assert.equal(workflow.connections["Recover one auto reply"].main[0][0].node, "Filter recovered card");
+  assert.equal(workflow.connections["Filter recovered card"].main[0][0].node, "Refresh recovered operator card");
+  assert.equal(workflow.connections["Recover one submission reply"].main[0][0].node, "Filter recovered submission card");
+  assert.equal(workflow.connections["Filter recovered submission card"].main[0][0].node, "Refresh recovered submission card");
+  const filter = new Function("$input", workflow.nodes.find((node) => node.id === "filter-recovered-card").parameters.jsCode);
+  assert.deepEqual(filter({ first: () => ({ json: { outcome: "empty" } }) }), []);
+  assert.deepEqual(filter({ first: () => ({ json: { lead_id } }) }), [{ json: { lead_id } }]);
+});
+
+test("12-hour recovery sends bounded reminders only for claimed stuck intakes", () => {
+  const workflow = buildScreeningWorkflow({
+    endpoint: "https://staff.test/api/platform-modules?module=company-screening-worker",
+    credential: { id: "offline-fixture", name: "Test" },
+    scheduled: true,
+    errorWorkflow: "verified-error-handler",
+    databaseCredential: { id: "database-fixture", name: "Database" },
+    telegramCredential: { id: "telegram-fixture", name: "Telegram" },
+  });
+  assert.equal(workflow.connections["Recovery every 12 hours"].main[0].at(-1).node, "Claim stuck intake alert");
+  assert.equal(workflow.connections["Record stuck intake alert"].main[0][0].node, "Claim stuck intake alert");
+  assert.equal(workflow.nodes.find((node) => node.id === "claim-stuck-alert").parameters.url.endsWith("/claim_offerpsp_stuck_intake_alert"), true);
+  assert.equal(workflow.nodes.find((node) => node.id === "send-stuck-alert").parameters.operation, "sendMessage");
+  assert.equal(workflow.nodes.find((node) => node.id === "record-stuck-alert").parameters.url.endsWith("/complete_offerpsp_stuck_intake_alert"), true);
+
+  assert.equal(renderStuckIntakeAlert({ outcome: "empty" }), null);
+  const rendered = renderStuckIntakeAlert({
+    outcome: "ready", lead_id, claim_token: run_id, chat_id: "123", company: "A & <B>",
+    alert_kind: "operator_review", reason_code: "source_not_allowlisted", lead_status: "qualifying",
+    detected_at: "2026-09-19T06:00:00Z", notification_count: 1, merchant_url: `https://staff.test/merchants/${lead_id}`,
+  });
+  assert.match(rendered.text, /требует внимания/);
+  assert.match(rendered.text, /A &amp; &lt;B&gt;/);
+  assert.match(rendered.text, /источник заявки требует ручной проверки/);
+  assert.doesNotMatch(rendered.text, /source_not_allowlisted/);
+  assert.match(rendered.text, /Статус заявки: квалификация/);
+  assert.match(rendered.text, /Повторное напоминание: 2/);
+  assert.throws(() => renderStuckIntakeAlert({ outcome: "ready", lead_id: "bad", claim_token: run_id, chat_id: "123" }), /identity/);
 });
 
 test("event ingress authenticates, never persists headers and passes only a fixed wake-up", () => {

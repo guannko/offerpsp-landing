@@ -127,3 +127,55 @@ export async function processIntakeAutoReply(leadId, { call = rpc, deliver = del
     sent_archive_status: delivered.body.sent_archive?.archived ? (delivered.body.sent_archive.duplicate ? "duplicate" : "archived") : "failed",
   };
 }
+
+export async function processIntakeSubmissionReply(submissionId, { call = rpc, deliver = deliverClaimedEmail, env = process.env } = {}) {
+  const candidate = await call("prepare_offerpsp_intake_submission_reply", { p_submission_id: submissionId });
+  if (candidate?.outcome !== "ready") return candidate || { outcome: "review_required", reason_code: "candidate_unavailable" };
+
+  const message = buildIntakeAutoReply(candidate);
+  const validation = validateIntakeAutoReply(candidate, message);
+  if (!validation.allowed) {
+    return call("block_offerpsp_intake_submission_reply", {
+      p_submission_id: submissionId,
+      p_source_hash: candidate.source_hash,
+      p_reason_code: validation.reason,
+    });
+  }
+
+  const claim = await call("claim_offerpsp_intake_submission_reply", {
+    p_submission_id: submissionId,
+    p_source_hash: candidate.source_hash,
+    p_reply_class: candidate.reply_class,
+    p_subject: validation.subject,
+    p_body: validation.body,
+  });
+  if (claim?.outcome !== "claimed") return claim || { outcome: "review_required", reason_code: "claim_unavailable" };
+
+  const delivered = await deliver({
+    claim,
+    draftId: Number(claim.draft_id),
+    configuration: claim.email_configuration || {},
+    env,
+    callRpc: call,
+    completeRpc: "complete_offerpsp_intake_submission_reply",
+    uncertainRpc: "mark_offerpsp_intake_submission_reply_uncertain",
+  });
+  if (delivered.body?.success !== true) {
+    return {
+      outcome: delivered.body?.delivery_uncertain ? "uncertain" : "failed",
+      submission_id: submissionId,
+      lead_id: claim.lead_id || candidate.lead_id || null,
+      reason_code: "delivery_failed",
+    };
+  }
+  return {
+    outcome: delivered.body.journal_recorded ? "sent" : "uncertain",
+    submission_id: submissionId,
+    lead_id: claim.lead_id || candidate.lead_id || null,
+    draft_id: Number(claim.draft_id),
+    message_id: delivered.body.message_id || null,
+    sent_archive_status: delivered.body.sent_archive?.archived
+      ? (delivered.body.sent_archive.duplicate ? "duplicate" : "archived")
+      : "failed",
+  };
+}

@@ -21,7 +21,7 @@
     "test:research-screening": "node --test scripts/test-research-screening.mjs scripts/test-screening-worker.mjs && node scripts/test-research-screening-postgres.mjs",
     "test:screening-concurrency": "node scripts/test-screening-postgres.mjs",
     "test:intake-autopilot": "node --test scripts/test-intake-actions.mjs scripts/test-telegram-intake-workflow.mjs",
-    "test:intake-auto-reply": "node --test scripts/test-intake-auto-reply.mjs && node scripts/test-intake-auto-reply-postgres.mjs",
+    "test:intake-auto-reply": "node --test scripts/test-intake-auto-reply.mjs && node scripts/test-intake-auto-reply-postgres.mjs && node scripts/test-intake-submission-reply-postgres.mjs",
     "test:intake-concurrency": "node scripts/test-intake-actions-postgres.mjs",
     "test:screening-http": "node scripts/test-screening-http.mjs",
     "test:screening-n8n": "node scripts/test-screening-http.mjs --n8n",

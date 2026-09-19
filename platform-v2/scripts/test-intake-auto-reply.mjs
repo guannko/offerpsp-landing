@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildIntakeAutoReply, processIntakeAutoReply, validateIntakeAutoReply } from "../api/_lib/intake-auto-reply.mjs";
+import { buildIntakeAutoReply, processIntakeAutoReply, processIntakeSubmissionReply, validateIntakeAutoReply } from "../api/_lib/intake-auto-reply.mjs";
 
 const ready = {
   outcome: "ready",
@@ -81,4 +81,55 @@ test("processor never claims or delivers a gate failure or already-sent reply", 
     assert.deepEqual(actual, result);
     assert.equal(delivered, false);
   }
+});
+
+test("submission processor sends one acknowledgement through submission-scoped RPCs", async () => {
+  const submissionId = "20000000-0000-4000-8000-000000000001";
+  const leadId = "30000000-0000-4000-8000-000000000001";
+  const candidate = {
+    ...ready,
+    submission_id: submissionId,
+    lead_id: leadId,
+    reply_class: "acknowledgement",
+    missing_information: [],
+  };
+  const calls = [];
+  const call = async (name, body) => {
+    calls.push({ name, body });
+    if (name === "prepare_offerpsp_intake_submission_reply") return candidate;
+    if (name === "claim_offerpsp_intake_submission_reply") return {
+      outcome: "claimed", submission_id: submissionId, lead_id: leadId,
+      draft_id: 51, attempt_id: "11111111-1111-4111-8111-111111111111",
+      to_email: ready.to_email, subject: body.p_subject, body: body.p_body,
+      lead_internal_id: leadId, email_configuration: ready.email_configuration,
+    };
+    if (name === "complete_offerpsp_intake_submission_reply") return { success: true, outcome: "sent" };
+    throw new Error(`Unexpected RPC ${name}`);
+  };
+  const deliver = async (input) => {
+    assert.equal(input.draftId, 51);
+    assert.equal(input.completeRpc, "complete_offerpsp_intake_submission_reply");
+    assert.equal(input.uncertainRpc, "mark_offerpsp_intake_submission_reply_uncertain");
+    await input.callRpc(input.completeRpc, { p_draft_id: 51 });
+    return { body: { success: true, journal_recorded: true, message_id: "<submission@example.test>", sent_archive: { archived: true, duplicate: false } } };
+  };
+  const result = await processIntakeSubmissionReply(submissionId, { call, deliver });
+  assert.equal(result.outcome, "sent");
+  assert.equal(result.submission_id, submissionId);
+  assert.equal(result.lead_id, leadId);
+  assert.deepEqual(calls.map((item) => item.name), [
+    "prepare_offerpsp_intake_submission_reply",
+    "claim_offerpsp_intake_submission_reply",
+    "complete_offerpsp_intake_submission_reply",
+  ]);
+});
+
+test("submission replay never creates a second delivery", async () => {
+  let delivered = false;
+  const result = await processIntakeSubmissionReply("20000000-0000-4000-8000-000000000001", {
+    call: async () => ({ outcome: "already_sent", draft_id: 51 }),
+    deliver: async () => { delivered = true; },
+  });
+  assert.equal(result.outcome, "already_sent");
+  assert.equal(delivered, false);
 });

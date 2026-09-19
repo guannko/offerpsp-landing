@@ -24,6 +24,12 @@ export async function initializeIntakeFixture(db) {
     create table private.offerpsp_integration_settings(integration_key text primary key,enabled boolean,configuration jsonb);
     create table private.offerpsp_route_matches(id uuid primary key default gen_random_uuid(),lead_id uuid,provider_id uuid,pricing_snapshot jsonb);
     create table private.offerpsp_offer_update_queue(lead_id uuid,status text,updated_at timestamptz,notes text);
+    create table private.offerpsp_intake_auto_replies(
+      lead_id uuid primary key references public.offerpsp_leads(lead_id) on delete cascade,
+      source_hash text,reply_class text,status text,reason_code text,draft_id bigint,
+      delivery_attempt_id uuid,created_at timestamptz default now(),updated_at timestamptz default now(),
+      claimed_at timestamptz,sent_at timestamptz,metadata jsonb default '{}'::jsonb
+    );
     create table public.email_drafts(id bigint generated always as identity,chat_id text not null,lead_internal_id text,to_email text,subject text,body text,status text);
     insert into auth.users values('${owner}'),('${other}');
     insert into public.offerpsp_staff_members(user_id,role) values('${owner}','owner'),('${other}','operator');
@@ -40,6 +46,8 @@ export async function initializeIntakeFixture(db) {
   await db.exec(await load('20260916185027_offerpsp_intake_operator_tasks.sql'));
   await db.exec(await load('20260916185028_offerpsp_telegram_intake_actions.sql'));
   await db.exec(await load('20260916190145_offerpsp_intake_terminal_guards.sql'));
+  await db.exec(await load('20260919090000_offerpsp_operator_live_card.sql'));
+  await db.exec(await load('20260919093000_offerpsp_stuck_intake_alerts.sql'));
 }
 export async function addIntake(db,{status='new',state='active',assignedTo=null}={}) {
   return (await db.query(`insert into public.offerpsp_leads(lead_id,company,name,work_email,company_url,status,record_state,assigned_to)

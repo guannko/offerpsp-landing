@@ -315,6 +315,13 @@ async function applyMigrations() {
     "20260917153500_offerpsp_intake_auto_reply_alignment.sql",
     "20260917155000_offerpsp_intake_auto_reply_trigger_visibility.sql",
     "20260917160500_offerpsp_intake_auto_reply_completed_receipt.sql",
+    "20260917201500_offerpsp_screening_rerun_cooldown.sql",
+    "20260919090000_offerpsp_operator_live_card.sql",
+    "20260919093000_offerpsp_stuck_intake_alerts.sql",
+    "20260919101500_offerpsp_company_intake_dedup.sql",
+    "20260919102500_offerpsp_intake_dedup_indexes.sql",
+    "20260919103500_offerpsp_intake_identity_hardening.sql",
+    "20260919143000_offerpsp_submission_auto_reply.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -541,6 +548,7 @@ async function verifyPreComplianceGrants() {
     has_function_privilege('authenticated', 'public.save_offerpsp_pre_compliance_decision(uuid,text,text,text,text[],text)', 'EXECUTE') as staff_decision,
     has_function_privilege('authenticated', 'public.record_offerpsp_pre_compliance_screening(uuid,jsonb)', 'EXECUTE') as staff_screen,
     has_function_privilege('service_role', 'public.record_offerpsp_pre_compliance_screening(uuid,jsonb)', 'EXECUTE') as service_screen,
+    has_function_privilege('service_role', 'public.complete_offerpsp_pre_compliance_run(uuid,uuid,jsonb)', 'EXECUTE') as service_complete,
     has_function_privilege('service_role', 'public.claim_offerpsp_pre_compliance_jobs(integer)', 'EXECUTE') as service_claim,
     has_function_privilege('authenticated', 'public.claim_offerpsp_pre_compliance_jobs(integer)', 'EXECUTE') as staff_claim,
     has_function_privilege('anon', 'public.get_offerpsp_pre_compliance_registry()', 'EXECUTE') as anon_registry,
@@ -549,8 +557,9 @@ async function verifyPreComplianceGrants() {
   `);
   const grants = result.rows[0];
   if (!grants.staff_entitlements || !grants.staff_registry || !grants.staff_case || !grants.staff_decision
-      || grants.staff_screen || grants.staff_claim || !grants.service_screen || !grants.service_claim || grants.anon_registry || grants.direct_cases || grants.direct_signals) {
-    throw new Error("Pre-compliance grants do not match the paid staff/service RPC boundary");
+      || grants.staff_screen || grants.staff_claim || grants.service_screen || !grants.service_complete || !grants.service_claim
+      || grants.anon_registry || grants.direct_cases || grants.direct_signals) {
+    throw new Error(`Pre-compliance grants do not match the paid staff/service RPC boundary: ${JSON.stringify(grants)}`);
   }
   process.stdout.write("PASS paid pre-compliance entitlement and staff/service isolation\n");
 }
@@ -630,6 +639,151 @@ async function seedUsers() {
       array['IN'], array['INR'], array['UPI', 'P2P'], array['IGAMING'], 'verified'
     )
   `);
+}
+
+async function verifyCompanyIntakeDeduplication() {
+  await query("begin");
+  try {
+    await setRole("service_role");
+    await setUser(STAFF_ID);
+
+    const firstPayload = {
+      name: "Primary Manager",
+      work_email: "primary@dedup-verify.example",
+      company: "Dedup Verify Ltd",
+      company_url: "https://www.dedup-verify.example/request",
+      vertical: "licensed gambling",
+      geos: "EU",
+      methods: "cards",
+      source: "offerpsp.com",
+      consent: true,
+    };
+    const first = (await query(
+      "select public.upsert_offerpsp_lead_intake($1::jsonb) as value",
+      [JSON.stringify(firstPayload)],
+    )).rows[0].value;
+    if (!first.created || first.merged || first.review_required || first.replayed) {
+      throw new Error(`First company intake was not created cleanly: ${JSON.stringify(first)}`);
+    }
+
+    const replay = (await query(
+      "select public.upsert_offerpsp_lead_intake($1::jsonb) as value",
+      [JSON.stringify(firstPayload)],
+    )).rows[0].value;
+    if (!replay.replayed || replay.lead_id !== first.lead_id || replay.submission_id !== first.submission_id) {
+      throw new Error(`Exact intake replay was not suppressed: ${JSON.stringify(replay)}`);
+    }
+
+    const secondPayload = {
+      ...firstPayload,
+      name: "Second Manager",
+      work_email: "second@dedup-verify.example",
+      company_url: "https://dedup-verify.example/another-form",
+      details: "Second manager from the same company",
+    };
+    const second = (await query(
+      "select public.upsert_offerpsp_lead_intake($1::jsonb) as value",
+      [JSON.stringify(secondPayload)],
+    )).rows[0].value;
+    if (!second.merged || second.created || second.review_required
+        || second.lead_id !== first.lead_id || second.match_strategy !== "verified_company_email_domain") {
+      throw new Error(`Second company manager did not merge into the canonical card: ${JSON.stringify(second)}`);
+    }
+
+    const mergedState = (await query(`select
+      (select count(*)::integer from public.offerpsp_leads
+        where private.offerpsp_normalize_company_name(company) = 'dedupverifyltd') as lead_count,
+      (select count(*)::integer from private.offerpsp_intake_submissions
+        where lead_id = $1) as submission_count,
+      (select count(*)::integer from private.offerpsp_merchant_contacts
+        where lead_id = $1 and active) as contact_count,
+      (select count(*)::integer from public.offerpsp_tasks
+        where lead_id = $1 and automation_ref = $2) as review_task_count,
+      (select count(*)::integer from public.offerpsp_lead_activities
+        where lead_id = $1 and activity_type = 'company_contact_intake_merged') as activity_count
+    `, [first.lead_id, `intake_submission:${second.submission_id}`])).rows[0];
+    if (mergedState.lead_count !== 1 || mergedState.submission_count !== 2
+        || mergedState.contact_count !== 2 || mergedState.review_task_count !== 1
+        || mergedState.activity_count !== 1) {
+      throw new Error(`Merged intake did not preserve one card with two contacts: ${JSON.stringify(mergedState)}`);
+    }
+
+    await query("update auth.users set email = 'second@dedup-verify.example' where id = $1", [OTHER_CLIENT_ID]);
+    await setRole("authenticated");
+    await setUser(OTHER_CLIENT_ID);
+    const claimed = await query("select * from public.claim_offerpsp_leads()");
+    if (!claimed.rows.some((row) => row.lead_id === first.lead_id)) {
+      throw new Error("The verified second manager could not claim the existing company card");
+    }
+    const managerAccess = (await query(
+      "select public.can_access_offerpsp_client_lead($1) as value",
+      [first.lead_id],
+    )).rows[0].value;
+    if (!managerAccess) throw new Error("The verified second manager did not receive organization access");
+
+    await setRole("service_role");
+    await setUser(STAFF_ID);
+    const spoofedPayload = {
+      ...firstPayload,
+      name: "Public Mail Contact",
+      work_email: "public-contact@gmail.com",
+      details: "Public mailbox with a copied company name and website",
+    };
+    const spoofed = (await query(
+      "select public.upsert_offerpsp_lead_intake($1::jsonb) as value",
+      [JSON.stringify(spoofedPayload)],
+    )).rows[0].value;
+    if (!spoofed.review_required || spoofed.created || spoofed.merged
+        || spoofed.lead_id !== first.lead_id || spoofed.contact_id !== null
+        || spoofed.match_strategy !== "contact_domain_unverified") {
+      throw new Error(`Public mailbox gained trust from a copied website: ${JSON.stringify(spoofed)}`);
+    }
+    const conflictPayload = {
+      ...firstPayload,
+      name: "Unverified Manager",
+      work_email: "manager@different-company.example",
+      company_url: "https://different-company.example",
+      details: "Same entered company name, conflicting website domain",
+    };
+    const conflict = (await query(
+      "select public.upsert_offerpsp_lead_intake($1::jsonb) as value",
+      [JSON.stringify(conflictPayload)],
+    )).rows[0].value;
+    if (!conflict.review_required || conflict.created || conflict.merged
+        || conflict.lead_id !== first.lead_id || conflict.contact_id !== null
+        || conflict.match_strategy !== "company_domain_conflict") {
+      throw new Error(`Conflicting company identity was not isolated for review: ${JSON.stringify(conflict)}`);
+    }
+    const conflictState = (await query(`select
+      (select count(*)::integer from public.offerpsp_leads
+        where private.offerpsp_normalize_company_name(company) = 'dedupverifyltd') as lead_count,
+      (select count(*)::integer from private.offerpsp_merchant_contacts
+        where lead_id = $1 and lower(email) = 'manager@different-company.example') as contact_count,
+      (select count(*)::integer from public.offerpsp_tasks
+        where lead_id = $1 and automation_ref = $2 and priority = 'high') as review_task_count
+    `, [first.lead_id, `intake_submission:${conflict.submission_id}`])).rows[0];
+    if (conflictState.lead_count !== 1 || conflictState.contact_count !== 0
+        || conflictState.review_task_count !== 1) {
+      throw new Error(`Conflicting identity leaked access or created a duplicate: ${JSON.stringify(conflictState)}`);
+    }
+
+    const privileges = (await query(`select
+      has_table_privilege('anon', 'private.offerpsp_intake_submissions', 'select') as anon_table,
+      has_table_privilege('authenticated', 'private.offerpsp_intake_submissions', 'select') as authenticated_table,
+      has_function_privilege('anon', 'public.upsert_offerpsp_lead_intake(jsonb)', 'execute') as anon_rpc,
+      has_function_privilege('authenticated', 'public.upsert_offerpsp_lead_intake(jsonb)', 'execute') as authenticated_rpc,
+      has_function_privilege('service_role', 'public.upsert_offerpsp_lead_intake(jsonb)', 'execute') as service_rpc
+    `)).rows[0];
+    if (privileges.anon_table || privileges.authenticated_table || privileges.anon_rpc
+        || privileges.authenticated_rpc || !privileges.service_rpc) {
+      throw new Error(`Company intake security boundary is incorrect: ${JSON.stringify(privileges)}`);
+    }
+  } finally {
+    await query("rollback");
+    await setRole("authenticated");
+    await setUser(STAFF_ID);
+  }
+  process.stdout.write("PASS company intake deduplication, replay suppression, corporate-manager access and public-mail isolation\n");
 }
 
 async function verifyProviderPortalBoundary() {
@@ -1064,22 +1218,14 @@ async function verifyPreComplianceGate() {
   );
 
   await setRole("service_role");
-  const prematureClaim = await query("select public.claim_offerpsp_pre_compliance_jobs(10) as value");
-  if (prematureClaim.rows[0].value.some((item) => item.lead_id === leadId)) {
-    throw new Error(`Service worker screened the lead before option selection: ${JSON.stringify(prematureClaim.rows[0].value)}`);
-  }
-
-  await setRole("authenticated");
-  await setUser(STAFF_ID);
-  await query("update public.offerpsp_leads set status = 'option_selected' where lead_id = $1", [leadId]);
-  await setRole("service_role");
   const claimed = await query("select public.claim_offerpsp_pre_compliance_jobs(10) as value");
-  if (!claimed.rows[0].value.some((item) => item.lead_id === leadId && item.target_geos.includes("KR"))) {
-    throw new Error(`Service worker did not claim the selected normalized lead: ${JSON.stringify(claimed.rows[0].value)}`);
+  const claimedLead = claimed.rows[0].value.find((item) => item.lead_id === leadId && item.target_geos.includes("KR"));
+  if (!claimedLead?.run_id) {
+    throw new Error(`Service worker did not claim the new normalized lead: ${JSON.stringify(claimed.rows[0].value)}`);
   }
   const screening = await query(
-    "select public.record_offerpsp_pre_compliance_screening($1, $2::jsonb) as value",
-    [leadId, JSON.stringify({
+    "select public.complete_offerpsp_pre_compliance_run($1, $2, $3::jsonb) as value",
+    [leadId, claimedLead.run_id, JSON.stringify({
       classification: "merchant",
       authenticity_score: 82,
       compliance_readiness_score: 45,
@@ -1106,11 +1252,11 @@ async function verifyPreComplianceGate() {
     "select l.status, c.case_status, c.classification, (select count(*) from private.offerpsp_compliance_decisions d where d.case_id = c.id) as decisions from public.offerpsp_leads l join private.offerpsp_compliance_cases c on c.lead_id = l.lead_id where l.lead_id = $1",
     [lead.rows[0].lead_id],
   );
-  if (cleared.rows[0].status !== "option_selected" || cleared.rows[0].case_status !== "cleared"
+  if (cleared.rows[0].status !== "qualifying" || cleared.rows[0].case_status !== "cleared"
       || cleared.rows[0].classification !== "merchant" || Number(cleared.rows[0].decisions) !== 1) {
     throw new Error(`Manual clearance changed the progressed deal incorrectly: ${JSON.stringify(cleared.rows[0])}`);
   }
-  process.stdout.write("PASS immediate matching, deferred screening after selection and manual review\n");
+  process.stdout.write("PASS immediate matching, event-driven intake screening and manual review\n");
 }
 
 async function verifyPortalLeadClaims() {
@@ -3785,6 +3931,7 @@ try {
   await verify360WorkspaceGrants();
   await verifyResearchCrudGrants();
   await seedUsers();
+  await verifyCompanyIntakeDeduplication();
   await verifyProviderPortalBoundary();
   await verifyGeoRegionAliases();
   await verifyContactTimelineCooldown();

@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { sendJson, serviceSupabaseRequest } from "./staff-auth.mjs";
 import { processClaimedCompany, processClaimedResearch } from "./company-screening-runner.mjs";
-import { processIntakeAutoReply } from "./intake-auto-reply.mjs";
+import { processIntakeAutoReply, processIntakeSubmissionReply } from "./intake-auto-reply.mjs";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const INTAKE_RECEIPTS = new Set(["completed", "already_completed", "stale_or_cancelled", "module_disabled", "in_progress"]);
@@ -15,6 +15,7 @@ export function createCompanyScreeningWorker({
   processJob = processClaimedCompany,
   processResearchJob = processClaimedResearch,
   processAutoReply = processIntakeAutoReply,
+  processSubmissionReply = processIntakeSubmissionReply,
 } = {}) {
   const call = rpc || ((name, args) => serviceSupabaseRequest(`rpc/${name}`, {
     method: "POST", body: JSON.stringify(args), signal: AbortSignal.timeout(10000),
@@ -35,12 +36,37 @@ export function createCompanyScreeningWorker({
     const keys = Object.keys(body);
     if (!((body.action === "claim" && keys.length === 1) ||
       (body.action === "recover_auto_reply" && keys.length === 1) ||
+      (body.action === "recover_submission_reply" && keys.length === 1) ||
+      (body.action === "process_submission_reply" && keys.length === 2 && UUID.test(body.submission_id || "")) ||
       (body.action === "process" && keys.length === 3 && UUID.test(body.lead_id || "") && UUID.test(body.run_id || "")) ||
       (body.action === "claim_research" && keys.length === 1) ||
       (body.action === "process_research" && keys.length === 3 && UUID.test(body.job_id || "") && UUID.test(body.run_id || "")))) {
       return sendJson(response, 400, { error: "Unsupported screening worker operation" });
     }
     try {
+      if (body.action === "process_submission_reply") {
+        const reply = await processSubmissionReply(body.submission_id);
+        if (!reply?.outcome) throw new Error("Invalid intake submission reply receipt");
+        return sendJson(response, reply.outcome === "claimed" || reply.outcome === "queued" ? 202 : 200, reply);
+      }
+      if (body.action === "recover_submission_reply") {
+        const pending = await call("claim_offerpsp_pending_intake_submission_reply", {});
+        if (pending?.outcome === "empty") return sendJson(response, 200, { outcome: "empty" });
+        if (pending?.outcome !== "claimed" || !UUID.test(pending.submission_id || "") || !UUID.test(pending.lead_id || "")) {
+          throw new Error("Invalid intake submission reply queue response");
+        }
+        let reply;
+        try {
+          reply = await processSubmissionReply(pending.submission_id);
+        } catch {
+          reply = { outcome: "queued", reason_code: "worker_interrupted" };
+        }
+        return sendJson(response, 200, {
+          submission_id: pending.submission_id,
+          lead_id: pending.lead_id,
+          ...reply,
+        });
+      }
       if (body.action === "recover_auto_reply") {
         const pending = await call("claim_offerpsp_pending_intake_auto_reply", {});
         if (pending?.outcome === "empty") return sendJson(response, 200, { outcome: "empty" });
