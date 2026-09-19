@@ -16,7 +16,8 @@ begin
     and brand_name = 'Antarex';
 
   if v_provider_id is null then
-    raise exception 'Canonical Antarex provider PSP-000002 was not found';
+    raise notice 'Canonical Antarex provider PSP-000002 is not present; zero-markup migration is a no-op';
+    return;
   end if;
 
   if coalesce((

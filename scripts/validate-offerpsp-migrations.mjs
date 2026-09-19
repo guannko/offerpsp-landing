@@ -321,7 +321,11 @@ async function applyMigrations() {
     "20260919101500_offerpsp_company_intake_dedup.sql",
     "20260919102500_offerpsp_intake_dedup_indexes.sql",
     "20260919103500_offerpsp_intake_identity_hardening.sql",
+    "20260919114950_offerpsp_pre_compliance_stable_input_hash.sql",
+    "20260919115307_offerpsp_pre_compliance_unstarted_run_hash_backfill.sql",
     "20260919143000_offerpsp_submission_auto_reply.sql",
+    "20260919162500_offerpsp_antarex_zero_markup.sql",
+    "20260919170000_aibot_matching_workspace.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {

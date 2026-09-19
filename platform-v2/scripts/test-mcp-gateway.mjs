@@ -135,6 +135,29 @@ assert.equal(searched.statusCode, 200);
 assert.equal(searched.payload.result.structuredContent.count, 1);
 assert.equal(searched.payload.result.structuredContent.results[0].id, "merchant:22222222-2222-4222-8222-222222222222");
 
+const agentAsked = responseMock();
+await mcpHandler(request({
+  jsonrpc: "2.0", id: 41, method: "tools/call",
+  params: {
+    name: "ask_offerpsp_agent",
+    arguments: {
+      message: "Prepare a pricing preview.",
+      entity_type: "merchant",
+      entity_id: "22222222-2222-4222-8222-222222222222",
+      entity_name: "Example Merchant",
+    },
+  },
+}), agentAsked);
+assert.equal(agentAsked.statusCode, 200);
+assert.equal(agentAsked.payload.result.structuredContent.answer, "Prepared only");
+const agentCall = calls.findLast((entry) => entry.url.includes("/api/aibot-command"));
+const agentPayload = JSON.parse(agentCall.init.body);
+assert.match(agentPayload.message, /"action":"get_matching"/);
+assert.match(agentPayload.message, /22222222-2222-4222-8222-222222222222/);
+assert.match(agentPayload.message, /saved_shortlist_item_count/);
+assert.match(agentPayload.message, /Never expose provider identity/);
+const agentCommandCount = calls.filter((entry) => entry.url.includes("/api/aibot-command")).length;
+
 const created = responseMock();
 await mcpHandler(request({ jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "create_task", arguments: { title: "Follow up" } } }), created);
 assert.equal(created.payload.result.structuredContent.title, "Follow up");
@@ -200,7 +223,7 @@ await mcpHandler(request({
 assert.equal(confirmedRoutes.statusCode, 200);
 assert.equal(confirmedRoutes.payload.result.structuredContent.status, "executed");
 assert.equal(confirmedRoutes.payload.result.structuredContent.processed, 2);
-assert.equal(calls.some((entry) => entry.url.includes("/api/aibot-command")), false);
+assert.equal(calls.filter((entry) => entry.url.includes("/api/aibot-command")).length, agentCommandCount);
 
 const source = await readFile(new URL("../api/_lib/offerpsp-mcp.mjs", import.meta.url), "utf8");
 assert.equal(source.includes("SUPABASE_SERVICE_ROLE_KEY"), false);
