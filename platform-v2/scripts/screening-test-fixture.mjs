@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const migration = await readFile(new URL("../../supabase/migrations/20260916141150_offerpsp_intake_screening_queue.sql", import.meta.url), "utf8");
+const stableInputHashMigration = await readFile(new URL("../../supabase/migrations/20260919114950_offerpsp_pre_compliance_stable_input_hash.sql", import.meta.url), "utf8");
+const unstartedRunHashBackfill = await readFile(new URL("../../supabase/migrations/20260919115307_offerpsp_pre_compliance_unstarted_run_hash_backfill.sql", import.meta.url), "utf8");
 const cooldownMigration = await readFile(new URL("../../supabase/migrations/20260917201500_offerpsp_screening_rerun_cooldown.sql", import.meta.url), "utf8");
 const researchMigration = await readFile(new URL("../../supabase/migrations/20260916203638_offerpsp_research_screening_jobs.sql", import.meta.url), "utf8");
 const base = await readFile(new URL("../../supabase/migrations/20260806123857_offerpsp_pre_compliance_module.sql", import.meta.url), "utf8");
@@ -27,6 +29,8 @@ create table public.psp_providers(id bigserial primary key,name text not null,we
 create table public.offerpsp_leads (
  lead_id uuid primary key, record_state text default 'active', status text default 'new',
  company text, name text, work_email text, telegram text, company_url text, vertical text,
+ updated_at timestamptz default now(), last_activity_at timestamptz default now(),
+ registration_geo text, business_model text,
  monthly_volume text, expected_monthly_volume numeric, geos text, target_geos text[],
  methods text, requested_methods text[], requested_currencies text[], requested_flows text[],
  license_status text, license_jurisdiction text, license_number text, license_evidence_url text,
@@ -41,6 +45,8 @@ export async function initializeScreeningFixture(db) {
   await db.exec(definition(base, "create or replace function public.record_offerpsp_pre_compliance_screening", "\n$$;"));
   await db.exec(review.slice(0, review.indexOf("-- Cases already screened")));
   await db.exec(migration);
+  await db.exec(stableInputHashMigration);
+  await db.exec(unstartedRunHashBackfill);
   await db.exec(cooldownMigration);
   await db.exec(researchMigration);
 }

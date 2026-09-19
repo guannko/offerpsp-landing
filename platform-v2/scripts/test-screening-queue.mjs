@@ -100,6 +100,19 @@ test("completion writes real evidence once; replay cannot create a second activi
     assert.equal((await db.query("select count(*)::int n from public.offerpsp_lead_activities")).rows[0].n, 1);
   } finally { await db.close(); }
 });
+test("operational activity timestamps do not cancel a claimed screening run", async () => {
+  const db = await fixture();
+  try {
+    const id = await add(db);
+    const [job] = await claim(db);
+    await db.query("update public.offerpsp_leads set last_activity_at=now()+interval '1 second',updated_at=now()+interval '1 second' where lead_id=$1", [id]);
+    const acquired = (await db.query("select public.begin_offerpsp_pre_compliance_run($1,$2) result", [id, job.run_id])).rows[0].result;
+    assert.equal(acquired.outcome, "acquired");
+    assert.equal(acquired.job.contact_name, acquired.job.name);
+    await db.query("update public.offerpsp_leads set last_activity_at=now()+interval '2 seconds',updated_at=now()+interval '2 seconds' where lead_id=$1", [id]);
+    assert.equal((await complete(db, job)).outcome, "completed");
+  } finally { await db.close(); }
+});
 test("expired run is fenced before and after a new claim", async () => {
   const db = await fixture();
   try {
