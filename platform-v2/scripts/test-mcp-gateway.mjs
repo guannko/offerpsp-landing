@@ -155,6 +155,10 @@ const agentPayload = JSON.parse(agentCall.init.body);
 assert.match(agentPayload.message, /"action":"get_matching"/);
 assert.match(agentPayload.message, /22222222-2222-4222-8222-222222222222/);
 assert.match(agentPayload.message, /saved_shortlist_item_count/);
+assert.match(agentPayload.message, /Validate every narrative claim/);
+assert.match(agentPayload.message, /do not claim that PayIn pricing is missing/);
+assert.match(agentPayload.message, /hide provider identity and internal route codes/);
+assert.match(agentPayload.message, /never mention internal margin, markup, base rates, provider count/);
 assert.match(agentPayload.message, /Never expose provider identity/);
 const agentCommandCount = calls.filter((entry) => entry.url.includes("/api/aibot-command")).length;
 
