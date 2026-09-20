@@ -26,5 +26,8 @@ test('archive and expired processing do not look like successful completion', ()
 });
 test('translated events preserve actual receipt and unknown event title', () => {
   assert.equal(intakeEventText({activity_type:'telegram_intake_action',detail:'Nothing sent'}).detail,'Nothing sent');
+  assert.equal(intakeEventText({activity_type:'telegram_intake_card_refreshed',title:'Operator card refreshed'}).title,'Карточка Telegram обновлена');
+  assert.match(intakeEventText({activity_type:'stuck_intake_alert_sent',title:'Operator notified'}).detail,/Повторные уведомления ограничены/);
+  assert.equal(intakeEventText({activity_type:'route_matching_completed',title:'Route matching completed'}).title,'Подбор платёжных маршрутов завершён');
   assert.equal(intakeEventText({activity_type:'custom',title:'Original audit event'}).title,'Original audit event');
 });
