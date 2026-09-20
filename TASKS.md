@@ -19,8 +19,9 @@ Code or a passing local test is not evidence that production has been updated.
   1 PSP contact, 1 published route and 1 exact eligible match. All contract checks pass and no
   contract issue is reported.
 - Captain's Bridge exposes the contract on the Integrations page with direct links to both entity
-  cards. Vercel deployment `dpl_DJEdoURcM83pbC2TERFif9fZyq1d` is READY and aliased to the staff
-  URL. The production UI was visually verified after deployment.
+  cards. The consolidated clean-tree release `dpl_14Jp3hrJ9zWLa3Zqk3BtPDn6AwBi` is READY and
+  aliased to the staff URL. The live production bundles were read back and contain the QA-contract
+  display, controlled licence selector and readable automation-event labels.
 - Local evidence: the full OfferPSP migration validator, TypeScript lint, Vite production build,
   control-integrity regression test and `git diff --check` pass.
 
