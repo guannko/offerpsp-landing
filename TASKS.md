@@ -5,16 +5,24 @@ Updated: 2026-09-21
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
-### PaySiski / WinPiski cockpit visibility — local candidate 2026-09-21
+### PaySiski / WinPiski cockpit visibility — production 2026-09-21
 
-- `VERIFIED` locally: the golden merchant and PSP stay in the production database and remain
+- `VERIFIED` in production: the golden merchant and PSP stay in the production database and remain
   reachable from `Интеграции → Эталонные сценарии`, but no longer appear in ordinary Captain's
   Bridge registries, working counters, attention queues, search, compliance, offers, mail,
   Telegram selectors, tasks or the AIBot offer selector.
-- The visibility boundary uses the registered stable fixture entity IDs. It does not archive,
-  rename or mutate the test records and does not change their matching/isolation contract.
-- Local evidence: TypeScript production build, ESLint, control-integrity regression and
-  `git diff --check` pass. Production deployment is still pending.
+- The visibility boundary uses the registered stable fixture entity IDs plus the explicit
+  `PaySiski` / `WinPiski` QA markers, so the auxiliary PaySiski merchant test card is hidden too.
+  It does not archive, rename or mutate the test records and does not change their
+  matching/isolation contract.
+- Production deployment `dpl_3f8CWSkEqMebRJjNSCgXZr65VcoD` is `READY` and aliased to
+  `https://ops-7q4m2x9k8v3n.vercel.app`. Browser verification confirmed that neither QA name is
+  present in the merchant registry, PaySiski is absent from the PSP registry, and the complete
+  `golden-payments-v1` card plus both direct entity links remain in Integrations.
+- Runtime verification: OAuth metadata returns HTTP 200, authenticated OfferPSP MCP search works,
+  and the Integrations screen reports the MCP gateway as published. TypeScript production build,
+  ESLint, control-integrity regression, `git diff --check` and the 107.3 MiB Vercel function-storage
+  budget check pass.
 
 ### PaySiski / WinPiski golden operating templates — production 2026-09-20
 
