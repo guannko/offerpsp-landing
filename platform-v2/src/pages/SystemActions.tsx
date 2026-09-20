@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { useControlBridge } from '../context/ControlBridgeContext';
+import { isQaFixtureLead } from '../lib/qaFixtures';
 import { supabase } from '../lib/supabase';
 import { intakeSteps, intakeStateLabels, intakeActionLabels, type IntakeSnapshot, type IntakeStep } from '../lib/intakeObservability';
 import { chronologicalIntakeEvents, intakeClock, intakeDestination, intakeEventText, intakeNow, intakeStatusName } from '../lib/intakeDisplay';
@@ -29,8 +30,9 @@ function Badge({ state }: { state: IntakeStep['state'] }) {
 }
 export default function SystemActions() {
   const { leads } = useControlBridge();
+  const operationalLeads = leads.filter((lead) => !isQaFixtureLead(lead));
   const [params, setParams] = useSearchParams();
-  const selected = params.get('lead') || leads[0]?.lead_id || '';
+  const selected = params.get('lead') || operationalLeads[0]?.lead_id || '';
   const [data, setData] = useState<IntakeSnapshot | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -80,8 +82,8 @@ export default function SystemActions() {
         <label htmlFor="intake-selector" className="mb-2 block text-base font-semibold">Заявка</label>
         <select id="intake-selector" value={selected} onChange={e => setParams({ lead: e.target.value })} className="min-h-14 w-full min-w-0 rounded-xl border border-slate-400 bg-white p-3 text-lg font-medium text-slate-900">
           <option value="" disabled>Выберите заявку</option>
-          {!leads.some(l => l.lead_id === selected) && selected && <option value={selected}>{data?.lead.company || 'Заявка по ссылке'}</option>}
-          {leads.map(l => <option key={l.lead_id} value={l.lead_id}>{l.company || l.name || l.lead_id} · {intakeStatusName(l.status)}</option>)}
+          {!operationalLeads.some(l => l.lead_id === selected) && selected && <option value={selected}>{data?.lead.company || 'Заявка по ссылке'}</option>}
+          {operationalLeads.map(l => <option key={l.lead_id} value={l.lead_id}>{l.company || l.name || l.lead_id} · {intakeStatusName(l.status)}</option>)}
         </select>
       </div>
       <button onClick={() => void load()} disabled={loading || !selected} className="min-h-14 rounded-xl bg-brand-500 px-7 py-3 text-lg font-bold text-white disabled:opacity-50 sm:self-end">{loading ? 'Загружаю…' : 'Обновить'}</button>

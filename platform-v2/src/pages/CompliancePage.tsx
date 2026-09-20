@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import PageMeta from "../components/common/PageMeta";
 import { EmptyState, Metric, PageHeading, Panel, SkeletonPage, StatusPill } from "../components/control/Ui";
 import { useControlBridge } from "../context/ControlBridgeContext";
+import { isQaFixtureLeadId } from "../lib/qaFixtures";
 
 const filters = [
   ["active", "Требуют решения"],
@@ -42,13 +43,14 @@ const riskClassName = (riskLevel: string) => ["high", "critical"].includes(riskL
 
 export default function CompliancePage() {
   const { loading, complianceCases, moduleEntitlements } = useControlBridge();
+  const operationalCases = useMemo(() => complianceCases.filter((item) => !isQaFixtureLeadId(item.lead_id)), [complianceCases]);
   const [filter, setFilter] = useState<(typeof filters)[number][0]>("active");
   const [search, setSearch] = useState("");
   const entitlement = moduleEntitlements.find((item) => item.module_key === "pre_compliance");
 
   const visible = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return complianceCases.filter((item) => {
+    return operationalCases.filter((item) => {
       const statusMatch = filter === "active"
         ? ["pending", "screening", "manual_review", "needs_info", "hold"].includes(item.case_status)
         : filter === "blocked"
@@ -58,16 +60,16 @@ export default function CompliancePage() {
         .filter(Boolean).join(" ").toLowerCase().includes(query);
       return statusMatch && searchMatch;
     });
-  }, [complianceCases, filter, search]);
+  }, [operationalCases, filter, search]);
 
   if (loading) return <SkeletonPage/>;
   if (!entitlement?.enabled) return <Panel><EmptyState title="Модуль не входит в тариф" description="Lead Intelligence / Pre-Compliance доступен как отдельный PRO-модуль."/></Panel>;
 
-  const pending = complianceCases.filter((item) => ["pending", "screening"].includes(item.case_status)).length;
-  const manualReview = complianceCases.filter((item) => item.case_status === "manual_review").length;
-  const needsInfo = complianceCases.filter((item) => item.case_status === "needs_info").length;
-  const cleared = complianceCases.filter((item) => item.case_status === "cleared").length;
-  const blocked = complianceCases.filter((item) => ["rejected", "spam"].includes(item.case_status)).length;
+  const pending = operationalCases.filter((item) => ["pending", "screening"].includes(item.case_status)).length;
+  const manualReview = operationalCases.filter((item) => item.case_status === "manual_review").length;
+  const needsInfo = operationalCases.filter((item) => item.case_status === "needs_info").length;
+  const cleared = operationalCases.filter((item) => item.case_status === "cleared").length;
+  const blocked = operationalCases.filter((item) => ["rejected", "spam"].includes(item.case_status)).length;
 
   return <>
     <PageMeta title="Проверка лидов | OfferPSP" description="Предварительная проверка входящих заявок до matching."/>

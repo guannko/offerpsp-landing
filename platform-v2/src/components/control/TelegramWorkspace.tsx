@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { EmptyState, Panel, StatusPill } from "./Ui";
 import { useControlBridge } from "../../context/ControlBridgeContext";
+import { isQaFixtureLead, isQaFixtureLeadId } from "../../lib/qaFixtures";
 import { supabase } from "../../lib/supabase";
 import type { IntegrationSetting, TelegramDelivery } from "../../types/offerpsp";
 
@@ -9,14 +10,15 @@ const area = "min-h-36 w-full rounded-lg border border-gray-300 bg-transparent p
 
 export default function TelegramWorkspace() {
   const { captainsBridge, leads } = useControlBridge();
-  const [deliveries, setDeliveries] = useState<TelegramDelivery[]>([]);
+  const [allDeliveries, setDeliveries] = useState<TelegramDelivery[]>([]);
   const [chatId, setChatId] = useState("");
   const [leadId, setLeadId] = useState("");
   const [message, setMessage] = useState("");
   const [tab, setTab] = useState<"send" | "history" | "aibot">("send");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ error?: boolean; text: string } | null>(null);
-  const activeLeads = useMemo(()=>leads.filter((lead)=>lead.record_state!=="archived"),[leads]);
+  const activeLeads = useMemo(()=>leads.filter((lead)=>lead.record_state!=="archived" && !isQaFixtureLead(lead)),[leads]);
+  const deliveries = useMemo(()=>allDeliveries.filter((entry)=>!isQaFixtureLeadId(entry.lead_id)),[allDeliveries]);
 
   const load = useCallback(async () => {
     const [messagesResult, settingsResult] = await Promise.all([

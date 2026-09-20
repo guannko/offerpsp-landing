@@ -1,9 +1,20 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-09-20
+Updated: 2026-09-21
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
+
+### PaySiski / WinPiski cockpit visibility — local candidate 2026-09-21
+
+- `VERIFIED` locally: the golden merchant and PSP stay in the production database and remain
+  reachable from `Интеграции → Эталонные сценарии`, but no longer appear in ordinary Captain's
+  Bridge registries, working counters, attention queues, search, compliance, offers, mail,
+  Telegram selectors, tasks or the AIBot offer selector.
+- The visibility boundary uses the registered stable fixture entity IDs. It does not archive,
+  rename or mutate the test records and does not change their matching/isolation contract.
+- Local evidence: TypeScript production build, ESLint, control-integrity regression and
+  `git diff --check` pass. Production deployment is still pending.
 
 ### PaySiski / WinPiski golden operating templates — production 2026-09-20
 

@@ -6,7 +6,7 @@ import path from "node:path";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const read = (relativePath) => readFile(path.join(root, relativePath), "utf8");
 
-const [captain, merchant, integrations, platform, modules, ui, context, seoGeo] = await Promise.all([
+const [captain, merchant, integrations, platform, modules, ui, context, seoGeo, qaFixtures, header, compliance, operations, telegram] = await Promise.all([
   read("platform-v2/src/pages/CaptainPages.tsx"),
   read("platform-v2/src/pages/MerchantWorkspace.tsx"),
   read("platform-v2/src/pages/IntegrationsWorkspace.tsx"),
@@ -15,6 +15,11 @@ const [captain, merchant, integrations, platform, modules, ui, context, seoGeo] 
   read("platform-v2/src/components/control/Ui.tsx"),
   read("platform-v2/src/context/ControlBridgeContext.tsx"),
   read("platform-v2/src/pages/SeoGeoPage.tsx"),
+  read("platform-v2/src/lib/qaFixtures.ts"),
+  read("platform-v2/src/layout/AppHeader.tsx"),
+  read("platform-v2/src/pages/CompliancePage.tsx"),
+  read("platform-v2/src/pages/OperationsWorkspace.tsx"),
+  read("platform-v2/src/components/control/TelegramWorkspace.tsx"),
 ]);
 
 assert.match(captain, /Вернуть в непрочитанные/);
@@ -79,6 +84,22 @@ assert.doesNotMatch(context, /load\(user, true\)[\s\S]{0,600}setInterval/);
 assert.match(seoGeo, /SEO_ANALYTICS_REFRESH_MS = 5 \* 60_000/);
 assert.match(seoGeo, /ACTIVE_AUDIT_POLL_MS = 15_000/);
 assert.match(platform, /hasProcessingJobs \? 15_000 : 120_000/);
+
+assert.match(qaFixtures, /ad724d57-e894-4d16-b7b0-948165aef4bf/);
+assert.match(qaFixtures, /6e531900-901c-4d5d-8887-0679db9b335d/);
+assert.match(qaFixtures, /60e61542-7070-43ef-937b-7f919e9abdb0/);
+assert.match(qaFixtures, /QA_FIXTURE_MARKERS = \["paysiski", "winpiski"\]/);
+assert.match(platform, /merchantLeads = useMemo\(\(\) => leads\.filter\(\(lead\) => !isQaFixtureLead\(lead\)\)/);
+assert.match(platform, /registryProviders = useMemo\(\(\) => providers\.filter\(\(provider\) => !isQaFixtureProvider\(provider\)\)/);
+assert.match(platform, /operationalRoutes = useMemo\(\(\) => routes\.filter\(\(route\) => !isQaFixtureRoute\(route\)\)/);
+assert.match(header, /!isQaFixturePath\(item\.path\)/);
+assert.match(compliance, /operationalCases = useMemo/);
+assert.match(operations, /operationalTasks = useMemo/);
+assert.match(telegram, /!isQaFixtureLead\(lead\)/);
+assert.match(captain, /fullMailCenter\.threads\.filter/);
+assert.match(integrations, /list_offerpsp_qa_fixture_status/);
+assert.match(integrations, /fixture\.entities\.map/);
+assert.match(integrations, /entity\.entity_type === "merchant" \? "merchants" : "psps"/);
 
 if (process.env.VERCEL !== "1") {
   const migration = await read("supabase/migrations/20260815090000_offerpsp_email_mark_unread.sql");

@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router";
 import { useControlBridge } from "../../context/ControlBridgeContext";
+import { isQaFixtureProvider } from "../../lib/qaFixtures";
 import { supabase } from "../../lib/supabase";
 import { extractOfferSource, safeStorageName } from "../../lib/offerSourceFiles";
 import { ChatIcon, CloseIcon, PaperPlaneIcon } from "../../icons";
@@ -46,6 +47,7 @@ function plainText(value: unknown) {
 export default function AIBotAssistant() {
   const { pathname } = useLocation();
   const { user, staff, leads, providers, organizations, refresh } = useControlBridge();
+  const offerProviders = useMemo(() => providers.filter((provider) => !isQaFixtureProvider(provider)), [providers]);
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
@@ -291,7 +293,7 @@ export default function AIBotAssistant() {
               <div className="flex items-center justify-between gap-3"><strong className="text-sm text-gray-900 dark:text-white">Добавить оффер PSP</strong><button type="button" onClick={() => setUploadOpen(false)} className="text-xs text-gray-500">Свернуть</button></div>
               <div className="mt-3 space-y-2">
                 <input list="aibot-offer-provider-names" value={offerProviderName} onChange={(event) => setOfferProviderName(event.target.value)} placeholder="Название PSP" className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
-                <datalist id="aibot-offer-provider-names">{providers.filter((provider) => provider.relationship_status !== "archived").map((provider) => <option key={provider.id} value={provider.brand_name} />)}</datalist>
+                <datalist id="aibot-offer-provider-names">{offerProviders.filter((provider) => provider.relationship_status !== "archived").map((provider) => <option key={provider.id} value={provider.brand_name} />)}</datalist>
                 <input ref={fileInputRef} type="file" accept=".txt,.md,.csv,.tsv,.json,.html,.xml,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.eml,.msg,.png,.jpg,.jpeg,.tif,.tiff,.webp" onChange={(event) => { setOfferFile(event.target.files?.[0] || null); setUploadStatus(""); }} className="block w-full text-xs text-gray-500 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:font-semibold file:text-brand-600 dark:file:bg-brand-500/10" />
                 <input value={offerNote} onChange={(event) => setOfferNote(event.target.value)} placeholder="Комментарий: новый, тестовый, не публиковать…" className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
                 {uploadStatus ? <p className="text-xs text-gray-500">{uploadStatus}</p> : null}

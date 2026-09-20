@@ -5,6 +5,7 @@ import { EmptyState, ErrorBanner, Metric, PageHeading, Panel, SkeletonPage, huma
 import ResearchEntityEditor from "../components/control/ResearchEntityEditor";
 import TelegramWorkspace from "../components/control/TelegramWorkspace";
 import { useControlBridge } from "../context/ControlBridgeContext";
+import { isQaFixtureLead, isQaFixtureLeadId, isQaFixtureProvider, isQaFixtureProviderId } from "../lib/qaFixtures";
 import { supabase } from "../lib/supabase";
 import type { CasinoLead, EmailAttachment, EmailMessage, EmailTemplate, EmailThread } from "../types/offerpsp";
 
@@ -116,7 +117,15 @@ export function CasinosWorkspace() {
 export const IntelligenceWorkspace = CasinosWorkspace;
 
 export function CommunicationsWorkspace() {
-  const { captainsBridge, mailCenter, leads, providers, refresh, ready } = useControlBridge();
+  const { captainsBridge, mailCenter: fullMailCenter, leads: allLeads, providers: allProviders, refresh, ready } = useControlBridge();
+  const leads = useMemo(() => allLeads.filter((lead) => !isQaFixtureLead(lead)), [allLeads]);
+  const providers = useMemo(() => allProviders.filter((provider) => !isQaFixtureProvider(provider)), [allProviders]);
+  const mailCenter = useMemo(() => ({
+    ...fullMailCenter,
+    threads: fullMailCenter.threads.filter((thread) => !isQaFixtureLeadId(thread.lead_id)
+      && !(thread.counterparty_type === "merchant" && isQaFixtureLeadId(thread.counterparty_id))
+      && !(thread.counterparty_type === "provider" && isQaFixtureProviderId(thread.counterparty_id))),
+  }), [fullMailCenter]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [to, setTo] = useState(""); const [subject, setSubject] = useState(""); const [body, setBody] = useState("");
   const [leadId, setLeadId] = useState(""); const [busy, setBusy] = useState(false); const [message, setMessage] = useState<{error?:boolean;text:string}|null>(null);

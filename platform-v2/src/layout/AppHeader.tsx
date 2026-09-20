@@ -4,6 +4,7 @@ import { platformModules } from "../config/modules";
 import { ThemeToggleButton } from "../components/common/ThemeToggleButton";
 import { useControlBridge } from "../context/ControlBridgeContext";
 import { useSidebar } from "../context/SidebarContext";
+import { isQaFixtureLead, isQaFixtureLeadId, isQaFixturePath, isQaFixtureProvider, isQaFixtureRoute } from "../lib/qaFixtures";
 import { supabase } from "../lib/supabase";
 
 type HeaderSearchResult = {
@@ -25,14 +26,14 @@ export default function AppHeader() {
   const [query, setQuery] = useState("");
   const [remoteSearchResults, setRemoteSearchResults] = useState<HeaderSearchResult[]>([]);
   const activeModule = platformModules.find((item) => item.path === "/" ? location.pathname === "/" : location.pathname.startsWith(item.path));
-  const attentionLeadIds = new Set(complianceCases.filter((item) => ["pending", "screening", "manual_review", "needs_info", "hold"].includes(item.case_status)).map((item) => item.lead_id));
-  const attentionCount = leads.filter((lead) => ["new", "needs_clarification", "provider_needs_info"].includes(lead.status || "") || attentionLeadIds.has(lead.lead_id)).length;
+  const attentionLeadIds = new Set(complianceCases.filter((item) => !isQaFixtureLeadId(item.lead_id) && ["pending", "screening", "manual_review", "needs_info", "hold"].includes(item.case_status)).map((item) => item.lead_id));
+  const attentionCount = leads.filter((lead) => !isQaFixtureLead(lead) && (["new", "needs_clarification", "provider_needs_info"].includes(lead.status || "") || attentionLeadIds.has(lead.lead_id))).length;
   const localSearchResults = useMemo<HeaderSearchResult[]>(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return [];
-    const merchantResults = leads.filter((item) => item.record_state !== "archived" && [item.company, item.name, item.work_email, item.telegram, item.company_url].join(" ").toLowerCase().includes(needle)).map((item) => ({ key: `merchant:${item.lead_id}`, label: item.company || item.name || "Без названия", meta: `Мерч · ${item.status || "без статуса"}`, path: `/merchants/${item.lead_id}` }));
-    const providerResults = providers.filter((item) => item.record_state !== "archived" && [item.brand_name, item.legal_name, item.internal_code, item.website].join(" ").toLowerCase().includes(needle)).map((item) => ({ key: `provider:${item.id}`, label: item.brand_name, meta: `PSP · ${item.relationship_status || "без статуса"}`, path: `/psps/${item.id}` }));
-    const routeResults = routes.filter((item) => item.status !== "archived" && [item.client_title, item.route_code, item.provider_name, item.provider_code, ...(item.geos || []), ...(item.currencies || []), ...(item.methods || [])].join(" ").toLowerCase().includes(needle)).map((item) => ({ key: `route:${item.route_id}`, label: item.client_title || item.route_code || "Маршрут", meta: `Оффер · ${item.provider_name || item.provider_code || "PSP"}`, path: `/psps/${item.provider_id}?route=${item.route_id}` }));
+    const merchantResults = leads.filter((item) => !isQaFixtureLead(item) && item.record_state !== "archived" && [item.company, item.name, item.work_email, item.telegram, item.company_url].join(" ").toLowerCase().includes(needle)).map((item) => ({ key: `merchant:${item.lead_id}`, label: item.company || item.name || "Без названия", meta: `Мерч · ${item.status || "без статуса"}`, path: `/merchants/${item.lead_id}` }));
+    const providerResults = providers.filter((item) => !isQaFixtureProvider(item) && item.record_state !== "archived" && [item.brand_name, item.legal_name, item.internal_code, item.website].join(" ").toLowerCase().includes(needle)).map((item) => ({ key: `provider:${item.id}`, label: item.brand_name, meta: `PSP · ${item.relationship_status || "без статуса"}`, path: `/psps/${item.id}` }));
+    const routeResults = routes.filter((item) => !isQaFixtureRoute(item) && item.status !== "archived" && [item.client_title, item.route_code, item.provider_name, item.provider_code, ...(item.geos || []), ...(item.currencies || []), ...(item.methods || [])].join(" ").toLowerCase().includes(needle)).map((item) => ({ key: `route:${item.route_id}`, label: item.client_title || item.route_code || "Маршрут", meta: `Оффер · ${item.provider_name || item.provider_code || "PSP"}`, path: `/psps/${item.provider_id}?route=${item.route_id}` }));
     return [...merchantResults, ...providerResults, ...routeResults].slice(0, 10);
   }, [leads, providers, routes, query]);
 
@@ -69,7 +70,7 @@ export default function AppHeader() {
           label: String(item.label || "Без названия"),
           meta: String(item.meta || item.kind || "Результат"),
           path: String(item.path || "/"),
-        })));
+        })).filter((item: HeaderSearchResult) => !isQaFixturePath(item.path)));
       } catch (error) {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
           console.warn("Remote search unavailable; using local index", error);
