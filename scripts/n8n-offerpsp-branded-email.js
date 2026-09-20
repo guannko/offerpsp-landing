@@ -1,6 +1,12 @@
 const inp = $input.first().json;
 const data = inp.body || inp;
-const rawText = String(data.body || data.text || '').trim();
+const signatureText = 'Best regards,\nOfferPSP team\nhttps://offerpsp.com';
+const suppliedText = String(data.body || data.text || '').trim();
+const rawText = suppliedText.replace(
+  /\n{2,}Best regards,\s*\nOfferPSP team\s*\nhttps:\/\/offerpsp\.com\/?\s*$/i,
+  '',
+).trim();
+const plainText = `${rawText}\n\n${signatureText}`;
 const subject = String(data.subject || 'Message from OfferPSP').trim();
 
 const escapeHtml = (value) => String(value)
@@ -82,7 +88,7 @@ const html = `<!doctype html>
 return [{ json: {
   to: String(data.to || '').trim(),
   subject,
-  text: rawText,
+  text: plainText,
   html,
   from_name: String(data.from_name || 'OfferPSP'),
 }}];

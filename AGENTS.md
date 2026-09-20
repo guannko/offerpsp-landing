@@ -204,6 +204,25 @@ Domain policy:
 - Controlled production E2E on 2026-08-14 confirmed the Titan email delivery path and the Telegram
   gateway. Synthetic verification messages marked `No action required` are transport tests, not
   merchant leads or operator tasks.
+- Superseding mail-client decision on 2026-09-20: Borys uses Spark for the OfferPSP mailbox;
+  Thunderbird was removed. Spark is only the human mail client, not an SMTP/IMAP provider and not a
+  runtime for bot automation. Automated outbound stays server-side, must preserve Message-ID/thread
+  headers and must synchronize the sent copy and delivery journal with the mailbox and Captain's
+  Bridge so Spark and the cockpit show the same conversation. Production secrets and transport must
+  still be revalidated before changing the sender.
+- Controlled E2E `OFFERPSP-MAIL-SYNC-20260917T093350Z` verified a production split-brain: the
+  canonical Bridge outbound row is in `offerpsp-production` (`iceopurxqzqmwtcmwfzl`), while the
+  mailbox poller wrote the inbound copy to legacy shared BIX project `xcizofpejsomjiflesbx`.
+  Automatic customer email must remain gated until the ingest URL is repointed, Message-ID is
+  journaled and the same sent copy is visible once in Bridge and IMAP `Sent`.
+- Superseding verification on 2026-09-17: the canonical mailbox path and bounded automatic first
+  response are live. Controlled execution `557002` screened one self-addressed synthetic intake,
+  sent draft `17` once with Message-ID
+  `<65f7260b-44e5-5b8c-80f2-5521362da61b@offerpsp.com>`, journaled one accepted outbound row and
+  archived the same message to IMAP `Sent`. Mailbox execution `557007` scanned the INBOX copy and
+  deduplicated it against that Message-ID (`ingested: 0`, `duplicates: 1`). Automatic content is
+  restricted to the canonical receipt or exact missing-information checklist; every other case
+  fails closed for staff review. The synthetic lead is archived and its audit evidence retained.
 - Product decision: do not configure or enable PostHog. Keep first-party acquisition/SEO telemetry;
   do not proxy merchant payment traffic merely to collect analytics. Processing volume and realized
   margin may be obtained from partner reports or PSP APIs when supported.
