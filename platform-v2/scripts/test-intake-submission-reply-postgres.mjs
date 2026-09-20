@@ -100,6 +100,10 @@ try {
     [submissionA, prepareA.source_hash, "acknowledgement", expected.subject, expected.body],
   ))[0].value;
   assert.equal(claimA.outcome, "claimed");
+  await db.query(
+    "insert into public.offerpsp_tasks(lead_id,automation_ref) values($1,'intake_response_v1')",
+    [lead],
+  );
   const replayClaim = (await rows(
     "select public.claim_offerpsp_intake_submission_reply($1,$2,$3,$4,$5) value",
     [submissionA, prepareA.source_hash, "acknowledgement", expected.subject, expected.body],
@@ -112,6 +116,10 @@ try {
     [claimA.draft_id, claimA.attempt_id, "<first@offerpsp.com>"],
   ))[0].value;
   assert.equal(completeA.outcome, "sent");
+  assert.equal(
+    (await rows("select status from public.offerpsp_tasks where automation_ref='intake_response_v1'"))[0].status,
+    "done",
+  );
   const replayComplete = (await rows(
     "select public.complete_offerpsp_intake_submission_reply($1,$2,$3,'smtp','archived',null) value",
     [claimA.draft_id, claimA.attempt_id, "<first@offerpsp.com>"],
@@ -130,6 +138,23 @@ try {
   const prepareReview = (await rows("select public.prepare_offerpsp_intake_submission_reply($1) value", [submissionReview]))[0].value;
   assert.equal(prepareReview.outcome, "ready");
   assert.equal(prepareReview.to_email, "third@acme.example");
+  await db.query(
+    "insert into public.offerpsp_tasks(lead_id,automation_ref) values($1,$2)",
+    [lead, `intake_submission:${submissionReview}`],
+  );
+  const claimReview = (await rows(
+    "select public.claim_offerpsp_intake_submission_reply($1,$2,$3,$4,$5) value",
+    [submissionReview, prepareReview.source_hash, "acknowledgement", expected.subject, expected.body],
+  ))[0].value;
+  assert.equal(claimReview.outcome, "claimed");
+  assert.equal((await rows(
+    "select public.complete_offerpsp_intake_submission_reply($1,$2,$3,'smtp','archived',null) value",
+    [claimReview.draft_id, claimReview.attempt_id, "<review@offerpsp.com>"],
+  ))[0].value.outcome, "sent");
+  assert.equal(
+    (await rows("select status from public.offerpsp_tasks where automation_ref=$1", [`intake_submission:${submissionReview}`]))[0].status,
+    "pending",
+  );
 
   await insertSubmission(submissionBlocked, "blocked@acme.example", "review_required", "other.example");
   const blocked = (await rows("select public.prepare_offerpsp_intake_submission_reply($1) value", [submissionBlocked]))[0].value;

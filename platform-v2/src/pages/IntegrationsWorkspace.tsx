@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router";
 import PageMeta from "../components/common/PageMeta";
 import { ErrorBanner, PageHeading, Panel, SkeletonPage } from "../components/control/Ui";
 import McpConnectionPanel from "../components/control/McpConnectionPanel";
@@ -32,6 +33,22 @@ type PlatformModuleHealth = {
   checked_at: string;
   modules: PlatformModule[];
   posthog: PlatformModule;
+};
+type QaFixtureEntity = { entity_type: "merchant" | "provider"; entity_id: string; label?: string | null };
+type QaFixtureCheck = { key: string; label: string; passed: boolean; detail: string };
+type QaFixtureStatus = {
+  scenario_key: string;
+  contract_version?: number;
+  healthy?: boolean;
+  merchant_count: number;
+  provider_count: number;
+  merchant_contact_count?: number;
+  provider_contact_count?: number;
+  published_route_count: number;
+  eligible_match_count: number;
+  checks?: QaFixtureCheck[];
+  issues?: string[];
+  entities: QaFixtureEntity[];
 };
 
 const moduleMeta: Record<string, { label: string; description: string }> = {
@@ -77,6 +94,7 @@ export default function IntegrationsWorkspace() {
   const [settings, setSettings] = useState<IntegrationSetting[]>([]);
   const [health, setHealth] = useState<Health | null>(null);
   const [platformModules, setPlatformModules] = useState<PlatformModuleHealth | null>(null);
+  const [qaFixtures, setQaFixtures] = useState<QaFixtureStatus[]>([]);
   const [moduleError, setModuleError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -87,10 +105,11 @@ export default function IntegrationsWorkspace() {
     setLoading(true); setError(null); setModuleError(null);
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 8_000);
-    const [settingsResult, healthResult, moduleResult] = await Promise.allSettled([
+    const [settingsResult, healthResult, moduleResult, qaResult] = await Promise.allSettled([
       supabase.rpc("get_offerpsp_integration_settings"),
       loadIntegrationHealth(controller.signal),
       loadPlatformModuleHealth(controller.signal),
+      supabase.rpc("list_offerpsp_qa_fixture_status"),
     ]);
     window.clearTimeout(timeout);
     if (settingsResult.status === "rejected") setError(settingsResult.reason instanceof Error ? settingsResult.reason.message : "Не удалось загрузить настройки");
@@ -108,6 +127,12 @@ export default function IntegrationsWorkspace() {
         : moduleResult.reason instanceof Error ? moduleResult.reason.message : "Не удалось проверить модульное ядро";
       setModuleError(message);
     } else setPlatformModules(moduleResult.value);
+    if (qaResult.status === "rejected") setError((current) => current || (qaResult.reason instanceof Error ? qaResult.reason.message : "Не удалось проверить эталонные сценарии"));
+    else if (qaResult.value.error) {
+      const qaError = qaResult.value.error.message;
+      setError((current) => current || qaError);
+    }
+    else setQaFixtures((qaResult.value.data || []) as QaFixtureStatus[]);
     setLoading(false);
   }, []);
 
@@ -189,6 +214,38 @@ export default function IntegrationsWorkspace() {
 
       {byKey.telegram && <Panel><div className="flex items-start justify-between gap-4"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Telegram</h2><p className="mt-1 text-sm text-gray-500">AIBot и ручные сообщения. Проверка шлюза ничего не отправляет.</p></div>{status(health?.telegram)}</div>{lastTest(byKey.telegram)}<label className="mt-5 flex items-center gap-3 text-sm font-semibold text-gray-700 dark:text-gray-200"><input type="checkbox" checked={byKey.telegram.enabled} onChange={(event)=>update("telegram",{enabled:event.target.checked})} className="h-5 w-5"/>Канал включён</label><div className="mt-4 grid gap-3"><input className={field} value={String(byKey.telegram.configuration.default_chat_id||"")} onChange={(event)=>update("telegram",{configuration:{default_chat_id:event.target.value}})} placeholder="Chat ID по умолчанию"/><label className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300"><input type="checkbox" checked={Boolean(byKey.telegram.configuration.lead_notifications)} onChange={(event)=>update("telegram",{configuration:{lead_notifications:event.target.checked}})} className="h-5 w-5"/>Уведомлять о новых лидах</label><label className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300"><input type="checkbox" checked={Boolean(byKey.telegram.configuration.error_notifications)} onChange={(event)=>update("telegram",{configuration:{error_notifications:event.target.checked}})} className="h-5 w-5"/>Уведомлять об ошибках</label></div><div className="mt-4 flex gap-3"><button disabled={Boolean(busy)} onClick={()=>void save("telegram")} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white">Сохранить</button><button disabled={Boolean(busy)} onClick={()=>void check("telegram")} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-100">Проверить шлюз</button></div></Panel>}
     </div>
+    <Panel className="mt-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Эталонные сценарии</h2>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-gray-500 dark:text-gray-400">Синтетические мерчант и PSP проходят тот же рабочий цикл, но технически изолированы от реальных компаний, подборов и шорт-листов.</p>
+        </div>
+        <button disabled={Boolean(busy)} onClick={()=>void load()} className="shrink-0 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-100">Перепроверить</button>
+      </div>
+      {!qaFixtures.length ? <p className="mt-5 rounded-xl border border-warning-200 bg-warning-50 p-4 text-sm text-warning-800">Эталонный сценарий не зарегистрирован.</p> : <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        {qaFixtures.map((fixture) => {
+          const healthy = fixture.healthy ?? (fixture.merchant_count > 0 && fixture.provider_count > 0 && fixture.published_route_count > 0 && fixture.eligible_match_count > 0);
+          const title = [...fixture.entities]
+            .sort((left, right) => (left.entity_type === right.entity_type ? 0 : left.entity_type === "provider" ? -1 : 1))
+            .map((entity) => entity.label || entity.entity_type)
+            .join(" ↔ ");
+          return <div key={fixture.scenario_key} className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-white/[0.04]">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">{fixture.scenario_key}{fixture.contract_version ? ` · contract v${fixture.contract_version}` : ""}</p><h3 className="mt-1 font-semibold text-gray-900 dark:text-white">{title || "Эталонный сценарий"}</h3></div>
+              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${healthy ? "bg-success-50 text-success-700 dark:bg-success-500/15 dark:text-success-300" : "bg-error-50 text-error-700 dark:bg-error-500/15 dark:text-error-300"}`}>{healthy ? "Работает целиком" : "Требует внимания"}</span>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-300">
+              <p>Мерчей: <strong>{fixture.merchant_count}</strong></p><p>PSP: <strong>{fixture.provider_count}</strong></p>
+              <p>Офферов в публикации: <strong>{fixture.published_route_count}</strong></p><p>Точных совпадений: <strong>{fixture.eligible_match_count}</strong></p>
+            </div>
+            {fixture.checks?.length ? <div className="mt-4 space-y-2 border-t border-gray-200 pt-4 dark:border-gray-700">{fixture.checks.map((check) => <div key={check.key} className="flex items-start gap-2 text-sm"><span aria-hidden="true" className={`mt-0.5 font-bold ${check.passed ? "text-success-600" : "text-error-600"}`}>{check.passed ? "✓" : "!"}</span><div><p className="font-medium text-gray-700 dark:text-gray-200">{check.label}</p><p className="text-xs text-gray-400">{check.detail}</p></div></div>)}</div> : null}
+            {!healthy && fixture.issues?.length ? <div className="mt-4 rounded-lg border border-error-200 bg-error-50 px-3 py-2 text-xs text-error-700">{fixture.issues.join(" · ")}</div> : null}
+            <div className="mt-4 flex flex-wrap gap-3">{fixture.entities.map((entity) => <Link key={`${entity.entity_type}-${entity.entity_id}`} to={`/${entity.entity_type === "merchant" ? "merchants" : "psps"}/${entity.entity_id}`} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-brand-600 dark:border-gray-600 dark:text-brand-300">{entity.label || entity.entity_type}</Link>)}</div>
+          </div>;
+        })}
+      </div>}
+      <p className="mt-4 rounded-xl bg-gray-50 px-4 py-3 text-xs leading-5 text-gray-500 dark:bg-white/[0.03] dark:text-gray-400">Изоляция проверяется на уровне базы: тестовый PSP не может попасть к реальному мерчанту, а тестовый мерчант — в реальный шорт-лист.</p>
+    </Panel>
     <Panel className="mt-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>

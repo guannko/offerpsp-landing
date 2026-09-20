@@ -25,7 +25,7 @@ function initial(lead: Lead): Draft {
     traffic_types: csv(lead.traffic_types), expected_monthly_volume: lead.expected_monthly_volume?.toString() || "",
     volume_currency: lead.volume_currency || "", min_transaction_amount: lead.min_transaction_amount?.toString() || "",
     max_transaction_amount: lead.max_transaction_amount?.toString() || "", transaction_currency: lead.transaction_currency || "",
-    business_model: lead.business_model || "", license_status: lead.license_status || "",
+    business_model: lead.business_model || "", license_status: lead.license_status || "unknown",
     license_jurisdiction: lead.license_jurisdiction || "", license_number: lead.license_number || "",
     license_evidence_url: lead.license_evidence_url || "", launch_timeline: lead.launch_timeline || "",
     current_processing_setup: lead.current_processing_setup || "", qualification_notes: lead.qualification_notes || "",
@@ -120,7 +120,7 @@ export default function MerchantProfileEditor({ lead, onChanged }: { lead: Lead;
     </div></Panel>
     <Panel><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Квалификация и лицензия</h2><div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       <Field label="Бизнес-модель"><input className={field} value={draft.business_model} onChange={(e)=>set("business_model",e.target.value)}/></Field>
-      <Field label="Статус лицензии"><input className={field} value={draft.license_status} onChange={(e)=>set("license_status",e.target.value)}/></Field>
+      <Field label="Статус лицензии"><select className={field} value={draft.license_status} onChange={(e)=>set("license_status",e.target.value)}><option value="unknown">Не указано</option><option value="licensed">Есть лицензия</option><option value="unlicensed">Без лицензии</option><option value="pending">В процессе</option><option value="not_required">Не требуется</option></select></Field>
       <Field label="Юрисдикция"><input className={field} value={draft.license_jurisdiction} onChange={(e)=>set("license_jurisdiction",e.target.value)}/></Field>
       <Field label="Номер лицензии"><input className={field} value={draft.license_number} onChange={(e)=>set("license_number",e.target.value)}/></Field>
       <Field label="Подтверждение лицензии"><input className={field} value={draft.license_evidence_url} onChange={(e)=>set("license_evidence_url",e.target.value)}/></Field>

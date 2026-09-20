@@ -326,6 +326,11 @@ async function applyMigrations() {
     "20260919143000_offerpsp_submission_auto_reply.sql",
     "20260919162500_offerpsp_antarex_zero_markup.sql",
     "20260919170000_aibot_matching_workspace.sql",
+    "20260920191500_offerpsp_keep_identity_review_open.sql",
+    "20260920210000_offerpsp_provider_code_sequence_alignment.sql",
+    "20260920214500_offerpsp_route_vertical_normalization.sql",
+    "20260920220000_offerpsp_qa_golden_paths.sql",
+    "20260920224000_offerpsp_qa_golden_contract.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -2565,6 +2570,238 @@ async function verifyAgentWorkspaceAndPricing() {
   process.stdout.write("PASS agent ownership, resale rate, commission workflow and foreign isolation\n");
 }
 
+async function verifyProviderCodeCollisionSafety() {
+  await setUser(STAFF_ID);
+  await query("begin");
+  try {
+    const maximum = await query(`
+      select coalesce(max((substring(internal_code from '[0-9]+$'))::bigint), 0) as value
+      from private.offerpsp_providers
+      where internal_code ~ '^PSP-[0-9]+$'
+    `);
+    const collisionNumber = Math.max(Number(maximum.rows[0].value) + 1, 2);
+    const collisionCode = `PSP-${String(collisionNumber).padStart(6, "0")}`;
+
+    await query(
+      "insert into private.offerpsp_providers(internal_code, brand_name) values($1, $2)",
+      [collisionCode, `Provider code collision fixture ${collisionCode}`],
+    );
+    await query(
+      "select setval('private.offerpsp_provider_code_seq', $1, true)",
+      [collisionNumber - 1],
+    );
+
+    const created = await query(
+      "select public.save_offerpsp_managed_provider(null, $1::jsonb) as value",
+      [JSON.stringify({
+        brand_name: "Collision-safe generated PSP",
+        relationship_status: "prospect",
+      })],
+    );
+    if (created.rows[0].value.internal_code === collisionCode) {
+      throw new Error("Provider code generator reused an occupied PSP code");
+    }
+  } finally {
+    await query("rollback");
+  }
+  process.stdout.write("PASS provider code generation skips historical collisions\n");
+}
+
+async function verifyRouteVerticalNormalization() {
+  await setUser(STAFF_ID);
+  await query("begin");
+  try {
+    const provider = await query(
+      "select public.save_offerpsp_managed_provider(null, $1::jsonb) as value",
+      [JSON.stringify({
+        brand_name: "Route vertical normalization fixture",
+        relationship_status: "prospect",
+      })],
+    );
+    const route = await query(
+      "select public.create_offerpsp_manual_route($1, $2::jsonb) as value",
+      [provider.rows[0].value.id, JSON.stringify({
+        client_title: "Canonical vertical fixture",
+        flow: "payin",
+        coverage_scope: "specific",
+        geos: ["QA-VERTICAL"],
+        currencies: ["EUR"],
+        methods: ["CARDS"],
+        verticals: ["Licensed gambling", "Casino"],
+        prohibited_verticals: ["E-commerce"],
+        source_reference: "Synthetic migration validation",
+      })],
+    );
+    await query(
+      "update private.offerpsp_offer_routes set prohibited_verticals = $2::text[] where id = $1",
+      [route.rows[0].value.route_id, ["E-commerce"]],
+    );
+    const saved = await query(
+      "select verticals, prohibited_verticals from private.offerpsp_offer_routes where id = $1",
+      [route.rows[0].value.route_id],
+    );
+    if (JSON.stringify(saved.rows[0].verticals) !== JSON.stringify(["IGAMING"])
+        || JSON.stringify(saved.rows[0].prohibited_verticals) !== JSON.stringify(["ECOMMERCE"])) {
+      throw new Error(`Route verticals were not canonicalized: ${JSON.stringify(saved.rows[0])}`);
+    }
+  } finally {
+    await query("rollback");
+  }
+  process.stdout.write("PASS provider route verticals use the merchant-matching vocabulary\n");
+}
+
+async function verifyQaGoldenPathIsolation() {
+  await setUser(STAFF_ID);
+  await query("begin");
+  try {
+    const provider = await query(
+      "select public.save_offerpsp_managed_provider(null, $1::jsonb) as value",
+      [JSON.stringify({
+        brand_name: "PaySiski golden-path fixture",
+        legal_name: "PaySiski Test PSP",
+        website: "https://paysiski.invalid",
+        relationship_status: "active",
+        margin_included_default: true,
+        relationship_notes: "Synthetic PSP fixture",
+      })],
+    );
+    const providerId = provider.rows[0].value.id;
+    await query(
+      "update private.offerpsp_providers set last_verified_at = now() where id = $1",
+      [providerId],
+    );
+    await query(
+      `insert into private.offerpsp_provider_contacts(
+        provider_id, full_name, role_title, email, preferred_channel, active
+      ) values ($1, 'PaySiski QA Partner Manager', 'Partnerships', 'partner@paysiski.invalid', 'email', true)`,
+      [providerId],
+    );
+    await query(
+      `insert into public.offerpsp_provider_profile_details(
+        provider_id, company_description, headquarters_country, operating_geos,
+        supported_currencies, payment_methods, supported_verticals, integrations,
+        licences, compliance_summary, onboarding_requirements, public_summary
+      ) values (
+        $1, 'Synthetic PSP golden template', 'QA Sandbox', array['QA-GOLDEN-PATH'],
+        array['EUR'], array['CARDS'], array['IGAMING'], array['API'],
+        '[{"jurisdiction":"QA Sandbox","status":"synthetic"}]'::jsonb,
+        'Synthetic compliance profile for validation only',
+        'Complete merchant dossier and verified contact',
+        'Synthetic PSP used only for OfferPSP workflow verification'
+      )`,
+      [providerId],
+    );
+    const route = await query(
+      "select public.create_offerpsp_manual_route($1, $2::jsonb) as value",
+      [providerId, JSON.stringify({
+        client_title: "WinPiski golden-path cards",
+        flow: "payin",
+        coverage_scope: "specific",
+        geos: ["QA-GOLDEN-PATH"],
+        currencies: ["EUR"],
+        methods: ["CARDS"],
+        traffic_types: ["SYNTHETIC QA ONLY"],
+        verticals: ["Licensed gambling"],
+        risk_segments: ["high"],
+        operational_notes: "Synthetic QA route. Never use for real merchant introductions.",
+        fees: [{ flow: "payin", fee_type: "percent", base_percent: 5, applies_on: "success" }],
+        source_reference: "Synthetic golden-path validation",
+      })],
+    );
+    const routeId = route.rows[0].value.route_id;
+    await query("select public.publish_offerpsp_route($1)", [routeId]);
+
+    const merchant = await query(`
+      insert into public.offerpsp_leads (
+        name, work_email, company, company_url, vertical, geos, methods, source, consent,
+        target_geos, requested_currencies, requested_flows, requested_methods, traffic_types,
+        expected_monthly_volume, volume_currency, min_transaction_amount,
+        max_transaction_amount, transaction_currency, business_model,
+        license_status, license_jurisdiction, license_number, license_evidence_url
+      ) values (
+        'WinPiski operator', 'operator@winpiski.invalid', 'WinPiski', 'https://winpiski.invalid',
+        'Licensed gambling', 'QA-GOLDEN-PATH', 'CARDS', 'qa_golden_path', true,
+        array['QA-GOLDEN-PATH'], array['EUR'], array['PAYIN'], array['CARDS'],
+        array['SYNTHETIC QA ONLY'], 100000, 'EUR', 10, 1000, 'EUR',
+        'Synthetic licensed-gambling merchant', 'licensed', 'QA Sandbox',
+        'QA-LICENCE-001', 'https://winpiski.invalid/qa-licence'
+      ) returning lead_id
+    `);
+    const merchantId = merchant.rows[0].lead_id;
+    await query(
+      `insert into private.offerpsp_merchant_contacts(
+        lead_id, full_name, role_title, email, preferred_channel, is_primary, active
+      ) values
+        ($1, 'WinPiski QA Operator', 'Payments Manager', 'operator@winpiski.invalid', 'email', true, true),
+        ($1, 'WinPiski QA Finance', 'Finance Manager', 'finance@winpiski.invalid', 'email', false, true)`,
+      [merchantId],
+    );
+    await query(
+      "select public.save_offerpsp_qa_fixture('golden-payments-v1', 'provider', $1, 'PaySiski')",
+      [providerId],
+    );
+    await query(
+      "select public.save_offerpsp_qa_fixture('golden-payments-v1', 'merchant', $1, 'WinPiski')",
+      [merchantId],
+    );
+    const qaMatch = await query(
+      "select public.rebuild_offerpsp_route_matches($1) as value",
+      [merchantId],
+    );
+    if (qaMatch.rows[0].value.match_count !== 1) {
+      throw new Error(`Golden-path fixture did not match: ${JSON.stringify(qaMatch.rows[0].value)}`);
+    }
+    const qaMatchRow = await query(
+      "select hard_gates from private.offerpsp_route_matches where lead_id = $1 and route_id = $2",
+      [merchantId, routeId],
+    );
+    if (qaMatchRow.rows[0]?.hard_gates?.qa_scenario_key !== "golden-payments-v1") {
+      throw new Error(`QA scenario evidence is missing from the match: ${JSON.stringify(qaMatchRow.rows[0])}`);
+    }
+
+    const realMerchant = await query(`
+      insert into public.offerpsp_leads (
+        name, work_email, company, company_url, vertical, geos, methods, source, consent,
+        target_geos, requested_currencies, requested_flows, requested_methods, traffic_types,
+        expected_monthly_volume, volume_currency, min_transaction_amount,
+        max_transaction_amount, transaction_currency, business_model
+      ) values (
+        'Real merchant control', 'merchant@example.com', 'Real Merchant', 'https://merchant.invalid',
+        'Licensed gambling', 'QA-GOLDEN-PATH', 'CARDS', 'validation', true,
+        array['QA-GOLDEN-PATH'], array['EUR'], array['PAYIN'], array['CARDS'],
+        array['SYNTHETIC QA ONLY'], 100000, 'EUR', 10, 1000, 'EUR',
+        'Control merchant without QA registration'
+      ) returning lead_id
+    `);
+    const realMerchantId = realMerchant.rows[0].lead_id;
+    const realMatch = await query(
+      "select public.rebuild_offerpsp_route_matches($1) as value",
+      [realMerchantId],
+    );
+    if (realMatch.rows[0].value.match_count !== 0) {
+      throw new Error("QA provider route leaked into a production merchant match");
+    }
+    await query("savepoint qa_shortlist_boundary");
+    await expectQueryFailure(
+      "select public.create_offerpsp_manual_shortlist($1, array[$2::uuid], 'Isolation check', 'Synthetic', 'Must fail')",
+      [realMerchantId, routeId],
+      "QA fixture and production entities cannot share a shortlist",
+    );
+    await query("rollback to savepoint qa_shortlist_boundary");
+
+    const status = await query("select public.list_offerpsp_qa_fixture_status() as value");
+    const scenario = status.rows[0].value.find((item) => item.scenario_key === "golden-payments-v1");
+    if (!scenario || scenario.merchant_count !== 1 || scenario.provider_count !== 1
+        || scenario.published_route_count !== 1 || scenario.eligible_match_count !== 1
+        || scenario.healthy !== true || scenario.checks.some((item) => item.passed !== true)) {
+      throw new Error(`Golden-path status is incomplete: ${JSON.stringify(status.rows[0].value)}`);
+    }
+  } finally {
+    await query("rollback");
+  }
+  process.stdout.write("PASS PaySiski/WinPiski golden path and production isolation\n");
+}
+
 async function verifyEntityLifecycle() {
   await setUser(STAFF_ID);
   const provider = await query(
@@ -3959,6 +4196,9 @@ try {
   await verifyImpactControlV4();
   await runEndToEndFixture();
   await verifyAgentWorkspaceAndPricing();
+  await verifyProviderCodeCollisionSafety();
+  await verifyRouteVerticalNormalization();
+  await verifyQaGoldenPathIsolation();
   await verifyEntityLifecycle();
   await verify360Workspaces();
   await verifyResearchCrud();

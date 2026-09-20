@@ -154,9 +154,13 @@ export function useEntityWorkspace(entityType: "merchant" | "provider", entityId
     }),
     saveTask: (task: Partial<EntityTask>) => entityId ? execute("task", async () => {
       const id = task.id;
-      const payload = { ...task };
-      delete payload.id;
-      delete payload.created_at;
+      const payload = {
+        title: task.title,
+        details: task.details,
+        status: task.status,
+        priority: task.priority,
+        due_at: task.due_at,
+      };
       const result = await supabase.rpc("save_offerpsp_lead_task", { p_lead_id: entityId, p_task_id: id || null, p_payload: payload });
       return { error: result.error };
     }) : Promise.resolve(false),
@@ -176,10 +180,19 @@ export function ContactsPanel({ contacts, baseContact, busy, onSave, onArchive }
     if (await onSave(draft)) setDraft({ preferred_channel: "telegram", active: true });
   };
   const visible = contacts.filter((contact) => contact.active !== false);
+  const normalizedIdentity = (value?: string | null) => String(value || "").trim().toLowerCase();
+  const showBaseContact = Boolean(baseContact) && !visible.some((contact) => {
+    const email = normalizedIdentity(baseContact?.email);
+    const telegram = normalizedIdentity(baseContact?.telegram);
+    const phone = normalizedIdentity(baseContact?.phone);
+    return (email && email === normalizedIdentity(contact.email))
+      || (telegram && telegram === normalizedIdentity(contact.telegram))
+      || (phone && phone === normalizedIdentity(contact.phone));
+  });
   return <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.3fr)_380px]">
-    <Panel><div className="flex items-center justify-between"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Контакты компании</h2><p className="mt-1 text-sm text-gray-500">Люди, через которых реально двигается сделка.</p></div><span className="text-sm text-gray-400">{visible.length + (baseContact ? 1 : 0)}</span></div>
+    <Panel><div className="flex items-center justify-between"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Контакты компании</h2><p className="mt-1 text-sm text-gray-500">Люди, через которых реально двигается сделка.</p></div><span className="text-sm text-gray-400">{visible.length + (showBaseContact ? 1 : 0)}</span></div>
       <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-2">
-        {baseContact && <div className="rounded-xl border border-brand-200 bg-brand-25 p-4 dark:border-brand-800 dark:bg-brand-500/5"><div className="flex items-start justify-between gap-3"><div><strong className="text-sm text-gray-900 dark:text-white">{baseContact.full_name || "Анкетный контакт"}</strong><span className="mt-1 block text-xs text-gray-400">Основной контакт из заявки</span></div><span className="rounded-full bg-brand-100 px-2 py-1 text-[10px] font-semibold uppercase text-brand-700">primary</span></div><div className="mt-3 space-y-1 text-sm text-gray-600 dark:text-gray-300">{baseContact.email && <p>{baseContact.email}</p>}{baseContact.telegram && <p>{baseContact.telegram}</p>}{baseContact.phone && <p>{baseContact.phone}</p>}</div></div>}
+        {showBaseContact && baseContact && <div className="rounded-xl border border-brand-200 bg-brand-25 p-4 dark:border-brand-800 dark:bg-brand-500/5"><div className="flex items-start justify-between gap-3"><div><strong className="text-sm text-gray-900 dark:text-white">{baseContact.full_name || "Анкетный контакт"}</strong><span className="mt-1 block text-xs text-gray-400">Основной контакт из заявки</span></div><span className="rounded-full bg-brand-100 px-2 py-1 text-[10px] font-semibold uppercase text-brand-700">primary</span></div><div className="mt-3 space-y-1 text-sm text-gray-600 dark:text-gray-300">{baseContact.email && <p>{baseContact.email}</p>}{baseContact.telegram && <p>{baseContact.telegram}</p>}{baseContact.phone && <p>{baseContact.phone}</p>}</div></div>}
         {visible.map((contact) => <div key={contact.id} className="rounded-xl border border-gray-200 p-4 dark:border-gray-800"><div className="flex items-start justify-between gap-3"><div><strong className="text-sm text-gray-900 dark:text-white">{contact.full_name}</strong><span className="mt-1 block text-xs text-gray-400">{contact.role_title || "Роль не указана"}</span></div>{contact.is_primary && <span className="rounded-full bg-success-50 px-2 py-1 text-[10px] font-semibold uppercase text-success-700">primary</span>}</div><div className="mt-3 space-y-1 text-sm text-gray-600 dark:text-gray-300">{contact.email && <p>{contact.email}</p>}{contact.telegram && <p>{contact.telegram}</p>}{contact.phone && <p>{contact.phone}</p>}</div><div className="mt-4 flex gap-3"><button onClick={()=>setDraft(contact)} className="text-xs font-semibold text-brand-500">Редактировать</button><button onClick={()=>void onArchive(contact.id)} className="text-xs font-semibold text-error-500">Архив</button></div></div>)}
         {!visible.length && !baseContact && <EmptyState title="Контактов нет" description="Добавьте человека, который отвечает за платёжное подключение."/>}
       </div>

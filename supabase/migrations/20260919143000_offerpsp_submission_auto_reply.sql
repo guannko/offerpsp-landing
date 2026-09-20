@@ -308,7 +308,7 @@ begin
     metadata=coalesce(metadata,'{}'::jsonb)||jsonb_build_object(
       'automation_completed_by','intake-submission-receipt-v1','draft_id',p_draft_id)
   where lead_id=v_reply.lead_id
-    and automation_ref in ('intake_response_v1','intake_submission:'||v_reply.submission_id::text)
+    and automation_ref='intake_response_v1'
     and status in ('pending','in_progress');
   insert into public.offerpsp_lead_activities(
     lead_id,actor_type,activity_type,title,metadata,client_visible

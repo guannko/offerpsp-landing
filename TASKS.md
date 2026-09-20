@@ -1,9 +1,28 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-09-17
+Updated: 2026-09-20
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
+
+### PaySiski / WinPiski golden operating templates — production 2026-09-20
+
+- `VERIFIED`: synthetic provider PaySiski and synthetic merchant WinPiski are registered as the
+  isolated `golden-payments-v1` reference scenario. They are templates for the complete PSP and
+  merchant operating paths, not disposable smoke-test rows.
+- The production contract checks five independent requirements: a complete merchant profile with
+  multiple active company contacts, a complete PSP profile with licence and active contact, one
+  published route with pricing and restrictions, one eligible exact match with a calculated price,
+  and two database isolation guards that prevent QA entities from entering real matching and
+  shortlists.
+- Live production status is healthy: 1 merchant profile, 2 merchant contacts, 1 PSP profile,
+  1 PSP contact, 1 published route and 1 exact eligible match. All contract checks pass and no
+  contract issue is reported.
+- Captain's Bridge exposes the contract on the Integrations page with direct links to both entity
+  cards. Vercel deployment `dpl_DJEdoURcM83pbC2TERFif9fZyq1d` is READY and aliased to the staff
+  URL. The production UI was visually verified after deployment.
+- Local evidence: the full OfferPSP migration validator, TypeScript lint, Vite production build,
+  control-integrity regression test and `git diff --check` pass.
 
 ### Screening rerun cooldown — production 2026-09-17
 
@@ -80,7 +99,7 @@ Code or a passing local test is not evidence that production has been updated.
 
 - `VERIFIED`: a new public intake is screened by the event-driven worker and, only after the
   fenced completion receipt exists, receives one immediate server-side first response. No Mac,
-  Thunderbird UI or 12-hour recovery sweep is required for the normal path.
+  desktop mail client or 12-hour recovery sweep is required for the normal path.
 - The only unattended message shapes are a receipt acknowledgement or an exact checklist of
   canonical missing facts. High/critical risk, red flags, duplicate identity, invalid consent or
   recipient, stale screening, prior outbound mail, unknown checklist labels and disabled
