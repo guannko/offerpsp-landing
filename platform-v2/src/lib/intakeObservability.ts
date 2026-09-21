@@ -12,7 +12,7 @@ export type IntakeSnapshot = {
 };
 export type IntakeStep = { key: string; title: string; state: 'done' | 'running' | 'attention' | 'failed' | 'unknown' | 'stopped'; reason: string; at?: string | null };
 export const intakeStateLabels = {done:'Подтверждено',running:'В работе',attention:'Нужно внимание',failed:'Ошибка',unknown:'Нет подтверждения',stopped:'Остановлено'};
-export const intakeActionLabels: Record<string,string> = {reply_draft:'Черновик ответа',missing_draft:'Запрос данных — черновик',screen:'Постановка проверки в очередь',matching:'Просмотр matching',remind:'Перенос срока задачи'};
+export const intakeActionLabels: Record<string,string> = {reply_draft:'Черновик ответа',missing_draft:'Запрос данных — черновик',screen:'Запуск проверки',matching:'Просмотр matching',remind:'Перенос срока задачи'};
 const replyReasons: Record<string,string> = {
   inactive_lead:'Заявка неактивна или завершена.',source_not_allowlisted:'Источник заявки пока не разрешён для автоматической отправки.',
   consent_not_recorded:'Согласие заявителя не записано.',invalid_recipient:'Email получателя некорректен.',

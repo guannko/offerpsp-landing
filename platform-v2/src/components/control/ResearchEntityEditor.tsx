@@ -161,7 +161,7 @@ function ScreeningPanel({ screening, busy, archived, onQueue }: { screening: Res
         <div className="mt-2 flex flex-wrap items-center gap-3"><h3 className="text-xl font-bold text-gray-950 dark:text-white">{statusText}</h3>{completed && !screening.result_current && <span className="rounded-full bg-warning-100 px-3 py-1 text-xs font-bold text-warning-800">Результат устарел</span>}</div>
         <p className="mt-2 text-base font-semibold text-gray-700 dark:text-gray-200">{timestamp ? dateTime(timestamp) : "Запусков пока не было"}</p>
       </div>
-      <button type="button" disabled={busy || archived || Boolean(active)} onClick={onQueue} className="rounded-xl bg-brand-500 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">{active ? "Проверка уже в очереди" : completed ? "Перепроверить" : "Запустить проверку"}</button>
+      <button type="button" disabled={busy || archived || Boolean(active)} onClick={onQueue} className="rounded-xl bg-brand-500 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">{active ? "Проверка выполняется…" : completed ? "Перепроверить" : "Запустить проверку"}</button>
     </div>
     {active?.last_error_code && <p className="mt-4 rounded-xl bg-white/80 px-4 py-3 text-sm font-semibold text-warning-800">Предыдущая попытка не завершилась: {active.last_error_code}. Система поставила проверку на безопасный повтор.</p>}
     {latest?.status === "failed" && <p className="mt-4 rounded-xl bg-white/80 px-4 py-3 text-sm font-semibold text-error-700">Проверка не завершена: {latest.last_error_code || "техническая ошибка"}. Предыдущий результат сохранён.</p>}

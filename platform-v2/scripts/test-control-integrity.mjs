@@ -6,7 +6,7 @@ import path from "node:path";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const read = (relativePath) => readFile(path.join(root, relativePath), "utf8");
 
-const [captain, merchant, integrations, platform, modules, ui, context, seoGeo, qaFixtures, header, compliance, operations, telegram] = await Promise.all([
+const [captain, merchant, integrations, platform, modules, ui, context, seoGeo, qaFixtures, header, compliance, operations, telegram, intakeObservability, researchEntityEditor] = await Promise.all([
   read("platform-v2/src/pages/CaptainPages.tsx"),
   read("platform-v2/src/pages/MerchantWorkspace.tsx"),
   read("platform-v2/src/pages/IntegrationsWorkspace.tsx"),
@@ -20,6 +20,8 @@ const [captain, merchant, integrations, platform, modules, ui, context, seoGeo, 
   read("platform-v2/src/pages/CompliancePage.tsx"),
   read("platform-v2/src/pages/OperationsWorkspace.tsx"),
   read("platform-v2/src/components/control/TelegramWorkspace.tsx"),
+  read("platform-v2/src/lib/intakeObservability.ts"),
+  read("platform-v2/src/components/control/ResearchEntityEditor.tsx"),
 ]);
 
 assert.match(captain, /Вернуть в непрочитанные/);
@@ -68,6 +70,11 @@ assert.match(modules, /label: "Радиорубка", shortLabel: "Почта"/)
 assert.match(integrations, /Проверка заняла больше 12 секунд/);
 assert.match(integrations, /finally\s*\{/);
 assert.match(integrations, /controller\.abort\(\)/);
+
+assert.match(intakeObservability, /screen:'Запуск проверки'/);
+assert.doesNotMatch(intakeObservability, /Постановка проверки в очередь/);
+assert.match(researchEntityEditor, /active \? "Проверка выполняется…" : completed \? "Перепроверить" : "Запустить проверку"/);
+assert.doesNotMatch(researchEntityEditor, /Проверка уже в очереди/);
 
 assert.match(modules, /label: "Обзор воронки"/);
 assert.match(platform, /title="Обзор воронки"/);
