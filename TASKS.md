@@ -317,7 +317,7 @@ This section supersedes the local-only release statuses in the historical passes
 
 ## Priority commercial-page content expansion — 2026-09-21
 
-Status: `VERIFIED` locally; production release pending.
+Status: `VERIFIED` in production.
 
 - [x] Expanded the six short priority pages identified by the 2026-09-21 audit:
   e-commerce, Middle East, gateway vs PSP vs acquirer, CIS/Central Asia,
@@ -334,6 +334,12 @@ Status: `VERIFIED` locally; production release pending.
   editorial words before the request form.
 - [x] Full `npm run validate`, `npm run build` and `git diff --check` pass. Desktop and 390 px mobile
   visual checks confirm readable cards, glossaries and bounded horizontal table overflow.
+- [x] Published commit `97e049a` as production deployment
+  `dpl_9aToTPgq8c8EGrTDjLzAD5ti9CJY`, `READY` and aliased to `https://offerpsp.com`.
+- [x] Live checks confirm the six pages contain 1,108–1,343 words, all required detail/review/glossary
+  sections and `2026-09-21` sitemap dates. Follow-up audit
+  `c7a92289-9935-4157-9e73-50f47698bb78` completed with 48/48 successful URLs, zero broken
+  URLs, SiteOne score 9.9, no priorities and no content recommendations.
 
 ## Commercial-page content depth — 2026-09-16
 
