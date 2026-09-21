@@ -142,7 +142,7 @@ export const seoPages = [
   },
   {
     slug: "psp-for-marketplaces",
-    modified: "2026-09-13",
+    modified: "2026-09-21",
     title: "PSP Matching for Online Marketplaces | OfferPSP",
     description: "Compare marketplace routes for onboarding, split funds, payouts and reconciliation. Get a focused private shortlist and qualified provider introductions.",
     kicker: "Marketplace payment infrastructure",
@@ -169,7 +169,7 @@ export const seoPages = [
   },
   {
     slug: "payment-provider-for-ecommerce",
-    modified: "2026-09-15",
+    modified: "2026-09-21",
     title: "E-commerce PSP and Payment Provider Matching | OfferPSP",
     description: "Match e-commerce routes for cards, wallets, local methods, refunds and settlement. Get a focused private shortlist and qualified provider introductions.",
     kicker: "E-commerce payment infrastructure",
@@ -197,7 +197,7 @@ export const seoPages = [
   },
   {
     slug: "psp-for-video-games",
-    modified: "2026-09-09",
+    modified: "2026-09-21",
     title: "PSP Matching for Video Game Businesses | OfferPSP",
     description: "Compare gaming routes for virtual goods, subscriptions, cards, wallets and local methods. Get a focused private shortlist and qualified introductions.",
     kicker: "Video game payment infrastructure",
@@ -321,7 +321,7 @@ export const seoPages = [
   },
   {
     slug: "payment-provider-cis-central-asia",
-    modified: "2026-09-09",
+    modified: "2026-09-21",
     title: "Payment Providers for CIS & Central Asia | OfferPSP",
     description: "Compare Kazakhstan, Uzbekistan, Georgia and CIS routes for cards, local rails and payouts. Get a focused private shortlist and qualified introductions.",
     kicker: "CIS and Central Asia payment coverage",
@@ -496,7 +496,7 @@ export const seoPages = [
   },
   {
     slug: "payment-provider-middle-east",
-    modified: "2026-09-13",
+    modified: "2026-09-21",
     title: "Payment Provider Matching in the Middle East | OfferPSP",
     description: "Compare UAE and Saudi Arabia routes for cards, Mada, rails, wallets and settlement. Get a focused private shortlist and qualified provider introductions.",
     kicker: "Middle East payment coverage",
@@ -726,7 +726,7 @@ export const seoPages = [
     slug: "payment-gateway-vs-psp-vs-acquirer",
     pageType: "guide",
     published: "2026-09-01",
-    modified: "2026-09-09",
+    modified: "2026-09-21",
     title: "Payment Gateway vs PSP vs Acquirer: B2B Guide | OfferPSP",
     description: "Compare payment gateways, PSPs and acquirers by connectivity, underwriting, funds flow, settlement and contracts. Identify the roles a payment stack requires.",
     kicker: "Payment infrastructure roles",
@@ -821,10 +821,43 @@ const commercialDepthBySlug = {
       ["Processing file", "Statements, volume and ticket calculation, refund and dispute ratios, fraud tooling, descriptors and any previous provider decision."],
       ["Route file", "Country-method matrix, currencies, recurring or one-off flow, settlement preference, integration owner and launch sequence."],
     ],
+    glossaryTitle: "E-commerce payment terms used in the brief",
+    glossary: [
+      ["Presentment currency", "The currency shown to and paid by the customer at checkout."],
+      ["Settlement currency", "The currency in which processed funds are paid to the merchant's bank account."],
+      ["Descriptor", "The transaction text a customer sees on a card or bank statement; unclear descriptors can create avoidable disputes."],
+      ["Chargeback", "A card-payment dispute handled through the card-scheme process, distinct from a merchant-issued refund."],
+    ],
     sources: [
       ["Visa rules — merchant underwriting records", "https://usa.visa.com/dam/VCOM/download/about-visa/visa-rules-public.pdf"],
       ["Mastercard — MATCH Pro onboarding due diligence", "https://www.mastercard.com/global/en/match-privacy-notice.html"],
       ["FATF — beneficial ownership guidance", "https://www.fatf-gafi.org/en/publications/Fatfrecommendations/Guidance-Beneficial-Ownership-Transparency-Legal-Arrangements.html"],
+    ],
+  },
+  "payment-provider-cis-central-asia": {
+    title: "Turn a regional request into country-level payment rows",
+    intro: "CIS and Central Asia cannot be assessed as one provider-coverage box. The contracting entity, customer location, product permissions, currency, collection or payout purpose and sanctions exposure must be recorded for every priority country before a route can be treated as plausible.",
+    columns: ["Country-level question", "Evidence to prepare", "Typical hold or decline trigger"],
+    criteria: [
+      ["Kazakhstan route", "Entity and customer GEO, lawful product basis, KZT or other required currencies, cards or bank flow, refund path and settlement destination.", "The request says Kazakhstan but does not identify the customer journey, transaction purpose, local versus cross-border structure or receiving bank."],
+      ["Uzbekistan route", "Customer and entity relationship, UZS collection or payout need, method category, expected limits, operational support and reconciliation fields.", "A generic wallet or card request replaces the actual funds flow, or the proposed entity and settlement structure cannot be explained."],
+      ["Georgia route", "GEL or international-currency flow, cards or bank transfer requirement, product terms, customer countries, refunds and settlement account.", "The operating entity, website, customer geography and bank evidence do not describe the same business or payment route."],
+      ["Regional compliance", "Ownership chart, licences or legal basis, sanctions and PEP controls, source-of-funds process, traffic sources and processing history.", "Ownership is unclear, a restricted country or party is involved, material history is omitted or forecast volume has no support."],
+    ],
+    briefTitle: "Example CIS and Central Asia route matrix",
+    briefIntro: "A useful brief might describe a Kazakhstan company serving named business customers in Kazakhstan, Uzbekistan and Georgia. It would provide a separate row for each country with product, customer type, PayIn or payout purpose, method category, currency, monthly volume, average ticket, refund logic, settlement bank and launch priority. It would also label every assumption that still needs provider confirmation. The example describes structure only; it is not a real client, a provider threshold or an approval promise.",
+    briefItems: [
+      ["Corporate pack", "Company extract, ownership and directors, operating address, tax position, group structure and proof of the intended settlement account."],
+      ["Country matrix", "One row per country covering customers, lawful product basis, methods, currencies, PayIn or payout, volume, ticket and launch order."],
+      ["Compliance pack", "KYC or KYB, sanctions and PEP screening, transaction monitoring, source-of-funds triggers and escalation ownership."],
+      ["Operating pack", "Website and agreements, refund and dispute workflow, processing statements, integration, reporting, reconciliation and known restrictions."],
+    ],
+    glossaryTitle: "Regional payment-brief terms",
+    glossary: [
+      ["PayIn", "A flow in which customer funds are collected for the merchant's product or service."],
+      ["Payout", "A separate flow sending funds to an eligible beneficiary; collection support does not prove payout support."],
+      ["PEP screening", "Checks for politically exposed persons and related risk indicators as part of customer or counterparty review."],
+      ["Settlement bank", "The bank account intended to receive net processed funds under the provider agreement."],
     ],
   },
   "payment-provider-cis-central-asia-ru": {
@@ -870,6 +903,39 @@ const commercialDepthBySlug = {
       ["Money movement", "Collection, split or sequential settlement, platform commission, reserves, refund funding, dispute allocation and payout instructions."],
       ["Technical controls", "API roles, submerchant identifiers, webhooks, ledger exports, access permissions, reconciliation and incident procedures."],
       ["Operating forecast", "Seller count, buyer GEOs, currencies, expected volume, average ticket, payout frequency, seasonality and launch stages."],
+    ],
+    glossaryTitle: "Marketplace payment terms",
+    glossary: [
+      ["Submerchant", "A seller or service provider onboarded under a marketplace or platform payment arrangement."],
+      ["Split settlement", "A controlled allocation of one collected payment between the platform, seller or other entitled parties."],
+      ["KYB", "Business verification covering the legal entity, ownership, controllers and supporting corporate evidence."],
+      ["Ledger", "The platform's record linking each order to collections, fees, refunds, adjustments and seller payouts."],
+    ],
+  },
+  "psp-for-video-games": {
+    title: "Separate the game, storefront and player payment model",
+    intro: "A provider cannot assess a video game route from genre and player count alone. It needs to know who is the merchant, where checkout occurs, what digital value is delivered, whether payments are one-off or recurring and how the studio handles account abuse, refunds and disputes.",
+    columns: ["Operating model", "Evidence to prepare", "Typical hold or decline trigger"],
+    criteria: [
+      ["Direct web checkout", "Merchant entity, game and checkout URLs, player countries, methods, currencies, entitlement delivery, refund policy and settlement account.", "The website and legal entity do not match, digital delivery cannot be evidenced or the requested countries are broader than the launch plan."],
+      ["Mobile, console or platform sales", "The platform contract, merchant-of-record position, off-platform payment boundary and any direct billing flow operated by the studio.", "The brief assumes the studio controls a transaction that is actually contracted and settled by a third-party storefront."],
+      ["Virtual goods and subscriptions", "Product catalogue, purchase values, subscription mandate, cancellation, parental controls, account ownership and fulfilment records.", "Recurring authority is unclear, virtual value can be transferred or resold without controls, or refunds conflict with the stated delivery model."],
+      ["Fraud and live operations", "Card-testing controls, account takeover monitoring, device and player signals, disputes, peak events, incident owners and reconciliation.", "The forecast ignores fraud pressure, processing history is omitted or no team owns entitlement failures and payment incidents."],
+    ],
+    briefTitle: "Example video game payment brief",
+    briefIntro: "A reviewable example could describe an EU studio selling PC game subscriptions and one-off virtual items through its own website to players in Germany, Poland and Brazil. The brief would separate subscription and virtual-item volume, average ticket, cards and locally relevant methods, currencies, entitlement delivery, refund rules, dispute history, fraud controls and the intended settlement account. These figures and countries are illustrative, not evidence that a route is available.",
+    briefItems: [
+      ["Business and storefront", "Studio and publishing entities, game and checkout URLs, platform contracts, customer terms, privacy, support and settlement-bank proof."],
+      ["Product and fulfilment", "Subscriptions, downloadable content, virtual items, purchase limits, entitlement events, cancellation, refunds and parental controls."],
+      ["Player and processing data", "Country and device mix, volume, ticket, seasonality, statements, disputes, refunds, card testing and account-abuse history."],
+      ["Technical route", "Checkout ownership, API or SDK, tokens, recurring mandates, webhooks, entitlement callbacks, reports, reconciliation and failover."],
+    ],
+    glossaryTitle: "Video game payment terms",
+    glossary: [
+      ["Entitlement", "The recorded right to access a game, subscription or virtual item after a successful purchase."],
+      ["Card testing", "Automated low-value attempts used to identify stolen card credentials that still work."],
+      ["Friendly fraud", "A dispute raised by a genuine customer or household member after the digital purchase was delivered."],
+      ["Merchant of record", "The entity contractually selling to the player and taking responsibility for the transaction, taxes, refunds and disputes."],
     ],
   },
   "psp-for-crypto-businesses": {
@@ -958,7 +1024,41 @@ const commercialDepthBySlug = {
       ["Risk file", "Customer onboarding, sanctions screening, fraud controls, chargebacks, fulfilment evidence and prohibited markets."],
       ["Technical file", "Checkout, authentication, token or recurring requirements, API ownership, webhooks, reports and reconciliation."],
     ],
+    glossaryTitle: "Middle East route terms",
+    glossary: [
+      ["Domestic scheme", "A payment scheme designed for a specific national market; merchant access and acquiring conditions must be confirmed locally."],
+      ["Local acquiring", "Card acquiring arranged in the customer market, subject to entity, vertical, licence and provider eligibility."],
+      ["Presentment", "The country and currency context in which the customer sees and authorises the payment."],
+      ["Settlement", "The provider's transfer of net processed funds to the merchant under the agreed currency, timing and reserve conditions."],
+    ],
     sources: [["Saudi Central Bank — Mada network", "https://rulebook.sama.gov.sa/en/new-identity-saudi-payment-network-mada"]],
+  },
+  "payment-gateway-vs-psp-vs-acquirer": {
+    title: "Map every payment role to a contract and an owner",
+    intro: "Labels are not enough because one company can perform several roles and one payment route can combine several companies. A usable architecture records who contracts with the merchant, who makes the risk decision, who handles transaction data, who controls settlement and who responds when the route fails.",
+    columns: ["Architecture question", "Evidence to prepare", "Failure caused by leaving it unclear"],
+    criteria: [
+      ["Who approves the merchant?", "Contracting entities, regulated roles, onboarding forms, required documents and the party issuing the final approval or decline.", "The project treats a technical gateway integration as proof that an acquirer or payment provider has approved the merchant."],
+      ["Who routes the transaction?", "Checkout, gateway, processor and orchestration diagram with tokens, authentication, webhooks, routing rules and retry ownership.", "Two suppliers both assume the other owns authentication, token portability, retries or incident investigation."],
+      ["Who moves and settles funds?", "Acquiring or payment-rail contract, settlement account, currencies, timing, reserves, fees, refunds and dispute funding.", "The commercial proposal does not identify the regulated funds-flow owner or the merchant cannot reconcile net settlement."],
+      ["Who operates the route?", "Support boundaries, monitoring, reconciliation, incident severity, escalation contacts, change control and backup procedure.", "A live failure has no accountable owner, or the fallback route depends on tokens and data that cannot be moved."],
+    ],
+    briefTitle: "Example payment-stack responsibility matrix",
+    briefIntro: "A practical brief can use one row per component: checkout, gateway, orchestration, processor, acquirer, alternative method and payout rail. Each row names the contracting party, regulated role, data handled, underwriting owner, settlement responsibility, currencies, reports, support boundary and exit dependency. This makes overlapping claims visible before contracts and integration work begin, without publishing provider identities or private commercial terms.",
+    briefItems: [
+      ["Contract map", "Legal entity on each agreement, service description, regulated responsibility, approval dependency and termination or migration condition."],
+      ["Data map", "Checkout fields, card or account data, tokens, authentication, routing, webhooks, reporting and access-control ownership."],
+      ["Funds-flow map", "Customer authorisation, clearing, settlement, reserves, refunds, disputes, payout and reconciliation from gross to net."],
+      ["Operations map", "Monitoring, support hours, incident owner, escalation, change notices, backup route, reporting and finance responsibilities."],
+    ],
+    glossaryTitle: "Payment-stack glossary",
+    glossary: [
+      ["Gateway", "The technical layer that captures or transmits payment instructions; it does not necessarily underwrite or settle for the merchant."],
+      ["PSP", "A payment service provider that may bundle access to methods, acquiring, gateway, reporting, risk tools and support."],
+      ["Acquirer", "The entity providing the merchant's card-acquiring relationship and participating in card clearing and settlement."],
+      ["Processor", "The infrastructure handling transaction messages and records between payment participants."],
+      ["Orchestration", "A control layer connecting multiple payment routes and applying routing or failover logic without replacing provider approval."],
+    ],
   },
   "payment-provider-africa": {
     title: "Build African coverage as a country-level method map",
@@ -1004,6 +1104,36 @@ const reviewProcessBySlug = {
     intro: "For planning, OfferPSP allows 1–2 business days to check brief completeness and approximately 3–10 business days for an initial provider review after a complete submission. Full due diligence, contracting and integration may take 2–6 weeks for a documented case and longer where products, countries or ownership require enhanced review. This is not a provider SLA or an approval promise.",
     mistakes: ["The live store lacks clear delivery, refund, privacy or customer-support information.", "Requested volume, ticket and countries do not match statements or acquisition plans.", "A long method list replaces a country-by-country checkout and settlement flow."],
     accelerators: ["Use matching names and addresses across corporate documents, website and bank evidence.", "Provide recent processing statements and explain refunds, disputes and abnormal months.", "Prioritise launch countries and methods instead of asking for worldwide coverage."],
+  },
+  "payment-provider-cis-central-asia": {
+    title: "Why regional payment requests stall",
+    intro: "OfferPSP uses 1–2 business days as a planning range to check whether a country-level brief is complete and approximately 3–10 business days for an interested provider's initial review after receiving the evidence. Cross-border compliance, enhanced due diligence, contracting and integration can take 3–8 weeks or longer. These are planning estimates, not a provider SLA or approval promise.",
+    mistakes: ["The request says CIS or Central Asia without separate customer, method, currency and settlement rows.", "Ownership, lawful product basis, sanctions exposure or the intended receiving bank is unclear.", "Forecast volume is presented without processing history, customer assumptions or a launch sequence."],
+    accelerators: ["Keep one current corporate pack and identify the exact entity serving each market.", "Use one row per country and separate PayIn, payout, refund and settlement requirements.", "Record restricted markets, open legal questions and provider dependencies instead of treating assumptions as facts."],
+  },
+  "psp-for-marketplaces": {
+    title: "Common marketplace review failures",
+    intro: "For planning, OfferPSP allows 1–2 business days to check the brief and roughly 3–10 business days for an initial provider response after the funds flow and seller model are complete. Legal-role analysis, seller onboarding design, provider due diligence and integration often require 3–8 weeks or more. This is not a provider SLA and does not guarantee approval.",
+    mistakes: ["The platform calls itself a marketplace but does not identify the seller, merchant of record or refund owner.", "Collection is described without the path for fees, balances, reserves, seller payouts and reversals.", "Seller growth forecasts omit seller categories, countries, verification fields and monitoring controls."],
+    accelerators: ["Provide one diagram showing every entity, account and movement of funds.", "Attach seller and buyer terms plus a sample onboarding record and ledger export.", "Separate buyer acceptance, platform fees and seller payout requirements before provider comparison."],
+  },
+  "psp-for-video-games": {
+    title: "What delays a video game payment review",
+    intro: "A documented brief can usually be checked for completeness within 1–2 business days, while an interested provider may need about 3–10 business days for an initial review. Underwriting, contract, technical work and live validation commonly take 2–6 weeks and may take longer for global, high-fraud or complex storefront models. These are OfferPSP planning estimates, not a provider SLA or approval guarantee.",
+    mistakes: ["The studio does not separate direct web sales from mobile, console or third-party storefront transactions.", "Virtual-item delivery, recurring authority, refunds, parental controls or account ownership are not documented.", "Volume and player growth are forecast without processing history, fraud controls or a country and device split."],
+    accelerators: ["Trace one purchase from checkout through payment confirmation and entitlement delivery.", "Separate subscriptions, virtual goods and other product lines by volume, ticket, refund and dispute profile.", "Provide player-country, platform and device priorities plus an owner for fraud, payments and reconciliation."],
+  },
+  "payment-provider-middle-east": {
+    title: "Why a Middle East route needs separate country evidence",
+    intro: "OfferPSP plans 1–2 business days for brief completeness and around 3–10 business days for an interested provider's initial assessment after UAE, Saudi and other country rows are complete. Local eligibility, licensing, due diligence, contracts and integration can require 3–8 weeks or longer. This is not a provider SLA or an approval promise.",
+    mistakes: ["UAE eligibility is presented as evidence of access to Saudi Arabia or the wider region.", "The request lists Mada, cards or bank methods without entity, customer flow, currency and settlement details.", "Local-presence, licence, sanctions, refund and treasury questions are left until after commercial discussion."],
+    accelerators: ["Use separate UAE and Saudi rows with entity, product, method, volume, ticket, currency and launch priority.", "State which local-presence and licensing points are confirmed and which still require advice.", "Attach ownership, bank, product, processing and risk evidence in one indexed package."],
+  },
+  "payment-gateway-vs-psp-vs-acquirer": {
+    title: "Where payment-stack decisions go wrong",
+    intro: "OfferPSP can check a responsibility matrix in 1–2 business days and use approximately 3–10 business days as a planning range for initial discussions with relevant providers after the merchant profile is complete. Underwriting, contracting, data review and integration usually take several additional weeks. These are planning estimates, not a provider SLA or a promise that a route will be approved.",
+    mistakes: ["A signed gateway or orchestration agreement is mistaken for merchant approval by an acquirer.", "The proposal does not name the regulated entity that holds or settles funds and owns reserves or disputes.", "Token ownership, reporting, reconciliation, incident response and migration dependencies are left outside the contract map."],
+    accelerators: ["Build one matrix linking every supplier to its contract, regulated role, data, funds and support responsibility.", "Trace an authorisation, refund, dispute and settlement through the full stack before selecting architecture.", "Test the backup and exit path on paper, including token portability, reconciliation and operational ownership."],
   },
   "payment-provider-cis-central-asia-ru": {
     title: "Частые ошибки в брифе и сроки решения",
@@ -1265,6 +1395,11 @@ export const renderPage = (page) => {
             </article>`).join("")}
           </div>
         </div>
+        ${commercialDepth.glossary?.length ? `<div class="depth-glossary">
+          <div class="kicker">${language === "ru" ? "Словарь" : "Glossary"}</div>
+          <h3>${escapeHtml(commercialDepth.glossaryTitle)}</h3>
+          <dl class="glossary-grid">${commercialDepth.glossary.map(([term, definition]) => `<div class="glossary-term"><dt>${escapeHtml(term)}</dt><dd>${escapeHtml(definition)}</dd></div>`).join("")}</dl>
+        </div>` : ""}
         ${commercialDepth.sources?.length ? `<p class="source-note"><strong>${language === "ru" ? "Первичные источники:" : "Primary references:"}</strong> ${commercialDepth.sources.map(([label, href]) => `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`).join(" · ")}. ${language === "ru" ? "Источники описывают требования или инфраструктуру, но не подтверждают доступность маршрута для конкретного мерчанта." : "These references describe the named infrastructure or regulatory framework; they do not confirm a provider route for a particular merchant."}</p>` : ""}
       </div>
     </section>` : "";
@@ -1314,7 +1449,7 @@ ${alternateLinks}
   <link rel="icon" href="/brand/offerpsp-favicon-32.png?v=20260816-1" type="image/png" sizes="32x32">
   <link rel="icon" href="/brand/offerpsp-favicon-48.png?v=20260816-1" type="image/png" sizes="48x48">
   <link rel="apple-touch-icon" href="/brand/offerpsp-apple-touch-icon-180.png?v=20260816-1" sizes="180x180">
-  <link rel="stylesheet" href="/service-pages.css?v=20260915-1">
+  <link rel="stylesheet" href="/service-pages.css?v=20260921-1">
   <link rel="stylesheet" href="/content-visuals.css?v=20260828-1">
   <link rel="stylesheet" href="/contact-dialog.css?v=20260907-5">
   <meta property="og:type" content="website">

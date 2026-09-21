@@ -332,20 +332,37 @@ const commercialDepthSlugs = [
   "psp-for-igaming",
   "high-risk-payment-provider",
   "payment-provider-for-ecommerce",
+  "payment-provider-cis-central-asia",
   "payment-provider-cis-central-asia-ru",
   "psp-for-marketplaces",
+  "psp-for-video-games",
   "psp-for-crypto-businesses",
   "payment-provider-latin-america",
   "payment-provider-asia-pacific",
   "payment-provider-middle-east",
   "payment-provider-africa",
+  "payment-gateway-vs-psp-vs-acquirer",
 ];
 
 const reviewProcessSlugs = [
   "psp-for-igaming",
   "high-risk-payment-provider",
   "payment-provider-for-ecommerce",
+  "payment-provider-cis-central-asia",
   "payment-provider-cis-central-asia-ru",
+  "psp-for-marketplaces",
+  "psp-for-video-games",
+  "payment-provider-middle-east",
+  "payment-gateway-vs-psp-vs-acquirer",
+];
+
+const priorityContentDepthSlugs = [
+  "payment-provider-for-ecommerce",
+  "payment-provider-middle-east",
+  "payment-gateway-vs-psp-vs-acquirer",
+  "payment-provider-cis-central-asia",
+  "psp-for-marketplaces",
+  "psp-for-video-games",
 ];
 
 const visibleMainWordCount = (html) => {
@@ -369,6 +386,19 @@ for (const slug of commercialDepthSlugs) {
   assert.ok(visibleMainWordCount(rendered) <= 1400, `${slug} main content must stay within the 1400-word editorial ceiling`);
   assert.ok(!/current provider (?:terms|routes|requirements|contracts)/i.test(rendered), `${slug} must not imply that stored provider information is current`);
 }
+
+for (const slug of priorityContentDepthSlugs) {
+  const page = seoPages.find((candidate) => candidate.slug === slug);
+  const rendered = renderPage(page);
+  assert.ok(rendered.includes('class="depth-glossary"'), `${slug} must include a compact operational glossary`);
+  assert.ok(rendered.includes('id="review-timing-and-errors"'), `${slug} must explain common review failures and accelerators`);
+  assert.ok(page.modified === "2026-09-21", `${slug} must carry the current substantive-content date`);
+}
+
+assert.ok(home.includes('id="brief-readiness"'), "home page must explain what makes a payment brief decision-ready");
+assert.ok(home.includes("does not publish private identities, rates, source terms, margins or contact details"), "home page must preserve provider confidentiality boundaries");
+const homeEditorialContent = home.match(/<main[^>]*>([\s\S]*?)<section class="contact"/i)?.[1] || "";
+assert.ok(visibleMainWordCount(`<main>${homeEditorialContent}</main>`) >= 700, "home page must contain at least 700 useful editorial words before the request form");
 
 const disclosureCopy = renderPage(seoPages.find((candidate) => candidate.slug === "psp-for-igaming"));
 assert.ok(

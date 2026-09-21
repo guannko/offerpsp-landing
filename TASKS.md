@@ -315,6 +315,26 @@ This section supersedes the local-only release statuses in the historical passes
 - [ ] Add validation plus controlled end-to-end tests for a valid lead, duplicate, spam, partial
   dossier, callback retry, failed screening and failed notification.
 
+## Priority commercial-page content expansion — 2026-09-21
+
+Status: `VERIFIED` locally; production release pending.
+
+- [x] Expanded the six short priority pages identified by the 2026-09-21 audit:
+  e-commerce, Middle East, gateway vs PSP vs acquirer, CIS/Central Asia,
+  marketplaces and video games.
+- [x] Added page-specific decision tables, provider-review evidence, illustrative brief structures,
+  common hold or decline triggers, decision accelerators and compact operational glossaries.
+- [x] Expanded the home page with a decision-ready brief example, common review stops, controlled
+  shortlist boundaries and a concise PayIn/payout/presentment/settlement glossary.
+- [x] Preserved confidentiality: no PSP identities, provider contacts, source rates, OfferPSP margin
+  or live commercial terms were published.
+- [x] Updated only the materially changed sitemap dates and added regression guards for content
+  depth, review-process coverage, glossaries, homepage editorial depth and confidentiality copy.
+- [x] The six pages render 1,108–1,343 useful main-content words; the home page contains 1,243
+  editorial words before the request form.
+- [x] Full `npm run validate`, `npm run build` and `git diff --check` pass. Desktop and 390 px mobile
+  visual checks confirm readable cards, glossaries and bounded horizontal table overflow.
+
 ## Commercial-page content depth — 2026-09-16
 
 Status: `VERIFIED` in production.
