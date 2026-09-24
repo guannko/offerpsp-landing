@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" role="img" aria-labelledby="title desc">
+  <title id="title">Payment provider matching brief map</title>
+  <desc id="desc">A diagram connecting entity, licensing, customer geography, methods, currencies, volume, risk and settlement to one payment matching brief.</desc>
+  <defs>
+    <radialGradient id="background" cx="50%" cy="45%" r="75%">
+      <stop offset="0" stop-color="#1a2030"/>
+      <stop offset="1" stop-color="#0b0e18"/>
+    </radialGradient>
+    <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="22"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="620" rx="34" fill="url(#background)"/>
+  <circle cx="600" cy="310" r="160" fill="#ff4d7a" opacity=".08" filter="url(#softGlow)"/>
+  <g stroke="#434958" stroke-width="2">
+    <path d="M600 310L255 150M600 310L600 115M600 310L945 150M600 310L1020 310M600 310L945 470M600 310L600 505M600 310L255 470M600 310L180 310"/>
+  </g>
+  <g font-family="Inter, Arial, sans-serif">
+    <g transform="translate(430 230)">
+      <rect width="340" height="160" rx="28" fill="#111522" stroke="#ff4d7a" stroke-width="2"/>
+      <text x="170" y="54" text-anchor="middle" fill="#ff6c91" font-size="15" font-weight="800" letter-spacing="3">OFFERPSP</text>
+      <text x="170" y="96" text-anchor="middle" fill="#f6f3ec" font-size="30" font-weight="750">PAYMENT BRIEF</text>
+      <text x="170" y="128" text-anchor="middle" fill="#a7abb6" font-size="15">One operating profile · relevant routes</text>
+    </g>
+    <g fill="#151a29" stroke="#353b4a">
+      <rect x="120" y="105" width="270" height="90" rx="20"/>
+      <rect x="465" y="70" width="270" height="90" rx="20"/>
+      <rect x="810" y="105" width="270" height="90" rx="20"/>
+      <rect x="885" y="265" width="270" height="90" rx="20"/>
+      <rect x="810" y="425" width="270" height="90" rx="20"/>
+      <rect x="465" y="460" width="270" height="90" rx="20"/>
+      <rect x="120" y="425" width="270" height="90" rx="20"/>
+      <rect x="45" y="265" width="270" height="90" rx="20"/>
+    </g>
+    <g fill="#f6f3ec" font-size="19" font-weight="700" text-anchor="middle">
+      <text x="255" y="144">ENTITY</text><text x="255" y="170" fill="#a7abb6" font-size="14" font-weight="500">Ownership and contracting party</text>
+      <text x="600" y="109">LICENSING</text><text x="600" y="135" fill="#a7abb6" font-size="14" font-weight="500">Regulatory position</text>
+      <text x="945" y="144">CUSTOMER GEOs</text><text x="945" y="170" fill="#a7abb6" font-size="14" font-weight="500">Markets and launch order</text>
+      <text x="1020" y="304">METHODS</text><text x="1020" y="330" fill="#a7abb6" font-size="14" font-weight="500">Cards · banks · wallets</text>
+      <text x="945" y="464">CURRENCIES</text><text x="945" y="490" fill="#a7abb6" font-size="14" font-weight="500">Presentment and settlement</text>
+      <text x="600" y="499">VOLUME</text><text x="600" y="525" fill="#a7abb6" font-size="14" font-weight="500">Ticket size and forecast</text>
+      <text x="255" y="464">RISK PROFILE</text><text x="255" y="490" fill="#a7abb6" font-size="14" font-weight="500">Disputes and controls</text>
+      <text x="180" y="304">SETTLEMENT</text><text x="180" y="330" fill="#a7abb6" font-size="14" font-weight="500">Timing · reserves · reporting</text>
+    </g>
+  </g>
+</svg>

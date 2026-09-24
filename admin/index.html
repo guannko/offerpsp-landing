@@ -1,0 +1,827 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#080a13">
+  <title>OfferPSP Desk</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/admin/styles.css">
+</head>
+<body>
+  <div class="app-bg" aria-hidden="true"></div>
+
+  <main id="authView" class="auth-shell">
+    <section class="auth-card">
+      <div class="language-switch" aria-label="Язык интерфейса">
+        <button type="button" data-language="ru">RU</button>
+        <button type="button" data-language="en">EN</button>
+      </div>
+      <a class="brand" href="/">
+        <span class="brand-mark">OP</span>
+        <span>OfferPSP</span>
+      </a>
+      <div class="eyebrow">Private operations desk</div>
+      <h1>Sign in to the lead desk</h1>
+      <p class="auth-copy">Merchant requests, matching, tasks and communication in one protected workspace.</p>
+
+      <form id="loginForm" class="auth-form">
+        <label>
+          Work email
+          <input id="emailInput" name="email" type="email" autocomplete="email" required placeholder="you@company.com">
+        </label>
+        <label>
+          Password
+          <input id="passwordInput" name="password" type="password" autocomplete="current-password" placeholder="Your password">
+        </label>
+        <button class="button button-primary" type="submit">Sign in</button>
+        <button id="googleLoginButton" class="button button-secondary" type="button">Continue with Google</button>
+        <button id="magicLinkButton" class="button button-secondary" type="button">Email me a secure link</button>
+      </form>
+      <p id="authStatus" class="form-status" role="status" aria-live="polite"></p>
+      <p class="auth-footnote">Access is limited to approved OfferPSP staff accounts.</p>
+    </section>
+  </main>
+
+  <div id="appView" class="app-shell is-hidden">
+    <aside class="sidebar">
+      <a class="brand sidebar-brand" href="/">
+        <span class="brand-mark">OP</span>
+        <span>OfferPSP</span>
+      </a>
+      <nav class="side-nav" aria-label="Operations">
+        <button class="nav-item is-active" type="button" data-view="leads">
+          <span class="nav-icon">⌁</span>
+          Lead desk
+        </button>
+        <button class="nav-item" type="button" data-view="supply">
+          <span class="nav-icon">▦</span>
+          PSP supply
+        </button>
+        <button class="nav-item" type="button" data-view="management">
+          <span class="nav-icon">◎</span>
+          Control center
+        </button>
+        <button class="nav-item" type="button" data-view="analytics">
+          <span class="nav-icon">↗</span>
+          Analytics
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-chip">
+          <span id="userInitial" class="avatar">B</span>
+          <span>
+            <strong id="userName">Boris</strong>
+            <small id="userRole">Owner</small>
+          </span>
+        </div>
+        <button id="signOutButton" class="text-button" type="button">Sign out</button>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <button id="menuButton" class="menu-button" type="button" aria-label="Open menu">☰</button>
+        <div>
+          <p id="topbarEyebrow" class="eyebrow">Operations</p>
+          <h1 id="topbarTitle">Merchant requests</h1>
+          <p id="topbarDescription" class="topbar-description">Review requests and move each merchant to the next action.</p>
+        </div>
+        <div class="topbar-actions">
+          <div class="language-switch" aria-label="Язык интерфейса">
+            <button type="button" data-language="ru">RU</button>
+            <button type="button" data-language="en">EN</button>
+          </div>
+          <span id="lastUpdated" class="last-updated"></span>
+          <button id="refreshButton" class="icon-button" type="button" aria-label="Refresh leads">↻</button>
+        </div>
+      </header>
+
+      <section class="stats-grid app-page" data-app-view="leads" aria-label="Lead summary">
+        <article class="stat-card stat-total">
+          <span>Total requests</span>
+          <strong id="statTotal">—</strong>
+          <small>All time</small>
+        </article>
+        <article class="stat-card">
+          <span>Needs review</span>
+          <strong id="statNew">—</strong>
+          <small>New + qualifying</small>
+        </article>
+        <article class="stat-card">
+          <span>In matching</span>
+          <strong id="statMatching">—</strong>
+          <small>Active research</small>
+        </article>
+        <article class="stat-card">
+          <span>Shortlists ready</span>
+          <strong id="statReady">—</strong>
+          <small>Ready to share</small>
+        </article>
+        <article class="stat-card stat-won">
+          <span>Converted</span>
+          <strong id="statWon">—</strong>
+          <small id="statWonRate">Won opportunities</small>
+        </article>
+      </section>
+
+      <section class="panel lead-panel app-page" data-app-view="leads">
+        <div class="panel-head">
+          <div>
+            <h2>Lead inbox</h2>
+            <p id="resultCount">Loading requests…</p>
+          </div>
+          <div class="filters">
+            <label class="search-field">
+              <span aria-hidden="true">⌕</span>
+              <input id="searchInput" type="search" placeholder="Search company, email or GEO">
+            </label>
+            <select id="statusFilter" aria-label="Filter by status">
+              <option value="all">All statuses</option>
+              <option value="new">New</option>
+              <option value="qualifying">Qualifying</option>
+              <option value="needs_clarification">Needs clarification</option>
+              <option value="matching">Matching</option>
+              <option value="shortlist_ready">Shortlist ready</option>
+              <option value="shared">Shared</option>
+              <option value="option_selected">Option selected</option>
+              <option value="dossier_ready">Dossier ready</option>
+              <option value="provider_reviewing">PSP review</option>
+              <option value="provider_needs_info">PSP needs info</option>
+              <option value="provider_accepted">PSP accepted</option>
+              <option value="provider_declined">PSP declined</option>
+              <option value="telegram_created">Telegram introduction</option>
+              <option value="zoom_scheduled">Zoom scheduled</option>
+              <option value="negotiating">Negotiating</option>
+              <option value="won">Won</option>
+              <option value="lost">Lost</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="loadingState" class="state-card">
+          <span class="spinner"></span>
+          Loading the lead desk…
+        </div>
+        <div id="emptyState" class="state-card is-hidden">
+          <span class="empty-icon">◇</span>
+          <strong>No requests found</strong>
+          <p>New merchant requests will appear here automatically.</p>
+        </div>
+        <div id="leadsTableWrap" class="table-wrap is-hidden">
+          <table>
+            <thead>
+              <tr>
+                <th>Merchant</th>
+                <th>Operating profile</th>
+                <th>Volume</th>
+                <th>Quality</th>
+                <th>Status</th>
+                <th>Received</th>
+                <th aria-label="Open"></th>
+              </tr>
+            </thead>
+            <tbody id="leadsTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="management" class="panel management-panel app-page is-hidden" data-app-view="management">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Operations control center</p>
+            <h2>Manage the whole network</h2>
+            <p>Merchants, PSPs, offers and agents stay editable as relationships change.</p>
+          </div>
+          <button id="refreshManagementButton" class="icon-button" type="button" aria-label="Refresh control center">↻</button>
+        </div>
+        <div id="managementSummary" class="management-summary"></div>
+        <nav class="management-tabs" aria-label="Managed entities">
+          <button class="is-active" type="button" data-management-tab="merchants">Merchants</button>
+          <button type="button" data-management-tab="providers">PSPs</button>
+          <button type="button" data-management-tab="offers">Offers</button>
+          <button type="button" data-management-tab="organizations">Agents & organizations</button>
+        </nav>
+
+        <div id="managementMerchants" class="management-view">
+          <div class="management-toolbar">
+            <label class="search-field"><span>⌕</span><input id="managementMerchantSearch" type="search" placeholder="Search merchant or contact"></label>
+            <select id="managementMerchantState" aria-label="Merchant record state"><option value="active">Active</option><option value="archived">Archived</option><option value="all">All records</option></select>
+          </div>
+          <div id="managementMerchantList" class="registry-list"></div>
+        </div>
+
+        <div id="managementProviders" class="management-view is-hidden">
+          <div class="split-management">
+            <form id="managedProviderForm" class="management-editor">
+              <input id="managedProviderId" type="hidden">
+              <div><p class="eyebrow">PSP record</p><h3 id="managedProviderHeading">Add PSP</h3></div>
+              <div class="dossier-form">
+                <label>Brand name<input id="managedProviderName" type="text" required></label>
+                <label>Legal name<input id="managedProviderLegalName" type="text"></label>
+                <label class="span-2">Website<input id="managedProviderWebsite" type="url" placeholder="https://"></label>
+                <label>Relationship<select id="managedProviderStatus"><option value="prospect">Prospect</option><option value="onboarding">Onboarding</option><option value="active">Active</option><option value="paused">Paused</option><option value="archived">Archived</option></select></label>
+                <label>Tier<select id="managedProviderTier"><option value="top">Top</option><option value="core">Core</option><option value="standard" selected>Standard</option><option value="watchlist">Watchlist</option></select></label>
+                <label>Priority<input id="managedProviderPriority" type="number" min="0" max="100" value="50"></label>
+                <label class="checkbox-field"><input id="managedProviderMarginIncluded" type="checkbox"> Margin included by PSP</label>
+                <label class="span-3">Relationship notes<textarea id="managedProviderNotes" rows="3"></textarea></label>
+              </div>
+              <div class="section-actions"><button class="button button-primary button-compact" type="submit">Save PSP</button><button id="resetManagedProviderButton" class="button button-secondary button-compact" type="button">New PSP</button></div>
+              <p id="managedProviderStatusMessage" class="form-status" role="status"></p>
+            </form>
+            <div><div class="section-head"><div><p class="eyebrow">Relationship register</p><h3>All PSPs</h3></div></div><div id="managementProviderList" class="registry-list"></div></div>
+          </div>
+        </div>
+
+        <div id="managementOffers" class="management-view is-hidden">
+          <div class="split-management">
+            <form id="manualOfferForm" class="management-editor">
+              <div><p class="eyebrow">Manual offer</p><h3>Add an offer from any PSP</h3><p class="section-copy">Creates an editable private draft. The PSP identity stays hidden from clients.</p></div>
+              <div class="dossier-form">
+                <label>PSP<select id="manualOfferProvider" required></select></label>
+                <label class="span-2">Client-safe title<input id="manualOfferTitle" type="text" required placeholder="India · INR · UPI Pay-in"></label>
+                <label>Flow<select id="manualOfferFlow"><option value="payin">Pay-in</option><option value="payout">Pay-out</option><option value="both">Both</option></select></label>
+                <label>GEOs<input id="manualOfferGeos" type="text" placeholder="IN, BR"></label>
+                <label>Currencies<input id="manualOfferCurrencies" type="text" placeholder="INR, USDT"></label>
+                <label>Methods<input id="manualOfferMethods" type="text" placeholder="UPI, Cards"></label>
+                <label>Verticals<input id="manualOfferVerticals" type="text" placeholder="iGaming"></label>
+                <label>Base rate, %<input id="manualOfferRate" type="number" step="0.01"></label>
+                <label>Minimum transaction<input id="manualOfferMin" type="number" step="any"></label>
+                <label>Maximum transaction<input id="manualOfferMax" type="number" step="any"></label>
+                <label>Limit currency<input id="manualOfferLimitCurrency" type="text"></label>
+                <label class="span-3">Source / internal note<textarea id="manualOfferSource" rows="3" required></textarea></label>
+              </div>
+              <button class="button button-primary button-compact" type="submit">Create private draft</button>
+              <p id="manualOfferStatus" class="form-status" role="status"></p>
+            </form>
+            <div><div class="section-head"><div><p class="eyebrow">Offer lifecycle</p><h3>How changes work</h3></div></div><div class="lifecycle-guide"><article><strong>Draft / review</strong><p>Edit rates, GEOs, methods, limits and settlement directly.</p></article><article><strong>Published</strong><p>Create a revision; the live offer stays unchanged until the replacement is approved.</p></article><article><strong>Margin</strong><p>Every change creates a new effective version and preserves the previous rate.</p></article><article><strong>Leave the market</strong><p>Pause or archive the route without losing deal history.</p></article></div></div>
+          </div>
+        </div>
+
+        <div id="managementOrganizations" class="management-view is-hidden">
+          <div class="split-management">
+            <form id="organizationForm" class="management-editor">
+              <input id="organizationId" type="hidden">
+              <div><p class="eyebrow">Organization record</p><h3 id="organizationHeading">Add agent or merchant company</h3></div>
+              <div class="dossier-form">
+                <label>Type<select id="organizationType"><option value="agent">Agent / affiliate</option><option value="merchant">Merchant organization</option></select></label>
+                <label>Name<input id="organizationName" type="text" required></label>
+                <label>Legal name<input id="organizationLegalName" type="text"></label>
+                <label>Status<select id="organizationStatus"><option value="pending">Pending</option><option value="active" selected>Active</option><option value="paused">Paused</option><option value="archived">Archived</option></select></label>
+                <label>Tier<select id="organizationTier"><option value="top">Top</option><option value="core">Core</option><option value="standard" selected>Standard</option><option value="watchlist">Watchlist</option></select></label>
+                <label class="span-3">Notes<textarea id="organizationNotes" rows="3"></textarea></label>
+              </div>
+              <div class="section-actions"><button class="button button-primary button-compact" type="submit">Save organization</button><button id="resetOrganizationButton" class="button button-secondary button-compact" type="button">New organization</button></div>
+              <p id="organizationStatusMessage" class="form-status" role="status"></p>
+            </form>
+            <div><div class="section-head"><div><p class="eyebrow">Portfolio register</p><h3>Agents and merchant organizations</h3></div></div><div id="organizationList" class="registry-list"></div></div>
+          </div>
+          <div class="relationship-tools">
+            <form id="agentAssignmentForm" class="management-editor compact-editor"><h3>Assign merchant to agent</h3><div class="dossier-form"><label>Agent<select id="assignmentAgent"></select></label><label>Merchant organization<select id="assignmentMerchant"></select></label><label>Status<select id="assignmentStatus"><option value="active">Active</option><option value="pending">Pending</option><option value="paused">Paused</option><option value="ended">Ended</option></select></label></div><button class="button button-secondary button-compact" type="submit">Save assignment</button></form>
+            <form id="agentMarginForm" class="management-editor compact-editor"><h3>Agent resale margin</h3><div class="dossier-form"><label>Agent<select id="agentMarginAgent"></select></label><label>Merchant scope<select id="agentMarginMerchant"><option value="">All assigned merchants</option></select></label><label>Flow<select id="agentMarginFlow"><option value="all">All</option><option value="payin">Pay-in</option><option value="payout">Pay-out</option></select></label><label>Mode<select id="agentMarginMode"><option value="percentage_points">Add percentage points</option><option value="relative_percent">Relative percent</option><option value="fixed">Fixed fee</option><option value="hybrid">Percent + fixed</option></select></label><label>Percent<input id="agentMarginPercent" type="number" step="0.01"></label><label>Fixed<input id="agentMarginFixed" type="number" step="0.01"></label><label>Currency<input id="agentMarginCurrency" type="text"></label><label class="span-3">Internal note<input id="agentMarginNotes" type="text"></label></div><button class="button button-secondary button-compact" type="submit">Save new margin version</button></form>
+          </div>
+          <div id="assignmentList" class="registry-list relationship-list"></div>
+        </div>
+        <p id="managementStatus" class="form-status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section id="supply" class="panel supply-panel app-page is-hidden" data-app-view="supply">
+        <div class="panel-head">
+          <div>
+            <h2>Private PSP supply</h2>
+            <p>Import reviewed rate-card drafts without exposing PSP pricing to clients</p>
+          </div>
+          <div class="supply-summary" aria-label="PSP supply summary">
+            <span><strong id="providerCount">—</strong> PSP</span>
+            <span><strong id="batchCount">—</strong> rate cards</span>
+          </div>
+        </div>
+
+        <nav class="section-tabs supply-page-tabs" aria-label="PSP supply sections">
+          <button class="is-active" type="button" data-supply-page="providers">PSP register</button>
+          <button type="button" data-supply-page="coverage">Offer catalog</button>
+          <button type="button" data-supply-page="import">Import rate card</button>
+          <button type="button" data-supply-page="history">Versions & history</button>
+        </nav>
+
+        <div class="supply-layout">
+          <form id="rateCardImportForm" class="supply-import-card supply-page is-hidden" data-supply-page-panel="import">
+            <div>
+              <p class="eyebrow">Controlled import</p>
+              <h3>Upload prepared rate card</h3>
+              <p>The file creates or updates the PSP and stores the original source, routes and parser warnings as a private draft.</p>
+            </div>
+            <label class="file-field">
+              Prepared JSON file
+              <input id="rateCardFileInput" type="file" accept="application/json,.json" required>
+            </label>
+            <div id="rateCardPreview" class="rate-card-preview is-hidden"></div>
+            <button id="importRateCardButton" class="button button-primary" type="submit">Import private draft</button>
+            <p id="supplyStatus" class="form-status" role="status" aria-live="polite"></p>
+          </form>
+
+          <div class="supply-register supply-page" data-supply-page-panel="providers">
+            <div class="supply-section-head">
+              <div>
+                <p class="eyebrow">Provider register</p>
+                <h3>PSP relationships</h3>
+              </div>
+              <button id="refreshSupplyButton" class="icon-button" type="button" aria-label="Refresh PSP supply">↻</button>
+            </div>
+            <div id="supplyLoadingState" class="supply-empty">Loading private supply…</div>
+            <div id="supplyEmptyState" class="supply-empty is-hidden">No PSP rate cards imported yet.</div>
+            <div id="providerList" class="provider-list is-hidden"></div>
+          </div>
+        </div>
+
+        <div class="coverage-register supply-page is-hidden" data-supply-page-panel="coverage">
+          <div class="supply-section-head coverage-head">
+            <div>
+              <p class="eyebrow">Coverage matrix</p>
+              <h3>What we can offer now</h3>
+              <p>Cross-provider view of active GEOs, currencies, methods and verticals.</p>
+            </div>
+            <div class="coverage-filters">
+              <input id="coverageSearch" type="search" placeholder="Search GEO, currency, method or PSP">
+              <select id="coverageStatusFilter" aria-label="Filter coverage routes">
+                <option value="all">All active routes</option>
+                <option value="published">Published only</option>
+                <option value="draft">Draft and review</option>
+                <option value="attention">Needs attention</option>
+              </select>
+            </div>
+          </div>
+          <div id="coverageSummary" class="coverage-summary"></div>
+          <div id="coverageUnavailable" class="supply-empty is-hidden">Coverage matrix is unavailable until its database migration is applied.</div>
+          <div id="coverageEmpty" class="supply-empty is-hidden">No routes match these filters.</div>
+          <div id="coverageTableWrap" class="coverage-table-wrap">
+            <table class="coverage-table">
+              <thead><tr><th>Coverage</th><th>PSP / route</th><th>Flow</th><th>Currencies</th><th>Methods</th><th>Verticals</th><th>Readiness</th></tr></thead>
+              <tbody id="coverageTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="batch-register supply-page is-hidden" data-supply-page-panel="history">
+          <div class="supply-section-head">
+            <div>
+              <p class="eyebrow">Rate-card register</p>
+              <h3>Import batches</h3>
+            </div>
+          </div>
+          <div id="batchList" class="batch-list"></div>
+        </div>
+      </section>
+
+      <section id="analytics" class="panel analytics-panel app-page is-hidden" data-app-view="analytics">
+        <div class="panel-head">
+          <div>
+            <h2>Commercial analytics</h2>
+            <p>Where leads stop, which sources work and what needs attention next</p>
+          </div>
+          <strong id="conversionRate" class="conversion-rate">0%</strong>
+        </div>
+        <div class="funnel">
+          <div class="funnel-row">
+            <span>Submitted</span>
+            <div><i id="funnelSubmittedBar"></i></div>
+            <strong id="funnelSubmitted">0</strong>
+          </div>
+          <div class="funnel-row">
+            <span>Qualified</span>
+            <div><i id="funnelQualifiedBar"></i></div>
+            <strong id="funnelQualified">0</strong>
+          </div>
+          <div class="funnel-row">
+            <span>Matched</span>
+            <div><i id="funnelMatchedBar"></i></div>
+            <strong id="funnelMatched">0</strong>
+          </div>
+          <div class="funnel-row">
+            <span>Introduced</span>
+            <div><i id="funnelIntroducedBar"></i></div>
+            <strong id="funnelIntroduced">0</strong>
+          </div>
+          <div class="funnel-row">
+            <span>Won</span>
+            <div><i id="funnelWonBar"></i></div>
+            <strong id="funnelWon">0</strong>
+          </div>
+        </div>
+        <div class="analytics-grid">
+          <section class="analytics-card">
+            <p class="eyebrow">Main bottleneck</p>
+            <h3 id="analyticsBottleneck">Not enough data yet</h3>
+            <p id="analyticsBottleneckCopy">The dashboard will identify the largest loss between funnel stages.</p>
+          </section>
+          <section class="analytics-card">
+            <div class="analytics-card-head"><div><p class="eyebrow">Current workload</p><h3>Requests by stage</h3></div></div>
+            <div id="analyticsStageChart" class="analytics-bar-chart"></div>
+          </section>
+          <section class="analytics-card">
+            <div class="analytics-card-head"><div><p class="eyebrow">Acquisition</p><h3>Lead sources and results</h3></div></div>
+            <div id="analyticsSourceChart" class="analytics-source-chart"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="drawerBackdrop" class="drawer-backdrop is-hidden"></div>
+  <aside id="leadDrawer" class="lead-drawer" aria-hidden="true" aria-label="Request workspace">
+    <div class="drawer-head">
+      <div>
+        <p class="eyebrow">Merchant request</p>
+        <h2 id="drawerCompany">—</h2>
+        <p id="drawerContact" class="drawer-contact">—</p>
+      </div>
+      <div class="drawer-head-actions">
+        <a id="drawerEmailLink" class="button button-secondary button-compact is-hidden" href="#">Email</a>
+        <a id="drawerTelegramLink" class="button button-secondary button-compact is-hidden" href="#" target="_blank" rel="noopener">Telegram</a>
+        <button id="drawerOfferButton" class="button button-primary button-compact" type="button">Send offer</button>
+        <button id="closeDrawerButton" class="icon-button" type="button" aria-label="Close">×</button>
+      </div>
+    </div>
+
+    <div class="drawer-body">
+      <nav class="workspace-tabs" aria-label="Request sections">
+        <button type="button" data-workspace-target="workspaceOverview">Overview</button>
+        <button type="button" data-workspace-target="workspaceDossier">Dossier</button>
+        <button type="button" data-workspace-target="workspaceMatching">Client offers</button>
+        <button type="button" data-workspace-target="workspaceDealDesk">Deal desk</button>
+        <button type="button" data-workspace-target="workspaceCollaboration">Tasks & messages</button>
+      </nav>
+
+      <section id="workspaceOverview" class="detail-section workspace-overview" data-workspace-panel="workspaceOverview">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Current operation</p>
+            <h3 id="workspaceNextAction">Loading next action…</h3>
+          </div>
+          <span id="dossierCompleteness" class="completion-pill">0% dossier</span>
+        </div>
+        <div id="workspaceSummary" class="workspace-summary"></div>
+      </section>
+
+      <section class="detail-section" data-workspace-panel="workspaceOverview">
+        <div class="section-head">
+          <h3>Pipeline</h3>
+          <span id="drawerLeadId" class="lead-id"></span>
+        </div>
+        <div class="field-grid">
+          <label>
+            Status
+            <select id="drawerStatus">
+              <option value="new">New</option>
+              <option value="qualifying">Qualifying</option>
+              <option value="needs_clarification">Needs clarification</option>
+              <option value="matching">Matching</option>
+              <option value="shortlist_ready">Shortlist ready</option>
+              <option value="shared">Shared</option>
+              <option value="option_selected">Option selected</option>
+              <option value="dossier_ready">Dossier ready</option>
+              <option value="provider_reviewing">PSP review</option>
+              <option value="provider_needs_info">PSP needs info</option>
+              <option value="provider_accepted">PSP accepted</option>
+              <option value="provider_declined">PSP declined</option>
+              <option value="telegram_created">Telegram introduction</option>
+              <option value="zoom_scheduled">Zoom scheduled</option>
+              <option value="negotiating">Negotiating</option>
+              <option value="won">Won</option>
+              <option value="lost">Lost</option>
+            </select>
+          </label>
+          <label>
+            Quality score
+            <input id="drawerScore" type="number" min="0" max="100" placeholder="0–100">
+          </label>
+          <label>
+            Grade
+            <select id="drawerGrade">
+              <option value="">Not scored</option>
+              <option value="A">A — priority</option>
+              <option value="B">B — qualified</option>
+              <option value="C">C — needs work</option>
+              <option value="D">D — low fit</option>
+            </select>
+          </label>
+          <label>
+            Owner
+            <select id="drawerOwner"><option value="">Unassigned</option></select>
+          </label>
+        </div>
+        <button id="saveLeadButton" class="button button-primary button-compact" type="button">Save changes</button>
+        <p id="drawerStatusMessage" class="form-status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="detail-section" data-workspace-panel="workspaceOverview">
+        <h3>Operating profile</h3>
+        <dl id="profileDetails" class="details-grid"></dl>
+      </section>
+
+      <section class="detail-section merchant-record-section" data-workspace-panel="workspaceOverview">
+        <div class="section-head"><div><h3>Merchant record</h3><p class="section-copy">Edit the source record, archive inactive requests or remove obvious junk.</p></div><span id="merchantRecordState" class="status-pill">active</span></div>
+        <form id="merchantRecordForm" class="dossier-form">
+          <label>Company<input id="merchantRecordCompany" type="text" required></label>
+          <label>Contact name<input id="merchantRecordName" type="text" required></label>
+          <label>Work email<input id="merchantRecordEmail" type="email" required></label>
+          <label>Telegram<input id="merchantRecordTelegram" type="text"></label>
+          <label class="span-2">Company URL<input id="merchantRecordUrl" type="url"></label>
+          <label>Vertical<input id="merchantRecordVertical" type="text"></label>
+          <label>GEOs<input id="merchantRecordGeos" type="text"></label>
+          <label>Monthly volume<input id="merchantRecordVolume" type="text"></label>
+          <label>Methods<input id="merchantRecordMethods" type="text"></label>
+          <label class="span-3">Details<textarea id="merchantRecordDetails" rows="3"></textarea></label>
+        </form>
+        <div class="section-actions merchant-lifecycle-actions">
+          <button id="saveMerchantRecordButton" class="button button-primary button-compact" type="button">Save merchant</button>
+          <button id="archiveMerchantButton" class="button button-secondary button-compact" type="button">Archive</button>
+          <button id="restoreMerchantButton" class="button button-secondary button-compact is-hidden" type="button">Restore</button>
+          <button id="purgeMerchantButton" class="button button-danger button-compact is-hidden" type="button">Delete permanently</button>
+        </div>
+        <p id="merchantRecordStatus" class="form-status" role="status"></p>
+      </section>
+
+      <section id="workspaceDossier" class="detail-section is-hidden" data-workspace-panel="workspaceDossier">
+        <div class="section-head">
+          <div>
+            <h3>Merchant dossier</h3>
+            <p class="section-copy">Information the PSP needs before it decides whether to meet the merchant.</p>
+          </div>
+          <span id="dossierStatus" class="status-pill">draft</span>
+        </div>
+        <div id="dossierMissing" class="dossier-missing"></div>
+        <div class="dossier-form">
+          <label>Legal / company name<input id="dossierCompany" type="text"></label>
+          <label>Contact name<input id="dossierContactName" type="text"></label>
+          <label>Telegram<input id="dossierTelegram" type="text" placeholder="@username"></label>
+          <label class="span-2">Product URL<input id="dossierCompanyUrl" type="url" placeholder="https://"></label>
+          <label>Registration GEO<input id="dossierRegistrationGeo" type="text" placeholder="CY"></label>
+          <label>Target GEOs<input id="dossierTargetGeos" type="text" placeholder="IN, BR, MX"></label>
+          <label>Vertical<input id="dossierVertical" type="text" placeholder="iGaming"></label>
+          <label>Business model<input id="dossierBusinessModel" type="text" placeholder="Online casino"></label>
+          <label>Licence status
+            <select id="dossierLicenseStatus">
+              <option value="unknown">Unknown</option>
+              <option value="licensed">Licensed</option>
+              <option value="unlicensed">Unlicensed</option>
+              <option value="pending">Pending</option>
+              <option value="not_required">Not required</option>
+            </select>
+          </label>
+          <label>Licence jurisdiction<input id="dossierLicenseJurisdiction" type="text" placeholder="Curaçao"></label>
+          <label>Licence number<input id="dossierLicenseNumber" type="text"></label>
+          <label class="span-2">Licence evidence URL<input id="dossierLicenseEvidenceUrl" type="url" placeholder="https://"></label>
+          <label>Expected monthly volume<input id="dossierMonthlyVolume" type="number" min="0" step="any"></label>
+          <label>Volume currency<input id="dossierVolumeCurrency" type="text" placeholder="EUR"></label>
+          <label>Requested currencies<input id="dossierCurrencies" type="text" placeholder="INR, USDT"></label>
+          <label>Payment methods<input id="dossierMethods" type="text" placeholder="UPI, Cards"></label>
+          <label>Flows<input id="dossierFlows" type="text" placeholder="PayIn, PayOut"></label>
+          <label>Traffic types<input id="dossierTrafficTypes" type="text" placeholder="FTD, Rebill"></label>
+          <label>Minimum transaction<input id="dossierMinTransaction" type="number" min="0" step="any"></label>
+          <label>Maximum transaction<input id="dossierMaxTransaction" type="number" min="0" step="any"></label>
+          <label>Transaction currency<input id="dossierTransactionCurrency" type="text" placeholder="INR"></label>
+          <label>Launch timeline<input id="dossierLaunchTimeline" type="text" placeholder="Within 2 weeks"></label>
+          <label class="span-3">Current processing setup<textarea id="dossierProcessingSetup" rows="3"></textarea></label>
+        </div>
+        <button id="saveDossierButton" class="button button-primary button-compact" type="button">Save dossier</button>
+        <p id="dossierSaveStatus" class="form-status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section id="workspaceMatching" class="detail-section is-hidden" data-workspace-panel="workspaceMatching">
+        <div class="section-head">
+          <div>
+            <h3>Client offers</h3>
+            <p id="matchSummary" class="section-copy">Loading candidates…</p>
+          </div>
+          <div class="section-actions">
+            <button id="runMatchingButton" class="button button-secondary button-compact" type="button">Run matching</button>
+            <button id="createShortlistButton" class="button button-secondary button-compact is-hidden" type="button">Create shortlist preview</button>
+            <button id="shareShortlistButton" class="button button-primary button-compact is-hidden" type="button">Share shortlist</button>
+          </div>
+        </div>
+        <div id="matchesList" class="matches-list"></div>
+        <div class="manual-offer-workspace">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Manual selection</p>
+              <h3>Send any published route</h3>
+              <p class="section-copy">Automatic matching is advisory. You can send a different route whenever it is commercially relevant.</p>
+            </div>
+            <span id="manualOfferSelectionCount" class="completion-pill">0 selected</span>
+          </div>
+          <input id="manualOfferSearch" type="search" placeholder="Search GEO, currency, method or internal PSP name">
+          <div id="manualOfferRouteList" class="manual-offer-route-list"></div>
+          <div class="dossier-form manual-offer-copy">
+            <label>Client title<input id="manualShortlistTitle" type="text" value="Selected payment routes"></label>
+            <label class="span-2">Introduction<textarea id="manualShortlistIntroduction" rows="2">OfferPSP selected these anonymous payment routes for your review.</textarea></label>
+            <label class="span-3">Note shown with every offer<textarea id="manualShortlistNote" rows="2">Selected manually by OfferPSP for your review.</textarea></label>
+          </div>
+          <button id="createManualShortlistButton" class="button button-primary button-compact" type="button">Create manual preview</button>
+        </div>
+        <div id="shortlistPreview" class="shortlist-preview is-hidden"></div>
+      </section>
+
+      <section id="workspaceDealDesk" class="detail-section is-hidden" data-workspace-panel="workspaceDealDesk">
+        <div class="section-head">
+          <div>
+            <h3>Deal desk</h3>
+            <p class="section-copy">PSP review → Telegram introduction → Zoom → result.</p>
+          </div>
+        </div>
+        <div id="dealDeskList" class="deal-desk-list"></div>
+      </section>
+
+      <section id="workspaceCollaboration" class="detail-section is-hidden" data-workspace-panel="workspaceCollaboration">
+        <h3>Internal note</h3>
+        <textarea id="noteInput" rows="4" placeholder="Add qualification context, PSP requirements or next steps…"></textarea>
+        <button id="addNoteButton" class="button button-secondary button-compact" type="button">Add to history</button>
+      </section>
+
+      <section class="detail-section is-hidden" data-workspace-panel="workspaceCollaboration">
+        <h3>Tasks</h3>
+        <div class="task-composer">
+          <input id="taskTitleInput" type="text" placeholder="e.g. Verify licence and processing history">
+          <div class="field-grid">
+            <label>
+              Priority
+              <select id="taskPriorityInput">
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+                <option value="low">Low</option>
+              </select>
+            </label>
+            <label>
+              Due date
+              <input id="taskDueInput" type="date">
+            </label>
+          </div>
+          <button id="addTaskButton" class="button button-secondary button-compact" type="button">Create task</button>
+        </div>
+        <div id="taskList" class="task-list"></div>
+      </section>
+
+      <section class="detail-section is-hidden" data-workspace-panel="workspaceCollaboration">
+        <h3>Client conversation</h3>
+        <div id="adminMessageList" class="message-list"></div>
+        <div class="admin-message-composer">
+          <textarea id="adminMessageInput" rows="3" placeholder="Reply in the client cabinet…"></textarea>
+          <button id="sendAdminMessageButton" class="button button-secondary button-compact" type="button">Send reply</button>
+        </div>
+      </section>
+
+      <section class="detail-section is-hidden" data-workspace-panel="workspaceCollaboration">
+        <h3>Activity</h3>
+        <div id="activityList" class="timeline"></div>
+      </section>
+    </div>
+  </aside>
+
+  <div id="supplyDrawerBackdrop" class="drawer-backdrop is-hidden"></div>
+  <aside id="supplyDrawer" class="lead-drawer supply-workspace-drawer" aria-hidden="true" aria-label="PSP supply workspace">
+    <div class="drawer-head">
+      <div>
+        <p class="eyebrow">Private PSP operations</p>
+        <h2 id="supplyDrawerTitle">—</h2>
+        <p id="supplyDrawerCode" class="drawer-contact">—</p>
+      </div>
+      <button id="closeSupplyDrawerButton" class="icon-button" type="button" aria-label="Close">×</button>
+    </div>
+
+    <div class="drawer-body">
+      <nav class="workspace-tabs" aria-label="PSP supply sections">
+        <button type="button" data-supply-target="supplyOverview">PSP & contacts</button>
+        <button type="button" data-supply-target="supplyRoutes">Routes & pricing</button>
+        <button type="button" data-supply-target="supplyAnomalies">Review queue</button>
+        <button type="button" data-supply-target="supplyHistory">Versions & history</button>
+      </nav>
+
+      <section id="supplyOverview" class="detail-section" data-supply-panel="supplyOverview">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Relationship owner view</p>
+            <h3>PSP profile</h3>
+          </div>
+          <button id="confirmSupplyFreshnessButton" class="button button-secondary button-compact" type="button">Confirm terms are current</button>
+        </div>
+        <div id="supplyWorkspaceSummary" class="workspace-summary"></div>
+        <div class="dossier-form supply-provider-form">
+          <label>Brand name<input id="supplyBrandName" type="text"></label>
+          <label>Legal name<input id="supplyLegalName" type="text"></label>
+          <label class="span-2">Website<input id="supplyWebsite" type="url" placeholder="https://"></label>
+          <label>Relationship
+            <select id="supplyRelationshipStatus">
+              <option value="prospect">Prospect</option><option value="onboarding">Onboarding</option>
+              <option value="active">Active</option><option value="paused">Paused</option><option value="archived">Archived</option>
+            </select>
+          </label>
+          <label>Tier<select id="supplyRelationshipTier"><option value="top">Top</option><option value="core">Core</option><option value="standard">Standard</option><option value="watchlist">Watchlist</option></select></label>
+          <label>Strategic priority<input id="supplyPriority" type="number" min="0" max="100"></label>
+          <label class="checkbox-field span-2"><input id="supplyMarginIncluded" type="checkbox"> PSP rate already includes our commission</label>
+          <label class="span-3">Relationship notes<textarea id="supplyRelationshipNotes" rows="3"></textarea></label>
+        </div>
+        <button id="saveSupplyProviderButton" class="button button-primary button-compact" type="button">Save PSP profile</button>
+        <p id="supplyWorkspaceStatus" class="form-status" role="status" aria-live="polite"></p>
+
+        <div class="supply-subsection">
+          <div class="section-head"><div><h3>Contacts</h3><p class="section-copy">People we actually work with at this PSP.</p></div></div>
+          <div id="supplyContactList" class="contact-list"></div>
+          <form id="supplyContactForm" class="inline-editor">
+            <input id="supplyContactId" type="hidden">
+            <div class="dossier-form">
+              <label>Name<input id="supplyContactName" type="text" required></label>
+              <label>Role<input id="supplyContactRole" type="text"></label>
+              <label>Region<input id="supplyContactRegion" type="text"></label>
+              <label>Telegram<input id="supplyContactTelegram" type="text" placeholder="@username"></label>
+              <label>Email<input id="supplyContactEmail" type="email"></label>
+              <label>Phone<input id="supplyContactPhone" type="text"></label>
+              <label>Preferred channel
+                <select id="supplyContactChannel"><option value="">Not specified</option><option value="telegram">Telegram</option><option value="email">Email</option><option value="phone">Phone</option><option value="other">Other</option></select>
+              </label>
+              <label class="checkbox-field"><input id="supplyContactActive" type="checkbox" checked> Active contact</label>
+              <label class="span-3">Notes<input id="supplyContactNotes" type="text"></label>
+            </div>
+            <div class="section-actions"><button class="button button-primary button-compact" type="submit">Save contact</button><button id="resetSupplyContactButton" class="button button-secondary button-compact" type="button">New contact</button></div>
+          </form>
+        </div>
+
+        <div class="supply-subsection">
+          <div class="section-head"><div><h3>Our margin</h3><p class="section-copy">PSP base rate stays private; the merchant sees only the final rate.</p></div></div>
+          <div id="supplyMarginList" class="margin-list"></div>
+          <form id="supplyMarginForm" class="inline-editor compact-editor">
+            <div class="dossier-form">
+              <label>Scope<select id="supplyMarginRoute"><option value="">All PSP routes</option></select></label>
+              <label>Flow<select id="supplyMarginFlow"><option value="all">All</option><option value="payin">Pay-in</option><option value="payout">Pay-out</option><option value="settlement">Settlement</option></select></label>
+              <label>Mode<select id="supplyMarginMode"><option value="percentage_points">Add percentage points</option><option value="relative_percent">Relative percent</option><option value="fixed">Fixed fee</option><option value="hybrid">Percent + fixed</option><option value="included">Already included</option></select></label>
+              <label>Percent<input id="supplyMarginPercent" type="number" step="0.01"></label>
+              <label>Fixed amount<input id="supplyMarginFixed" type="number" step="0.01"></label>
+              <label>Currency<input id="supplyMarginCurrency" type="text" placeholder="EUR"></label>
+              <label class="span-3">Internal note<input id="supplyMarginNotes" type="text"></label>
+            </div>
+            <button class="button button-primary button-compact" type="submit">Save new margin policy</button>
+          </form>
+        </div>
+      </section>
+
+      <section id="supplyRoutes" class="detail-section supply-routes-workspace is-hidden" data-supply-panel="supplyRoutes">
+        <div class="section-head"><div><h3>Normalized routes</h3><p class="section-copy">Edit working fields without changing the original partner message.</p></div><button id="reviseSupplyRouteButton" class="button button-secondary button-compact is-hidden" type="button">Create revision</button></div>
+        <div class="route-workbench">
+          <div id="supplyRouteList" class="route-list"></div>
+          <form id="supplyRouteForm" class="route-editor is-hidden">
+            <input id="supplyRouteId" type="hidden">
+            <div class="section-head"><div><p id="supplyRouteCode" class="eyebrow">—</p><h3 id="supplyRouteHeading">Select a route</h3></div><span id="supplyRouteStatus" class="status-pill">—</span></div>
+            <div class="dossier-form">
+              <label class="span-2">Client title<input id="supplyRouteTitle" type="text"></label>
+              <label>Flow<select id="supplyRouteFlow"><option value="payin">Pay-in</option><option value="payout">Pay-out</option><option value="both">Both</option></select></label>
+              <label>Coverage<select id="supplyRouteCoverage"><option value="specific">Specific GEOs</option><option value="regional">Regional</option><option value="global">Global</option></select></label>
+              <label>GEOs<input id="supplyRouteGeos" type="text" placeholder="IN, BR"></label>
+              <label>Blocked GEOs<input id="supplyRouteBlockedGeos" type="text"></label>
+              <label>Currencies<input id="supplyRouteCurrencies" type="text" placeholder="INR, USDT"></label>
+              <label>Methods<input id="supplyRouteMethods" type="text" placeholder="UPI, Cards"></label>
+              <label>Traffic<input id="supplyRouteTraffic" type="text" placeholder="FTD, Rebill"></label>
+              <label>Verticals<input id="supplyRouteVerticals" type="text" placeholder="iGaming"></label>
+              <label>Integrations<input id="supplyRouteIntegrations" type="text" placeholder="API, H2H"></label>
+              <label>Minimum monthly volume<input id="supplyRouteMinVolume" type="number" step="any"></label>
+              <label>Maximum monthly volume<input id="supplyRouteMaxVolume" type="number" step="any"></label>
+              <label>Volume currency<input id="supplyRouteVolumeCurrency" type="text"></label>
+              <label>Fresh for days<input id="supplyRouteFreshness" type="number" min="1"></label>
+              <label>Effective from<input id="supplyRouteEffectiveFrom" type="date"></label>
+              <label>Expires<input id="supplyRouteExpiresAt" type="date"></label>
+              <label class="span-3">Operational notes<textarea id="supplyRouteNotes" rows="2"></textarea></label>
+            </div>
+
+            <div class="component-editor"><div class="section-head"><h4>Fees</h4><button id="addSupplyFeeButton" class="text-button" type="button">+ Add fee</button></div><div id="supplyFeeRows" class="component-rows"></div></div>
+            <div class="component-editor"><div class="section-head"><h4>Limits</h4><button id="addSupplyLimitButton" class="text-button" type="button">+ Add limit</button></div><div id="supplyLimitRows" class="component-rows"></div></div>
+            <div class="component-editor"><div class="section-head"><h4>Settlement</h4><button id="addSupplySettlementButton" class="text-button" type="button">+ Add term</button></div><div id="supplySettlementRows" class="component-rows"></div></div>
+
+            <div class="section-actions route-status-actions">
+              <button id="saveSupplyRouteButton" class="button button-primary button-compact" type="submit">Save route</button>
+              <button id="pauseSupplyRouteButton" class="button button-secondary button-compact" type="button">Pause</button>
+              <button id="resumeSupplyRouteButton" class="button button-secondary button-compact" type="button">Resume</button>
+              <button id="archiveSupplyRouteButton" class="button button-danger button-compact" type="button">Archive</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section id="supplyAnomalies" class="detail-section is-hidden" data-supply-panel="supplyAnomalies">
+        <div class="section-head"><div><h3>Review queue</h3><p class="section-copy">Every parser error must be corrected or consciously accepted before publication.</p></div><span id="supplyOpenChecks" class="completion-pill">0 open</span></div>
+        <div id="supplyAnomalyList" class="anomaly-list"></div>
+      </section>
+
+      <section id="supplyHistory" class="detail-section is-hidden" data-supply-panel="supplyHistory">
+        <div class="section-head"><div><h3>Rate-card versions</h3><p class="section-copy">Immutable sources and the operational changes made after parsing.</p></div></div>
+        <div id="supplyBatchHistory" class="batch-list"></div>
+        <div class="section-head history-heading"><h3>Change history</h3></div>
+        <div id="supplyActivityList" class="timeline"></div>
+      </section>
+    </div>
+  </aside>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/admin/i18n.js"></script>
+  <script type="module" src="/admin/app.js"></script>
+</body>
+</html>

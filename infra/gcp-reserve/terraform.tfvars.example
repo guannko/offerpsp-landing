@@ -1,0 +1,10 @@
+project_id = "offerpsp-reserve-prod"
+region     = "europe-west1"
+
+environment            = "production"
+cloud_sql_tier         = "db-custom-2-7680"
+cloud_sql_disk_size_gb = 20
+
+# Add only after an immutable worker image has passed its tests.
+cloud_run_worker_image = ""
+cloud_run_min_instances = 0
