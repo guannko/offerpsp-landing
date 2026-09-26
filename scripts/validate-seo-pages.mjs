@@ -277,9 +277,9 @@ for (const [sourceSlug, requiredRelatedSlugs] of [
   ["payment-provider-for-ecommerce", ["high-risk-payment-processing-guide"]],
   ["high-risk-payment-processing-guide", ["payment-provider-for-ecommerce"]],
   ["psp-for-forex", ["high-risk-payment-provider", "cross-border-payment-matching", "payment-methods-by-geo"]],
-  ["high-risk-payment-provider", ["psp-for-forex", "cross-border-payment-matching"]],
+  ["high-risk-payment-provider", ["psp-for-forex", "cross-border-payment-matching", "psp-matching-process"]],
   ["cross-border-payment-matching", ["how-to-compare-psp-offers", "psp-for-forex", "high-risk-payment-provider", "payment-methods-by-geo"]],
-  ["payment-methods-by-geo", ["payment-gateway-vs-psp-vs-acquirer", "psp-for-forex", "cross-border-payment-matching"]],
+  ["payment-methods-by-geo", ["payment-gateway-vs-psp-vs-acquirer", "psp-matching-process", "payment-provider-europe", "psp-for-saas", "cross-border-payment-matching"]],
   ["how-to-compare-psp-offers", ["cross-border-payment-matching"]],
   ["psp-for-saas", ["psp-onboarding-requirements"]],
   ["psp-for-marketplaces", ["psp-onboarding-requirements"]],
@@ -331,6 +331,10 @@ const searchExpansionSlugs = [
 const commercialDepthSlugs = [
   "psp-for-igaming",
   "high-risk-payment-provider",
+  "psp-for-saas",
+  "payment-methods-by-geo",
+  "payment-provider-europe",
+  "psp-matching-process",
   "payment-provider-for-ecommerce",
   "payment-provider-cis-central-asia",
   "payment-provider-cis-central-asia-ru",
@@ -347,6 +351,10 @@ const commercialDepthSlugs = [
 const reviewProcessSlugs = [
   "psp-for-igaming",
   "high-risk-payment-provider",
+  "psp-for-saas",
+  "payment-methods-by-geo",
+  "payment-provider-europe",
+  "psp-matching-process",
   "payment-provider-for-ecommerce",
   "payment-provider-cis-central-asia",
   "payment-provider-cis-central-asia-ru",
@@ -406,6 +414,12 @@ assert.ok(
   "provider identity disclosure must remain gated by provider acceptance",
 );
 
+const matchingDisclosureCopy = renderPage(seoPages.find((candidate) => candidate.slug === "psp-matching-process"));
+assert.ok(
+  matchingDisclosureCopy.includes("Its identity is disclosed only after it accepts the merchant and OfferPSP coordinates a controlled introduction."),
+  "matching process must gate provider identity disclosure on provider acceptance",
+);
+
 for (const legalFile of [privacy, terms]) {
   assert.ok(!legalFile.includes('id="provider-review-detail"'), "legal pages must not be padded with commercial SEO sections");
 }
@@ -416,7 +430,7 @@ for (const slug of reviewProcessSlugs) {
   assert.ok(rendered.includes('id="review-timing-and-errors"'), `${slug} must explain timing, brief mistakes and decision accelerators`);
   assert.ok(/1–2 (?:business days|рабочих дня)/.test(rendered), `${slug} must include a bounded brief-review planning range`);
   assert.ok(/3–10 (?:business days|рабочих дней)/.test(rendered), `${slug} must include a bounded provider-review planning range`);
-  assert.ok(/not a provider SLA|не SLA/i.test(rendered), `${slug} must label timing as a planning estimate rather than a provider promise`);
+  assert.ok(/not (?:a )?provider SLAs?|не SLA/i.test(rendered), `${slug} must label timing as a planning estimate rather than a provider promise`);
 }
 
 for (const slug of searchExpansionSlugs) {

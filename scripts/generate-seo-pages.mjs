@@ -84,7 +84,8 @@ export const seoPages = [
       "payment-provider-middle-east",
       "psp-for-crypto-businesses",
       "psp-for-forex",
-      "cross-border-payment-matching"
+      "cross-border-payment-matching",
+      "psp-matching-process"
     ]
   },
   {
@@ -116,6 +117,7 @@ export const seoPages = [
   },
   {
     slug: "psp-for-saas",
+    modified: "2026-09-26",
     title: "PSP Matching for SaaS and Subscription Businesses | OfferPSP",
     description: "Match SaaS subscription routes for recurring billing, retries, debit and settlement. Get a focused private shortlist and qualified provider introductions.",
     kicker: "SaaS and subscription payments",
@@ -138,7 +140,7 @@ export const seoPages = [
       ["Does OfferPSP provide merchant-of-record services?", "OfferPSP does not provide merchant-of-record services. We can include that requirement in the research brief where relevant, but the service itself does not resell or process payments."],
       ["Can you help with a backup provider?", "OfferPSP can help define and match a backup-provider route. Redundancy is credible only when token handling, billing orchestration and the operational failover plan are technically feasible."]
     ],
-    related: ["cross-border-payment-matching", "payment-methods-by-geo", "psp-matching-process", "psp-onboarding-requirements"]
+    related: ["psp-matching-process", "payment-provider-europe", "payment-methods-by-geo", "psp-onboarding-requirements", "cross-border-payment-matching"]
   },
   {
     slug: "psp-for-marketplaces",
@@ -225,7 +227,7 @@ export const seoPages = [
   },
   {
     slug: "payment-methods-by-geo",
-    modified: "2026-09-10",
+    modified: "2026-09-26",
     title: "Payment Methods by GEO: Provider Matching | OfferPSP",
     description: "Map cards, open banking, wallets, vouchers and payouts by customer GEO and needs. Get a focused private shortlist and qualified provider introductions.",
     kicker: "Local payment method coverage",
@@ -248,7 +250,7 @@ export const seoPages = [
       ["Can one integration provide every local method?", "One integration can provide broad local-method coverage, but it should not be assumed to cover every relevant method. Availability remains entity-, vertical- and market-specific, and local specialists may fill gaps."],
       ["How often should the GEO coverage map be reviewed?", "A GEO coverage map should be reviewed whenever the business enters a market, changes entity or vertical, sees material conversion issues, or a provider changes pricing, limits, appetite or method availability."]
     ],
-    related: ["cross-border-payment-matching", "psp-for-marketplaces", "psp-matching-process", "payment-gateway-vs-psp-vs-acquirer", "psp-for-forex"]
+    related: ["psp-matching-process", "payment-provider-europe", "psp-for-saas", "cross-border-payment-matching", "payment-gateway-vs-psp-vs-acquirer"]
   },
   {
     slug: "psp-for-forex",
@@ -293,7 +295,7 @@ export const seoPages = [
   },
   {
     slug: "payment-provider-europe",
-    modified: "2026-09-09",
+    modified: "2026-09-26",
     title: "Payment Provider Matching in Europe | OfferPSP",
     description: "Compare EEA and UK PSP routes for cards, SEPA, open banking, iDEAL and local wallets. Get a focused private shortlist and qualified provider introductions.",
     kicker: "European payment coverage",
@@ -317,7 +319,7 @@ export const seoPages = [
       ["Can UK and EEA coverage use the same route?", "UK and EEA coverage can use the same provider only when entity, regulatory, acquiring and settlement conditions support both regions. Those conditions must be confirmed separately."]
     ],
     areaServed: ["European Union", "European Economic Area", "United Kingdom", "Switzerland"],
-    related: ["psp-for-forex", "cross-border-payment-matching", "payment-methods-by-geo", "how-to-compare-psp-offers"]
+    related: ["psp-matching-process", "payment-methods-by-geo", "psp-for-saas", "cross-border-payment-matching", "how-to-compare-psp-offers"]
   },
   {
     slug: "payment-provider-cis-central-asia",
@@ -568,7 +570,7 @@ export const seoPages = [
   },
   {
     slug: "psp-matching-process",
-    modified: "2026-09-09",
+    modified: "2026-09-26",
     title: "How PSP Matching Works | OfferPSP",
     description: "Build a private merchant brief, screen provider fit and review a focused PSP shortlist. Move from requirements to qualified provider introductions now.",
     kicker: "PSP matching process",
@@ -581,8 +583,8 @@ export const seoPages = [
     points: [
       ["Prepare the merchant profile", "Provide the entity, website, vertical, licences, customer GEOs, payment methods, currencies, volume, ticket size and current constraints."],
       ["Screen practical provider fit", "We compare the brief with current coverage, method, risk, integration, limit and settlement constraints. Missing facts are clarified rather than invented."],
-      ["Review a focused shortlist", "Relevant routes are explained without presenting a generic directory. Provider identity remains controlled until the case is ready for a qualified conversation."],
-      ["Confirm interest and introduce", "A provider reviews the merchant dossier and can accept, decline or request more information. A controlled introduction follows only after explicit interest."]
+      ["Review indicative route information", "Relevant route information is explained without presenting a generic directory. Provider identity remains confidential while the merchant brief is still being qualified."],
+      ["Confirm provider acceptance and introduce", "A provider reviews the merchant dossier and can accept, decline or request more information. Its identity is disclosed only after it accepts the merchant and OfferPSP coordinates a controlled introduction."]
     ],
     decisionTitle: "What a merchant receives at each stage",
     decisionIntro: "The process is designed to preserve the operating context and make every next step visible without presenting a decorative provider list.",
@@ -600,7 +602,7 @@ export const seoPages = [
       ["What happens if the first provider declines?", "We record the reason where available, protect the provider’s identity and assess whether another genuinely compatible route exists. A decline is not hidden or relabelled as an approval."],
       ["Does a shortlist contain final commercial terms?", "A PSP shortlist does not contain final commercial terms. It can include indicative route information, but pricing, limits, reserves, settlement and contracts are confirmed by the provider after due diligence."]
     ],
-    related: ["psp-onboarding-requirements", "how-to-compare-psp-offers", "payment-gateway-vs-psp-vs-acquirer", "cross-border-payment-matching"]
+    related: ["psp-onboarding-requirements", "payment-provider-europe", "payment-methods-by-geo", "how-to-compare-psp-offers", "cross-border-payment-matching"]
   },
   {
     slug: "how-to-compare-psp-offers",
@@ -801,6 +803,127 @@ const commercialDepthBySlug = {
       ["Risk evidence", "AML and fraud procedures, sanctions controls, marketing sources, dispute management, processing history and remediation records."],
       ["Route request", "Customer GEOs, entity GEO, methods, currencies, PayIn and payout flows, settlement, volumes, average ticket and launch sequence."],
       ["Decision record", "Known restrictions, assumptions requiring confirmation, provider questions and the internal owner responsible for each follow-up."],
+    ],
+  },
+  "psp-for-saas": {
+    title: "Turn subscription billing into a provider-ready route",
+    intro: "A SaaS payment route has to survive the second and twentieth charge, not only the first checkout. The brief should show how customer authority is obtained, how recurring attempts are identified, how failed charges are handled and whether payment data can move if the provider relationship changes.",
+    columns: ["Subscription decision", "Evidence to prepare", "Provider confirmation needed"],
+    criteria: [
+      ["Customer authority", "Subscription terms, price and cadence, trial conversion, cancellation and refund flow, initial customer-initiated payment and stored-credential consent.", "Supported recurring or merchant-initiated transaction model, required indicators, mandate evidence and markets where the flow is permitted."],
+      ["Revenue recovery", "Retry and dunning rules, decline handling, customer notifications, account-updater or network-token needs and the point at which service is suspended.", "Retry controls, decline information, token lifecycle, webhook coverage and whether the provider supports the intended recovery sequence."],
+      ["Country and method mix", "Customer and entity GEOs, B2B or B2C split, cards, SEPA Direct Debit or local methods, billing currencies and expected volume by country.", "Entity eligibility, recurring-method support, mandate and refund rules, settlement currencies and final method availability."],
+      ["Portability and operations", "Billing platform, token owner, API and webhook dependencies, reconciliation fields, finance exports, backup route and migration assumptions.", "Token portability, vault and PCI responsibilities, reporting, support model and the practical steps needed to activate a second route."],
+    ],
+    briefTitle: "Example SaaS payment brief",
+    briefIntro: "A useful request might describe an EU-based B2B SaaS company billing monthly and annually in EUR and GBP, with separate forecasts for new card payments, subsequent recurring charges and SEPA Direct Debit. It should state the billing platform, trial and cancellation logic, average revenue per account, failed-payment workflow, present processor constraints and intended settlement accounts. This is a brief structure, not a provider-availability claim or approval promise.",
+    briefItems: [
+      ["Commercial model", "Plans, billing cadence, free or paid trial, contract term, proration, upgrades, cancellation, refunds and customer type."],
+      ["Payment lifecycle", "Initial checkout, stored-credential agreement, recurring authority, retries, dunning, account updates and service suspension rules."],
+      ["Country matrix", "Entity, customer GEO, method, currency, volume, average account value, tax or merchant-of-record dependency and launch order."],
+      ["Technical and finance file", "Billing stack, token ownership, webhooks, reconciliation keys, settlement accounts, reporting, migration and backup requirements."],
+    ],
+    glossaryTitle: "Subscription payment terms",
+    glossary: [
+      ["Customer-initiated transaction", "A payment initiated with the customer actively participating; it commonly establishes the initial payment relationship for later agreed charges."],
+      ["Merchant-initiated transaction", "A subsequent payment initiated by the merchant under a prior customer agreement, subject to the applicable scheme and provider rules."],
+      ["Mandate", "The payer's authorisation for a defined debit arrangement, such as a SEPA Direct Debit mandate that the biller must retain."],
+      ["Token portability", "The practical and contractual ability to keep or move payment credentials when changing or adding a provider; it must be confirmed before relying on failover."],
+    ],
+    sources: [
+      ["Visa — stored credential transaction framework", "https://usa.visa.com/content/dam/VCOM/global/support-legal/documents/stored-credential-transaction-framework-vbs-10-may-17.pdf"],
+      ["European Payments Council — SEPA Direct Debit", "https://www.europeanpaymentscouncil.eu/what-we-do/sepa-direct-debit"],
+      ["European Payments Council — SDD mandate", "https://www.europeanpaymentscouncil.eu/what-we-do/epc-payment-schemes/sepa-direct-debit/sdd-mandate"],
+    ],
+  },
+  "payment-methods-by-geo": {
+    title: "Build one payment row for each country and customer journey",
+    intro: "A method name is not a route. The usable requirement combines the customer country, contracting entity, payment purpose, currency, amount, refund or payout path, settlement destination and operating owner. The examples below show why global coverage should be decomposed into country-level rows.",
+    columns: ["Market and rail", "Merchant brief row", "Provider confirmation needed"],
+    criteria: [
+      ["Europe — cards and SEPA", "Country, B2B or B2C customer, card or bank-debit purpose, EUR presentment, recurring need, refund path and settlement account.", "Acquiring model, authentication, SDD mandate support, scheme participation, refunds, reconciliation and final country eligibility."],
+      ["India — UPI", "Indian customer flow, product, entity relationship, INR amount and volume, collect or intent journey, refund and reconciliation requirements.", "Merchant eligibility, acquiring arrangement, supported UPI flow, limits, refunds, settlement and any local operational dependency."],
+      ["Brazil — Pix", "Brazilian customer flow, BRL ticket and volume, QR or other initiation need, refund handling, settlement destination and support process.", "Participant or partner route, merchant onboarding, identifiers, limits, returns, reconciliation and BRL settlement conditions."],
+      ["Singapore — PayNow", "Singapore customer and merchant use case, SGD amount, PayNow or QR journey, entity identifier, refunds and settlement account.", "Access through a participating bank or major payment institution, supported merchant flow, identifiers, limits and reconciliation."],
+    ],
+    briefTitle: "Example GEO-by-method route matrix",
+    briefIntro: "A merchant entering three countries should submit three rows rather than request worldwide local methods. Each row names the customer and entity GEO, product, PayIn or payout purpose, method, currency, monthly volume, average ticket, refund or reversal path, settlement destination, launch priority and unresolved dependency. OfferPSP can compare those rows with available route information; each provider still confirms eligibility and final terms.",
+    briefItems: [
+      ["Customer journey", "Device, checkout or invoice context, authentication, redirect or QR step, success confirmation and customer-support path."],
+      ["Funds flow", "Who pays, who receives, PayIn or payout purpose, refund or reversal owner, currencies and settlement account."],
+      ["Volume case", "Forecast transactions, monthly value, average and maximum ticket, seasonality, method share and the evidence behind the forecast."],
+      ["Operational case", "Integration owner, launch sequence, webhooks, reconciliation keys, failed-payment handling, support and fallback method."],
+    ],
+    glossaryTitle: "Route-matrix terms",
+    glossary: [
+      ["Payment rail", "The scheme or infrastructure that carries payment instructions and settlement between participating institutions."],
+      ["PayIn", "A collection flow in which a customer pays the merchant or platform."],
+      ["Payout", "A separate disbursement flow from the business or platform to a beneficiary; PayIn support does not prove payout support."],
+      ["Reconciliation key", "A stable reference used to connect provider transactions, refunds, fees and net settlement to the merchant ledger."],
+    ],
+    sources: [
+      ["Association of Banks in Singapore — PayNow", "https://www.abs.org.sg/e-payments/pay-now"],
+      ["NPCI — UPI frequently asked questions", "https://www.npci.org.in/what-we-do/upi/faqs"],
+      ["Banco Central do Brasil — Instant Payment System", "https://bcb.gov.br/en/financialstability/spi_en"],
+      ["European Payments Council — SEPA payment schemes", "https://www.europeanpaymentscouncil.eu/what-we-do/epc-payment-scheme-management/what-payment-scheme"],
+    ],
+  },
+  "payment-provider-europe": {
+    title: "Compare European payment routes country by country",
+    intro: "The EEA, United Kingdom and Switzerland should not be treated as one acquiring switch. The provider review needs to separate customer country, merchant entity, payment rail, regulated role, authentication, presentment, settlement and operational ownership for every launch market.",
+    columns: ["European route area", "Evidence to prepare", "Provider confirmation needed"],
+    criteria: [
+      ["Cards and authentication", "Customer countries, entity, schemes, one-off or recurring flow, 3-D Secure journey, exemptions strategy, descriptors and dispute evidence.", "Local or cross-border acquiring, SCA handling, recurring indicators, supported currencies and profile-specific acceptance conditions."],
+      ["SEPA Direct Debit", "B2C or B2B payer type, mandate capture and storage, collection cadence, creditor setup, refunds, failures and reconciliation.", "SDD Core or B2B support, creditor identifier model, country eligibility, mandate requirements, return handling and settlement."],
+      ["SEPA Instant and open banking", "Payment-initiation journey, customer bank markets, confirmation needs, refund process, beneficiary checks and treasury workflow.", "Supported banks or scheme reach, Verification of Payee handling, limits, refunds, reconciliation and merchant access to the rail."],
+      ["Local methods and settlement", "Country priority, customer evidence, method purpose, presentment and settlement currencies, FX preference, reserves and finance reporting.", "Current method availability, local entity or bank dependencies, payout timing, fees, limits and final commercial terms."],
+    ],
+    briefTitle: "Example Europe launch matrix",
+    briefIntro: "A practical brief might stage Germany and the Netherlands first, followed by France and the United Kingdom. For every country it would show the selling entity, customer type, cards or bank method, currency, monthly volume, ticket, recurring requirement, refund flow, settlement account and launch date. The matrix should mark legal or product assumptions as unresolved instead of presenting them as provider coverage.",
+    briefItems: [
+      ["Entity and permissions", "Contracting company, beneficial ownership, establishment, product permissions, licences or exemptions and restricted markets."],
+      ["Country and method rows", "Separate customer-country rows for cards, SEPA, open banking or genuinely demanded local methods, with volume and ticket assumptions."],
+      ["Risk and customer journey", "Authentication, recurring authority, fulfilment, refunds, disputes, fraud controls, support and evidence from current processing."],
+      ["Treasury and operations", "Presentment, settlement, FX, reserve tolerance, reconciliation, API ownership, rollout order and backup-route dependency."],
+    ],
+    glossaryTitle: "European payment terms",
+    glossary: [
+      ["SCA", "Strong customer authentication under the PSD2 framework; the provider confirms how the required customer-authentication flow and any exemption are applied."],
+      ["SCT Inst", "The SEPA Instant Credit Transfer scheme for euro credit transfers designed to make funds available within seconds through participating providers."],
+      ["SDD Core", "The SEPA Direct Debit scheme primarily used for consumers, based on a payer mandate and scheme-specific refund and return rules."],
+      ["Verification of Payee", "A check comparing the intended payee name and account identifier before a credit transfer; implementation and merchant access depend on the provider flow."],
+    ],
+    sources: [
+      ["European Commission — PSD2 strong customer authentication", "https://finance.ec.europa.eu/publications/strong-customer-authentication-requirement-psd2-comes-force_en"],
+      ["European Central Bank — Instant Payments Regulation", "https://www.ecb.europa.eu/paym/retail/instant_payments/html/instant_payments_regulation.en.html"],
+      ["European Payments Council — SEPA payment schemes", "https://www.europeanpaymentscouncil.eu/what-we-do/epc-payment-scheme-management/what-payment-scheme"],
+      ["European Payments Council — SEPA Direct Debit", "https://www.europeanpaymentscouncil.eu/what-we-do/sepa-direct-debit"],
+    ],
+  },
+  "psp-matching-process": {
+    title: "What changes between a lead, a route match and an introduction",
+    intro: "These are separate decision states. A complete merchant brief allows route screening; a plausible route allows a confidential provider review; only explicit provider acceptance allows OfferPSP to disclose the provider and coordinate a controlled introduction. None of those stages is final onboarding approval.",
+    columns: ["Stage", "Evidence and output", "Decision boundary"],
+    criteria: [
+      ["Merchant qualification", "Entity, website, ownership, licence position, customer GEOs, vertical, methods, currencies, volumes, ticket, processing history and funds flow.", "Missing material facts are requested; an incomplete profile is not promoted as a qualified provider opportunity."],
+      ["Route screening", "Available route information is compared with GEO, method, traffic, vertical, integration, limits, settlement and risk requirements.", "A match is an internal compatibility hypothesis, not proof of availability, fresh commercial terms or provider acceptance."],
+      ["Provider review", "The provider receives the structured merchant dossier and can accept, decline or request more information.", "Provider identity remains confidential until that provider explicitly accepts the merchant for a controlled introduction."],
+      ["Controlled introduction", "OfferPSP coordinates disclosure, shared context and the direct conversation after acceptance.", "The provider still controls due diligence, contract, pricing, reserves, limits, settlement and final approval."],
+    ],
+    briefTitle: "Example dossier handed to a provider",
+    briefIntro: "A dossier for a subscription merchant might name the contracting entity and owners, product URL, customer markets, licence or regulatory position, cards and bank-debit flows, currencies, expected volume, average ticket, disputes, recurring authority, settlement account and launch sequence. It also lists missing evidence and questions. OfferPSP shares the dossier for provider review without promising a route or revealing that provider to the merchant before acceptance.",
+    briefItems: [
+      ["Identity and product", "Company records, owners, directors, website, customer terms, product description, licences and restricted-market policy."],
+      ["Payment requirement", "Customer and entity GEOs, PayIn and payout flows, methods, currencies, volume, ticket, limits, settlement and launch order."],
+      ["Risk and history", "Traffic sources, processing statements, refunds, disputes, fraud and compliance controls, earlier constraints and unresolved risks."],
+      ["Decision log", "Route rationale, freshness warnings, provider questions, acceptance or decline, missing-information requests and the introduction record."],
+    ],
+    glossaryTitle: "Matching-stage terms",
+    glossary: [
+      ["Qualified brief", "A merchant profile specific enough to screen for relevant routes and present coherently to a provider; it is not compliance approval."],
+      ["Indicative route information", "Available information used to assess possible fit before the provider confirms live availability and commercial terms."],
+      ["Provider acceptance", "The provider's explicit agreement to consider the identified merchant; it precedes identity disclosure and does not equal onboarding approval."],
+      ["Controlled introduction", "The coordinated point at which OfferPSP discloses the accepted parties and transfers the relevant context into a direct conversation."],
     ],
   },
   "payment-provider-for-ecommerce": {
@@ -1098,6 +1221,30 @@ const reviewProcessBySlug = {
     intro: "OfferPSP uses 1–2 business days as a planning range for brief completeness and 3–10 business days for an initial provider fit review when the file is ready. Enhanced due diligence, contracting and integration commonly need 3–8 weeks or more. This is not a provider SLA: the provider controls its queue, requests, approval and final timetable, and may decline at any stage.",
     mistakes: ["The vertical is softened or a previous decline and dispute history are hidden.", "Forecast volume has no statements, traffic plan or calculation behind it.", "The merchant requests fast settlement without showing refund funding and reserve tolerance."],
     accelerators: ["Separate verified facts, forecasts and unresolved assumptions in the first submission.", "Provide ownership, licensing, product, funds-flow and processing evidence together.", "Answer enhanced-due-diligence questions through one accountable contact."],
+  },
+  "psp-for-saas": {
+    title: "Why subscription payment reviews stall",
+    intro: "For planning, OfferPSP allows 1–2 business days to check brief completeness and roughly 3–10 business days for an interested provider's initial review after the billing and recurring-payment model is clear. Due diligence, contracting, token or mandate work, integration and migration commonly require 2–8 weeks or longer. These are planning ranges, not a provider SLA or approval promise.",
+    mistakes: ["The brief describes checkout but not customer authority for later recurring charges.", "Retry, dunning, cancellation, refunds and service suspension have no documented owner or rule.", "A backup provider is requested without confirming token ownership, portability or billing-orchestration support."],
+    accelerators: ["Submit the subscription terms, initial payment journey and recurring authority together.", "Separate new payments, recurring attempts, retries, refunds and bank-debit mandates in the route matrix.", "Name the billing, engineering, finance and compliance owners who can answer provider questions."],
+  },
+  "payment-methods-by-geo": {
+    title: "Why a local-method request needs country-level detail",
+    intro: "OfferPSP can usually check a complete country-method matrix within 1–2 business days. An interested provider may need approximately 3–10 business days for an initial route assessment, while onboarding, contracting and integration can require 2–8 weeks or longer. Local participation, merchant eligibility and missing legal or banking dependencies can extend the timetable. These are planning estimates, not a provider SLA.",
+    mistakes: ["The request says worldwide local methods without customer-country priorities or volume evidence.", "PayIn, payout, refund and settlement requirements are combined as if one method supported every flow.", "A method brand is treated as proof that the merchant entity and vertical are eligible to access it."],
+    accelerators: ["Use one row per country, method, currency and payment purpose.", "Attach the customer journey, expected volume and reconciliation requirement for every priority row.", "Label local-entity, bank, licence and provider dependencies as open questions before commercial comparison."],
+  },
+  "payment-provider-europe": {
+    title: "Why European coverage should be reviewed market by market",
+    intro: "OfferPSP uses 1–2 business days as a planning range for brief completeness and approximately 3–10 business days for an interested provider's initial review after country, method and entity rows are complete. Compliance, contracts, authentication design and integration commonly require 2–8 weeks or longer. This is not a provider SLA, and the provider can request more information or decline at any stage.",
+    mistakes: ["EU, EEA, UK and Switzerland are presented as one market without separate entity and customer-country rows.", "Cards, SEPA, open banking and local methods are listed without payment purpose, currency, refunds or settlement.", "A provider's regional marketing page is treated as proof of local acquiring or merchant eligibility."],
+    accelerators: ["Stage the launch and submit only the priority countries and methods first.", "Document SCA, recurring authority, mandate, refund, dispute and reconciliation flows before provider review.", "Provide current corporate, licence, bank and processing evidence in one indexed file with named open questions."],
+  },
+  "psp-matching-process": {
+    title: "What prevents a match from becoming a controlled introduction",
+    intro: "OfferPSP can check whether a brief is complete within a planning range of 1–2 business days. Route screening and an interested provider's first review may take roughly 3–10 business days once the dossier is ready; due diligence, contracting and technical launch take additional weeks. These are not provider SLAs. Provider identity remains confidential until the provider explicitly accepts the merchant for an introduction.",
+    mistakes: ["A route match is described as provider approval or live commercial availability.", "The dossier omits the entity, website, licence, payment flow, volume or processing evidence needed for provider review.", "Provider identity is requested before the provider has received and accepted the merchant dossier."],
+    accelerators: ["Keep one structured dossier and answer every missing-information request against the same version.", "Record the route rationale, freshness warning and unresolved assumption instead of converting them into claims.", "Use one decision log for provider questions, acceptance, decline and the controlled introduction gate."],
   },
   "payment-provider-for-ecommerce": {
     title: "Frequent e-commerce brief mistakes and decision timing",
