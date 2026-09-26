@@ -1,9 +1,52 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-09-21
+Updated: 2026-09-27
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
+
+### Intake and operations stabilization — production 2026-09-27
+
+- `VERIFIED`: the public request is now a compact step-by-step brief covering website, legal
+  status, countries, currencies, PayIn/PayOut, methods, approximate monthly volume, average ticket
+  and traffic type. Every field requires either a concrete value or an explicit `Not sure yet`;
+  incomplete and repeated-company paths are covered by regression tests.
+- `VERIFIED`: MCP `get_matching` now returns an object-shaped structured payload
+  (`{ matches: [...] }`) instead of a top-level array. Live checks returned zero matches for the
+  incomplete Railon record and one for the complete WinPiski fixture without mixing the QA entity
+  into normal Operations.
+- `VERIFIED`: the leaked WinPiski task was removed from the working queue while the PaySiski and
+  WinPiski reference entities were preserved. QA task isolation is enforced and tested. Expired
+  Telegram action tokens are converted to the `expired` state by the canonical cleanup path rather
+  than remaining active.
+- `VERIFIED`: the active Dedicated Scheduled Agent no longer contains the competing legacy
+  `Send Email Tool`; all email delivery remains behind the draft, preflight and controlled-send
+  path. The workflow validates with zero errors and retains the shared error workflow.
+- `VERIFIED`: a private entity alias registry now supports legal names, trading names and brands
+  for merchant and PSP resolution. Staff-only read/write RPCs, automatic canonical-name aliases,
+  intake resolution and the 360 workspace editor are released. A rolled-back live transaction
+  confirmed both RPCs and left no test alias behind.
+- `VERIFIED`: migrations `offerpsp_entity_alias_registry` and
+  `offerpsp_new_definer_acl_hardening` are applied. Every post-baseline `SECURITY DEFINER` function
+  has a fixed search path; the private email-draft trigger has no execute grant for anon,
+  authenticated or service roles. The focused Supabase advisor review found no new P0/P1 issue.
+- `VERIFIED`: Integrations health now distinguishes network reachability, authentication and real
+  delivery evidence, displays the actual `checked_at`, and marks stale saved checks. Production
+  deployment `dpl_7GVguRzzWu9DXc7BSJCGWFjqEpSh` is `READY`; its bundles contain the alias editor
+  and the new health evidence fields.
+- `VERIFIED`: the shared n8n runtime was patched from `2.39.5` to `2.39.10`. Northflank reports the
+  service running with zero restarts after rollout and both readiness/liveness checks returning
+  HTTP 200. Rollout interrupted scheduled execution `639745`; recovery marked it crashed and the
+  next execution `639747` completed successfully. All 14 active OfferPSP workflows validate with
+  zero errors after the upgrade.
+- `VERIFIED`: the active Groq and Telegram credentials are the rotated 2026-09-07 credentials.
+  Public concierge returned HTTP 200 before and after the n8n upgrade; Telegram execution `639688`
+  completed through `@aibot_bix_bot`. No additional credential rotation was required.
+- `VERIFIED`: full migration validation, lint, production build, Vercel function-storage budget,
+  bridge, MCP, control-integrity, intake autopilot and intake display suites pass. Current
+  first-party code contains no `url.parse()` call and the production build emits no such warning;
+  remaining occurrences are upstream dependencies whose latest releases still contain the API, so
+  this stays non-blocking dependency debt rather than a local patch.
 
 ### PaySiski / WinPiski cockpit visibility — production 2026-09-21
 
