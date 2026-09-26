@@ -32,8 +32,11 @@ Code or a passing local test is not evidence that production has been updated.
   authenticated or service roles. The focused Supabase advisor review found no new P0/P1 issue.
 - `VERIFIED`: Integrations health now distinguishes network reachability, authentication and real
   delivery evidence, displays the actual `checked_at`, and marks stale saved checks. Production
-  deployment `dpl_7GVguRzzWu9DXc7BSJCGWFjqEpSh` is `READY`; its bundles contain the alias editor
-  and the new health evidence fields.
+  deployment `dpl_EMCgUM9FBSMQJKGLBXGbKmZXtV1h` is `READY`; its bundles contain the alias editor,
+  the new health evidence fields and the required Supabase public auth configuration. The prior
+  prebuilt artifact had omitted the Vite auth variables despite their presence in Vercel; an
+  explicit production-environment pull before rebuilding removed the configuration fallback, and
+  a live Brave smoke restored the existing staff session from `/signin` into Captain's Bridge.
 - `VERIFIED`: the shared n8n runtime was patched from `2.39.5` to `2.39.10`. Northflank reports the
   service running with zero restarts after rollout and both readiness/liveness checks returning
   HTTP 200. Rollout interrupted scheduled execution `639745`; recovery marked it crashed and the
