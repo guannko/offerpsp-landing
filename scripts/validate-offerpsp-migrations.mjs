@@ -331,6 +331,7 @@ async function applyMigrations() {
     "20260920214500_offerpsp_route_vertical_normalization.sql",
     "20260920220000_offerpsp_qa_golden_paths.sql",
     "20260920224000_offerpsp_qa_golden_contract.sql",
+    "20260926204405_offerpsp_intake_brief_qa_and_telegram_cleanup.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -666,6 +667,21 @@ async function verifyCompanyIntakeDeduplication() {
       methods: "cards",
       source: "offerpsp.com",
       consent: true,
+      attribution: {
+        intake_brief: {
+          license_status: "licensed",
+          target_geos: ["DE", "FR"],
+          requested_currencies: ["EUR", "USD"],
+          requested_flows: ["PAYIN", "PAYOUT"],
+          requested_methods: ["CARDS", "SEPA"],
+          expected_monthly_volume: 250000,
+          volume_currency: "EUR",
+          average_ticket_amount: 85,
+          average_ticket_currency: "EUR",
+          traffic_types: ["RECURRING"],
+          profile_unknown_fields: [],
+        },
+      },
     };
     const first = (await query(
       "select public.upsert_offerpsp_lead_intake($1::jsonb) as value",
@@ -673,6 +689,25 @@ async function verifyCompanyIntakeDeduplication() {
     )).rows[0].value;
     if (!first.created || first.merged || first.review_required || first.replayed) {
       throw new Error(`First company intake was not created cleanly: ${JSON.stringify(first)}`);
+    }
+
+    const completeBrief = (await query(`select
+      target_geos, requested_currencies, requested_flows, requested_methods,
+      expected_monthly_volume, volume_currency, average_ticket_amount,
+      average_ticket_currency, traffic_types, license_status, profile_unknown_fields
+      from public.offerpsp_leads where lead_id = $1`, [first.lead_id])).rows[0];
+    if (JSON.stringify(completeBrief.target_geos) !== JSON.stringify(["DE", "FR"])
+        || JSON.stringify(completeBrief.requested_currencies) !== JSON.stringify(["EUR", "USD"])
+        || JSON.stringify(completeBrief.requested_flows) !== JSON.stringify(["PAYIN", "PAYOUT"])
+        || JSON.stringify(completeBrief.requested_methods) !== JSON.stringify(["CARDS", "SEPA"])
+        || Number(completeBrief.expected_monthly_volume) !== 250000
+        || completeBrief.volume_currency !== "EUR"
+        || Number(completeBrief.average_ticket_amount) !== 85
+        || completeBrief.average_ticket_currency !== "EUR"
+        || JSON.stringify(completeBrief.traffic_types) !== JSON.stringify(["RECURRING"])
+        || completeBrief.license_status !== "licensed"
+        || completeBrief.profile_unknown_fields.length !== 0) {
+      throw new Error(`Complete merchant brief was not stored canonically: ${JSON.stringify(completeBrief)}`);
     }
 
     const replay = (await query(
@@ -715,6 +750,73 @@ async function verifyCompanyIntakeDeduplication() {
         || mergedState.contact_count !== 2 || mergedState.review_task_count !== 1
         || mergedState.activity_count !== 1) {
       throw new Error(`Merged intake did not preserve one card with two contacts: ${JSON.stringify(mergedState)}`);
+    }
+
+    const unknownPayload = {
+      name: "Unknown Brief Manager",
+      work_email: "owner@unknown-brief.example",
+      company: "Unknown Brief Ltd",
+      company_url: null,
+      vertical: "E-commerce",
+      geos: "Not sure yet",
+      methods: "Not sure yet",
+      monthly_volume: "Not sure yet",
+      source: "offerpsp.com",
+      consent: true,
+      attribution: {
+        intake_brief: {
+          license_status: "unknown",
+          target_geos: [], requested_currencies: [], requested_flows: [], requested_methods: [],
+          expected_monthly_volume: null, volume_currency: null,
+          average_ticket_amount: null, average_ticket_currency: null, traffic_types: [],
+          profile_unknown_fields: ["company_url", "license_status", "target_geos", "requested_currencies",
+            "requested_flows", "requested_methods", "expected_monthly_volume", "average_ticket_amount", "traffic_types"],
+        },
+      },
+    };
+    const unknown = (await query(
+      "select public.upsert_offerpsp_lead_intake($1::jsonb) as value",
+      [JSON.stringify(unknownPayload)],
+    )).rows[0].value;
+    const unknownBrief = (await query(`select
+      company_url, target_geos, requested_currencies, requested_flows, requested_methods,
+      expected_monthly_volume, average_ticket_amount, traffic_types, license_status, profile_unknown_fields
+      from public.offerpsp_leads where lead_id = $1`, [unknown.lead_id])).rows[0];
+    if (!unknown.created || unknownBrief.company_url !== null
+        || unknownBrief.expected_monthly_volume !== null || unknownBrief.average_ticket_amount !== null
+        || unknownBrief.target_geos.length || unknownBrief.requested_currencies.length
+        || unknownBrief.requested_flows.length || unknownBrief.requested_methods.length
+        || unknownBrief.traffic_types.length || unknownBrief.license_status !== "unknown"
+        || !unknownBrief.profile_unknown_fields.includes("average_ticket_amount")) {
+      throw new Error(`Explicitly unknown merchant brief was not preserved safely: ${JSON.stringify({ unknown, unknownBrief })}`);
+    }
+
+    const qaTask = (await query(`insert into public.offerpsp_tasks(
+      lead_id, source, title, details, status, priority
+    ) values ($1, 'system', 'QA isolation regression', 'WinPiski QA — NO ACTION REQUIRED', 'pending', 'normal')
+    returning status, completed_at, metadata`, [first.lead_id])).rows[0];
+    if (qaTask.status !== "cancelled" || !qaTask.completed_at || qaTask.metadata.qa_fixture_suppressed !== true) {
+      throw new Error(`QA fixture task entered the ordinary Operations queue: ${JSON.stringify(qaTask)}`);
+    }
+
+    const telegramAction = (await query(`insert into private.offerpsp_telegram_intake_actions(
+      lead_id, staff_user_id, chat_id, action, expires_at
+    ) values ($1, $2, '123456789', 'screen', now() - interval '1 minute')
+    returning active, status`, [first.lead_id, STAFF_ID])).rows[0];
+    if (telegramAction.active || telegramAction.status !== "expired") {
+      throw new Error(`Expired Telegram action remained active: ${JSON.stringify(telegramAction)}`);
+    }
+    const cleanupSchedule = (await query(`select count(*)::integer as count from cron.job
+      where jobname = 'offerpsp-expire-telegram-actions'
+        and command = 'select private.offerpsp_cleanup_expired_telegram_actions();'`)).rows[0];
+    if (cleanupSchedule.count !== 1) throw new Error("Telegram action cleanup schedule is missing");
+
+    const edited = (await query(
+      "select public.save_offerpsp_managed_merchant($1, $2::jsonb) as value",
+      [first.lead_id, JSON.stringify({ average_ticket_amount: 95, average_ticket_currency: "usd" })],
+    )).rows[0].value;
+    if (Number(edited.average_ticket_amount) !== 95 || edited.average_ticket_currency !== "USD") {
+      throw new Error(`Staff merchant editor did not persist average ticket: ${JSON.stringify(edited)}`);
     }
 
     await query("update auth.users set email = 'second@dedup-verify.example' where id = $1", [OTHER_CLIENT_ID]);
@@ -792,7 +894,7 @@ async function verifyCompanyIntakeDeduplication() {
     await setRole("authenticated");
     await setUser(STAFF_ID);
   }
-  process.stdout.write("PASS company intake deduplication, replay suppression, corporate-manager access and public-mail isolation\n");
+  process.stdout.write("PASS full/unknown/repeated intake, QA isolation, Telegram expiry and company deduplication\n");
 }
 
 async function verifyProviderPortalBoundary() {

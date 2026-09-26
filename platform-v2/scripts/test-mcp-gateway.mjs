@@ -48,6 +48,11 @@ global.fetch = async (url, init = {}) => {
     management: { providers: [], organizations: [] }, coverage: { routes: [] },
     captains_bridge: { casino_leads: [], psp_providers: [] },
   });
+  if (String(url).endsWith("/rpc/list_offerpsp_route_matches")) return Response.json([{
+    id: "66666666-6666-4666-8666-666666666666",
+    lead_id: "22222222-2222-4222-8222-222222222222",
+    eligibility: "eligible",
+  }]);
   if (String(url).endsWith("/rpc/get_offerpsp_seo_geo_analytics")) return Response.json({
     traffic: { source: "historical_snapshot", visitors: 2, pageviews: 2 },
     traffic_history: [{ source: "historical_snapshot", visitors: 2, pageviews: 2 }],
@@ -134,6 +139,16 @@ await mcpHandler(request({ jsonrpc: "2.0", id: 4, method: "tools/call", params: 
 assert.equal(searched.statusCode, 200);
 assert.equal(searched.payload.result.structuredContent.count, 1);
 assert.equal(searched.payload.result.structuredContent.results[0].id, "merchant:22222222-2222-4222-8222-222222222222");
+
+const matching = responseMock();
+await mcpHandler(request({
+  jsonrpc: "2.0", id: 42, method: "tools/call",
+  params: { name: "get_matching", arguments: { merchant_id: "22222222-2222-4222-8222-222222222222" } },
+}), matching);
+assert.equal(matching.statusCode, 200);
+assert.ok(!Array.isArray(matching.payload.result.structuredContent));
+assert.equal(matching.payload.result.structuredContent.matches.length, 1);
+assert.equal(matching.payload.result.structuredContent.matches[0].eligibility, "eligible");
 
 const agentAsked = responseMock();
 await mcpHandler(request({

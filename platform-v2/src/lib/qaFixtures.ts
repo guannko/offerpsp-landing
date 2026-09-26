@@ -29,6 +29,18 @@ export const isQaFixtureRoute = (route: Pick<RouteCoverage, "provider_id" | "pro
   || containsQaFixtureMarker([route.provider_name, route.provider_code, route.client_title])
 );
 
+export const isQaFixtureTask = (task: {
+  lead_id?: string | null;
+  title?: string | null;
+  details?: string | null;
+  automation_ref?: string | null;
+  metadata?: Record<string, unknown> | null;
+}) => (
+  isQaFixtureLeadId(task.lead_id)
+  || task.metadata?.qa_fixture_suppressed === true
+  || containsQaFixtureMarker([task.title, task.details, task.automation_ref])
+);
+
 export const isQaFixturePath = (path?: string | null) => {
   if (!path) return false;
   return [...QA_FIXTURE_LEAD_IDS].some((id) => path.startsWith(`/merchants/${id}`))

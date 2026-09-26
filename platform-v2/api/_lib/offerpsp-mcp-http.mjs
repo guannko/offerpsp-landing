@@ -113,7 +113,7 @@ export async function offerPspMcpHandler(request, response) {
           throw new HttpError(403, `OAuth scope ${requiredScope} is required`);
         }
         const result = await executeOfferPspTool(name, body.params?.arguments || {}, { request, context, callId: id });
-        return jsonRpc(response, 200, { jsonrpc: "2.0", id, result: toToolResult(result) });
+        return jsonRpc(response, 200, { jsonrpc: "2.0", id, result: toToolResult(result, name) });
       } catch (error) {
         const message = error instanceof Error ? error.message : "Tool execution failed";
         return jsonRpc(response, 200, { jsonrpc: "2.0", id, result: { isError: true, content: [{ type: "text", text: message }] } });

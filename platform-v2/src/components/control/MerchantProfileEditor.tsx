@@ -25,6 +25,7 @@ function initial(lead: Lead): Draft {
     traffic_types: csv(lead.traffic_types), expected_monthly_volume: lead.expected_monthly_volume?.toString() || "",
     volume_currency: lead.volume_currency || "", min_transaction_amount: lead.min_transaction_amount?.toString() || "",
     max_transaction_amount: lead.max_transaction_amount?.toString() || "", transaction_currency: lead.transaction_currency || "",
+    average_ticket_amount: lead.average_ticket_amount?.toString() || "", average_ticket_currency: lead.average_ticket_currency || "",
     business_model: lead.business_model || "", license_status: lead.license_status || "unknown",
     license_jurisdiction: lead.license_jurisdiction || "", license_number: lead.license_number || "",
     license_evidence_url: lead.license_evidence_url || "", launch_timeline: lead.launch_timeline || "",
@@ -67,6 +68,7 @@ export default function MerchantProfileEditor({ lead, onChanged }: { lead: Lead;
       requested_flows: split(draft.requested_flows), requested_methods: split(draft.requested_methods),
       traffic_types: split(draft.traffic_types), expected_monthly_volume: numberOrNull(draft.expected_monthly_volume),
       min_transaction_amount: numberOrNull(draft.min_transaction_amount), max_transaction_amount: numberOrNull(draft.max_transaction_amount),
+      average_ticket_amount: numberOrNull(draft.average_ticket_amount),
     };
     const result = await supabase.rpc("save_offerpsp_managed_merchant", { p_lead_id: lead.lead_id, p_payload: payload });
     if (result.error) setMessage({ error: true, text: result.error.message });
@@ -115,6 +117,8 @@ export default function MerchantProfileEditor({ lead, onChanged }: { lead: Lead;
       <Field label="Месячный оборот"><input type="number" className={field} value={draft.expected_monthly_volume} onChange={(e)=>set("expected_monthly_volume",e.target.value)}/></Field>
       <Field label="Валюта оборота"><input className={field} value={draft.volume_currency} onChange={(e)=>set("volume_currency",e.target.value)}/></Field>
       <Field label="Валюта транзакции"><input className={field} value={draft.transaction_currency} onChange={(e)=>set("transaction_currency",e.target.value)}/></Field>
+      <Field label="Средний чек"><input type="number" className={field} value={draft.average_ticket_amount} onChange={(e)=>set("average_ticket_amount",e.target.value)}/></Field>
+      <Field label="Валюта среднего чека"><input className={field} value={draft.average_ticket_currency} onChange={(e)=>set("average_ticket_currency",e.target.value)}/></Field>
       <Field label="Min транзакции"><input type="number" className={field} value={draft.min_transaction_amount} onChange={(e)=>set("min_transaction_amount",e.target.value)}/></Field>
       <Field label="Max транзакции"><input type="number" className={field} value={draft.max_transaction_amount} onChange={(e)=>set("max_transaction_amount",e.target.value)}/></Field>
     </div></Panel>

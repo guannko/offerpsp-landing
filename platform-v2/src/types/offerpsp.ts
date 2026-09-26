@@ -41,6 +41,9 @@ export type Lead = {
   min_transaction_amount?: number | null;
   max_transaction_amount?: number | null;
   transaction_currency?: string | null;
+  average_ticket_amount?: number | null;
+  average_ticket_currency?: string | null;
+  profile_unknown_fields?: string[] | null;
   business_model?: string | null;
   license_status?: string | null;
   license_jurisdiction?: string | null;

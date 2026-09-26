@@ -1427,6 +1427,56 @@
       gap: 18px;
     }
 
+    .form-progress {
+      margin: -12px 0 26px;
+    }
+
+    .form-progress-row {
+      margin-bottom: 9px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      color: #858a97;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .form-progress-track {
+      height: 4px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255,255,255,.08);
+    }
+
+    .form-progress-value {
+      width: 33.333%;
+      height: 100%;
+      display: block;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--coral), #ff7899);
+      transition: width .2s ease;
+    }
+
+    .form-step[hidden] {
+      display: none;
+    }
+
+    .form-step-title {
+      grid-column: 1 / -1;
+      margin: 0 0 2px;
+      color: var(--paper);
+      font-size: 17px;
+    }
+
+    .form-step-copy {
+      grid-column: 1 / -1;
+      margin: -6px 0 4px;
+      color: #858a97;
+      font-size: 12px;
+    }
+
     .field {
       display: grid;
       gap: 8px;
@@ -1445,6 +1495,56 @@
     .field label span {
       color: #7d8290;
       font-weight: 500;
+    }
+
+    .unknown-toggle,
+    .choice {
+      display: flex !important;
+      align-items: center;
+      gap: 8px;
+      color: #9297a4 !important;
+      font-size: 12px !important;
+      font-weight: 600 !important;
+      text-transform: none;
+    }
+
+    .unknown-toggle input,
+    .choice input {
+      width: 16px;
+      min-height: 16px;
+      height: 16px;
+      padding: 0;
+      accent-color: var(--coral);
+    }
+
+    .choice-grid {
+      min-height: 50px;
+      padding: 13px 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      border: 1px solid var(--line-strong);
+      border-radius: 11px;
+      background: #0c0f1a;
+    }
+
+    .form-navigation {
+      margin-top: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .form-navigation [hidden],
+    .consent[hidden] {
+      display: none;
+    }
+
+    .form-back {
+      border: 1px solid var(--line-strong);
+      color: var(--paper-muted);
+      background: transparent;
     }
 
     input,
@@ -2366,11 +2466,11 @@
           <div>
             <div class="section-kicker">Private request</div>
             <h2>Start with a short merchant profile.</h2>
-            <p>Five operating facts are enough to begin. We will email you a secure link to confirm your address and open your private workspace.</p>
+            <p>A short step-by-step brief is enough to begin. We will email you a secure link to confirm your address and open your private workspace.</p>
           </div>
           <div class="request-strip-actions">
             <button class="button button-arrow" type="button" data-open-lead-modal data-analytics-placement="request_section">Request a private match</button>
-            <p class="request-strip-note">No password. About 2 minutes.</p>
+            <p class="request-strip-note">No password. About 3 minutes.</p>
           </div>
         </div>
       </div>
@@ -2388,7 +2488,14 @@
               <div class="form-badge">Private intake</div>
             </div>
 
-            <div class="form-grid">
+            <div class="form-progress" aria-label="Merchant brief progress">
+              <div class="form-progress-row"><span id="formStepLabel">Step 1 of 3</span><span id="formStepName">Company</span></div>
+              <div class="form-progress-track"><span class="form-progress-value" id="formProgressValue"></span></div>
+            </div>
+
+            <section class="form-step form-grid" data-form-step="0" aria-label="Company and contact">
+              <h4 class="form-step-title">Company and contact</h4>
+              <p class="form-step-copy">Who is requesting the match and which business should we assess?</p>
               <div class="field">
                 <label for="name">Your name *</label>
                 <input id="name" name="name" type="text" autocomplete="name" maxlength="120" required placeholder="Name and surname">
@@ -2402,8 +2509,9 @@
                 <input id="company" name="company" type="text" autocomplete="organization" maxlength="160" required placeholder="Legal or trading name">
               </div>
               <div class="field">
-                <label for="company_url">Website <span>(optional)</span></label>
-                <input id="company_url" name="company_url" type="url" autocomplete="url" maxlength="500" placeholder="https://">
+                <label for="company_url">Website *</label>
+                <input id="company_url" name="company_url" type="url" autocomplete="url" maxlength="500" required data-required="true" data-brief-field="company_url" placeholder="https://">
+                <label class="unknown-toggle"><input type="checkbox" data-unknown-for="company_url">Not sure yet</label>
               </div>
               <div class="field">
                 <label for="vertical">Vertical *</label>
@@ -2421,8 +2529,71 @@
                 </select>
               </div>
               <div class="field">
-                <label for="geos">Target GEOs *</label>
-                <input id="geos" name="geos" type="text" maxlength="2000" required placeholder="Countries or regions you need to cover">
+                <label for="license_status">Licence / legal status *</label>
+                <select id="license_status" name="license_status" required>
+                  <option value="">Select status</option>
+                  <option value="licensed">Licensed</option>
+                  <option value="pending">Licence application in progress</option>
+                  <option value="not_required">Licence not required for this business</option>
+                  <option value="unlicensed">Not licensed</option>
+                  <option value="unknown">Not sure yet</option>
+                </select>
+              </div>
+            </section>
+
+            <section class="form-step form-grid" data-form-step="1" aria-label="Markets and payment needs" hidden>
+              <h4 class="form-step-title">Markets and payment needs</h4>
+              <p class="form-step-copy">Use concrete values where possible. Every field also accepts an explicit “Not sure yet”.</p>
+              <div class="field">
+                <label for="target_geos">Target countries *</label>
+                <input id="target_geos" name="target_geos" type="text" maxlength="2000" required data-required="true" data-brief-field="target_geos" placeholder="Germany, France, Brazil">
+                <label class="unknown-toggle"><input type="checkbox" data-unknown-for="target_geos">Not sure yet</label>
+              </div>
+              <div class="field">
+                <label for="requested_currencies">Currencies *</label>
+                <input id="requested_currencies" name="requested_currencies" type="text" maxlength="500" required data-required="true" data-brief-field="requested_currencies" placeholder="EUR, USD, BRL">
+                <label class="unknown-toggle"><input type="checkbox" data-unknown-for="requested_currencies">Not sure yet</label>
+              </div>
+              <div class="field field-full">
+                <label>Required flows *</label>
+                <div class="choice-grid" id="requestedFlows">
+                  <label class="choice"><input type="checkbox" name="requested_flows" value="PAYIN" data-brief-field="requested_flows">PayIn</label>
+                  <label class="choice"><input type="checkbox" name="requested_flows" value="PAYOUT" data-brief-field="requested_flows">PayOut</label>
+                  <label class="choice"><input type="checkbox" data-unknown-for="requested_flows">Not sure yet</label>
+                </div>
+              </div>
+              <div class="field field-full">
+                <label for="requested_methods">Payment methods *</label>
+                <input id="requested_methods" name="requested_methods" type="text" maxlength="1000" required data-required="true" data-brief-field="requested_methods" placeholder="Cards, bank transfer, PIX, UPI…">
+                <label class="unknown-toggle"><input type="checkbox" data-unknown-for="requested_methods">Not sure yet</label>
+              </div>
+            </section>
+
+            <section class="form-step form-grid" data-form-step="2" aria-label="Volume and operations" hidden>
+              <h4 class="form-step-title">Volume and operations</h4>
+              <p class="form-step-copy">Approximate numbers are enough for the first route comparison.</p>
+              <div class="field">
+                <label for="expected_monthly_volume">Approx. monthly volume *</label>
+                <input id="expected_monthly_volume" name="expected_monthly_volume" type="number" min="0" step="any" required data-required="true" data-brief-field="expected_monthly_volume" placeholder="250000">
+                <label class="unknown-toggle"><input type="checkbox" data-unknown-for="expected_monthly_volume">Not sure yet</label>
+              </div>
+              <div class="field">
+                <label for="volume_currency">Volume currency *</label>
+                <input id="volume_currency" name="volume_currency" type="text" maxlength="12" required data-required="true" data-brief-field="expected_monthly_volume" placeholder="EUR">
+              </div>
+              <div class="field">
+                <label for="average_ticket_amount">Average ticket *</label>
+                <input id="average_ticket_amount" name="average_ticket_amount" type="number" min="0" step="any" required data-required="true" data-brief-field="average_ticket_amount" placeholder="85">
+                <label class="unknown-toggle"><input type="checkbox" data-unknown-for="average_ticket_amount">Not sure yet</label>
+              </div>
+              <div class="field">
+                <label for="average_ticket_currency">Ticket currency *</label>
+                <input id="average_ticket_currency" name="average_ticket_currency" type="text" maxlength="12" required data-required="true" data-brief-field="average_ticket_amount" placeholder="EUR">
+              </div>
+              <div class="field field-full">
+                <label for="traffic_types">Traffic type *</label>
+                <input id="traffic_types" name="traffic_types" type="text" maxlength="1000" required data-required="true" data-brief-field="traffic_types" placeholder="FTD, recurring, returning customers, subscriptions…">
+                <label class="unknown-toggle"><input type="checkbox" data-unknown-for="traffic_types">Not sure yet</label>
               </div>
               <div class="field">
                 <label for="preferred_contact_time">Preferred contact time <span>(optional)</span></label>
@@ -2436,17 +2607,19 @@
                 <label for="website_url">Leave this field empty</label>
                 <input id="website_url" name="website_url" type="text" tabindex="-1" autocomplete="off">
               </div>
-            </div>
+            </section>
 
-            <label class="consent" for="consent">
+            <label class="consent" id="leadConsentRow" for="consent" hidden>
               <input id="consent" name="consent" type="checkbox" required>
               <span>I agree that OfferPSP may use the submitted information to assess this request and contact me about relevant PSP introductions. See the <a href="/privacy.html">Privacy Notice</a>.</span>
             </label>
 
-            <div class="form-footer">
-              <button class="button submit-button" id="submitButton" type="submit">Submit and email my access link</button>
-              <p class="form-status" id="formStatus" role="status" aria-live="polite"></p>
+            <div class="form-navigation">
+              <button class="button form-back" id="formBackButton" type="button" hidden>Back</button>
+              <button class="button" id="formNextButton" type="button">Continue</button>
+              <button class="button submit-button" id="submitButton" type="submit" hidden>Submit and email my access link</button>
             </div>
+            <p class="form-status" id="formStatus" role="status" aria-live="polite"></p>
           </form>
 
           <div class="success-panel" id="successPanel">
@@ -2521,6 +2694,7 @@
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
     import { buildLeadAttributionFields, collectAcquisitionAttribution } from "/acquisition-attribution.js?v=20260901-1";
+    import { buildIntakeBriefPayload, validateIntakeBrief } from "/intake-brief.js?v=20260926-1";
 
     const LEAD_ENDPOINT = "https://annoris--n8n-make--xjvz9xynmzwk.code.run/webhook/offerpsp-lead-v1";
     const supabase = createClient(
@@ -2534,6 +2708,13 @@
     const navLinks = document.getElementById("navLinks");
     const leadForm = document.getElementById("leadForm");
     const submitButton = document.getElementById("submitButton");
+    const formBackButton = document.getElementById("formBackButton");
+    const formNextButton = document.getElementById("formNextButton");
+    const formStepLabel = document.getElementById("formStepLabel");
+    const formStepName = document.getElementById("formStepName");
+    const formProgressValue = document.getElementById("formProgressValue");
+    const leadConsentRow = document.getElementById("leadConsentRow");
+    const formSteps = [...leadForm.querySelectorAll("[data-form-step]")];
     const formStatus = document.getElementById("formStatus");
     const successPanel = document.getElementById("successPanel");
     const successTitle = document.getElementById("successTitle");
@@ -2543,6 +2724,7 @@
     const closeLeadDialog = document.getElementById("closeLeadDialog");
     let leadDialogTrigger = null;
     let leadFormStarted = false;
+    let currentFormStep = 0;
 
     const query = new URLSearchParams(window.location.search);
     try {
@@ -2686,6 +2868,84 @@
 
     const acquisition = window.offerpspAcquisition || collectAcquisitionAttribution();
 
+    const formStepNames = ["Company", "Payment needs", "Operations"];
+    const renderFormStep = () => {
+      formSteps.forEach((step, index) => { step.hidden = index !== currentFormStep; });
+      formStepLabel.textContent = `Step ${currentFormStep + 1} of ${formSteps.length}`;
+      formStepName.textContent = formStepNames[currentFormStep];
+      formProgressValue.style.width = `${((currentFormStep + 1) / formSteps.length) * 100}%`;
+      formBackButton.hidden = currentFormStep === 0;
+      formNextButton.hidden = currentFormStep === formSteps.length - 1;
+      submitButton.hidden = currentFormStep !== formSteps.length - 1;
+      leadConsentRow.hidden = currentFormStep !== formSteps.length - 1;
+      formStatus.className = "form-status";
+      formStatus.textContent = "";
+      requestAnimationFrame(() => formSteps[currentFormStep].querySelector("input:not(:disabled), select:not(:disabled), textarea:not(:disabled)")?.focus());
+    };
+
+    const syncUnknownControl = (control) => {
+      const key = control.dataset.unknownFor;
+      leadForm.querySelectorAll(`[data-brief-field="${key}"]`).forEach((field) => {
+        field.disabled = control.checked;
+        if (control.checked) {
+          if (field.type === "checkbox") field.checked = false;
+          else field.value = "";
+        }
+        if (field.dataset.required === "true") field.required = !control.checked;
+      });
+    };
+
+    leadForm.querySelectorAll("[data-unknown-for]").forEach((control) => {
+      control.addEventListener("change", () => syncUnknownControl(control));
+      syncUnknownControl(control);
+    });
+    leadForm.querySelectorAll('input[name="requested_flows"]').forEach((control) => {
+      control.addEventListener("change", () => {
+        if (!control.checked) return;
+        const unknown = leadForm.querySelector('[data-unknown-for="requested_flows"]');
+        if (unknown?.checked) { unknown.checked = false; syncUnknownControl(unknown); control.checked = true; }
+      });
+    });
+
+    const validateCurrentStep = () => {
+      const step = formSteps[currentFormStep];
+      const invalid = [...step.querySelectorAll("input, select, textarea")].find((field) => !field.disabled && !field.checkValidity());
+      if (invalid) { invalid.reportValidity(); return false; }
+      if (currentFormStep === 1) {
+        const hasFlow = leadForm.querySelector('input[name="requested_flows"]:checked');
+        const flowUnknown = leadForm.querySelector('[data-unknown-for="requested_flows"]:checked');
+        if (!hasFlow && !flowUnknown) {
+          formStatus.classList.add("error");
+          formStatus.textContent = "Select PayIn, PayOut, or Not sure yet.";
+          leadForm.querySelector("#requestedFlows")?.scrollIntoView({ block: "center" });
+          return false;
+        }
+      }
+      return true;
+    };
+
+    formNextButton.addEventListener("click", () => {
+      if (!validateCurrentStep()) return;
+      currentFormStep = Math.min(currentFormStep + 1, formSteps.length - 1);
+      renderFormStep();
+    });
+    formBackButton.addEventListener("click", () => {
+      currentFormStep = Math.max(currentFormStep - 1, 0);
+      renderFormStep();
+    });
+    renderFormStep();
+
+    const collectBriefValues = (formData) => {
+      const unknownFields = [...leadForm.querySelectorAll("[data-unknown-for]:checked")]
+        .map((control) => control.dataset.unknownFor);
+      if (formData.get("license_status") === "unknown") unknownFields.push("license_status");
+      return {
+        ...Object.fromEntries(formData.entries()),
+        requested_flows: formData.getAll("requested_flows"),
+        unknown_fields: [...new Set(unknownFields)],
+      };
+    };
+
     leadForm.addEventListener("input", (event) => {
       if (leadFormStarted || event.target?.name === "website_url" || event.target?.name === "consent") return;
       leadFormStarted = true;
@@ -2701,7 +2961,7 @@
       formStatus.className = "form-status";
       formStatus.textContent = "";
 
-      if (!leadForm.checkValidity()) {
+      if (!leadForm.checkValidity() || !validateCurrentStep()) {
         leadForm.reportValidity();
         trackExperienceEvent("lead_submit_failure", "validation");
         formStatus.classList.add("error");
@@ -2712,10 +2972,17 @@
       trackExperienceEvent("lead_submit_attempt", "request_form");
 
       const formData = new FormData(leadForm);
-      const payload = Object.fromEntries(formData.entries());
-      payload.monthly_volume = "";
-      payload.methods = "";
+      const briefValues = collectBriefValues(formData);
+      const briefValidation = validateIntakeBrief(briefValues);
+      if (!briefValidation.valid) {
+        trackExperienceEvent("lead_submit_failure", "brief_validation");
+        formStatus.classList.add("error");
+        formStatus.textContent = `Please complete: ${briefValidation.missing.join(", ")}.`;
+        return;
+      }
+      const payload = buildIntakeBriefPayload(briefValues);
       payload.telegram = "";
+      payload.website_url = String(formData.get("website_url") || "");
       const preferredTime = String(formData.get("preferred_contact_time") || "").trim();
       const preferredTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Not reported";
       const submittedDetails = String(formData.get("details") || "").trim();

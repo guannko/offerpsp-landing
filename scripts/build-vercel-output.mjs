@@ -17,6 +17,7 @@ const publicFiles = [
   "llms.txt",
   "service-pages.css",
   "acquisition-attribution.js",
+  "intake-brief.js",
   "legal.css",
   "contact-dialog.css",
   "contact-dialog.js",

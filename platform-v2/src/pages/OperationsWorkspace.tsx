@@ -6,7 +6,7 @@ import listPlugin from "@fullcalendar/list";
 import PageMeta from "../components/common/PageMeta";
 import { EmptyState, ErrorBanner, Metric, PageHeading, Panel, SkeletonPage, StatusPill } from "../components/control/Ui";
 import { useControlBridge } from "../context/ControlBridgeContext";
-import { isQaFixtureLead, isQaFixtureLeadId } from "../lib/qaFixtures";
+import { isQaFixtureLead, isQaFixtureTask } from "../lib/qaFixtures";
 import { supabase } from "../lib/supabase";
 import type { OperationsWorkspaceSnapshot, WorkTask } from "../types/offerpsp";
 
@@ -44,8 +44,8 @@ export default function OperationsWorkspace() {
   const [priority, setPriority] = useState("all");
   const [draft, setDraft] = useState<TaskDraft | null>(null);
   const [busy, setBusy] = useState(false);
-  const operationalTasks = useMemo(() => workspace.tasks.filter((task) => !isQaFixtureLeadId(task.lead_id)), [workspace.tasks]);
-  const operationalAibotTasks = useMemo(() => workspace.aibot_tasks.filter((task) => !isQaFixtureLeadId(task.lead_id)), [workspace.aibot_tasks]);
+  const operationalTasks = useMemo(() => workspace.tasks.filter((task) => !isQaFixtureTask(task)), [workspace.tasks]);
+  const operationalAibotTasks = useMemo(() => workspace.aibot_tasks.filter((task) => !isQaFixtureTask(task)), [workspace.aibot_tasks]);
 
   async function load() {
     setLoading(true); setError(null);

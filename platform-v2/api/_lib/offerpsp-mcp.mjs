@@ -484,9 +484,12 @@ export async function executeOfferPspTool(name, args, { request, context, callId
   throw new HttpError(404, `Unknown MCP tool: ${name}`);
 }
 
-export function toToolResult(value) {
+export function toToolResult(value, toolName = "") {
+  const structuredContent = Array.isArray(value)
+    ? { [toolName === "get_matching" ? "matches" : "items"]: value }
+    : value && typeof value === "object" ? value : { value };
   return {
-    structuredContent: value && typeof value === "object" ? value : { value },
+    structuredContent,
     content: [{ type: "text", text: JSON.stringify(value, null, 2).slice(0, 100_000) }],
   };
 }
