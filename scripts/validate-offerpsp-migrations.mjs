@@ -332,6 +332,7 @@ async function applyMigrations() {
     "20260920220000_offerpsp_qa_golden_paths.sql",
     "20260920224000_offerpsp_qa_golden_contract.sql",
     "20260926204405_offerpsp_intake_brief_qa_and_telegram_cleanup.sql",
+    "20260927002500_offerpsp_entity_alias_registry.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -752,6 +753,41 @@ async function verifyCompanyIntakeDeduplication() {
       throw new Error(`Merged intake did not preserve one card with two contacts: ${JSON.stringify(mergedState)}`);
     }
 
+    const organization = (await query(
+      "select merchant_organization_id from public.offerpsp_leads where lead_id = $1",
+      [first.lead_id],
+    )).rows[0];
+    const savedAliases = (await query(
+      "select public.save_offerpsp_entity_aliases('organization', $1, array['Dedup Trading']) as value",
+      [organization.merchant_organization_id],
+    )).rows[0].value;
+    if (!savedAliases.some((item) => item.alias === "Dedup Trading" && item.source === "staff")) {
+      throw new Error(`Merchant alias was not saved in the registry: ${JSON.stringify(savedAliases)}`);
+    }
+
+    const aliasPayload = {
+      ...firstPayload,
+      name: "Alias Manager",
+      work_email: "alias@dedup-verify.example",
+      company: "Dedup Trading",
+      details: "Submitted with the approved trading alias",
+    };
+    const aliasSubmission = (await query(
+      "select public.upsert_offerpsp_lead_intake($1::jsonb) as value",
+      [JSON.stringify(aliasPayload)],
+    )).rows[0].value;
+    if (!aliasSubmission.merged || aliasSubmission.lead_id !== first.lead_id
+        || aliasSubmission.match_strategy !== "verified_company_email_domain") {
+      throw new Error(`Approved company alias did not resolve to the canonical card: ${JSON.stringify(aliasSubmission)}`);
+    }
+    const aliasAudit = (await query(
+      "select submitted_company, payload ->> 'company' as payload_company from private.offerpsp_intake_submissions where id = $1",
+      [aliasSubmission.submission_id],
+    )).rows[0];
+    if (aliasAudit.submitted_company !== "Dedup Trading" || aliasAudit.payload_company !== "Dedup Trading") {
+      throw new Error(`Submitted alias spelling was not preserved in the intake audit: ${JSON.stringify(aliasAudit)}`);
+    }
+
     const unknownPayload = {
       name: "Unknown Brief Manager",
       work_email: "owner@unknown-brief.example",
@@ -883,10 +919,17 @@ async function verifyCompanyIntakeDeduplication() {
       has_table_privilege('authenticated', 'private.offerpsp_intake_submissions', 'select') as authenticated_table,
       has_function_privilege('anon', 'public.upsert_offerpsp_lead_intake(jsonb)', 'execute') as anon_rpc,
       has_function_privilege('authenticated', 'public.upsert_offerpsp_lead_intake(jsonb)', 'execute') as authenticated_rpc,
-      has_function_privilege('service_role', 'public.upsert_offerpsp_lead_intake(jsonb)', 'execute') as service_rpc
+      has_function_privilege('service_role', 'public.upsert_offerpsp_lead_intake(jsonb)', 'execute') as service_rpc,
+      has_table_privilege('authenticated', 'private.offerpsp_entity_aliases', 'select') as authenticated_alias_table,
+      has_function_privilege('anon', 'public.get_offerpsp_entity_aliases(text,uuid)', 'execute') as anon_alias_get,
+      has_function_privilege('anon', 'public.save_offerpsp_entity_aliases(text,uuid,text[])', 'execute') as anon_alias_save,
+      has_function_privilege('authenticated', 'public.get_offerpsp_entity_aliases(text,uuid)', 'execute') as authenticated_alias_get,
+      has_function_privilege('authenticated', 'public.save_offerpsp_entity_aliases(text,uuid,text[])', 'execute') as authenticated_alias_save
     `)).rows[0];
     if (privileges.anon_table || privileges.authenticated_table || privileges.anon_rpc
-        || privileges.authenticated_rpc || !privileges.service_rpc) {
+        || privileges.authenticated_rpc || !privileges.service_rpc
+        || privileges.authenticated_alias_table || privileges.anon_alias_get || privileges.anon_alias_save
+        || !privileges.authenticated_alias_get || !privileges.authenticated_alias_save) {
       throw new Error(`Company intake security boundary is incorrect: ${JSON.stringify(privileges)}`);
     }
   } finally {

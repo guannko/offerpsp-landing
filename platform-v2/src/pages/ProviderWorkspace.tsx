@@ -4,6 +4,7 @@ import PageMeta from "../components/common/PageMeta";
 import { EmptyState, ErrorBanner, Panel, SkeletonPage, StatusPill, statusLabels } from "../components/control/Ui";
 import { QuickStatusSelect, type QuickStatusOption } from "../components/control/QuickStatusSelect";
 import { VisibilityToggleButton } from "../components/control/VisibilityToggleButton";
+import EntityAliasEditor from "../components/control/EntityAliasEditor";
 import { useControlBridge } from "../context/ControlBridgeContext";
 import { supabase } from "../lib/supabase";
 import { ActivityPanel, DocumentsPanel, documentCategoryLabels, useEntityWorkspace, type EntityWorkspaceSnapshot } from "../components/control/EntityWorkspace360";
@@ -272,7 +273,7 @@ export default function ProviderWorkspace() {
             {tab === "overview"
               ? <ProviderOverview workspace={workspace} entity={entityWorkspace.data} setTab={selectTab}/>
               : tab === "edit"
-                ? <div className="max-w-2xl space-y-6"><ProviderForm draft={providerDraft} setDraft={setProviderDraft} save={() => void saveProvider()} busy={busy}/><DefaultMarkupPanel draft={defaultMarkupDraft} setDraft={setDefaultMarkupDraft} save={() => void saveDefaultMarkups()} busy={busy}/></div>
+                ? <div className="max-w-2xl space-y-6"><ProviderForm draft={providerDraft} setDraft={setProviderDraft} save={() => void saveProvider()} busy={busy}/><EntityAliasEditor entityType="provider" entityId={workspace.provider.id}/><DefaultMarkupPanel draft={defaultMarkupDraft} setDraft={setDefaultMarkupDraft} save={() => void saveDefaultMarkups()} busy={busy}/></div>
               : tab === "contacts"
                 ? <div className="max-w-3xl"><ContactPanel contacts={workspace.contacts || []} draft={contactDraft} setDraft={setContactDraft} save={() => void saveContact()} busy={busy}/></div>
               : tab === "offers"

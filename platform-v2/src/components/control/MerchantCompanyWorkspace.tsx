@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { EmptyState, Panel, StatusPill } from "./Ui";
+import EntityAliasEditor from "./EntityAliasEditor";
 
 type CompanyProfile = {
   id: string;
@@ -221,6 +222,12 @@ export default function MerchantCompanyWorkspace({ leadId, onChanged }: { leadId
       </div>
       <button disabled={Boolean(busy) || !draft.name?.trim()} onClick={()=>void save()} className="mt-5 rounded-lg bg-brand-500 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy === "profile" ? "Сохраняю…" : "Сохранить профиль"}</button>
     </Panel>
+
+    <EntityAliasEditor
+      key={`${workspace.organization.id}:${workspace.organization.updated_at || ""}`}
+      entityType="organization"
+      entityId={workspace.organization.id}
+    />
 
     <Panel>
       <div><p className="text-xs font-semibold uppercase tracking-[.18em] text-brand-500">Document vault</p><h2 className="mt-2 text-xl font-semibold text-gray-900 dark:text-white">Документы компании</h2><p className="mt-1 text-sm text-gray-500">Приватные файлы до 10 МБ. Клиент видит статус и причину отклонения, но не внутренние заметки.</p></div>
