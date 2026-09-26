@@ -5,6 +5,21 @@ Updated: 2026-09-27
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+### Captain's Bridge native-runtime recovery — production 2026-09-27
+
+- `VERIFIED`: deployment `dpl_EMCgUM9FBSMQJKGLBXGbKmZXtV1h` was `READY` at the platform level
+  but its serverless functions failed before their handlers loaded. Runtime logs identified missing
+  Linux ARM64 native bindings for `@gorules/zen-engine` and `@napi-rs/canvas`; this affected MCP,
+  SEO live traffic, Google Search Console and mailbox polling.
+- `VERIFIED`: Captain's Bridge was rebuilt from clean source by Vercel rather than uploaded as a
+  Mac prebuilt artifact. Deployment `dpl_5YbTCkWgZ7tjeEkLuUCCZmuZEkLK` is `READY` and promoted to
+  `https://ops-7q4m2x9k8v3n.vercel.app/`.
+- `VERIFIED`: the authenticated SEO/GEO screen now shows live Vercel data and final Google Search
+  Console data through 24 September, both API-checked on 27 September at 01:31. OfferPSP MCP
+  analytics is reachable again. Future Captain's Bridge production releases must use a clean
+  server-side source build; do not publish a locally prebuilt Mac artifact containing native
+  dependencies.
+
 ### GSC-led priority SEO expansion — production 2026-09-27
 
 - `VERIFIED`: expanded the SaaS, Europe, payment-methods-by-GEO and matching-process pages with
