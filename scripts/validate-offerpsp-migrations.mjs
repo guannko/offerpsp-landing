@@ -333,6 +333,7 @@ async function applyMigrations() {
     "20260920224000_offerpsp_qa_golden_contract.sql",
     "20260926204405_offerpsp_intake_brief_qa_and_telegram_cleanup.sql",
     "20260927002500_offerpsp_entity_alias_registry.sql",
+    "20260927003100_offerpsp_new_definer_acl_hardening.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -650,6 +651,29 @@ async function seedUsers() {
       array['IN'], array['INR'], array['UPI', 'P2P'], array['IGAMING'], 'verified'
     )
   `);
+}
+
+async function verifyNewSecurityDefinerDelta() {
+  const result = await query(`select
+    has_function_privilege('anon', 'private.offerpsp_sync_email_draft()', 'execute') as anon_email_trigger,
+    has_function_privilege('authenticated', 'private.offerpsp_sync_email_draft()', 'execute') as authenticated_email_trigger,
+    has_function_privilege('service_role', 'private.offerpsp_sync_email_draft()', 'execute') as service_email_trigger,
+    exists (
+      select 1
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname in ('public', 'private')
+        and p.prosecdef
+        and p.proname like '%offerpsp%'
+        and p.proconfig is null
+    ) as mutable_search_path_exists
+  `);
+  const boundary = result.rows[0];
+  if (boundary.anon_email_trigger || boundary.authenticated_email_trigger
+      || boundary.service_email_trigger || boundary.mutable_search_path_exists) {
+    throw new Error(`New SECURITY DEFINER delta is not hardened: ${JSON.stringify(boundary)}`);
+  }
+  process.stdout.write("PASS post-baseline SECURITY DEFINER trigger ACL and fixed search paths\n");
 }
 
 async function verifyCompanyIntakeDeduplication() {
@@ -4316,6 +4340,7 @@ try {
   await verifyCaptainsBridgeGrants();
   await verify360WorkspaceGrants();
   await verifyResearchCrudGrants();
+  await verifyNewSecurityDefinerDelta();
   await seedUsers();
   await verifyCompanyIntakeDeduplication();
   await verifyProviderPortalBoundary();
