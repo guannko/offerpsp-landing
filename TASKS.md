@@ -5,6 +5,20 @@ Updated: 2026-09-27
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+### Manual-only PSP offer updates — production 2026-09-27
+
+- `VERIFIED`: PSP profiles, agreements and offers remain in the system until staff records new
+  partner information or an explicit correction. Elapsed time alone does not change an offer.
+- The retired calendar compatibility RPCs return an empty queue and create no searches, reminders,
+  notifications or tasks. Staff-created reminders remain supported as ordinary OfferPSP tasks and
+  are not modified by the compatibility sync.
+- Shortlist creation and sharing do not create age-based tasks or block an offer because of its
+  source date. Existing source and confirmation timestamps remain available as historical evidence.
+- The obsolete BR-Pay, Antarex and PAYOK confirmation tasks and the completed first outreach-wave
+  task are closed with their audit history preserved. Production has zero active automatic
+  freshness triggers, tasks and calendar reminders, and zero overdue tasks after the cleanup.
+- Local verification: the full OfferPSP migration validator and `git diff --check` pass.
+
 ### Operational data hygiene — production 2026-09-27
 
 - `VERIFIED`: migration `offerpsp_operational_qa_and_mail_hygiene` (production version

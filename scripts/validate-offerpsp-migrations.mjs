@@ -335,6 +335,9 @@ async function applyMigrations() {
     "20260927002500_offerpsp_entity_alias_registry.sql",
     "20260927003100_offerpsp_new_definer_acl_hardening.sql",
     "20260927090000_offerpsp_operational_qa_and_mail_hygiene.sql",
+    "20260927113000_offerpsp_event_driven_freshness.sql",
+    "20260927120000_offerpsp_manual_offer_updates_only.sql",
+    "20260927121500_offerpsp_disable_freshness_sync.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -3677,11 +3680,17 @@ async function verifyFreshnessReminders() {
   await query("select public.publish_offerpsp_rate_card($1)", [imported.rows[0].value.batch_id]);
   await query("update private.offerpsp_providers set last_verified_at = now() - interval '45 days' where id = $1", [providerId]);
 
+  const route = await query(
+    "select id from private.offerpsp_offer_routes where batch_id = $1 order by created_at limit 1",
+    [imported.rows[0].value.batch_id],
+  );
+  const routeId = route.rows[0].id;
+
   const synced = await query("select public.sync_offerpsp_freshness_reminders(7, 7) as value");
-  const reminder = synced.rows[0].value.queue.find((item) => item.provider_id === providerId);
-  const notification = synced.rows[0].value.notifications.find((item) => item.provider_id === providerId);
-  if (!reminder || !notification || reminder.contact_value !== "@freshness" || !reminder.message_ru.includes("Freshness Reminder Fixture")) {
-    throw new Error(`Freshness sync did not prepare the PSP reminder: ${JSON.stringify(synced.rows[0].value)}`);
+  if (synced.rows[0].value.policy !== "manual_updates_only"
+      || synced.rows[0].value.queue.length !== 0
+      || synced.rows[0].value.notifications.length !== 0) {
+    throw new Error(`Calendar freshness sync was not retired: ${JSON.stringify(synced.rows[0].value)}`);
   }
 
   const openTasks = await query(
@@ -3690,30 +3699,60 @@ async function verifyFreshnessReminders() {
        and metadata ->> 'provider_id' = $1 and status in ('pending', 'in_progress')`,
     [providerId],
   );
-  if (openTasks.rows[0].count !== 1) throw new Error("Freshness sync did not create exactly one operational task");
+  if (openTasks.rows[0].count !== 0) throw new Error("Calendar sync created a provider freshness task");
 
-  await query(
-    "select public.mark_offerpsp_freshness_notified($1, 'telegram', 'owner', $2)",
-    [providerId, reminder.message_ru],
+  const lead = await query(
+    `insert into public.offerpsp_leads (
+      name, work_email, company, company_url, vertical, monthly_volume, geos, methods,
+      details, source, status, consent, target_geos, requested_currencies,
+      requested_flows, requested_methods, traffic_types, expected_monthly_volume,
+      volume_currency, min_transaction_amount, max_transaction_amount,
+      transaction_currency, registration_geo, business_model, license_status,
+      license_jurisdiction, launch_timeline, current_processing_setup, client_user_id
+    ) values (
+      'Freshness Client', 'freshness-client@example.com', 'Freshness Merchant',
+      'https://freshness-client.invalid', 'iGaming', '500000 EUR', 'India', 'UPI',
+      'Event-driven freshness validation', 'validation', 'new', true, array['IN'],
+      array['INR'], array['PAYIN'], array['UPI'], array['FTD'], 500000, 'EUR',
+      100, 10000, 'INR', 'CY', 'Online casino', 'licensed', 'CY', 'Immediate',
+      'Existing processing', $1
+    ) returning lead_id`,
+    [CLIENT_ID],
   );
-  const repeated = await query("select public.sync_offerpsp_freshness_reminders(7, 7) as value");
-  if (repeated.rows[0].value.notifications.some((item) => item.provider_id === providerId)) {
-    throw new Error("Freshness sync repeated a notification inside the cooldown window");
+  const shortlist = await query(
+    "select public.create_offerpsp_manual_shortlist($1, $2::uuid[], 'Freshness shortlist', 'Validation', 'Validation') as value",
+    [lead.rows[0].lead_id, [routeId]],
+  );
+  const shortlistId = shortlist.rows[0].value.shortlist_id;
+  const reconfirmationTasks = await query(
+    `select status from public.offerpsp_tasks
+     where lead_id = $1 and metadata ->> 'automation' = 'offer_reconfirmation'
+       and metadata ->> 'route_id' = $2 and status in ('pending', 'in_progress')`,
+    [lead.rows[0].lead_id, routeId],
+  );
+  if (reconfirmationTasks.rows.length !== 0) {
+    throw new Error("Preparing a shortlist created an automatic reconfirmation task");
   }
 
-  await query("select public.confirm_offerpsp_provider_freshness($1)", [providerId]);
-  const resolved = await query(
-    "select status from private.offerpsp_freshness_reminders where provider_id = $1",
-    [providerId],
+  await query("select public.share_offerpsp_shortlist($1)", [shortlistId]);
+
+  const manualTask = await query(
+    "select public.save_offerpsp_task(null, $1::jsonb) as value",
+    [JSON.stringify({
+      title: "Explicit manual reminder",
+      details: "Created by staff, not inferred from offer age",
+      status: "pending",
+      priority: "normal",
+      lead_id: lead.rows[0].lead_id,
+    })],
   );
-  const resolvedTask = await query(
-    `select status from public.offerpsp_tasks
-     where metadata ->> 'automation' = 'provider_freshness'
-       and metadata ->> 'provider_id' = $1 order by created_at desc limit 1`,
-    [providerId],
+  await query("select public.sync_offerpsp_freshness_reminders(7, 7)");
+  const preservedManualTask = await query(
+    "select status from public.offerpsp_tasks where id = $1",
+    [manualTask.rows[0].value.id],
   );
-  if (resolved.rows[0].status !== "resolved" || resolvedTask.rows[0].status !== "done") {
-    throw new Error("Freshness confirmation did not resolve the reminder and task");
+  if (preservedManualTask.rows[0].status !== "pending") {
+    throw new Error("Calendar compatibility sync changed an explicit staff reminder");
   }
 
   const grants = await query(`select
@@ -3724,7 +3763,7 @@ async function verifyFreshnessReminders() {
   if (!grants.rows[0].staff_list || !grants.rows[0].service_sync || grants.rows[0].anon_list || grants.rows[0].direct_read) {
     throw new Error("Freshness reminder grants are broader than the RPC-only contract");
   }
-  process.stdout.write("PASS n8n freshness queue, notification cooldown, task deduplication and confirmation cleanup\n");
+  process.stdout.write("PASS manual-only offer updates with retired calendar freshness automation\n");
 }
 
 async function verifyOperationsAndIntegrations() {
