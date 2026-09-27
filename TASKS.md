@@ -5,6 +5,31 @@ Updated: 2026-09-27
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+### Operational data hygiene — production 2026-09-27
+
+- `VERIFIED`: migration `offerpsp_operational_qa_and_mail_hygiene` (production version
+  `20260927082522`) archived the exact synthetic provider `PAYOK E2E TEST 20260826` and all three
+  of its routes without deleting audit evidence. The frontend also recognizes the stable fixture
+  ID and exact marker, keeping it out of PSP catalogues, offer filters, analytics and counters.
+- `VERIFIED`: 36 known non-operational mail threads remain retained but excluded from the Radio
+  Room: internal/self-addressed mail, QA/E2E checks, Spark service mail, Ecommpay marketing and a
+  delivery-system notice. Working metrics changed from 41 unread / 14 awaiting reply / 12 overdue
+  to 22 / 2 / 1. A database trigger applies the same classification to future mail; a rolled-back
+  production insert verified the rule and left zero smoke rows.
+- `VERIFIED`: the mail classifier and trigger are private, invoker-rights functions. Anonymous and
+  authenticated roles cannot execute them, while the service role can. The security advisor still
+  reports the pre-existing 163 authenticated `SECURITY DEFINER` RPCs; this release adds none.
+- `VERIFIED`: the current public brief already rejects an incomplete submission unless every key
+  fact has a value or explicit `Not sure yet`. A live negative submission returned an error and
+  created no lead; Railon is a historical pre-fix record, not evidence that the current form is
+  permissive.
+- `VERIFIED`: Titan Mailbox Poller failures began with the 2026-09-26 21:46 UTC Vercel cutover and
+  stopped after the stable deployment became ready at 22:28 UTC. n8n then resumed successful
+  minute executions. The evidence identifies the release window, not an IMAP or Titan outage;
+  production releases must use the normal remote Vercel build instead of a prebuilt artifact.
+- Local verification: full migration validation, control-integrity, intake brief/normalizer,
+  30 intake/Telegram tests, ESLint, production build and `git diff --check` pass.
+
 ### Intake and operations stabilization — production 2026-09-27
 
 - `VERIFIED`: the public request is now a compact step-by-step brief covering website, legal

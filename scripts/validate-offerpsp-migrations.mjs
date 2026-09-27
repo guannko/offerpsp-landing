@@ -334,6 +334,7 @@ async function applyMigrations() {
     "20260926204405_offerpsp_intake_brief_qa_and_telegram_cleanup.sql",
     "20260927002500_offerpsp_entity_alias_registry.sql",
     "20260927003100_offerpsp_new_definer_acl_hardening.sql",
+    "20260927090000_offerpsp_operational_qa_and_mail_hygiene.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -342,6 +343,29 @@ async function applyMigrations() {
 
   for (const migrationName of migrationNames) {
     let sql = await readFile(resolve(migrationsDirectory, migrationName), "utf8");
+    if (migrationName === "20260927090000_offerpsp_operational_qa_and_mail_hygiene.sql") {
+      await db.exec(`
+        insert into private.offerpsp_providers(
+          id, internal_code, brand_name, relationship_status, relationship_notes
+        ) values (
+          '1e584fde-67d7-42d1-be52-83c014218c09', 'PSP-990014',
+          'PAYOK E2E TEST 20260826', 'onboarding', 'Migration validation fixture'
+        );
+        insert into private.offerpsp_rate_card_batches(
+          id, provider_id, batch_version, source_type, source_text, parser_version
+        ) values (
+          '90dff792-bf79-4fa2-ad00-e38b9bf24216',
+          '1e584fde-67d7-42d1-be52-83c014218c09', 1, 'manual',
+          'PAYOK E2E TEST 20260826 migration fixture', 'validation-v1'
+        );
+        insert into private.offerpsp_offer_routes(
+          provider_id, batch_id, client_title, flow, status
+        ) values
+          ('1e584fde-67d7-42d1-be52-83c014218c09', '90dff792-bf79-4fa2-ad00-e38b9bf24216', 'PAYOK E2E route 1', 'payin', 'draft'),
+          ('1e584fde-67d7-42d1-be52-83c014218c09', '90dff792-bf79-4fa2-ad00-e38b9bf24216', 'PAYOK E2E route 2', 'payout', 'draft'),
+          ('1e584fde-67d7-42d1-be52-83c014218c09', '90dff792-bf79-4fa2-ad00-e38b9bf24216', 'PAYOK E2E route 3', 'both', 'draft');
+      `);
+    }
     if (migrationName === "20260901185355_offerpsp_email_trash_retention.sql") {
       sql = sql.replace("create extension if not exists pg_cron with schema pg_catalog;", "-- pg_cron is stubbed by the local validator");
     }
@@ -4322,6 +4346,90 @@ async function verifyBixResilience() {
   process.stdout.write("PASS BIX outbox delivery and single-writer fencing\n");
 }
 
+async function verifyOperationalQaAndMailHygiene() {
+  const qaProvider = await query(`
+    select
+      relationship_status,
+      archived_at is not null as archived,
+      (select count(*)::integer
+       from private.offerpsp_offer_routes route
+       where route.provider_id = provider.id
+         and route.status = 'archived') as archived_routes
+    from private.offerpsp_providers provider
+    where provider.id = '1e584fde-67d7-42d1-be52-83c014218c09'::uuid
+  `);
+  if (qaProvider.rows.length !== 1
+      || qaProvider.rows[0].relationship_status !== "archived"
+      || !qaProvider.rows[0].archived
+      || qaProvider.rows[0].archived_routes !== 3) {
+    throw new Error(`PAYOK E2E provider remains operational: ${JSON.stringify(qaProvider.rows)}`);
+  }
+
+  const privileges = await query(`select
+    has_function_privilege('anon', 'private.offerpsp_mail_non_operational_reason(text,text)', 'execute') as anon_classifier,
+    has_function_privilege('authenticated', 'private.offerpsp_mail_non_operational_reason(text,text)', 'execute') as authenticated_classifier,
+    has_function_privilege('service_role', 'private.offerpsp_mail_non_operational_reason(text,text)', 'execute') as service_classifier,
+    has_function_privilege('anon', 'private.offerpsp_classify_email_thread()', 'execute') as anon_trigger,
+    has_function_privilege('authenticated', 'private.offerpsp_classify_email_thread()', 'execute') as authenticated_trigger,
+    has_function_privilege('service_role', 'private.offerpsp_classify_email_thread()', 'execute') as service_trigger
+  `);
+  const grants = privileges.rows[0];
+  if (grants.anon_classifier
+      || grants.authenticated_classifier
+      || !grants.service_classifier
+      || grants.anon_trigger
+      || grants.authenticated_trigger
+      || !grants.service_trigger) {
+    throw new Error(`Mail hygiene grants are unsafe: ${JSON.stringify(grants)}`);
+  }
+
+  await query("begin");
+  try {
+    const excluded = await query(`
+      insert into public.offerpsp_email_threads(
+        thread_key, subject, participant_email, status, unread_count,
+        follow_up_at, is_flagged
+      ) values (
+        'mail-hygiene-spark-fixture', 'Welcome to Spark',
+        'team@connect.sparkmailapp.com', 'awaiting_reply', 3,
+        now() - interval '2 days', true
+      )
+      returning status, unread_count, follow_up_at, is_flagged,
+        metadata ->> 'operational_visibility' as visibility,
+        metadata ->> 'operational_exclusion_reason' as exclusion_reason
+    `);
+    const excludedThread = excluded.rows[0];
+    if (excludedThread.status !== "archived"
+        || excludedThread.unread_count !== 0
+        || excludedThread.follow_up_at !== null
+        || excludedThread.is_flagged
+        || excludedThread.visibility !== "excluded"
+        || excludedThread.exclusion_reason !== "mail_service") {
+      throw new Error(`Service mail remains operational: ${JSON.stringify(excludedThread)}`);
+    }
+
+    const partner = await query(`
+      insert into public.offerpsp_email_threads(
+        thread_key, subject, participant_email, status, unread_count
+      ) values (
+        'mail-hygiene-partner-fixture', 'Partner offer matrix',
+        'partner@example.com', 'open', 1
+      )
+      returning status, unread_count,
+        metadata ->> 'operational_exclusion_reason' as exclusion_reason
+    `);
+    if (partner.rows[0].status !== "open"
+        || partner.rows[0].unread_count !== 1
+        || partner.rows[0].exclusion_reason !== null) {
+      throw new Error(`Operational partner mail was hidden: ${JSON.stringify(partner.rows[0])}`);
+    }
+  } finally {
+    await query("rollback");
+  }
+
+  process.stdout.write("PASS PAYOK E2E isolation and Radio Room mail hygiene\n");
+}
+
 try {
   verifyCanonicalGeoHeaderParsing();
   verifyWorldwideCoverageParsing();
@@ -4349,6 +4457,7 @@ try {
   await verifyAibotExecutionJournal();
   await verifySecurityAndLifecycleRemediation();
   await verifyBixResilience();
+  await verifyOperationalQaAndMailHygiene();
   await verifyIncrementalDraftImports();
   await verifyRateCardBatchHistory();
   await verifyAtomicRouteReplacement();

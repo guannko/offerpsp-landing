@@ -3,10 +3,11 @@ import type { Lead, Provider, RouteCoverage } from "../types/offerpsp";
 export const QA_GOLDEN_MERCHANT_ID = "ad724d57-e894-4d16-b7b0-948165aef4bf";
 export const QA_GOLDEN_PROVIDER_ID = "6e531900-901c-4d5d-8887-0679db9b335d";
 export const QA_PAYSISKI_MERCHANT_ID = "60e61542-7070-43ef-937b-7f919e9abdb0";
+export const QA_PAYOK_E2E_PROVIDER_ID = "1e584fde-67d7-42d1-be52-83c014218c09";
 
 const QA_FIXTURE_LEAD_IDS = new Set([QA_GOLDEN_MERCHANT_ID, QA_PAYSISKI_MERCHANT_ID]);
-const QA_FIXTURE_PROVIDER_IDS = new Set([QA_GOLDEN_PROVIDER_ID]);
-const QA_FIXTURE_MARKERS = ["paysiski", "winpiski"];
+const QA_FIXTURE_PROVIDER_IDS = new Set([QA_GOLDEN_PROVIDER_ID, QA_PAYOK_E2E_PROVIDER_ID]);
+const QA_FIXTURE_MARKERS = ["paysiski", "winpiski", "payok e2e test 20260826"];
 
 const containsQaFixtureMarker = (values: Array<string | null | undefined>) => {
   const haystack = values.filter(Boolean).join(" ").toLowerCase();

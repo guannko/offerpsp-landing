@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { isQaFixtureTask } from "../src/lib/qaFixtures.ts";
+import { isQaFixtureProvider, isQaFixtureRoute, isQaFixtureTask } from "../src/lib/qaFixtures.ts";
 
 assert.equal(isQaFixtureTask({
   lead_id: "0d982f0b-7b8f-4caa-9e36-8481b181b4ae",
@@ -17,5 +17,20 @@ assert.equal(isQaFixtureTask({
   title: "Review Railon dossier",
   details: "Confirm missing currencies and payment methods.",
 }), false, "ordinary merchant work must remain visible");
+
+assert.equal(isQaFixtureProvider({
+  id: "1e584fde-67d7-42d1-be52-83c014218c09",
+  brand_name: "PAYOK E2E TEST 20260826",
+  legal_name: null,
+  internal_code: "PSP-000014",
+  website: null,
+}), true, "the historical PAYOK E2E provider must stay outside the working registry");
+
+assert.equal(isQaFixtureRoute({
+  provider_id: "1e584fde-67d7-42d1-be52-83c014218c09",
+  provider_name: "PAYOK E2E TEST 20260826",
+  provider_code: "PSP-000014",
+  client_title: "E2E route",
+}), true, "PAYOK E2E routes must stay outside catalogues, filters and counters");
 
 process.stdout.write("PASS QA fixture tasks stay outside ordinary Operations\n");
