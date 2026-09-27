@@ -13,6 +13,9 @@ type ConnectorHealth = {
   authenticated: boolean;
   delivery_tested: boolean;
   detail: string;
+  last_delivery_at?: string | null;
+  delivery_reference?: string | null;
+  delivery_detail?: string | null;
 };
 type Health = { supabase: ConnectorHealth; n8n: ConnectorHealth; email: ConnectorHealth; telegram: ConnectorHealth };
 type IntegrationHealthResult = { checks: Health; checked_at: string };
@@ -177,7 +180,7 @@ export default function IntegrationsWorkspace() {
   const healthFacts = (item?: ConnectorHealth, deliveryLabel = "Тестовая отправка") => <div className="mt-4 grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
     <span className={`rounded-lg px-3 py-2 ${item?.reachable ? "bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-300" : "bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-300"}`}>Сеть: {item?.reachable ? "отвечает" : "нет ответа"}</span>
     <span className={`rounded-lg px-3 py-2 ${item?.authenticated ? "bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-300" : "bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-300"}`}>Авторизация: {item?.authenticated ? "проверена" : "не подтверждена"}</span>
-    <span className={`rounded-lg px-3 py-2 ${item?.delivery_tested ? "bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-300" : "bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-400"}`}>{deliveryLabel}: {item?.delivery_tested ? "проверена" : "не выполнялась"}</span>
+    <span title={item?.delivery_detail || undefined} className={`rounded-lg px-3 py-2 ${item?.delivery_tested ? "bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-300" : "bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-400"}`}>{deliveryLabel}: {item?.delivery_tested ? `подтверждена${item.last_delivery_at ? ` · ${new Date(item.last_delivery_at).toLocaleString("ru-RU")}` : ""}` : "нет подтверждённой доставки"}</span>
   </div>;
   const lastTest = (item?: IntegrationSetting) => item?.last_tested_at
     ? <p className={`mt-3 text-xs ${item.last_test_status === "success" ? "text-success-600 dark:text-success-300" : "text-error-600 dark:text-error-300"}`}>Последняя записанная серверная проверка: {item.last_test_status === "success" ? "успешно" : "ошибка"}, {new Date(item.last_tested_at).toLocaleString("ru-RU")}{Date.now() - new Date(item.last_tested_at).getTime() > 24 * 60 * 60 * 1000 ? " · данные старше 24 часов" : ""}.</p>
