@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router";
-import { AngleLeftIcon, AngleRightIcon, HorizontaLDots } from "../icons";
+import { HorizontaLDots } from "../icons";
 import { platformModules } from "../config/modules";
 import { useSidebar } from "../context/SidebarContext";
 import { useControlBridge } from "../context/ControlBridgeContext";
@@ -12,11 +12,11 @@ const groupLabels = {
 } as const;
 
 export default function AppSidebar() {
-  const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleSidebar, toggleMobileSidebar } = useSidebar();
+  const { isExpanded, isMobileOpen, toggleMobileSidebar } = useSidebar();
   const location = useLocation();
   const { moduleEntitlements, loading, refreshing, ready, error, lastUpdatedAt } = useControlBridge();
   const [buildManifest, setBuildManifest] = useState<{ commit?: string; built_at?: string; deployment_id?: string } | null>(null);
-  const showLabels = isExpanded || isHovered || isMobileOpen;
+  const showLabels = isExpanded || isMobileOpen;
   useEffect(() => {
     const controller = new AbortController();
     void fetch("/build-manifest.json", { cache: "no-store", signal: controller.signal })
@@ -38,47 +38,33 @@ export default function AppSidebar() {
 
   return (
     <aside
-      className={`fixed left-0 top-0 z-50 mt-16 flex h-screen flex-col border-r border-gray-200 bg-white px-4 text-gray-900 transition-all duration-300 dark:border-[#34435a] dark:bg-[#1c283b] lg:mt-0 ${showLabels ? "w-[290px]" : "w-[90px]"} ${isMobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
-      onMouseEnter={() => !isExpanded && setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      className={`fixed left-0 top-0 z-50 mt-14 flex h-[calc(100vh-3.5rem)] flex-col border-r border-gray-200 bg-white px-2.5 text-gray-900 transition-[width,transform] duration-200 dark:border-[#34435a] dark:bg-[#1c283b] lg:mt-0 lg:h-screen ${showLabels ? "w-[248px]" : "w-[68px]"} ${isMobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
     >
-      <button
-        type="button"
-        onClick={toggleSidebar}
-        aria-label={isExpanded ? "Свернуть боковую панель" : "Развернуть боковую панель"}
-        title={isExpanded ? "Свернуть боковую панель" : "Развернуть боковую панель"}
-        className="absolute -right-3 top-8 z-10 hidden h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-theme-sm transition hover:border-brand-300 hover:text-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-300 dark:border-[#34435a] dark:bg-[#1c283b] dark:text-gray-300 dark:hover:border-brand-500 dark:hover:text-white lg:flex"
-      >
-        {isExpanded ? <AngleLeftIcon className="size-4" /> : <AngleRightIcon className="size-4" />}
-      </button>
-      <div className={`flex items-center py-7 ${showLabels ? "justify-start" : "justify-center"}`}>
-        <Link to="/" className="flex items-center gap-3" aria-label="OfferPSP Control Bridge">
+      <div className={`flex h-16 items-center ${showLabels ? "justify-start px-2" : "justify-center"}`}>
+        <Link to="/" className="flex min-w-0 items-center gap-2.5" aria-label="OfferPSP Control Bridge">
           {showLabels ? (
-            <span>
-              <img src="/brand/offerpsp-logo-horizontal-transparent.png" alt="OfferPSP" className="h-10 w-auto max-w-[190px] object-contain" />
-              <small className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.24em] text-gray-400">Control Bridge</small>
-            </span>
+            <img src="/brand/offerpsp-logo-horizontal-transparent.png" alt="OfferPSP" className="h-8 w-auto max-w-[176px] object-contain" />
           ) : (
-            <img src="/brand/offerpsp-logo-square-dark.png" alt="OfferPSP" className="h-11 w-11 rounded-xl object-cover shadow-theme-sm" />
+            <img src="/brand/offerpsp-logo-square-dark.png" alt="OfferPSP" className="h-9 w-9 rounded-lg object-cover" />
           )}
         </Link>
       </div>
-      <div className="flex flex-1 flex-col overflow-y-auto pb-24 no-scrollbar">
-        <nav className="space-y-6">
+      <div className="flex flex-1 flex-col overflow-y-auto pb-16 no-scrollbar">
+        <nav className="space-y-4">
           {(Object.keys(groupLabels) as Array<keyof typeof groupLabels>).map((group) => {
             const items = platformModules.filter((item) => item.group === group && item.enabled && (
               !item.requiresEntitlement || moduleEntitlements.some((entitlement) => entitlement.module_key === item.requiresEntitlement && entitlement.enabled)
             ));
             return <div key={group}>
-              <h2 className={`mb-3 flex text-[10px] font-semibold uppercase leading-5 tracking-[0.18em] text-gray-400 ${showLabels ? "justify-start px-3" : "justify-center"}`}>{showLabels ? groupLabels[group] : <HorizontaLDots className="size-5"/>}</h2>
-              <ul className="space-y-1">{items.map((item) => {
+              <h2 className={`mb-1.5 flex h-5 items-center text-[9px] font-semibold uppercase tracking-[0.16em] text-gray-400 ${showLabels ? "justify-start px-2.5" : "justify-center"}`}>{showLabels ? groupLabels[group] : <HorizontaLDots className="size-4"/>}</h2>
+              <ul className="space-y-0.5">{items.map((item) => {
                 const active = item.path === "/" ? location.pathname === "/" : location.pathname.startsWith(item.path);
                 return <li key={item.id}><Link to={item.path} onClick={() => { if (isMobileOpen) toggleMobileSidebar(); }} title={!showLabels ? item.label : undefined} className={`menu-item group ${active ? "menu-item-active" : "menu-item-inactive"} ${showLabels ? "justify-start" : "justify-center"}`}><span className={`menu-item-icon-size ${active ? "menu-item-icon-active" : "menu-item-icon-inactive"}`}>{item.icon}</span>{showLabels && <><span className="menu-item-text">{item.label}</span>{item.badge && <span className="ml-auto rounded-full bg-brand-50 px-2 py-0.5 text-[9px] font-bold text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">{item.badge}</span>}</>}</Link></li>;
               })}</ul>
             </div>;
           })}
         </nav>
-        {showLabels && <div className="mt-auto rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-white/[0.03]"><div className="flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${bridgeState.dot}`}/><strong className="text-xs text-gray-700 dark:text-gray-300">{bridgeState.label}{refreshing ? " · обновление" : ""}</strong></div><p className="mt-2 text-[11px] leading-4 text-gray-400">{bridgeState.detail}</p><p className="mt-2 border-t border-gray-200 pt-2 text-[10px] leading-4 text-gray-400 dark:border-gray-700" title={buildManifest?.deployment_id || undefined}>{buildLabel}</p></div>}
+        <div className={`mt-auto mb-3 flex items-center rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-white/[0.03] ${showLabels ? "gap-2 px-2.5 py-2" : "justify-center p-2"}`} title={`${bridgeState.label}. ${bridgeState.detail} ${buildLabel}`}><span className={`h-2 w-2 shrink-0 rounded-full ${bridgeState.dot}`}/>{showLabels && <div className="min-w-0"><strong className="block truncate text-[11px] text-gray-700 dark:text-gray-300">{bridgeState.label}{refreshing ? " · обновление" : ""}</strong><span className="block truncate text-[9px] text-gray-400">{buildLabel}</span></div>}</div>
       </div>
     </aside>
   );

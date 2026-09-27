@@ -196,7 +196,7 @@ layer(base);
 }
 
 @utility menu-item {
-  @apply relative flex items-center w-full gap-3 px-3 py-2 font-medium rounded-lg text-theme-sm;
+  @apply relative flex min-h-9 items-center w-full gap-2.5 px-2.5 py-1.5 font-medium rounded-lg text-[13px];
 }
 
 @utility menu-item-active {
@@ -217,7 +217,7 @@ layer(base);
 
 @utility menu-item-icon-size {
   & svg {
-    @apply !size-6;
+    @apply !size-5;
   }
 }
 

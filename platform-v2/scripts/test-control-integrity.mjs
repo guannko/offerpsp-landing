@@ -31,12 +31,14 @@ const [captain, merchant, integrations, platform, modules, ui, context, seoGeo, 
 ]);
 const dealDesk = await read("platform-v2/src/pages/DealDeskPanel.tsx");
 
-assert.match(sidebar, /Свернуть боковую панель/);
-assert.match(sidebar, /Развернуть боковую панель/);
-assert.match(sidebar, /AngleLeftIcon/);
-assert.match(sidebar, /AngleRightIcon/);
+assert.match(header, /Свернуть боковую панель/);
+assert.match(header, /Развернуть боковую панель/);
+assert.match(sidebar, /w-\[248px\]/);
+assert.match(sidebar, /w-\[68px\]/);
+assert.doesNotMatch(sidebar, /onMouseEnter/);
 assert.match(sidebarContext, /offerpsp:sidebar-expanded/);
 assert.match(sidebarContext, /localStorage\.setItem/);
+assert.match(sidebarContext, /savedValue === null \? false/);
 assert.doesNotMatch(sidebar, /Production работает/);
 assert.match(sidebar, /Рабочие данные доступны/);
 assert.match(sidebar, /ready && !error/);
