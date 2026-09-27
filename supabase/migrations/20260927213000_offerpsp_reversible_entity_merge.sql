@@ -506,6 +506,15 @@ begin
   select * into v_merge from private.offerpsp_entity_merges where id = p_merge_id for update;
   if not found or v_merge.status <> 'executed' then raise exception 'Executed OfferPSP merge not found'; end if;
   if v_merge.observation_until < now() then raise exception 'OfferPSP merge observation window has ended'; end if;
+  if v_merge.entity_type = 'organization' and exists (
+    select 1 from private.offerpsp_entity_audit a
+    where a.entity_type = 'organization'
+      and a.entity_id = v_merge.source_entity_id::text
+      and a.action_type = 'alias_intake_resolved'
+      and a.created_at >= v_merge.executed_at
+  ) then
+    raise exception 'OfferPSP merge has intervening alias intake; manual reconciliation is required';
+  end if;
 
   if v_merge.entity_type = 'organization' then
     update public.offerpsp_organizations set
@@ -641,6 +650,46 @@ begin
     'canonical_entity', private.offerpsp_entity_summary(p_entity_type, v_canonical_id),
     'relationships', v_relationships, 'merged_sources', v_merged_sources,
     'active_merges', v_active_merges
+  );
+end;
+$$;
+
+-- Relationships always attach to canonical entities. This prevents a stale
+-- alias URL or API client from recreating a second graph behind a merged card.
+alter function public.save_offerpsp_entity_relationship(text,uuid,text,uuid,text,text,text,text)
+  rename to save_offerpsp_entity_relationship_base;
+alter function public.save_offerpsp_entity_relationship_base(text,uuid,text,uuid,text,text,text,text)
+  set schema private;
+revoke all on function private.save_offerpsp_entity_relationship_base(text,uuid,text,uuid,text,text,text,text)
+  from public, anon, authenticated;
+grant execute on function private.save_offerpsp_entity_relationship_base(text,uuid,text,uuid,text,text,text,text)
+  to service_role;
+
+create or replace function public.save_offerpsp_entity_relationship(
+  p_source_entity_type text,
+  p_source_entity_id uuid,
+  p_target_entity_type text,
+  p_target_entity_id uuid,
+  p_relationship_type text,
+  p_status text default 'verified',
+  p_evidence_note text default null,
+  p_evidence_url text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_source_id uuid;
+  v_target_id uuid;
+begin
+  if not public.is_offerpsp_staff() then raise exception 'OfferPSP staff access required'; end if;
+  v_source_id := private.offerpsp_canonical_entity_id(p_source_entity_type, p_source_entity_id);
+  v_target_id := private.offerpsp_canonical_entity_id(p_target_entity_type, p_target_entity_id);
+  return private.save_offerpsp_entity_relationship_base(
+    p_source_entity_type, v_source_id, p_target_entity_type, v_target_id,
+    p_relationship_type, p_status, p_evidence_note, p_evidence_url
   );
 end;
 $$;
@@ -970,14 +1019,15 @@ declare
   v_effective_payload jsonb := p_payload;
   v_result jsonb;
   v_submission_id uuid;
+  v_alias_organization_id uuid;
 begin
   if v_role <> 'service_role' then raise exception 'OfferPSP service access required'; end if;
   v_original_norm := private.offerpsp_normalize_company_name(v_original_company);
   if v_original_norm is not null then
-    select coalesce((select l.company from public.offerpsp_leads l
+    select o.id, coalesce((select l.company from public.offerpsp_leads l
       where l.merchant_organization_id = coalesce(o.merged_into_id, o.id) and l.status <> 'spam'
       order by l.submitted_at, l.lead_id limit 1), canonical.name, o.name)
-    into v_canonical_company
+    into v_alias_organization_id, v_canonical_company
     from private.offerpsp_entity_aliases a
     join public.offerpsp_organizations o on o.id = a.organization_id
     left join public.offerpsp_organizations canonical on canonical.id = o.merged_into_id
@@ -997,6 +1047,22 @@ begin
     update public.offerpsp_lead_activities set
       metadata = jsonb_set(metadata, '{submitted_company}', to_jsonb(v_original_company), true)
     where metadata ->> 'submission_id' = v_submission_id::text;
+    if exists (
+      select 1 from public.offerpsp_organizations
+      where id = v_alias_organization_id and merged_into_id is not null
+    ) then
+      insert into private.offerpsp_entity_audit(
+        entity_type, entity_id, action_type, actor_user_id, reason, after_state
+      ) values (
+        'organization', v_alias_organization_id::text, 'alias_intake_resolved', auth.uid(),
+        'Historical organization alias resolved to its canonical card',
+        jsonb_build_object(
+          'submission_id', v_submission_id,
+          'submitted_company', v_original_company,
+          'canonical_company', v_canonical_company
+        )
+      );
+    end if;
   end if;
   return v_result;
 end;
@@ -1011,6 +1077,8 @@ revoke all on function public.execute_offerpsp_entity_merge(uuid,uuid)
 revoke all on function public.rollback_offerpsp_entity_merge(uuid,text)
   from public, anon, authenticated, service_role;
 revoke all on function public.get_offerpsp_entity_relationship_workspace(text,uuid)
+  from public, anon, authenticated, service_role;
+revoke all on function public.save_offerpsp_entity_relationship(text,uuid,text,uuid,text,text,text,text)
   from public, anon, authenticated, service_role;
 revoke all on function public.get_offerpsp_email_thread_entity_context(uuid)
   from public, anon, authenticated, service_role;
@@ -1030,6 +1098,8 @@ grant execute on function public.prepare_offerpsp_entity_merge(text,uuid,uuid,te
 grant execute on function public.execute_offerpsp_entity_merge(uuid,uuid) to authenticated;
 grant execute on function public.rollback_offerpsp_entity_merge(uuid,text) to authenticated;
 grant execute on function public.get_offerpsp_entity_relationship_workspace(text,uuid) to authenticated;
+grant execute on function public.save_offerpsp_entity_relationship(text,uuid,text,uuid,text,text,text,text)
+  to authenticated;
 grant execute on function public.get_offerpsp_email_thread_entity_context(uuid) to authenticated;
 grant execute on function public.get_offerpsp_supply_workspace(uuid) to authenticated;
 grant execute on function public.list_offerpsp_supply() to authenticated;

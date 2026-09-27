@@ -1365,6 +1365,22 @@ async function verifyEntityRelationships() {
       throw new Error(`Merged organization did not resolve to one company workspace: ${JSON.stringify(companyWorkspace)}`);
     }
 
+    await setRole("service_role");
+    await query(`insert into private.offerpsp_entity_audit(
+      entity_type, entity_id, action_type, reason
+    ) values ('organization', $1, 'alias_intake_resolved', 'Fixture intervening intake')`, [duplicateId]);
+    await setRole("authenticated");
+    await expectTransactionFailure(
+      "select public.rollback_offerpsp_entity_merge($1, 'Unsafe rollback fixture')",
+      [prepared.merge_id],
+      "intervening alias intake",
+    );
+    await setRole("service_role");
+    await query(`delete from private.offerpsp_entity_audit
+      where entity_type = 'organization' and entity_id = $1 and action_type = 'alias_intake_resolved'`,
+    [duplicateId]);
+    await setRole("authenticated");
+
     const rolledBack = (await query(
       "select public.rollback_offerpsp_entity_merge($1, 'Fixture rollback inside observation window') as value",
       [prepared.merge_id],
@@ -1422,6 +1438,16 @@ async function verifyEntityRelationships() {
       throw new Error(`Provider logical merge did not preserve one working canonical card: ${JSON.stringify({
         providerExecuted, providerWorkspace, providerSourceState,
       })}`);
+    }
+
+    const canonicalRelationship = (await query(`select public.save_offerpsp_entity_relationship(
+      'provider', $1, 'organization', $2, 'processing_partner', 'proposed', null, null
+    ) as value`, [duplicateProviderId, merchantpaydId])).rows[0].value;
+    if (canonicalRelationship.source_entity_id !== providerId
+        && canonicalRelationship.target_entity_id !== providerId
+        || canonicalRelationship.source_entity_id === duplicateProviderId
+        || canonicalRelationship.target_entity_id === duplicateProviderId) {
+      throw new Error(`Relationship saved through an alias did not attach to the canonical provider: ${JSON.stringify(canonicalRelationship)}`);
     }
 
     await setRole("service_role");

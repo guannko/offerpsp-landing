@@ -159,7 +159,7 @@ export default function EntityRelationshipsPanel({
     setBusy("save"); setMessage(null);
     const result = await supabase.rpc("save_offerpsp_entity_relationship", {
       p_source_entity_type: entityType,
-      p_source_entity_id: entityId,
+      p_source_entity_id: workspace?.canonical_entity?.id || workspace?.entity.id || entityId,
       p_target_entity_type: targetType,
       p_target_entity_id: targetId,
       p_relationship_type: relationshipType,
@@ -202,7 +202,7 @@ export default function EntityRelationshipsPanel({
     const result = await supabase.rpc("preview_offerpsp_entity_merge", {
       p_entity_type: entityType,
       p_source_entity_id: candidate.id,
-      p_target_entity_id: entityId,
+      p_target_entity_id: workspace?.canonical_entity?.id || workspace?.entity.id || entityId,
     });
     if (result.error) setMessage({ tone: "error", text: result.error.message });
     else setPreview(result.data as MergePreview);

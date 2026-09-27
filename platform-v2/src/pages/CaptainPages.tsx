@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import PageMeta from "../components/common/PageMeta";
 import { EmptyState, ErrorBanner, Metric, PageHeading, Panel, SkeletonPage, StatusPill, humanizeCode, statusLabels } from "../components/control/Ui";
@@ -161,6 +161,8 @@ export function CommunicationsWorkspace() {
   const [responseExpected, setResponseExpected] = useState(false);
   const [threadEntityContext, setThreadEntityContext] = useState<ThreadEntityContext | null>(null);
   const [threadEntityContextLoading, setThreadEntityContextLoading] = useState(false);
+  const threadEntityRequestRef = useRef(0);
+  const selectedThreadIdRef = useRef("");
 
   const lastMessageByThread = useMemo(() => {
     const result = new Map<string, EmailMessage>();
@@ -264,14 +266,18 @@ export function CommunicationsWorkspace() {
 
   useEffect(() => {
     let cancelled = false;
+    const requestId = ++threadEntityRequestRef.current;
+    selectedThreadIdRef.current = selectedThreadId;
     if (!selectedThreadId) {
       setThreadEntityContext(null);
+      setThreadEntityContextLoading(false);
       return () => { cancelled = true; };
     }
     setThreadEntityContextLoading(true);
     void supabase.rpc("get_offerpsp_email_thread_entity_context", { p_thread_id: selectedThreadId })
       .then((result) => {
-        if (cancelled) return;
+        if (cancelled || requestId !== threadEntityRequestRef.current
+          || selectedThreadIdRef.current !== selectedThreadId) return;
         setThreadEntityContext(result.error
           ? { status: "unlinked", reason: result.error.message }
           : result.data as ThreadEntityContext);
@@ -423,6 +429,7 @@ export function CommunicationsWorkspace() {
 
   async function saveThreadLink() {
     if (!selectedThread) return;
+    const linkedThreadId = selectedThread.id;
     setBusy(true);
     const result = await supabase.rpc("link_offerpsp_email_thread", {
       p_thread_id: selectedThread.id,
@@ -433,10 +440,13 @@ export function CommunicationsWorkspace() {
     setMessage(result.error ? { error: true, text: result.error.message } : { text: "Переписка привязана к рабочей карточке." });
     await refresh();
     if (!result.error) {
-      const contextResult = await supabase.rpc("get_offerpsp_email_thread_entity_context", { p_thread_id: selectedThread.id });
-      setThreadEntityContext(contextResult.error
-        ? { status: "unlinked", reason: contextResult.error.message }
-        : contextResult.data as ThreadEntityContext);
+      const requestId = ++threadEntityRequestRef.current;
+      const contextResult = await supabase.rpc("get_offerpsp_email_thread_entity_context", { p_thread_id: linkedThreadId });
+      if (requestId === threadEntityRequestRef.current && selectedThreadIdRef.current === linkedThreadId) {
+        setThreadEntityContext(contextResult.error
+          ? { status: "unlinked", reason: contextResult.error.message }
+          : contextResult.data as ThreadEntityContext);
+      }
     }
     setBusy(false);
   }
