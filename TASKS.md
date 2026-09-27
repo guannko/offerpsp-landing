@@ -1,9 +1,44 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-09-27
+Updated: 2026-09-28
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
+
+## Post-audit debt closure — production 2026-09-28
+
+- `VERIFIED`: production deploys now inject the exact Git commit into `build-manifest.json` and
+  refuse a dirty working tree. Stable Captain's Bridge currently reports commit
+  `21a641b9a4773a8d9e27fdef8898d5db2c4521f9`, deployment
+  `dpl_6EDeTkpCbH2pbPzmbSrnU8AYkZUQ` and source `explicit-build-env`.
+- `VERIFIED`: all 79 previously reported unindexed foreign keys now have covering indexes. The
+  migration completed in production in 1.7 seconds and the Supabase performance advisor now
+  reports no unindexed-foreign-key notice.
+- `VERIFIED`: the 33 RLS-without-policy findings are intentional deny-all boundaries. None of those
+  tables grants direct access to `anon` or `authenticated`; access is limited to guarded RPC or
+  service paths. The 169 authenticated `SECURITY DEFINER` functions were classified: 168 contain
+  direct identity/staff guards and the remaining wrapper delegates to a guarded function. They are
+  the deliberate staff/client API boundary, not an unreviewed open grant.
+- `VERIFIED`: the apparent duplicate sidebar control was an accessibility-snapshot artefact. The
+  live DOM contains one explicit collapse/expand control, so no duplicate-control defect remains.
+- `VERIFIED`: the unused Mem0 runtime package and its transitive dependency tree were removed.
+  Supabase `BIXOFFPSP` remains the authoritative memory path; `npm ci`, lint, tests and the
+  production build passed with zero package vulnerabilities.
+- `VERIFIED`: `--trace-deprecation` proved the remaining `url.parse()` warning originates inside
+  Vercel's official `request.query` helper (`/opt/rust/nodejs.js`) on successful HTTP 200 requests,
+  not in OfferPSP or a bundled dependency. The temporary trace deployment was removed from the
+  stable alias; production is back on the ordinary non-trace deployment above. Replacing the
+  monolithic gateway with many duplicated serverless functions solely to silence a platform helper
+  would increase cost and failure surface, so this is classified as an upstream Vercel runtime
+  issue rather than OfferPSP technical debt.
+- Fresh production health confirms authenticated Supabase, email, Telegram and both n8n gateways;
+  GoRules, Meilisearch, Vercel Web Analytics and MCP staff authorization are healthy.
+- The remaining advisor information is not actionable debt: the temporary freshness quarantine
+  table is retained for the agreed 1–3 day rollback window; new/low-traffic indexes need observation
+  before any removal; fixed Auth DB connections matter only when the database instance is resized;
+  leaked-password protection is not used by the current Google OAuth/magic-link-only application
+  flow. Optional GCP reserve provisioning remains a separate paid resilience decision, not an
+  incomplete OfferPSP release.
 
 ## Captain's Bridge compact UI and post-release audit — production 2026-09-27
 
