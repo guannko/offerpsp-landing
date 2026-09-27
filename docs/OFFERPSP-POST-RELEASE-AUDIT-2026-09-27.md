@@ -4,6 +4,14 @@ Date: 2026-09-27
 Scope: Captain's Bridge UI, entity relationships and reversible merge, operational data boundaries,
 integrations, n8n recovery, Supabase security posture and production deployment.
 
+> Superseded debt status, 2026-09-28: the six items originally listed in “Remaining non-blocking
+> debt” were subsequently closed or classified with production evidence. Build traceability is
+> exact, the alleged duplicate sidebar control is absent from the live DOM, all foreign keys are
+> covered, the RLS and definer findings are intentional guarded boundaries, the local n8n MCP uses
+> `@latest`, and the residual deprecation is inside Vercel's official Node helper. GCP reserve is an
+> optional paid resilience decision and was not provisioned without cost approval. The detailed
+> evidence is recorded at the top of `TASKS.md`.
+
 ## Executive result
 
 Status: `VERIFIED` for the released UI, operational relationship workspace, production deployment,
