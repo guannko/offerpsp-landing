@@ -64,13 +64,12 @@ function PageFrame({ title, description, children }: { title: string; descriptio
 }
 
 export function CommandCenter() {
-  const { leads, providers, routes, organizations, ingestionJobs, freshnessReminders, complianceCases, lastUpdatedAt, refreshing, refresh } = useControlBridge();
+  const { leads, providers, routes, organizations, ingestionJobs, complianceCases, lastUpdatedAt, refreshing, refresh } = useControlBridge();
   const funnelMetrics = leadFunnel(leads);
   const operationalLeads = funnelMetrics.businessLeads.filter(isOpenBusinessLead);
   const operationalProviders = providers.filter((provider) => provider.relationship_status !== "archived" && !isQaFixtureProvider(provider));
   const operationalRoutes = useMemo(() => routes.filter((route) => !isQaFixtureRoute(route)), [routes]);
   const operationalComplianceCases = useMemo(() => complianceCases.filter((item) => !isQaFixtureLeadId(item.lead_id)), [complianceCases]);
-  const operationalFreshnessReminders = useMemo(() => freshnessReminders.filter((item) => !isQaFixtureProviderId(item.provider_id)), [freshnessReminders]);
   const operationalIngestionJobs = useMemo(() => ingestionJobs.filter((item) => !isQaFixtureProviderId(item.provider_id)), [ingestionJobs]);
   const stats = useMemo(() => ({
     newLeads: operationalLeads.filter((lead) => ["new", "qualifying", "needs_clarification"].includes(lead.status || "")).length,
@@ -82,9 +81,8 @@ export function CommandCenter() {
     reviewNoteRoutes: operationalRoutes.filter((route) => Number(route.open_error_count || 0) > 0).length,
     agents: organizations.filter((organization) => organization.organization_type === "agent" && organization.status === "active").length,
     offerReviews: operationalIngestionJobs.filter((job) => ["review", "failed", "duplicate"].includes(job.status) || Number(job.blocking_anomaly_count || 0) > 0).length,
-    freshnessReminders: operationalFreshnessReminders.length,
     complianceReview: operationalComplianceCases.filter((item) => ["pending", "screening", "manual_review", "needs_info", "hold"].includes(item.case_status)).length,
-  }), [operationalLeads, funnelMetrics.launched, operationalRoutes, organizations, operationalIngestionJobs, operationalFreshnessReminders, operationalComplianceCases]);
+  }), [operationalLeads, funnelMetrics.launched, operationalRoutes, organizations, operationalIngestionJobs, operationalComplianceCases]);
 
   const attention = [
     { label: "Проверка входящих лидов", count: stats.complianceReview, path: "/compliance", hint: "подлинность, роль компании и готовность досье" },
@@ -92,7 +90,6 @@ export function CommandCenter() {
     { label: "Нужны данные", count: stats.needsData, path: "/merchants", hint: "ждём уточнения от мерча или PSP" },
     { label: "Маршруты с заметками", count: stats.reviewNoteRoutes, path: "/offers?health=notes", hint: "заметки разбора не блокируют решение staff" },
     { label: "Офферы ждут проверки", count: stats.offerReviews, path: "/offers?workspace=intake", hint: "новые разборы, заметки и дубли находятся в очереди контроля" },
-    { label: "PSP ждут подтверждения", count: stats.freshnessReminders, path: "/psps", hint: "n8n уже поставил задачу и подготовил сообщение партнёру" },
   ].filter((item) => item.count > 0);
 
   const funnel = [
@@ -124,10 +121,6 @@ export function CommandCenter() {
         <div className="mt-7 grid grid-cols-2 gap-3"><div className="rounded-xl bg-gray-50 p-3 dark:bg-white/[0.03]"><span className="text-xs text-gray-500">Активных агентов</span><strong className="mt-1 block text-xl text-gray-900 dark:text-white">{stats.agents}</strong></div><div className="rounded-xl bg-gray-50 p-3 dark:bg-white/[0.03]"><span className="text-xs text-gray-500">Офферов на паузе</span><strong className="mt-1 block text-xl text-gray-900 dark:text-white">{stats.pausedRoutes}</strong></div></div>
       </Panel>
     </div>
-    {operationalFreshnessReminders.length > 0 && <Panel className="mt-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Подтверждение условий PSP</h2><p className="mt-1 text-sm text-gray-500">Единая очередь: срок, контакт и готовый текст партнёру. n8n напоминает повторно не чаще одного раза в 7 дней.</p></div><Link to="/operations" className="text-sm font-semibold text-brand-500">Все задачи →</Link></div>
-      <div className="mt-5 divide-y divide-gray-100 dark:divide-gray-800">{operationalFreshnessReminders.slice(0, 8).map((reminder) => <div key={reminder.provider_id} className="grid gap-4 py-4 lg:grid-cols-[minmax(180px,0.7fr)_minmax(230px,1fr)_minmax(260px,1.5fr)_auto] lg:items-start"><div><Link to={`/psps/${reminder.provider_id}`} className="font-semibold text-gray-900 hover:text-brand-500 dark:text-white">{reminder.provider_name}</Link><span className="mt-1 block text-xs text-gray-400">{reminder.provider_code || "без кода"} · {reminder.active_route_count} офферов</span></div><div><strong className={reminder.days_overdue > 0 ? "text-sm text-error-600" : "text-sm text-warning-600"}>{reminder.days_overdue > 0 ? `Просрочено ${reminder.days_overdue} дн.` : `Подтвердить до ${date(reminder.due_at)}`}</strong><span className="mt-1 block text-xs text-gray-400">{reminder.contact_value ? `${reminder.contact_name || "Контакт"} · ${reminder.contact_value}` : "Контакт не указан — добавьте его в карточке PSP"}</span></div><p className="text-sm leading-6 text-gray-600 dark:text-gray-300">{reminder.message_ru}</p><button onClick={() => void navigator.clipboard.writeText(reminder.message_ru)} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:border-brand-300 hover:text-brand-500 dark:border-gray-700 dark:text-gray-300">Копировать</button></div>)}</div>
-    </Panel>}
   </PageFrame>;
 }
 

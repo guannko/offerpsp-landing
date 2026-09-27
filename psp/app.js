@@ -98,12 +98,10 @@ async function loadWorkspaces() {
     byId("workspaceContent").classList.add("hidden");
     byId("providerName").textContent = "Доступ не назначен";
     byId("providerMeta").textContent = "Закрытый кабинет OfferPSP";
-    byId("freshnessButton").classList.add("hidden");
     return;
   }
   byId("accessDenied").classList.add("hidden");
   byId("workspaceContent").classList.remove("hidden");
-  byId("freshnessButton").classList.remove("hidden");
   const select = byId("workspaceSelect");
   select.innerHTML = state.workspaces.map((item) => `<option value="${escapeHtml(item.provider_id)}">${escapeHtml(item.brand_name)}</option>`).join("");
   select.classList.toggle("hidden", state.workspaces.length < 2);
@@ -133,15 +131,14 @@ function renderWorkspace() {
   const canEdit = editableRoles.has(membership.role);
 
   byId("providerName").textContent = provider.brand_name || "PSP workspace";
-  byId("providerMeta").textContent = `${provider.internal_code || ""} · роль: ${roleLabel(membership.role)} · условия подтверждены ${formatDate(provider.last_verified_at)}`;
+  byId("providerMeta").textContent = `${provider.internal_code || ""} · роль: ${roleLabel(membership.role)} · условия обновлены ${formatDate(provider.last_verified_at)}`;
   byId("stats").innerHTML = [
     [routes.filter((item) => item.status === "published").length, "Опубликовано"],
     [routes.filter((item) => ["draft", "review"].includes(item.status)).length, "На проверке"],
     [drafts.filter((item) => item.status === "draft").length, "Черновики"],
-    [routes.filter((item) => item.is_stale).length, "Требуют сверки"],
+    [routes.filter((item) => item.is_stale).length, "Истёк срок"],
   ].map(([value, label], index) => `<article><span class="stat-index">${String(index + 1).padStart(2, "0")}</span><strong>${value}</strong><span>${label}</span></article>`).join("");
 
-  byId("freshnessButton").disabled = !canEdit;
   byId("newOfferButton").classList.toggle("hidden", !canEdit);
   document.querySelector('[data-tab="new"]').classList.toggle("hidden", !canEdit);
   document.querySelectorAll("#profileForm input, #profileForm textarea, #profileForm button, #contactForm input, #contactForm textarea, #contactForm select, #contactForm button, #updateForm input, #updateForm textarea, #updateForm select, #updateForm button, #sourceForm textarea, #sourceForm input, #sourceForm button").forEach((node) => { node.disabled = !canEdit; });
@@ -209,7 +206,7 @@ function routeCard(route, canEdit) {
   const coverage = route.coverage_mode === "global_except" ? `WW кроме ${(route.blocked_geos || []).join(", ") || "ограничений"}` : (route.geos || []).join(", ") || route.coverage_mode || "—";
   const fee = (route.fees || []).map((item) => `${item.flow}: ${item.base_percent ?? "—"}%${item.base_fixed != null ? ` + ${item.base_fixed} ${item.base_fixed_currency || ""}` : ""}`).join(" · ") || "ставка не указана";
   const pause = route.status === "published" && canEdit ? `<button class="button danger" type="button" data-pause-route="${escapeHtml(route.id)}">Поставить на паузу</button>` : "";
-  return `<article class="offer-card"><div class="offer-main"><div><span class="pill ${escapeHtml(route.status)}">${escapeHtml(statusLabels[route.status] || route.status)}</span><h3>${escapeHtml(route.client_title)}</h3><p>${escapeHtml(route.internal_code)} · ${escapeHtml(route.flow)} · ${escapeHtml(coverage)}</p></div><div class="offer-actions">${pause}</div></div><dl><div><dt>Валюты</dt><dd>${escapeHtml((route.currencies || []).join(", ") || "—")}</dd></div><div><dt>Методы</dt><dd>${escapeHtml((route.methods || []).join(", ") || "—")}</dd></div><div><dt>Ставка PSP</dt><dd>${escapeHtml(fee)}</dd></div><div><dt>Актуальность</dt><dd>${route.is_stale ? "Нужно подтвердить" : "Актуально"}</dd></div></dl></article>`;
+  return `<article class="offer-card"><div class="offer-main"><div><span class="pill ${escapeHtml(route.status)}">${escapeHtml(statusLabels[route.status] || route.status)}</span><h3>${escapeHtml(route.client_title)}</h3><p>${escapeHtml(route.internal_code)} · ${escapeHtml(route.flow)} · ${escapeHtml(coverage)}</p></div><div class="offer-actions">${pause}</div></div><dl><div><dt>Валюты</dt><dd>${escapeHtml((route.currencies || []).join(", ") || "—")}</dd></div><div><dt>Методы</dt><dd>${escapeHtml((route.methods || []).join(", ") || "—")}</dd></div><div><dt>Ставка PSP</dt><dd>${escapeHtml(fee)}</dd></div><div><dt>Срок действия</dt><dd>${route.is_stale ? "Истёк" : "Действует"}</dd></div></dl></article>`;
 }
 
 function draftCard(draft, canEdit) {
@@ -242,7 +239,6 @@ function offerPayload() {
     methods: split(byId("methods").value), card_brands: split(byId("cardBrands").value), traffic_types: split(byId("trafficTypes").value),
     verticals: split(byId("verticals").value), prohibited_verticals: split(byId("prohibitedVerticals").value), integrations: split(byId("integrations").value),
     effective_from: byId("effectiveFrom").value || null, expires_at: byId("expiresAt").value || null,
-    freshness_days: numberOrNull(byId("freshnessDays").value) || 30,
     min_monthly_volume: numberOrNull(byId("minMonthlyVolume").value), max_monthly_volume: numberOrNull(byId("maxMonthlyVolume").value),
     volume_currency: byId("volumeCurrency").value.trim().toUpperCase() || null,
     fees, limits, settlements, risk_terms: { notes: byId("riskNotes").value.trim() }, operational_notes: byId("operationalNotes").value.trim() || null,
@@ -292,7 +288,7 @@ function editDraft(id) {
     geos: (payload.geos || []).join(", "), blockedGeos: (payload.blocked_geos || []).join(", "), currencies: (payload.currencies || []).join(", "),
     methods: (payload.methods || []).join(", "), cardBrands: (payload.card_brands || []).join(", "), trafficTypes: (payload.traffic_types || []).join(", "),
     verticals: (payload.verticals || []).join(", "), prohibitedVerticals: (payload.prohibited_verticals || []).join(", "), integrations: (payload.integrations || []).join(", "),
-    effectiveFrom: payload.effective_from, expiresAt: payload.expires_at, freshnessDays: payload.freshness_days || 30,
+    effectiveFrom: payload.effective_from, expiresAt: payload.expires_at,
     minMonthlyVolume: payload.min_monthly_volume, maxMonthlyVolume: payload.max_monthly_volume, volumeCurrency: payload.volume_currency,
     riskNotes: payload.risk_terms?.notes, operationalNotes: payload.operational_notes,
   };
@@ -312,7 +308,6 @@ function editDraft(id) {
 function resetOfferForm() {
   byId("offerForm").reset();
   byId("draftId").value = "";
-  byId("freshnessDays").value = "30";
   byId("offerFormTitle").textContent = "Новый оффер PSP";
 }
 
@@ -325,16 +320,6 @@ async function pauseRoute(id) {
   if (result.error) { setStatus(result.error.message, "error"); return; }
   await loadWorkspace();
   setStatus("Оффер поставлен на паузу. Команда OfferPSP увидит изменение.", "success");
-}
-
-async function confirmFreshness() {
-  if (!window.confirm("Подтвердить, что текущие условия PSP актуальны на сегодня?")) return;
-  setBusy(true); setStatus();
-  const result = await supabase.rpc("confirm_offerpsp_provider_portal_freshness", { p_provider_id: state.providerId });
-  setBusy(false);
-  if (result.error) { setStatus(result.error.message, "error"); return; }
-  await loadWorkspace();
-  setStatus("Актуальность условий подтверждена.", "success");
 }
 
 async function saveProfile(event) {
@@ -548,7 +533,6 @@ byId("loginForm").addEventListener("submit", async (event) => {
 });
 byId("signOutButton").addEventListener("click", async () => { await supabase.auth.signOut(); showAuth(); });
 byId("workspaceSelect").addEventListener("change", async (event) => { state.providerId = event.target.value; await loadWorkspace(); });
-byId("freshnessButton").addEventListener("click", confirmFreshness);
 byId("uploadOfferButton").addEventListener("click", () => {
   selectTab("offers");
   window.requestAnimationFrame(() => byId("sourceText").focus());

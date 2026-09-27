@@ -735,7 +735,6 @@ function parseRoute(block, index) {
     route_family_key: buildRouteFamilyKey({ coverageMode, geos, currencies, flow, methods, cardBrands, trafficTypes, integrations }),
     effective_from: null,
     expires_at: null,
-    freshness_days: 30,
     min_monthly_volume: null,
     max_monthly_volume: null,
     volume_currency: null,

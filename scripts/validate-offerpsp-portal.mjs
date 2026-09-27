@@ -155,7 +155,7 @@ assert.match(appSource, /classList\.toggle\("profile-only", !hasRequests\)/);
 assert.doesNotMatch(appSource, /service_role/);
 assert.match(pspHtmlSource, /<meta name="robots" content="noindex, nofollow">/);
 assert.match(pspHtmlSource, /Закрытый кабинет PSP/);
-assert.match(pspHtmlSource, /\/psp\/app\.js\?v=20260827-5/);
+assert.match(pspHtmlSource, /\/psp\/app\.js\?v=20260927-1/);
 assert.match(pspHtmlSource, /\/psp\/styles\.css\?v=20260827-4/);
 assert.match(pspHtmlSource, /class="portal-sidebar"/);
 assert.match(pspHtmlSource, /id="uploadOfferButton"/);
@@ -181,8 +181,11 @@ for (const rpc of [
   "save_offerpsp_provider_offer_draft",
   "submit_offerpsp_provider_offer_draft",
   "pause_offerpsp_provider_route",
-  "confirm_offerpsp_provider_portal_freshness",
 ]) assert.match(pspAppSource, new RegExp(`rpc\\("${rpc}"`));
+assert.doesNotMatch(
+  pspAppSource,
+  /confirm_offerpsp_provider_portal_freshness|freshnessDays|freshnessButton/,
+);
 assert.doesNotMatch(pspAppSource, /service_role|margin_polic|commission_terms|publish_offerpsp|set_offerpsp_route_status/);
 assert.match(pspHtmlSource, /Публикация возможна только после проверки OfferPSP/);
 assert.match(pspHtmlSource, /Новости и изменения/);
@@ -228,6 +231,10 @@ assert.match(adminSource, /rpc\("set_offerpsp_margin_policy"/);
 assert.match(adminSource, /rpc\("get_offerpsp_management_registry"/);
 assert.match(adminSource, /rpc\("save_offerpsp_managed_merchant"/);
 assert.match(adminSource, /rpc\("set_offerpsp_merchant_record_state"/);
+assert.doesNotMatch(
+  adminSource,
+  /confirm_offerpsp_provider_freshness|supplyRouteFreshness|confirmSupplyFreshnessButton/,
+);
 assert.match(adminSource, /rpc\("purge_offerpsp_merchant"/);
 assert.match(adminSource, /rpc\("create_offerpsp_manual_route"/);
 assert.match(adminSource, /rpc\("revise_offerpsp_route"/);

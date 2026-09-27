@@ -23,7 +23,6 @@ import type {
   CaptainsBridgeSnapshot,
   MailCenterSnapshot,
   OfferIngestionJob,
-  FreshnessReminder,
   ModuleEntitlement,
   ComplianceCaseSummary,
 } from "../types/offerpsp";
@@ -43,7 +42,6 @@ const emptyData: ControlBridgeData = {
   assignments: [],
   agentMarginPolicies: [],
   ingestionJobs: [],
-  freshnessReminders: [],
   moduleEntitlements: [],
   complianceCases: [],
   commissionSummary: {},
@@ -210,15 +208,14 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
         );
         return request;
       })();
-    const [core, captainsResult, mailResult, ingestionResult, freshnessResult] = await Promise.all([
+    const [core, captainsResult, mailResult, ingestionResult] = await Promise.all([
       coreRequest,
       needsCaptains ? supabase.rpc("get_offerpsp_captains_bridge") : skipped,
       needsMail ? supabase.rpc("get_offerpsp_mail_center", { p_limit: 250 }) : skipped,
       needsSupplyOperations ? supabase.rpc("list_offerpsp_ingestion_jobs", { p_limit: 100 }) : skipped,
-      needsSupplyOperations ? supabase.rpc("list_offerpsp_freshness_reminders") : skipped,
     ]);
 
-    const scopedError = [captainsResult.error, mailResult.error, ingestionResult.error, freshnessResult.error].find(Boolean);
+    const scopedError = [captainsResult.error, mailResult.error, ingestionResult.error].find(Boolean);
 
     const updatedAt = new Date();
     lastFullRefreshAt.current = updatedAt.getTime();
@@ -232,7 +229,6 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
       assignments: core.assignments,
       agentMarginPolicies: core.agentMarginPolicies,
       ingestionJobs: needsSupplyOperations ? asArray<OfferIngestionJob>(ingestionResult.data) : current.ingestionJobs,
-      freshnessReminders: needsSupplyOperations ? asArray<FreshnessReminder>(freshnessResult.data) : current.freshnessReminders,
       moduleEntitlements: core.moduleEntitlements,
       complianceCases: core.complianceCases,
       commissionSummary: core.commissionSummary,

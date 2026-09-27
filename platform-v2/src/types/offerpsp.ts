@@ -342,26 +342,6 @@ export type OfferIngestionJob = {
   batch_version?: number | null;
 };
 
-export type FreshnessReminder = {
-  provider_id: string;
-  provider_code?: string | null;
-  provider_name: string;
-  due_at: string;
-  days_overdue: number;
-  active_route_count: number;
-  stale_route_count: number;
-  nearest_expiry?: string | null;
-  status: "pending" | "snoozed" | string;
-  snoozed_until?: string | null;
-  last_notified_at?: string | null;
-  notification_count: number;
-  contact_name?: string | null;
-  contact_channel?: string | null;
-  contact_value?: string | null;
-  message_ru: string;
-  message_en: string;
-};
-
 export type ModuleEntitlement = {
   module_key: string;
   name: string;
@@ -413,7 +393,6 @@ export type ControlBridgeData = {
   assignments: AgentAssignment[];
   agentMarginPolicies: AgentMarginPolicy[];
   ingestionJobs: OfferIngestionJob[];
-  freshnessReminders: FreshnessReminder[];
   moduleEntitlements: ModuleEntitlement[];
   complianceCases: ComplianceCaseSummary[];
   commissionSummary: Record<string, number>;

@@ -339,6 +339,8 @@ async function applyMigrations() {
     "20260927120000_offerpsp_manual_offer_updates_only.sql",
     "20260927121500_offerpsp_disable_freshness_sync.sql",
     "20260927130000_offerpsp_explicit_expiry_only.sql",
+    "20260927143000_offerpsp_freshness_quarantine.sql",
+    "20260927144500_offerpsp_freshness_confirmation_quarantine.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -3657,6 +3659,32 @@ async function verifyFreshnessReminders() {
       || !portalDefinition.includes("r.expires_at < current_date")) {
     throw new Error("Provider portal still infers route staleness from elapsed time");
   }
+  const quarantine = (await query(`select
+    (select count(*)::integer from private.offerpsp_freshness_reminders) as live_rows,
+    (select count(*)::integer from pg_trigger
+      where not tgisinternal and tgname = 'offerpsp_provider_freshness_resolves_reminder') as writer_triggers,
+    has_function_privilege(
+      'service_role',
+      'public.mark_offerpsp_freshness_notified(uuid,text,text,text)',
+      'EXECUTE'
+    ) as service_can_mark,
+    has_function_privilege(
+      'authenticated',
+      'public.confirm_offerpsp_provider_freshness(uuid)',
+      'EXECUTE'
+    ) as staff_can_confirm,
+    has_function_privilege(
+      'service_role',
+      'public.confirm_offerpsp_provider_portal_freshness(uuid)',
+      'EXECUTE'
+    ) as service_can_confirm_portal`)).rows[0];
+  if (quarantine.live_rows !== 0
+      || quarantine.writer_triggers !== 0
+      || quarantine.service_can_mark
+      || quarantine.staff_can_confirm
+      || quarantine.service_can_confirm_portal) {
+    throw new Error(`Legacy freshness subsystem escaped quarantine: ${JSON.stringify(quarantine)}`);
+  }
   const provider = await query(
     "select public.upsert_offerpsp_provider('Freshness Reminder Fixture', null, null, null, 'active', 1, true, 'Validation only') as value",
   );
@@ -3773,7 +3801,7 @@ async function verifyFreshnessReminders() {
   if (!grants.rows[0].staff_list || !grants.rows[0].service_sync || grants.rows[0].anon_list || grants.rows[0].direct_read) {
     throw new Error("Freshness reminder grants are broader than the RPC-only contract");
   }
-  process.stdout.write("PASS manual-only offer updates with retired calendar freshness automation\n");
+  process.stdout.write("PASS manual-only offer updates with quarantined calendar freshness subsystem\n");
 }
 
 async function verifyOperationsAndIntegrations() {

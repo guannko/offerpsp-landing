@@ -206,7 +206,6 @@ const elements = {
   supplyDrawerCode: document.getElementById("supplyDrawerCode"),
   supplyWorkspaceSummary: document.getElementById("supplyWorkspaceSummary"),
   supplyWorkspaceStatus: document.getElementById("supplyWorkspaceStatus"),
-  confirmSupplyFreshnessButton: document.getElementById("confirmSupplyFreshnessButton"),
   supplyBrandName: document.getElementById("supplyBrandName"),
   supplyLegalName: document.getElementById("supplyLegalName"),
   supplyWebsite: document.getElementById("supplyWebsite"),
@@ -257,7 +256,6 @@ const elements = {
   supplyRouteMinVolume: document.getElementById("supplyRouteMinVolume"),
   supplyRouteMaxVolume: document.getElementById("supplyRouteMaxVolume"),
   supplyRouteVolumeCurrency: document.getElementById("supplyRouteVolumeCurrency"),
-  supplyRouteFreshness: document.getElementById("supplyRouteFreshness"),
   supplyRouteEffectiveFrom: document.getElementById("supplyRouteEffectiveFrom"),
   supplyRouteExpiresAt: document.getElementById("supplyRouteExpiresAt"),
   supplyRouteNotes: document.getElementById("supplyRouteNotes"),
@@ -941,10 +939,10 @@ function coverageReadiness(route) {
   if (Number(route.open_error_count || 0) > 0) return { key: "blocked", label: "Blocked by errors" };
   if (!route.margin_ready) return { key: "margin", label: "Margin required" };
   if (route.status === "published") return route.is_stale
-    ? { key: "stale", label: "Published · stale" }
+    ? { key: "stale", label: "Published · expired" }
     : { key: "live", label: "Published · live" };
   if (route.status === "paused") return { key: "paused", label: "Paused" };
-  return { key: "review", label: route.is_stale ? "Review · stale" : "Ready for review" };
+  return { key: "review", label: route.is_stale ? "Review · expired" : "Ready for review" };
 }
 
 function routeCoverage(route) {
@@ -1085,8 +1083,8 @@ function renderSupplyWorkspace() {
   elements.supplyWorkspaceSummary.innerHTML = [
     ["Published routes", String(published)],
     ["Open errors / warnings", `${openErrors} / ${openWarnings}`],
-    ["Stale routes", String(stale)],
-    ["Last confirmed", provider.last_verified_at ? formatDate(provider.last_verified_at, true) : "Never"],
+    ["Expired routes", String(stale)],
+    ["Terms updated", provider.last_verified_at ? formatDate(provider.last_verified_at, true) : "Never"],
   ].map(([label, value]) => `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`).join("");
 
   elements.supplyBrandName.value = provider.brand_name || "";
@@ -1174,7 +1172,7 @@ function renderSupplyRoutes(routes) {
   elements.supplyRouteList.innerHTML = routes.length ? routes.map((route) => `
     <button class="route-list-item${state.selectedSupplyRouteId === route.id ? " is-active" : ""}" type="button" data-route-id="${escapeHtml(route.id)}">
       <span><strong>${escapeHtml(route.client_title)}</strong><small>${escapeHtml(route.internal_code)} · v${Number(route.batch_version || 0)}</small></span>
-      <span class="route-health"><i class="status-pill status-${escapeHtml(route.status)}">${escapeHtml(route.status)}</i>${Number(route.open_error_count || 0) ? `<b>${Number(route.open_error_count)} errors</b>` : route.is_stale ? "<b>stale</b>" : ""}</span>
+      <span class="route-health"><i class="status-pill status-${escapeHtml(route.status)}">${escapeHtml(route.status)}</i>${Number(route.open_error_count || 0) ? `<b>${Number(route.open_error_count)} errors</b>` : route.is_stale ? "<b>expired</b>" : ""}</span>
     </button>
   `).join("") : '<p class="supply-empty">No normalized routes.</p>';
   elements.supplyRouteList.querySelectorAll(".route-list-item").forEach((button) => {
@@ -1218,7 +1216,6 @@ function renderSupplyRouteEditor() {
   elements.supplyRouteMinVolume.value = route.min_monthly_volume ?? "";
   elements.supplyRouteMaxVolume.value = route.max_monthly_volume ?? "";
   elements.supplyRouteVolumeCurrency.value = route.volume_currency || "";
-  elements.supplyRouteFreshness.value = route.freshness_days ?? 30;
   elements.supplyRouteEffectiveFrom.value = inputDate(route.effective_from);
   elements.supplyRouteExpiresAt.value = inputDate(route.expires_at);
   elements.supplyRouteNotes.value = route.operational_notes || "";
@@ -1410,7 +1407,7 @@ async function saveSupplyRoute(event) {
       methods: listValue(elements.supplyRouteMethods.value), traffic_types: listValue(elements.supplyRouteTraffic.value),
       verticals: listValue(elements.supplyRouteVerticals.value), integrations: listValue(elements.supplyRouteIntegrations.value),
       min_monthly_volume: elements.supplyRouteMinVolume.value, max_monthly_volume: elements.supplyRouteMaxVolume.value,
-      volume_currency: elements.supplyRouteVolumeCurrency.value.trim(), freshness_days: elements.supplyRouteFreshness.value,
+      volume_currency: elements.supplyRouteVolumeCurrency.value.trim(),
       effective_from: elements.supplyRouteEffectiveFrom.value, expires_at: elements.supplyRouteExpiresAt.value,
       operational_notes: elements.supplyRouteNotes.value.trim(), fees: collectComponentRows(elements.supplyFeeRows),
       limits: collectComponentRows(elements.supplyLimitRows), settlements: collectComponentRows(elements.supplySettlementRows),
@@ -1442,16 +1439,6 @@ async function resolveSupplyAnomaly(anomalyId, status, button) {
   if (error) return setSupplyWorkspaceStatus(friendlyError(error, "Could not resolve the parser check."), "error");
   await Promise.all([loadSupply(), loadSupplyWorkspace()]);
   setSupplyWorkspaceStatus(`Parser check marked ${status}.`, "success");
-}
-
-async function confirmSupplyFreshness() {
-  if (!state.selectedSupplyProviderId || !window.confirm("Confirm that the PSP terms were checked and are current today?")) return;
-  setButtonLoading(elements.confirmSupplyFreshnessButton, true, "Confirming…");
-  const { error } = await supabase.rpc("confirm_offerpsp_provider_freshness", { p_provider_id: state.selectedSupplyProviderId });
-  setButtonLoading(elements.confirmSupplyFreshnessButton, false);
-  if (error) return setSupplyWorkspaceStatus(friendlyError(error, "Could not confirm PSP terms."), "error");
-  await Promise.all([loadSupply(), loadSupplyWorkspace()]);
-  setSupplyWorkspaceStatus("PSP terms confirmed as current.", "success");
 }
 
 function validateRateCardPayload(payload) {
@@ -2944,7 +2931,6 @@ elements.rateCardImportForm.addEventListener("submit", importRateCard);
 elements.closeSupplyDrawerButton.addEventListener("click", closeSupplyWorkspace);
 elements.supplyDrawerBackdrop.addEventListener("click", closeSupplyWorkspace);
 elements.saveSupplyProviderButton.addEventListener("click", saveSupplyProvider);
-elements.confirmSupplyFreshnessButton.addEventListener("click", confirmSupplyFreshness);
 elements.supplyContactForm.addEventListener("submit", saveSupplyContact);
 elements.resetSupplyContactButton.addEventListener("click", resetSupplyContactForm);
 elements.supplyMarginForm.addEventListener("submit", saveSupplyMargin);

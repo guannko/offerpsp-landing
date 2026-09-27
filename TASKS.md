@@ -17,6 +17,11 @@ Code or a passing local test is not evidence that production has been updated.
 - Provider portal routes become stale only when the offer has an explicit `expires_at` date in the
   past. `freshness_days`, source dates and verification dates are retained as legacy/informational
   metadata and have no operational effect.
+- The active n8n freshness workflow is deactivated and renamed with a quarantine marker. Captain's
+  Bridge, the legacy admin and the PSP portal no longer load the reminder queue, expose a periodic
+  cadence or offer a generic “confirm freshness” action. Historical reminder rows are held in a
+  private recovery-only snapshot for the observation window; compatibility list/sync RPCs remain
+  read-only no-ops until final removal.
 - The obsolete BR-Pay, Antarex and PAYOK confirmation tasks and the completed first outreach-wave
   task are closed with their audit history preserved. Production has zero active automatic
   freshness triggers, tasks and calendar reminders, and zero overdue tasks after the cleanup.
@@ -2041,9 +2046,8 @@ a normal authenticated user was denied. Mutation E2E remains locally verified on
 - [x] The PSP rate-card editor shows a responsive field-by-field `Было / Стало` comparison against
   the confirmed predecessor revision, including coverage, commercial rates, limits, settlement,
   risk, traffic, integrations and operational notes. Unchanged fields are omitted.
-- [x] Advisory partner reminders use `last_verified_at` and `freshness_days`; they create one
-  deduplicated operational task and prepare RU/EN partner text. They never pause, archive or mark
-  an offer unavailable.
+- [x] Legacy advisory partner reminders were retired on 2026-09-27. Offer changes now follow new
+  partner information, an explicit expiry date or a staff-created task; elapsed time creates no work.
 - [x] GEO/currency/method/vertical coverage matrix with readiness, search and status filters.
 
 ### Production grant hotfix
