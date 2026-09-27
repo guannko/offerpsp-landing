@@ -1,5 +1,18 @@
 import { createContext, useContext, useState, useEffect } from "react";
 
+const SIDEBAR_EXPANDED_STORAGE_KEY = "offerpsp:sidebar-expanded";
+
+const getInitialSidebarState = () => {
+  if (typeof window === "undefined") return true;
+
+  try {
+    const savedValue = window.localStorage.getItem(SIDEBAR_EXPANDED_STORAGE_KEY);
+    return savedValue === null ? true : savedValue === "true";
+  } catch {
+    return true;
+  }
+};
+
 type SidebarContextType = {
   isExpanded: boolean;
   isMobileOpen: boolean;
@@ -26,7 +39,7 @@ export const useSidebar = () => {
 export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(getInitialSidebarState);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -50,8 +63,17 @@ export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, []);
 
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SIDEBAR_EXPANDED_STORAGE_KEY, String(isExpanded));
+    } catch {
+      // Private browsing or a storage policy can block persistence; the toggle still works.
+    }
+  }, [isExpanded]);
+
   const toggleSidebar = () => {
     setIsExpanded((prev) => !prev);
+    setIsHovered(false);
   };
 
   const toggleMobileSidebar = () => {

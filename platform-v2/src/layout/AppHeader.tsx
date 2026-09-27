@@ -15,7 +15,7 @@ type HeaderSearchResult = {
 };
 
 export default function AppHeader() {
-  const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
+  const { isExpanded, isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
   const { staff, user, signOut, leads, providers, routes, complianceCases } = useControlBridge();
   const location = useLocation();
   const navigate = useNavigate();
@@ -102,7 +102,7 @@ export default function AppHeader() {
   return <header className="sticky top-0 z-40 flex w-full border-b border-gray-200 bg-white dark:border-[#34435a] dark:bg-[#1c283b]">
     <div className="flex w-full items-center justify-between gap-3 px-4 py-3 lg:px-6">
       <div className="flex min-w-0 items-center gap-3">
-        <button onClick={() => window.innerWidth >= 1024 ? toggleSidebar() : toggleMobileSidebar()} aria-label="Открыть меню" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-500 dark:border-gray-800 dark:text-gray-400">{isMobileOpen ? "×" : "☰"}</button>
+        <button onClick={() => window.innerWidth >= 1024 ? toggleSidebar() : toggleMobileSidebar()} aria-label={isMobileOpen ? "Закрыть меню" : isExpanded ? "Свернуть боковую панель" : "Развернуть боковую панель"} title={isMobileOpen ? "Закрыть меню" : isExpanded ? "Свернуть боковую панель" : "Развернуть боковую панель"} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-500 dark:border-gray-800 dark:text-gray-400">{isMobileOpen ? "×" : "☰"}</button>
         <div className="hidden min-w-0 sm:block"><span className="block truncate text-xs text-gray-400">OfferPSP / {activeModule?.label || "Workspace"}</span><strong className="block truncate text-sm text-gray-800 dark:text-white/90">Captain's Bridge</strong></div>
       </div>
       <div className="hidden flex-1 lg:block"><div className="relative mx-auto max-w-xl"><span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">⌕</span><input ref={inputRef} value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && searchResults[0]) { navigate(searchResults[0].path); setQuery(""); } if (event.key === "Escape") setQuery(""); }} placeholder="Найти мерча, PSP, оффер или сделку…" className="h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2 pl-10 pr-16 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-800 dark:text-white"/><span className="absolute right-3 top-1/2 -translate-y-1/2 rounded border border-gray-200 px-1.5 py-0.5 text-[10px] text-gray-400 dark:border-gray-700">⌘K</span>{query.trim() && <div className="absolute left-0 right-0 top-12 z-50 rounded-xl border border-gray-200 bg-white p-2 shadow-theme-lg dark:border-gray-800 dark:bg-gray-900">{searchResults.length ? searchResults.map((result) => <Link key={result.key} to={result.path} onClick={() => setQuery("")} className="flex items-center justify-between rounded-lg px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-white/5"><strong className="truncate text-sm text-gray-800 dark:text-white">{result.label}</strong><span className="ml-3 shrink-0 text-xs text-gray-400">{result.meta}</span></Link>) : <p className="px-3 py-4 text-center text-sm text-gray-500">Ничего не найдено</p>}</div>}</div></div>

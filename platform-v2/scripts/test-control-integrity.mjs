@@ -6,7 +6,7 @@ import path from "node:path";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const read = (relativePath) => readFile(path.join(root, relativePath), "utf8");
 
-const [captain, merchant, integrations, platform, modules, ui, context, seoGeo, qaFixtures, header, compliance, operations, telegram, intakeObservability, researchEntityEditor] = await Promise.all([
+const [captain, merchant, integrations, platform, modules, ui, context, seoGeo, qaFixtures, header, compliance, operations, telegram, intakeObservability, researchEntityEditor, sidebar, sidebarContext] = await Promise.all([
   read("platform-v2/src/pages/CaptainPages.tsx"),
   read("platform-v2/src/pages/MerchantWorkspace.tsx"),
   read("platform-v2/src/pages/IntegrationsWorkspace.tsx"),
@@ -22,7 +22,16 @@ const [captain, merchant, integrations, platform, modules, ui, context, seoGeo, 
   read("platform-v2/src/components/control/TelegramWorkspace.tsx"),
   read("platform-v2/src/lib/intakeObservability.ts"),
   read("platform-v2/src/components/control/ResearchEntityEditor.tsx"),
+  read("platform-v2/src/layout/AppSidebar.tsx"),
+  read("platform-v2/src/context/SidebarContext.tsx"),
 ]);
+
+assert.match(sidebar, /Свернуть боковую панель/);
+assert.match(sidebar, /Развернуть боковую панель/);
+assert.match(sidebar, /AngleLeftIcon/);
+assert.match(sidebar, /AngleRightIcon/);
+assert.match(sidebarContext, /offerpsp:sidebar-expanded/);
+assert.match(sidebarContext, /localStorage\.setItem/);
 
 assert.match(captain, /Вернуть в непрочитанные/);
 assert.match(captain, /p_mark_read: markRead/);

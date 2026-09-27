@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router";
-import { HorizontaLDots } from "../icons";
+import { AngleLeftIcon, AngleRightIcon, HorizontaLDots } from "../icons";
 import { platformModules } from "../config/modules";
 import { useSidebar } from "../context/SidebarContext";
 import { useControlBridge } from "../context/ControlBridgeContext";
@@ -11,7 +11,7 @@ const groupLabels = {
 } as const;
 
 export default function AppSidebar() {
-  const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleMobileSidebar } = useSidebar();
+  const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleSidebar, toggleMobileSidebar } = useSidebar();
   const location = useLocation();
   const { moduleEntitlements } = useControlBridge();
   const showLabels = isExpanded || isHovered || isMobileOpen;
@@ -22,6 +22,15 @@ export default function AppSidebar() {
       onMouseEnter={() => !isExpanded && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
+      <button
+        type="button"
+        onClick={toggleSidebar}
+        aria-label={isExpanded ? "Свернуть боковую панель" : "Развернуть боковую панель"}
+        title={isExpanded ? "Свернуть боковую панель" : "Развернуть боковую панель"}
+        className="absolute -right-3 top-8 z-10 hidden h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-theme-sm transition hover:border-brand-300 hover:text-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-300 dark:border-[#34435a] dark:bg-[#1c283b] dark:text-gray-300 dark:hover:border-brand-500 dark:hover:text-white lg:flex"
+      >
+        {isExpanded ? <AngleLeftIcon className="size-4" /> : <AngleRightIcon className="size-4" />}
+      </button>
       <div className={`flex items-center py-7 ${showLabels ? "justify-start" : "justify-center"}`}>
         <Link to="/" className="flex items-center gap-3" aria-label="OfferPSP Control Bridge">
           {showLabels ? (
