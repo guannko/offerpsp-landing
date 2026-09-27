@@ -5,6 +5,26 @@ Updated: 2026-09-27
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+### Operational tail lifecycle — production 2026-09-27
+
+- `VERIFIED`: the three abandoned August AIBot draft/send intentions are retained in the
+  execution journal and marked `cancelled`; no BIXOFFPSP journal item remains `planned` or
+  `in_progress`.
+- `VERIFIED`: five historic intake auto-reply rows, including Protocol/W1, are retained and marked
+  `cancelled`. No auto reply remains queued, claimed, uncertain or waiting for staff review.
+- `VERIFIED`: 194 open anomalies belonging to archived Antarex, BR-Pay, Merchant Bridge and PAYOK
+  routes are retained as `ignored` with 194 immutable supply-audit rows. Published-route and draft-
+  route anomalies were not changed; they remain available for real offer review.
+- Future lifecycle handling is automatic and event-driven: completing/cancelling the initial
+  response task removes its unsent auto reply from active attention, making a merchant workspace
+  inactive resolves its pending intake alert, and archiving a route removes that route's open
+  anomalies from active attention. The trigger helpers are private and are not executable by
+  authenticated or service roles.
+- Production migration `offerpsp_operational_tail_hygiene` is recorded and all three lifecycle
+  triggers are enabled. The focused PGlite migration checks passed. The complete validator then
+  advanced beyond the new checks and stopped only because the clean isolated checkout intentionally
+  lacks the ignored private BR-Pay import fixture.
+
 ### Manual-only PSP offer updates — production 2026-09-27
 
 - `VERIFIED`: PSP profiles, agreements and offers remain in the system until staff records new
