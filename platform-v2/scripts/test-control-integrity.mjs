@@ -6,7 +6,7 @@ import path from "node:path";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const read = (relativePath) => readFile(path.join(root, relativePath), "utf8");
 
-const [captain, merchant, integrations, platform, modules, ui, context, seoGeo, qaFixtures, header, compliance, operations, telegram, intakeObservability, researchEntityEditor, sidebar, sidebarContext, qaDiagnostics, app, buildManifestScript] = await Promise.all([
+const [captain, merchant, integrations, platform, modules, ui, context, seoGeo, qaFixtures, header, compliance, operations, telegram, intakeObservability, researchEntityEditor, entityRelationships, sidebar, sidebarContext, qaDiagnostics, app, buildManifestScript] = await Promise.all([
   read("platform-v2/src/pages/CaptainPages.tsx"),
   read("platform-v2/src/pages/MerchantWorkspace.tsx"),
   read("platform-v2/src/pages/IntegrationsWorkspace.tsx"),
@@ -22,6 +22,7 @@ const [captain, merchant, integrations, platform, modules, ui, context, seoGeo, 
   read("platform-v2/src/components/control/TelegramWorkspace.tsx"),
   read("platform-v2/src/lib/intakeObservability.ts"),
   read("platform-v2/src/components/control/ResearchEntityEditor.tsx"),
+  read("platform-v2/src/components/control/EntityRelationshipsPanel.tsx"),
   read("platform-v2/src/layout/AppSidebar.tsx"),
   read("platform-v2/src/context/SidebarContext.tsx"),
   read("platform-v2/src/pages/QaDiagnosticsPage.tsx"),
@@ -63,6 +64,9 @@ assert.match(captain, /set_offerpsp_email_draft_response_expected/);
 assert.match(captain, /Ожидаем ответ партнёра/);
 assert.match(captain, /Только при включённом флаге/);
 assert.match(captain, /Рабочая привязка:/);
+assert.match(captain, /get_offerpsp_email_thread_entity_context/);
+assert.match(captain, /Связи компании/);
+assert.match(captain, /Открыть карточку →/);
 assert.match(captain, /title="Радиорубка"/);
 assert.match(captain, /Папки/);
 assert.match(captain, /Входящие/);
@@ -89,6 +93,12 @@ assert.match(captain, /Переписка находится в корзине/)
 assert.match(captain, /Окончательное удаление:/);
 assert.match(captain, /Новое письмо от собеседника восстановит цепочку автоматически/);
 assert.match(modules, /label: "Радиорубка", shortLabel: "Почта"/);
+
+assert.match(entityRelationships, /prepare_offerpsp_entity_merge/);
+assert.match(entityRelationships, /execute_offerpsp_entity_merge/);
+assert.match(entityRelationships, /rollback_offerpsp_entity_merge/);
+assert.match(entityRelationships, /ОБЪЕДИНИТЬ/);
+assert.match(entityRelationships, /История не переносится и не удаляется/);
 
 assert.match(integrations, /Проверка заняла больше 12 секунд/);
 assert.match(integrations, /finally\s*\{/);
