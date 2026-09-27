@@ -30,6 +30,39 @@ Code or a passing local test is not evidence that production has been updated.
 - Local verification: full migration validation, control-integrity, intake brief/normalizer,
   30 intake/Telegram tests, ESLint, production build and `git diff --check` pass.
 
+### Captain's Bridge native-runtime recovery — production 2026-09-27
+
+- `VERIFIED`: deployment `dpl_EMCgUM9FBSMQJKGLBXGbKmZXtV1h` was `READY` at the platform level
+  but its serverless functions failed before their handlers loaded. Runtime logs identified missing
+  Linux ARM64 native bindings for `@gorules/zen-engine` and `@napi-rs/canvas`; this affected MCP,
+  SEO live traffic, Google Search Console and mailbox polling.
+- `VERIFIED`: Captain's Bridge was rebuilt from clean source by Vercel rather than uploaded as a
+  Mac prebuilt artifact. Deployment `dpl_5YbTCkWgZ7tjeEkLuUCCZmuZEkLK` is `READY` and promoted to
+  `https://ops-7q4m2x9k8v3n.vercel.app/`.
+- `VERIFIED`: the authenticated SEO/GEO screen now shows live Vercel data and final Google Search
+  Console data through 24 September, both API-checked on 27 September at 01:31. OfferPSP MCP
+  analytics is reachable again. Future Captain's Bridge production releases must use a clean
+  server-side source build; do not publish a locally prebuilt Mac artifact containing native
+  dependencies.
+
+### GSC-led priority SEO expansion — production 2026-09-27
+
+- `VERIFIED`: expanded the SaaS, Europe, payment-methods-by-GEO and matching-process pages with
+  decision tables, provider-ready brief examples, glossaries, primary references, review timing,
+  common brief errors and decision accelerators. The high-risk page already had sufficient depth,
+  so this release strengthened its hand-off to the matching process instead of duplicating content.
+- Provider identity remains confidential through qualification and route screening. Public copy
+  states that identity is disclosed only after the provider accepts the merchant and OfferPSP
+  coordinates a controlled introduction. Planning ranges are labelled as estimates rather than
+  provider SLAs or approval promises.
+- The clean release build passed the full validation suite for all 22 SEO pages, public intake,
+  attribution, portal boundaries and control integrity. Commit `32a2729` was deployed as production
+  deployment `dpl_4RaPYkKtRmm5aMrSvY5Cn283Cbzo`, which is `READY` and aliased to
+  `https://offerpsp.com/`.
+- Live checks returned HTTP 200 for all five priority pages and `sitemap.xml`, confirmed the new
+  content and provider-disclosure gate, and confirmed `2026-09-26` modification dates for the four
+  substantively expanded URLs.
+
 ### Intake and operations stabilization — production 2026-09-27
 
 - `VERIFIED`: the public request is now a compact step-by-step brief covering website, legal
