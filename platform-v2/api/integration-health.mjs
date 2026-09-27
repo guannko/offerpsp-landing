@@ -5,6 +5,12 @@ const json = (response, status, body) => {
   response.end(JSON.stringify(body));
 };
 
+import {
+  attachDeliveryEvidence,
+  latestEmailDelivery,
+  latestTelegramDelivery,
+} from "./_lib/delivery-evidence.mjs";
+
 function healthUrl(senderUrl, explicitUrl, path) {
   if (explicitUrl) return String(explicitUrl).trim();
   if (!senderUrl) return "";
@@ -66,6 +72,20 @@ async function recordIntegrationCheck(url, key, authorization, integration, chec
   }
 }
 
+async function loadRpc(url, key, authorization, name, body = {}) {
+  try {
+    const result = await fetch(`${url}/rest/v1/rpc/${name}`, {
+      method: "POST",
+      headers: { apikey: key, Authorization: authorization, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!result.ok) return null;
+    return await result.json().catch(() => null);
+  } catch {
+    return null;
+  }
+}
+
 export default async function handler(request, response) {
   if (!["GET", "POST"].includes(request.method)) return json(response, 405, { success: false, error: "Method not allowed" });
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -83,10 +103,18 @@ export default async function handler(request, response) {
   const webhookSecret = String(process.env.AIBOT_WEBHOOK_SECRET || "").trim();
   const emailUrl = healthUrl(process.env.N8N_EMAIL_WEBHOOK_URL, process.env.N8N_EMAIL_HEALTH_URL, "offerpsp-email-gateway-health");
   const telegramUrl = healthUrl(process.env.N8N_TELEGRAM_WEBHOOK_URL, process.env.N8N_TELEGRAM_HEALTH_URL, "offerpsp-telegram-gateway-health");
-  const [email, telegram] = await Promise.all([
+  const [emailProbe, telegramProbe, mailCenter, telegramMessages] = await Promise.all([
     probeGateway(emailUrl, webhookSecret, "Email"),
     probeGateway(telegramUrl, webhookSecret, "Telegram"),
+    loadRpc(supabaseUrl, supabaseKey, authorization, "get_offerpsp_mail_center", { p_limit: 10 }),
+    loadRpc(supabaseUrl, supabaseKey, authorization, "list_offerpsp_telegram_messages", { p_limit: 10 }),
   ]);
+  const email = attachDeliveryEvidence(emailProbe, latestEmailDelivery(mailCenter), "Email");
+  const telegram = attachDeliveryEvidence(telegramProbe, latestTelegramDelivery(telegramMessages), "Telegram");
+  const bothDelivered = email.delivery_tested && telegram.delivery_tested;
+  const lastDeliveryAt = [email.last_delivery_at, telegram.last_delivery_at]
+    .filter(Boolean)
+    .sort((left, right) => Date.parse(String(right)) - Date.parse(String(left)))[0] || null;
   const checks = {
     supabase: { configured: true, reachable: true, authenticated: true, delivery_tested: true, detail: "Supabase staff session verified" },
     email,
@@ -95,7 +123,12 @@ export default async function handler(request, response) {
       configured: email.configured && telegram.configured,
       reachable: email.reachable && telegram.reachable,
       authenticated: email.authenticated && telegram.authenticated,
-      delivery_tested: false,
+      delivery_tested: bothDelivered,
+      last_delivery_at: lastDeliveryAt,
+      delivery_reference: null,
+      delivery_detail: bothDelivered
+        ? "Email and Telegram both have persisted delivery receipts"
+        : "A delivery receipt is missing for Email or Telegram",
       detail: email.reachable && telegram.reachable ? "Both authenticated n8n gateways responded" : "One or more n8n gateways failed",
     },
   };

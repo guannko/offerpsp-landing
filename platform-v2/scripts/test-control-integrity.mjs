@@ -28,6 +28,7 @@ const [captain, merchant, integrations, platform, modules, ui, context, seoGeo, 
   read("platform-v2/src/App.tsx"),
   read("platform-v2/scripts/write-build-manifest.mjs"),
 ]);
+const dealDesk = await read("platform-v2/src/pages/DealDeskPanel.tsx");
 
 assert.match(sidebar, /Свернуть боковую панель/);
 assert.match(sidebar, /Развернуть боковую панель/);
@@ -92,6 +93,13 @@ assert.match(modules, /label: "Радиорубка", shortLabel: "Почта"/)
 assert.match(integrations, /Проверка заняла больше 12 секунд/);
 assert.match(integrations, /finally\s*\{/);
 assert.match(integrations, /controller\.abort\(\)/);
+assert.match(integrations, /нет подтверждённой доставки/);
+assert.match(integrations, /last_delivery_at/);
+assert.match(platform, /Полный production‑цикл субагента ещё не проверен/);
+assert.match(dealDesk, /Рубка сама сообщение не отправляет/);
+assert.match(dealDesk, /Рубка встречу не создаёт/);
+assert.doesNotMatch(dealDesk, />Отправить PSP</);
+assert.doesNotMatch(dealDesk, />Назначить Zoom</);
 
 assert.match(intakeObservability, /screen:'Запуск проверки'/);
 assert.doesNotMatch(intakeObservability, /Постановка проверки в очередь/);
