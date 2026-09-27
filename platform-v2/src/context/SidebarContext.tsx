@@ -3,25 +3,23 @@ import { createContext, useContext, useState, useEffect } from "react";
 const SIDEBAR_EXPANDED_STORAGE_KEY = "offerpsp:sidebar-expanded";
 
 const getInitialSidebarState = () => {
-  if (typeof window === "undefined") return true;
+  if (typeof window === "undefined") return false;
 
   try {
     const savedValue = window.localStorage.getItem(SIDEBAR_EXPANDED_STORAGE_KEY);
-    return savedValue === null ? true : savedValue === "true";
+    return savedValue === null ? false : savedValue === "true";
   } catch {
-    return true;
+    return false;
   }
 };
 
 type SidebarContextType = {
   isExpanded: boolean;
   isMobileOpen: boolean;
-  isHovered: boolean;
   activeItem: string | null;
   openSubmenu: string | null;
   toggleSidebar: () => void;
   toggleMobileSidebar: () => void;
-  setIsHovered: (isHovered: boolean) => void;
   setActiveItem: (item: string | null) => void;
   toggleSubmenu: (item: string) => void;
 };
@@ -42,7 +40,6 @@ export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isExpanded, setIsExpanded] = useState(getInitialSidebarState);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
   const [activeItem, setActiveItem] = useState<string | null>(null);
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
 
@@ -73,7 +70,6 @@ export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const toggleSidebar = () => {
     setIsExpanded((prev) => !prev);
-    setIsHovered(false);
   };
 
   const toggleMobileSidebar = () => {
@@ -89,12 +85,10 @@ export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({
       value={{
         isExpanded: isMobile ? false : isExpanded,
         isMobileOpen,
-        isHovered,
         activeItem,
         openSubmenu,
         toggleSidebar,
         toggleMobileSidebar,
-        setIsHovered,
         setActiveItem,
         toggleSubmenu,
       }}

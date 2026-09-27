@@ -6,7 +6,7 @@ import AppSidebar from "./AppSidebar";
 import AIBotAssistant from "../components/control/AIBotAssistant";
 
 const LayoutContent: React.FC = () => {
-  const { isExpanded, isHovered, isMobileOpen } = useSidebar();
+  const { isExpanded, isMobileOpen } = useSidebar();
 
   return (
     <div className="min-h-screen bg-gray-50 transition-colors dark:bg-[#172235] xl:flex">
@@ -15,12 +15,12 @@ const LayoutContent: React.FC = () => {
         <Backdrop />
       </div>
       <div
-        className={`min-w-0 flex-1 transition-all duration-300 ease-in-out ${
-          isExpanded || isHovered ? "lg:ml-[290px]" : "lg:ml-[90px]"
+        className={`min-w-0 flex-1 transition-[margin] duration-200 ease-in-out ${
+          isExpanded ? "lg:ml-[248px]" : "lg:ml-[68px]"
         } ${isMobileOpen ? "ml-0" : ""}`}
       >
         <AppHeader />
-        <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+        <div className="mx-auto max-w-[1800px] px-3 py-4 sm:px-5 lg:px-6">
           <Outlet />
         </div>
         <AIBotAssistant />

@@ -108,11 +108,11 @@ export const humanizeCode = (value?: string | null) => {
 
 export function PageHeading({ eyebrow, title, description, action }: { eyebrow: string; title: string; description: string; action?: ReactNode }) {
   return (
-    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">{eyebrow}</p>
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white sm:text-3xl">{title}</h1>
-        <p className="mt-2 max-w-3xl text-sm text-gray-500 dark:text-gray-400">{description}</p>
+        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-500">{eyebrow}</p>
+        <h1 className="text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{title}</h1>
+        <p className="mt-1 max-w-4xl text-sm leading-5 text-gray-500 dark:text-gray-400">{description}</p>
       </div>
       {action}
     </div>
@@ -120,21 +120,21 @@ export function PageHeading({ eyebrow, title, description, action }: { eyebrow: 
 }
 
 export function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <section className={`rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-xs transition-colors dark:border-[#34435a] dark:bg-[#202d42] ${className}`}>{children}</section>;
+  return <section className={`rounded-xl border border-gray-200 bg-white p-4 transition-colors dark:border-[#34435a] dark:bg-[#202d42] ${className}`}>{children}</section>;
 }
 
 export function Metric({ label, value, hint, tone = "default" }: { label: string; value: string | number; hint: string; tone?: "default" | "warning" | "success" | "danger" }) {
   const tones = {
-    default: "bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300",
-    warning: "bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-300",
-    success: "bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-300",
-    danger: "bg-error-50 text-error-700 dark:bg-error-500/10 dark:text-error-300",
+    default: "text-brand-700 dark:text-brand-300",
+    warning: "text-warning-700 dark:text-warning-300",
+    success: "text-success-700 dark:text-success-300",
+    danger: "text-error-700 dark:text-error-300",
   };
   return (
     <Panel>
-      <div className={`mb-4 inline-flex rounded-lg px-2.5 py-1 text-xs font-semibold ${tones[tone]}`}>{label}</div>
-      <div className="text-3xl font-semibold text-gray-900 dark:text-white">{value}</div>
-      <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{hint}</p>
+      <div className={`mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] ${tones[tone]}`}>{label}</div>
+      <div className="text-2xl font-semibold leading-none text-gray-900 dark:text-white">{value}</div>
+      <p className="mt-1.5 text-xs leading-4 text-gray-500 dark:text-gray-400">{hint}</p>
     </Panel>
   );
 }
@@ -153,7 +153,7 @@ export function StatusPill({ status }: { status?: string | null }) {
 
 export function EmptyState({ title, description }: { title: string; description: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-gray-300 px-6 py-12 text-center dark:border-gray-700">
+    <div className="rounded-xl border border-dashed border-gray-300 px-5 py-8 text-center dark:border-gray-700">
       <h3 className="font-semibold text-gray-800 dark:text-white/90">{title}</h3>
       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{description}</p>
     </div>
@@ -165,5 +165,5 @@ export function ErrorBanner({ message }: { message: string }) {
 }
 
 export function SkeletonPage({ label = "Загружаем рабочие данные…" }: { label?: string }) {
-  return <div className="space-y-5" role="status" aria-live="polite"><div className="flex items-center gap-3 text-sm font-medium text-gray-500 dark:text-gray-400"><span className="h-2.5 w-2.5 animate-pulse rounded-full bg-brand-500"/>{label}</div><div className="animate-pulse space-y-5"><div className="h-9 w-80 max-w-full rounded bg-gray-200 dark:bg-gray-800"/><div className="grid grid-cols-1 gap-4 md:grid-cols-4">{[1,2,3,4].map((item)=><div key={item} className="h-36 rounded-2xl bg-gray-200 dark:bg-gray-800"/>)}</div><div className="h-96 rounded-2xl bg-gray-200 dark:bg-gray-800"/></div></div>;
+  return <div className="space-y-4" role="status" aria-live="polite"><div className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400"><span className="h-2 w-2 animate-pulse rounded-full bg-brand-500"/>{label}</div><div className="animate-pulse space-y-4"><div className="h-7 w-72 max-w-full rounded bg-gray-200 dark:bg-gray-800"/><div className="grid grid-cols-1 gap-3 md:grid-cols-4">{[1,2,3,4].map((item)=><div key={item} className="h-24 rounded-xl bg-gray-200 dark:bg-gray-800"/>)}</div><div className="h-80 rounded-xl bg-gray-200 dark:bg-gray-800"/></div></div>;
 }
