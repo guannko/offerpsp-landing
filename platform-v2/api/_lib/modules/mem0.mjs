@@ -19,8 +19,7 @@ export function getSemanticMemoryConfig() {
 
 export async function createSemanticMemoryClient(config = getSemanticMemoryConfig()) {
   if (!config.state.enabled) throw new Error("Mem0 is disabled or unconfigured");
-  const { MemoryClient } = await import("mem0ai");
-  return new MemoryClient({ apiKey: config.apiKey, ...(config.host ? { host: config.host } : {}) });
+  throw new Error("The Mem0 adapter is retired; Supabase BIXOFFPSP memory is authoritative");
 }
 
 export async function probeSemanticMemory(config = getSemanticMemoryConfig(), client = null) {
