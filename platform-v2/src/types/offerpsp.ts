@@ -98,7 +98,7 @@ export type AgentPspProvider = {
 
 export type EmailDraft = {
   id: number; lead_internal_id?: string | null; to_email?: string | null; subject?: string | null;
-  body?: string | null; status?: string | null; created_at?: string | null;
+  body?: string | null; status?: string | null; response_expected?: boolean; created_at?: string | null;
 };
 
 export type EmailThread = {

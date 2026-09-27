@@ -24,7 +24,7 @@ const counterpartyLabels: Record<string, string> = {
 
 const mailThreadLabels: Record<string, { label: string; hint: string; className: string }> = {
   open: { label: "Открытая переписка", hint: "Нужно определить следующий шаг", className: "border-gray-200 bg-gray-50 text-gray-700 dark:border-gray-700 dark:bg-white/5 dark:text-gray-200" },
-  awaiting_reply: { label: "Ждём ответ партнёра", hint: "Последнее письмо отправили мы", className: "border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300" },
+  awaiting_reply: { label: "Ждём ответ партнёра", hint: "При отправке явно указано, что ответ ожидается", className: "border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300" },
   follow_up: { label: "Нужен follow-up", hint: "Пора напомнить о переписке", className: "border-warning-200 bg-warning-50 text-warning-700 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-300" },
   closed: { label: "Переписка закрыта", hint: "Активных действий не требуется", className: "border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-700 dark:bg-white/5 dark:text-gray-400" },
   archived: { label: "В архиве", hint: "Переписка убрана из рабочего списка", className: "border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-700 dark:bg-white/5 dark:text-gray-400" },
@@ -146,6 +146,7 @@ export function CommunicationsWorkspace() {
   const [organizerTags, setOrganizerTags] = useState("");
   const [summaryBusy, setSummaryBusy] = useState(false);
   const [templateId, setTemplateId] = useState("");
+  const [responseExpected, setResponseExpected] = useState(false);
 
   const lastMessageByThread = useMemo(() => {
     const result = new Map<string, EmailMessage>();
@@ -282,6 +283,7 @@ export function CommunicationsWorkspace() {
     setTo(requestedDraft.to_email || "");
     setSubject(requestedDraft.subject || "");
     setBody(requestedDraft.body || "");
+    setResponseExpected(Boolean(requestedDraft.response_expected));
     setLeadId(/^[0-9a-f-]{36}$/i.test(requestedDraft.lead_internal_id || "") ? requestedDraft.lead_internal_id || "" : "");
     setMessage({ text: `Черновик #${requestedDraft.id} открыт для проверки.` });
     setSection("compose");
@@ -291,7 +293,7 @@ export function CommunicationsWorkspace() {
     const next = new URLSearchParams(searchParams);
     next.delete("draft");
     setSearchParams(next, { replace: true });
-    setTo(""); setSubject(""); setBody(""); setLeadId("");
+    setTo(""); setSubject(""); setBody(""); setLeadId(""); setResponseExpected(false);
     setSection("mail");
   }
 
@@ -313,6 +315,11 @@ export function CommunicationsWorkspace() {
       draftId = Number((created.data as {id?:number})?.id);
       if (!Number.isFinite(draftId)) { setMessage({ error: true, text: "Черновик создан без корректного ID. Отправка остановлена, чтобы не потерять историю." }); setBusy(false); return; }
     }
+    const expectationState = await supabase.rpc("set_offerpsp_email_draft_response_expected", {
+      p_draft_id: draftId,
+      p_response_expected: responseExpected,
+    });
+    if (expectationState.error) { setMessage({ error: true, text: `Черновик сохранён, но признак ожидания ответа не записан (${expectationState.error.message}). Отправка остановлена.` }); setBusy(false); return; }
     const sendingState = await supabase.rpc("set_offerpsp_email_draft_status", { p_draft_id: draftId, p_status: "sending" });
     if (sendingState.error) { setMessage({ error: true, text: `Черновик создан, но отправка остановлена: статус не записан (${sendingState.error.message}).` }); setBusy(false); return; }
     const session = await supabase.auth.getSession();
@@ -332,7 +339,7 @@ export function CommunicationsWorkspace() {
         ? { error: true, text: `Письмо отправлено на ${to}, но требуется техническая проверка: ${deliveryWarning}` }
         : { text: `Письмо отправлено на ${to}, записано в почтовом центре и сохранено в IMAP Sent.` });
       if (activeDraftId !== null) closeDraft();
-      else { setSubject(""); setBody(""); }
+      else { setSubject(""); setBody(""); setResponseExpected(false); }
     } catch (error) {
       const deliveryError = error instanceof Error ? error.message : "Не удалось отправить письмо";
       setMessage({ error: true, text: `${deliveryError}. Повторная отправка не выполнялась; проверьте статус черновика перед новой попыткой.` });
@@ -498,12 +505,19 @@ export function CommunicationsWorkspace() {
     await refresh(); setBusy(false);
   }
 
+  function startNewEmail() {
+    setActiveDraftId(null);
+    setTo(""); setSubject(""); setBody(""); setLeadId(""); setResponseExpected(false);
+    setSection("compose");
+  }
+
   function startReply() {
     if (!selectedThread) return;
     setTo(selectedThread.participant_email);
     setSubject(/^re:/i.test(selectedThread.subject) ? selectedThread.subject : `Re: ${selectedThread.subject}`);
     setBody("");
     setLeadId(selectedThread.lead_id || "");
+    setResponseExpected(lastSelectedMessage?.direction === "outbound");
     setSection("compose");
   }
 
@@ -600,7 +614,7 @@ export function CommunicationsWorkspace() {
     </div>;
   }
 
-  return <Frame title="Радиорубка" description="Почта и партнёрские коммуникации OfferPSP."><PageHeading eyebrow="Captain's Bridge / Radio room" title="Радиорубка" description="Почта, цепочки переговоров и следующий шаг по каждой партнёрской коммуникации." action={<button onClick={()=>setSection("compose")} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white">+ Новое письмо</button>}/>
+  return <Frame title="Радиорубка" description="Почта и партнёрские коммуникации OfferPSP."><PageHeading eyebrow="Captain's Bridge / Radio room" title="Радиорубка" description="Почта, цепочки переговоров и следующий шаг по каждой партнёрской коммуникации." action={<button onClick={startNewEmail} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white">+ Новое письмо</button>}/>
     {message&&<div className={`mb-4 rounded-xl border px-4 py-3 text-sm ${message.error?"border-error-200 bg-error-50 text-error-700":"border-success-200 bg-success-50 text-success-700"}`}>{message.text}</div>}
     <Panel className="mb-4"><div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between"><div className="flex flex-wrap gap-2">{[
       ["mail", "Радиорубка", `${mailCenter.metrics.threads} цепочек`],
@@ -653,7 +667,7 @@ export function CommunicationsWorkspace() {
         <div className="mt-5 max-h-[650px] space-y-5 overflow-y-auto pr-1">{selectedMessages.map((entry)=>{const attachments=selectedAttachments.filter((attachment)=>attachment.message_id===entry.id);const outbound=entry.direction==="outbound";return <article key={entry.id} className={`max-w-[94%] rounded-2xl border p-4 ${outbound?"ml-auto border-brand-200 bg-brand-50/70 dark:border-brand-500/25 dark:bg-brand-500/10":"mr-auto border-gray-200 bg-white shadow-theme-xs dark:border-gray-700 dark:bg-gray-900"}`}><header className="flex flex-col gap-2 border-b border-black/5 pb-3 dark:border-white/10 sm:flex-row sm:items-start sm:justify-between"><div><strong className={`text-xs uppercase tracking-[0.12em] ${outbound?"text-brand-600":"text-success-600"}`}>{outbound?"Исходящее письмо →":"← Входящее письмо"}</strong><p className="mt-1 text-xs text-gray-500">От: <span className="font-medium text-gray-700 dark:text-gray-200">{entry.sender_email}</span></p><p className="mt-0.5 text-xs text-gray-500">Кому: <span className="font-medium text-gray-700 dark:text-gray-200">{entry.recipient_emails.join(", ") || "не указано"}</span></p></div><div className="text-left sm:text-right"><span className="block text-xs text-gray-400">{formatDate(messageDate(entry))}</span><span className="mt-1 block text-[11px] text-gray-400">{outbound?`${humanizeCode(entry.delivery_status)} · ${entry.provider}`:entry.is_read?"Прочитано":"Не прочитано"}</span></div></header><p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-gray-700 dark:text-gray-200">{entry.text_body || (entry.html_body ? "HTML-письмо без текстовой версии" : "Пустое письмо")}</p>{attachments.length>0&&<div className="mt-4 space-y-3 border-t border-gray-100 pt-4 dark:border-gray-800">{attachments.map((attachment)=>renderAttachment(attachment))}</div>}</article>})}</div>
       </> : <EmptyState title="Выберите переписку" description="Откройте цепочку слева или создайте новое письмо."/>}</Panel>
     </div> : section === "compose"
-        ? <Panel><div className="flex items-start justify-between gap-4"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">{activeDraft ? `Черновик #${activeDraft.id}` : selectedThread && to===selectedThread.participant_email ? "Ответ на письмо" : "Новое письмо"}</h2><p className="mt-1 text-sm text-gray-500">Отправитель: <strong className="text-gray-700 dark:text-gray-200">bizdev@offerpsp.com</strong> · доставка через n8n.</p>{activeDraft&&<p className="mt-1 text-xs font-semibold text-brand-500">Редактируется существующая запись — новый черновик создан не будет.</p>}</div><button onClick={activeDraft?closeDraft:()=>setSection("mail")} className="text-sm text-gray-500">{activeDraft?"Закрыть черновик":"К перепискам"}</button></div><div className="mt-5 space-y-4">{mailCenter.templates.length>0&&<div className="rounded-xl border border-brand-100 bg-brand-50/60 p-4 dark:border-brand-500/20 dark:bg-brand-500/5"><label className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-600" htmlFor="mail-template">Рабочий шаблон</label><select id="mail-template" className={`${field} mt-2 bg-white dark:bg-gray-900`} value={templateId} onChange={(event)=>{const template=mailCenter.templates.find((entry)=>entry.id===event.target.value);if(template)applyTemplate(template);else setTemplateId("");}}><option value="">Начать без шаблона</option>{mailCenter.templates.map((template)=><option key={template.id} value={template.id}>{template.name} · {template.language.toUpperCase()}</option>)}</select><p className="mt-2 text-xs text-gray-500">Шаблон подставляет основу, но письмо остаётся редактируемым и не отправляется автоматически.</p></div>}<select className={field} value={leadId} disabled={Boolean(activeDraft)} onChange={(e)=>{setLeadId(e.target.value);const selected=leads.find((lead)=>lead.lead_id===e.target.value);if(selected?.work_email)setTo(selected.work_email);}}><option value="">Без привязки к мерчу</option>{leads.filter((lead)=>lead.record_state!=="archived").map((lead)=><option key={lead.lead_id} value={lead.lead_id}>{lead.company || "Без названия"} · {lead.work_email || "нет email"}</option>)}</select><input className={field} type="email" value={to} onChange={(e)=>setTo(e.target.value)} placeholder="Получатель"/><input className={field} value={subject} onChange={(e)=>setSubject(e.target.value)} placeholder="Тема"/><textarea className={area} value={body} onChange={(e)=>setBody(e.target.value)} placeholder="Текст письма"/><button onClick={()=>void sendEmail(Boolean(selectedThread && to===selectedThread.participant_email))} disabled={busy || activeDraft?.status === "sending"} className="w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy?"Отправляю…":activeDraft?"Отправить этот черновик":"Отправить письмо"}</button></div></Panel>
+        ? <Panel><div className="flex items-start justify-between gap-4"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">{activeDraft ? `Черновик #${activeDraft.id}` : selectedThread && to===selectedThread.participant_email ? "Ответ на письмо" : "Новое письмо"}</h2><p className="mt-1 text-sm text-gray-500">Отправитель: <strong className="text-gray-700 dark:text-gray-200">bizdev@offerpsp.com</strong> · доставка через n8n.</p>{activeDraft&&<p className="mt-1 text-xs font-semibold text-brand-500">Редактируется существующая запись — новый черновик создан не будет.</p>}</div><button onClick={activeDraft?closeDraft:()=>setSection("mail")} className="text-sm text-gray-500">{activeDraft?"Закрыть черновик":"К перепискам"}</button></div><div className="mt-5 space-y-4">{mailCenter.templates.length>0&&<div className="rounded-xl border border-brand-100 bg-brand-50/60 p-4 dark:border-brand-500/20 dark:bg-brand-500/5"><label className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-600" htmlFor="mail-template">Рабочий шаблон</label><select id="mail-template" className={`${field} mt-2 bg-white dark:bg-gray-900`} value={templateId} onChange={(event)=>{const template=mailCenter.templates.find((entry)=>entry.id===event.target.value);if(template)applyTemplate(template);else setTemplateId("");}}><option value="">Начать без шаблона</option>{mailCenter.templates.map((template)=><option key={template.id} value={template.id}>{template.name} · {template.language.toUpperCase()}</option>)}</select><p className="mt-2 text-xs text-gray-500">Шаблон подставляет основу, но письмо остаётся редактируемым и не отправляется автоматически.</p></div>}<select className={field} value={leadId} disabled={Boolean(activeDraft)} onChange={(e)=>{setLeadId(e.target.value);const selected=leads.find((lead)=>lead.lead_id===e.target.value);if(selected?.work_email)setTo(selected.work_email);}}><option value="">Без привязки к мерчу</option>{leads.filter((lead)=>lead.record_state!=="archived").map((lead)=><option key={lead.lead_id} value={lead.lead_id}>{lead.company || "Без названия"} · {lead.work_email || "нет email"}</option>)}</select><input className={field} type="email" value={to} onChange={(e)=>setTo(e.target.value)} placeholder="Получатель"/><input className={field} value={subject} onChange={(e)=>setSubject(e.target.value)} placeholder="Тема"/><textarea className={area} value={body} onChange={(e)=>setBody(e.target.value)} placeholder="Текст письма"/><label className="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-white/[0.03]"><input type="checkbox" checked={responseExpected} onChange={(event)=>setResponseExpected(event.target.checked)} className="mt-0.5 h-5 w-5"/><span><strong className="block text-sm text-gray-900 dark:text-white">Ожидаем ответ партнёра</strong><span className="mt-1 block text-xs leading-5 text-gray-500">Только при включённом флаге цепочка перейдёт в «Ждём ответ» и получит автоматический срок +3 дня.</span></span></label><button onClick={()=>void sendEmail(Boolean(selectedThread && to===selectedThread.participant_email))} disabled={busy || activeDraft?.status === "sending"} className="w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy?"Отправляю…":activeDraft?"Отправить этот черновик":"Отправить письмо"}</button></div></Panel>
         : <TelegramWorkspace/>}
   </Frame>;
 }

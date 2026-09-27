@@ -342,6 +342,7 @@ async function applyMigrations() {
     "20260927143000_offerpsp_freshness_quarantine.sql",
     "20260927144500_offerpsp_freshness_confirmation_quarantine.sql",
     "20260927160000_offerpsp_operational_tail_hygiene.sql",
+    "20260927183000_offerpsp_truthful_operational_state.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -4656,6 +4657,63 @@ async function verifyOperationalTailHygiene() {
   process.stdout.write("PASS operational tail lifecycle cleanup and audit preservation\n");
 }
 
+async function verifyTruthfulOperationalState() {
+  await query("begin");
+  try {
+    const informational = await query(`insert into public.email_drafts(
+      chat_id,lead_internal_id,to_email,subject,body,status,response_expected
+    ) values (
+      'truthful-state','', 'ops-proof@acme-payments.com',
+      'Informational delivery', 'No response requested', 'draft', false
+    ) returning id`);
+    await query("update public.email_drafts set status='sent' where id=$1", [informational.rows[0].id]);
+    const informationalThread = await query(`select thread.status,thread.follow_up_at,
+        message.metadata ->> 'response_expected' as response_expected
+      from public.offerpsp_email_messages message
+      join public.offerpsp_email_threads thread on thread.id=message.thread_id
+      where message.source_draft_id=$1`, [informational.rows[0].id]);
+    if (informationalThread.rows[0].status !== "open"
+        || informationalThread.rows[0].follow_up_at !== null
+        || informationalThread.rows[0].response_expected !== "false") {
+      throw new Error(`Informational email fabricated a reply wait: ${JSON.stringify(informationalThread.rows[0])}`);
+    }
+
+    const expected = await query(`insert into public.email_drafts(
+      chat_id,lead_internal_id,to_email,subject,body,status,response_expected
+    ) values (
+      'truthful-state','', 'partnership@sample-payments.com',
+      'Reply requested', 'Please respond', 'draft', true
+    ) returning id`);
+    await query("update public.email_drafts set status='sent' where id=$1", [expected.rows[0].id]);
+    const expectedThread = await query(`select thread.status,thread.follow_up_at,
+        message.metadata ->> 'response_expected' as response_expected
+      from public.offerpsp_email_messages message
+      join public.offerpsp_email_threads thread on thread.id=message.thread_id
+      where message.source_draft_id=$1`, [expected.rows[0].id]);
+    if (expectedThread.rows[0].status !== "awaiting_reply"
+        || expectedThread.rows[0].follow_up_at === null
+        || expectedThread.rows[0].response_expected !== "true") {
+      throw new Error(`Explicit reply expectation was not recorded: ${JSON.stringify(expectedThread.rows[0])}`);
+    }
+
+    await query(`insert into public.offerpsp_leads(
+      lead_id,name,work_email,company,vertical,geos,source,consent,status,
+      record_state,source_platform,utm_campaign
+    ) values (
+      '94000000-0000-4000-8000-000000000020','QA attribution fixture',
+      'qa-attribution@example.com','Ordinary looking company','SaaS','EU',
+      'offerpsp.com',true,'new','active','BIX INSTANT INTAKE E2E','portal regression'
+    )`);
+    const predicate = await query(`select private.offerpsp_is_qa_lead(lead) as is_qa
+      from public.offerpsp_leads lead
+      where lead_id='94000000-0000-4000-8000-000000000020'::uuid`);
+    if (!predicate.rows[0].is_qa) throw new Error("Canonical QA attribution predicate missed a synthetic lead");
+  } finally {
+    await query("rollback");
+  }
+  process.stdout.write("PASS explicit email reply state and canonical QA attribution isolation\n");
+}
+
 try {
   verifyCanonicalGeoHeaderParsing();
   verifyWorldwideCoverageParsing();
@@ -4685,6 +4743,7 @@ try {
   await verifyBixResilience();
   await verifyOperationalQaAndMailHygiene();
   await verifyOperationalTailHygiene();
+  await verifyTruthfulOperationalState();
   await verifyIncrementalDraftImports();
   await verifyRateCardBatchHistory();
   await verifyAtomicRouteReplacement();
