@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { isQaFixtureEntitySummary } from "../../lib/qaFixtures";
 import { EmptyState, Panel, StatusPill } from "./Ui";
 
 type EntityType = "organization" | "provider";
@@ -143,7 +144,7 @@ export default function EntityRelationshipsPanel({
 
   const filteredTargets = useMemo(() => {
     const needle = targetSearch.trim().toLowerCase();
-    const targets = workspace?.selectable_targets || [];
+    const targets = (workspace?.selectable_targets || []).filter((item) => !isQaFixtureEntitySummary(item));
     if (!needle) return targets;
     return targets.filter((item) => [item.name, item.legal_name, item.website, item.internal_code]
       .some((value) => value?.toLowerCase().includes(needle)));
@@ -274,7 +275,7 @@ export default function EntityRelationshipsPanel({
         <div>
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Текущие связи</h3>
           <div className="mt-3 space-y-3">
-            {workspace.relationships.map((item) => <article key={item.id} className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+            {workspace.relationships.filter((item) => !isQaFixtureEntitySummary(item.other_entity)).map((item) => <article key={item.id} className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div><p className="text-sm font-semibold text-gray-900 dark:text-white">{relationshipLabels[item.relationship_type] || item.relationship_type}</p><p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{entityLabel(item.other_entity)}</p><p className="mt-1 text-xs text-gray-400">{item.other_entity.entity_type === "provider" ? "PSP" : "Компания"} · {item.other_entity.internal_code || "без кода"}</p></div>
                 <StatusPill status={item.status}/>
@@ -285,7 +286,7 @@ export default function EntityRelationshipsPanel({
                 <button disabled={Boolean(busy)} onClick={() => void endRelationship(item)} className="text-xs font-semibold text-error-600 disabled:opacity-40">Завершить связь</button>
               </div>
             </article>)}
-            {!workspace.relationships.length && <EmptyState title="Связей пока нет" description="Добавьте подтверждённую корпоративную или операционную связь."/>}
+            {!workspace.relationships.some((item) => !isQaFixtureEntitySummary(item.other_entity)) && <EmptyState title="Связей пока нет" description="Добавьте подтверждённую корпоративную или операционную связь."/>}
           </div>
         </div>
 
@@ -314,7 +315,7 @@ export default function EntityRelationshipsPanel({
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Объединённые карточки</h3>
         <p className="mt-1 text-xs text-gray-400">Исходные записи и вся их коммерческая история сохранены. Рубка показывает их через основную карточку.</p>
         <div className="mt-4 space-y-3">
-          {(workspace.merged_sources || []).map((item) => {
+          {(workspace.merged_sources || []).filter((item) => !isQaFixtureEntitySummary(item)).map((item) => {
             const merge = (workspace.active_merges || []).find((entry) => entry.source_entity_id === item.id);
             return <article key={item.id} className="flex flex-col gap-3 rounded-xl border border-gray-200 p-4 dark:border-gray-700 sm:flex-row sm:items-center sm:justify-between">
               <div><strong className="text-sm text-gray-900 dark:text-white">{entityLabel(item)}</strong><p className="mt-1 text-xs text-gray-500">Историческая карточка · {item.internal_code || "без кода"}{merge?.executed_at ? ` · объединена ${new Date(merge.executed_at).toLocaleString("ru-RU")}` : ""}</p>{merge?.reason && <p className="mt-2 text-xs text-gray-400">{merge.reason}</p>}</div>
@@ -328,11 +329,11 @@ export default function EntityRelationshipsPanel({
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Точные кандидаты в дубли</h3>
         <p className="mt-1 text-xs text-gray-400">Совпадение части названия не считается сигналом. Merchant Bridge Advisory и Merchantpayd останутся разными карточками без точного доказательства.</p>
         <div className="mt-4 space-y-3">
-          {workspace.duplicate_candidates.map((item) => <article key={item.id} className="flex flex-col gap-3 rounded-xl border border-warning-200 bg-warning-50/60 p-4 dark:border-warning-500/20 dark:bg-warning-500/5 sm:flex-row sm:items-center sm:justify-between">
+          {workspace.duplicate_candidates.filter((item) => !isQaFixtureEntitySummary(item)).map((item) => <article key={item.id} className="flex flex-col gap-3 rounded-xl border border-warning-200 bg-warning-50/60 p-4 dark:border-warning-500/20 dark:bg-warning-500/5 sm:flex-row sm:items-center sm:justify-between">
             <div><div className="flex flex-wrap items-center gap-2"><strong className="text-sm text-gray-900 dark:text-white">{entityLabel(item)}</strong><span className="rounded-full bg-white px-2 py-1 text-xs font-semibold text-warning-700 dark:bg-gray-900 dark:text-warning-300">{item.score}/100</span></div><p className="mt-1 text-xs text-gray-500">Совпало: {item.signals.map((signal) => signalLabels[signal] || signal).join(", ")}</p></div>
             <button disabled={Boolean(busy)} onClick={() => void previewMerge(item)} className="rounded-lg border border-warning-300 px-4 py-2.5 text-xs font-semibold text-warning-700 disabled:opacity-40 dark:text-warning-300">{busy === `preview:${item.id}` ? "Считаю…" : "Показать последствия"}</button>
           </article>)}
-          {!workspace.duplicate_candidates.length && <EmptyState title="Точных дублей не найдено" description="Карточка не совпадает с другими по домену, регистрационному номеру или точному имени."/>}
+          {!workspace.duplicate_candidates.some((item) => !isQaFixtureEntitySummary(item)) && <EmptyState title="Точных дублей не найдено" description="Карточка не совпадает с другими по домену, регистрационному номеру или точному имени."/>}
         </div>
       </div>
 

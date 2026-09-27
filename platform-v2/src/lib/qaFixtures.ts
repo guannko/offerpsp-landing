@@ -49,6 +49,19 @@ export const isQaFixtureProvider = (provider: Pick<Provider, "id" | "brand_name"
   isQaFixtureProviderId(provider.id)
   || isQaAttributionMarker(provider.brand_name, provider.legal_name, provider.internal_code, provider.website)
 );
+
+export const isQaFixtureEntitySummary = (entity: {
+  entity_type: "organization" | "provider";
+  id: string;
+  name?: string | null;
+  legal_name?: string | null;
+  internal_code?: string | null;
+  website?: string | null;
+}) => (
+  entity.entity_type === "provider"
+    ? isQaFixtureProviderId(entity.id)
+    : isQaFixtureLeadId(entity.id)
+) || isQaAttributionMarker(entity.name, entity.legal_name, entity.internal_code, entity.website);
 export const isQaFixtureRoute = (route: Pick<RouteCoverage, "provider_id" | "provider_name" | "provider_code" | "client_title">) => (
   isQaFixtureProviderId(route.provider_id)
   || isQaAttributionMarker(route.provider_name, route.provider_code, route.client_title)
