@@ -5,6 +5,7 @@ import { EmptyState, ErrorBanner, Panel, SkeletonPage, StatusPill, statusLabels 
 import { QuickStatusSelect, type QuickStatusOption } from "../components/control/QuickStatusSelect";
 import { VisibilityToggleButton } from "../components/control/VisibilityToggleButton";
 import EntityAliasEditor from "../components/control/EntityAliasEditor";
+import EntityRelationshipsPanel from "../components/control/EntityRelationshipsPanel";
 import { useControlBridge } from "../context/ControlBridgeContext";
 import { supabase } from "../lib/supabase";
 import { ActivityPanel, DocumentsPanel, documentCategoryLabels, useEntityWorkspace, type EntityWorkspaceSnapshot } from "../components/control/EntityWorkspace360";
@@ -40,7 +41,7 @@ type MarginDraft = { route_id:string; flow:string; mode:string; percent_value:st
 type DefaultMarkupDraft = { payin: string; payout: string; notes: string };
 type ProviderMember = { id: string; provider_id: string; user_id: string; email: string; role: "owner" | "admin" | "editor" | "viewer"; active: boolean; updated_at?: string };
 type ProviderMemberDraft = { id?: string; email: string; role: ProviderMember["role"]; active: boolean };
-type ProviderTab = "overview" | "edit" | "contacts" | "offers" | "pricing" | "access" | "documents" | "activity";
+type ProviderTab = "overview" | "edit" | "contacts" | "offers" | "pricing" | "relationships" | "access" | "documents" | "activity";
 
 const providerTabs: Array<{ id: ProviderTab; label: string }> = [
   { id: "overview", label: "Карточка" },
@@ -48,6 +49,7 @@ const providerTabs: Array<{ id: ProviderTab; label: string }> = [
   { id: "contacts", label: "Контакты" },
   { id: "offers", label: "Офферы" },
   { id: "pricing", label: "Маржа" },
+  { id: "relationships", label: "Связи" },
   { id: "access", label: "Доступ PSP" },
   { id: "documents", label: "Документы" },
   { id: "activity", label: "История" },
@@ -275,6 +277,8 @@ export default function ProviderWorkspace() {
                 ? <RouteWorkspace workspace={workspace} route={selectedRoute} select={(id) => { const nextParams = new URLSearchParams(params); nextParams.set("route", id); nextParams.set("tab", "offers"); setParams(nextParams); setTab("offers"); }} reload={load} execute={execute}/>
               : tab === "pricing"
                 ? <MarginPanel routes={workspace.routes} policies={workspace.margin_policies || []} draft={marginDraft} setDraft={setMarginDraft} save={() => void saveMargin()} busy={busy}/>
+              : tab === "relationships"
+                ? <EntityRelationshipsPanel entityType="provider" entityId={workspace.provider.id}/>
               : tab === "access"
                 ? <ProviderAccessPanel members={members} draft={memberDraft} setDraft={setMemberDraft} save={() => void saveMember()} invite={() => void inviteMember()} busy={busy}/>
               : tab === "documents"

@@ -7,20 +7,24 @@ Code or a passing local test is not evidence that production has been updated.
 
 ## Backlog — entity merge and corporate relationships
 
-- Add a staff-only duplicate review for merchants, PSPs and organizations. Candidate matches must
-  be based on the full company name, exact email/website domains, legal entity identifiers and
-  manually confirmed evidence; a similar fragment of a name must never merge records.
+- `VERIFIED locally`: a staff-only entity graph now supports directional corporate and operational
+  relationships between organizations and PSPs. Verified links require written evidence, parent
+  cycles are rejected, ended links retain their audit history, and the private relation table is
+  unavailable to browser roles except through staff-only RPCs.
+- `VERIFIED locally`: duplicate review uses exact registration number, normalized website domain,
+  full legal/brand name or an exact registered alias. A similar fragment of a name never creates a
+  candidate; the regression case for Merchant Bridge Advisory and Merchantpayd passes.
+- `VERIFIED locally`: the staff workspace shows relationships and exact duplicate candidates. Its
+  read-only merge preview calculates conflicting fields, aliases, links and every current foreign-
+  key dependency dynamically without changing either record.
 - Add a reversible `merge into canonical card` operation for records proven to be the same
   counterparty. Before execution it must show an immutable impact preview covering contacts,
   aliases, email threads, offers/routes, agreements, tasks, notes and audit history. The source
   card must be retained as a merged alias with `merged_into_id`; no communication or history may
   be deleted, and a rollback path is required during the observation window.
-- Add explicit directional relationships for distinct legal entities: parent company,
-  subsidiary, trading brand and same corporate group. Related cards remain separate and keep their
-  own domains, contacts, licences, contracts, offers and communication history.
-- Show both the canonical identity and verified relationships in the staff workspace and Radio
-  Room. Automatic suggestions are allowed, but merge/relationship confirmation is always a staff
-  decision with actor, timestamp, evidence and reason in the audit trail.
+- Still pending: expose verified relationship context in Radio Room, then design the physical merge
+  executor with immutable preview tokens, per-table conflict policies and an observation-window
+  rollback. Until that exists, the UI deliberately exposes preview only and cannot merge records.
 - Regression scenario: `Merchant Bridge Advisory / merchantbridgeadvisory.com / John` and
   `Merchantpayd / merchantpayd.com / Danil` must remain separate unless later evidence proves a
   relationship; partial name similarity is insufficient.
