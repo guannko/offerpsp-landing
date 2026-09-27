@@ -6,7 +6,7 @@ import path from "node:path";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const read = (relativePath) => readFile(path.join(root, relativePath), "utf8");
 
-const [captain, merchant, integrations, platform, modules, ui, context, seoGeo, qaFixtures, header, compliance, operations, telegram, intakeObservability, researchEntityEditor, sidebar, sidebarContext] = await Promise.all([
+const [captain, merchant, integrations, platform, modules, ui, context, seoGeo, qaFixtures, header, compliance, operations, telegram, intakeObservability, researchEntityEditor, sidebar, sidebarContext, qaDiagnostics, app, buildManifestScript] = await Promise.all([
   read("platform-v2/src/pages/CaptainPages.tsx"),
   read("platform-v2/src/pages/MerchantWorkspace.tsx"),
   read("platform-v2/src/pages/IntegrationsWorkspace.tsx"),
@@ -24,6 +24,9 @@ const [captain, merchant, integrations, platform, modules, ui, context, seoGeo, 
   read("platform-v2/src/components/control/ResearchEntityEditor.tsx"),
   read("platform-v2/src/layout/AppSidebar.tsx"),
   read("platform-v2/src/context/SidebarContext.tsx"),
+  read("platform-v2/src/pages/QaDiagnosticsPage.tsx"),
+  read("platform-v2/src/App.tsx"),
+  read("platform-v2/scripts/write-build-manifest.mjs"),
 ]);
 
 assert.match(sidebar, /Свернуть боковую панель/);
@@ -32,6 +35,13 @@ assert.match(sidebar, /AngleLeftIcon/);
 assert.match(sidebar, /AngleRightIcon/);
 assert.match(sidebarContext, /offerpsp:sidebar-expanded/);
 assert.match(sidebarContext, /localStorage\.setItem/);
+assert.doesNotMatch(sidebar, /Production работает/);
+assert.match(sidebar, /Рабочие данные доступны/);
+assert.match(sidebar, /ready && !error/);
+assert.match(sidebar, /lastUpdatedAt/);
+assert.match(sidebar, /build-manifest\.json/);
+assert.match(buildManifestScript, /VERCEL_GIT_COMMIT_SHA/);
+assert.match(buildManifestScript, /git.*rev-parse/);
 
 assert.match(captain, /Вернуть в непрочитанные/);
 assert.match(captain, /p_mark_read: markRead/);
@@ -48,6 +58,9 @@ assert.match(captain, /Последнее: входящее/);
 assert.match(captain, /Исходящее письмо →/);
 assert.match(captain, /← Входящее письмо/);
 assert.match(captain, /Написать follow-up/);
+assert.match(captain, /set_offerpsp_email_draft_response_expected/);
+assert.match(captain, /Ожидаем ответ партнёра/);
+assert.match(captain, /Только при включённом флаге/);
 assert.match(captain, /Рабочая привязка:/);
 assert.match(captain, /title="Радиорубка"/);
 assert.match(captain, /Папки/);
@@ -105,7 +118,9 @@ assert.match(qaFixtures, /ad724d57-e894-4d16-b7b0-948165aef4bf/);
 assert.match(qaFixtures, /6e531900-901c-4d5d-8887-0679db9b335d/);
 assert.match(qaFixtures, /60e61542-7070-43ef-937b-7f919e9abdb0/);
 assert.match(qaFixtures, /1e584fde-67d7-42d1-be52-83c014218c09/);
-assert.match(qaFixtures, /QA_FIXTURE_MARKERS = \["paysiski", "winpiski", "payok e2e test 20260826"\]/);
+assert.match(qaFixtures, /autopilot e2e/);
+assert.match(qaFixtures, /screening canary/);
+assert.match(qaFixtures, /portal regression/);
 assert.match(platform, /merchantLeads = useMemo\(\(\) => leads\.filter\(\(lead\) => !isQaFixtureLead\(lead\)\)/);
 assert.match(platform, /registryProviders = useMemo\(\(\) => providers\.filter\(\(provider\) => !isQaFixtureProvider\(provider\)\)/);
 assert.match(platform, /operationalRoutes = useMemo\(\(\) => routes\.filter\(\(route\) => !isQaFixtureRoute\(route\)\)/);
@@ -114,9 +129,12 @@ assert.match(compliance, /operationalCases = useMemo/);
 assert.match(operations, /operationalTasks = useMemo/);
 assert.match(telegram, /!isQaFixtureLead\(lead\)/);
 assert.match(captain, /fullMailCenter\.threads\.filter/);
-assert.match(integrations, /list_offerpsp_qa_fixture_status/);
-assert.match(integrations, /fixture\.entities\.map/);
-assert.match(integrations, /entity\.entity_type === "merchant" \? "merchants" : "psps"/);
+assert.doesNotMatch(integrations, /list_offerpsp_qa_fixture_status/);
+assert.doesNotMatch(integrations, /Эталонные сценарии/);
+assert.match(qaDiagnostics, /list_offerpsp_qa_fixture_status/);
+assert.match(qaDiagnostics, /Синтетический стенд/);
+assert.match(app, /path="\/diagnostics\/qa"/);
+assert.doesNotMatch(modules, /diagnostics\/qa/);
 
 if (process.env.VERCEL !== "1") {
   const migration = await read("supabase/migrations/20260815090000_offerpsp_email_mark_unread.sql");
@@ -143,6 +161,16 @@ if (process.env.VERCEL !== "1") {
   assert.match(trashMigration, /offerpsp-purge-email-trash/);
   assert.match(trashMigration, /perform cron\.schedule/);
   assert.match(trashMigration, /trashed_from_status/);
+  const truthfulStateMigration = await read("supabase/migrations/20260927183000_offerpsp_truthful_operational_state.sql");
+  const truthfulStateReviewFixes = await read("supabase/migrations/20260927190000_offerpsp_truthful_operational_state_review_fixes.sql");
+  assert.match(truthfulStateMigration, /add column if not exists response_expected boolean not null default false/);
+  assert.match(truthfulStateMigration, /new\.status = 'sent' and coalesce\(new\.response_expected, false\)/);
+  assert.match(truthfulStateMigration, /set_offerpsp_email_draft_response_expected/);
+  assert.match(truthfulStateMigration, /not private\.offerpsp_is_qa_lead/);
+  assert.match(truthfulStateMigration, /last_message\.direction = 'inbound'/);
+  assert.match(truthfulStateReviewFixes, /when new\.status = 'sent' and not v_waiting/);
+  assert.match(truthfulStateReviewFixes, /language sql\s+stable\s+security invoker/);
+  assert.match(truthfulStateReviewFixes, /like '%\.invalid%'/);
 }
 
 console.log("Control integrity regression tests passed");

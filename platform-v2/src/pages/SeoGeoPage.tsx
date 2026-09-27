@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import PageMeta from "../components/common/PageMeta";
 import { EmptyState, ErrorBanner, Metric, PageHeading, Panel, SkeletonPage } from "../components/control/Ui";
+import { isQaAttributionMarker, isQaFixtureLeadId } from "../lib/qaFixtures";
 import { supabase } from "../lib/supabase";
 
 type CountRow = { key?: string; source?: string; category?: string; geo?: string; visitors?: number; pageviews?: number; leads?: number };
@@ -461,10 +462,17 @@ export default function SeoGeoPage() {
   const sourceMatrix = audit.metadata?.source_matrix;
   const auditSources = sourceMatrix?.sources || [];
   const referrers = (traffic?.referrers || []).map((row) => ({ ...row, key: row.key === "direct" ? "Прямой заход" : row.key }));
-  const recent = attribution.recent || [];
-  const sourceRows = attribution.sources || [];
+  const recent = (attribution.recent || []).filter((lead) => !isQaFixtureLeadId(lead.lead_id) && !isQaAttributionMarker(
+    lead.company,
+    lead.source_category,
+    lead.source_platform,
+    lead.source_referrer,
+    lead.utm_source,
+    lead.utm_campaign,
+  ));
+  const sourceRows = (attribution.sources || []).filter((row) => !isQaAttributionMarker(row.source, row.category));
   const acquisitionTotals = acquisition?.totals || {};
-  const campaignRows = acquisition?.campaigns || [];
+  const campaignRows = (acquisition?.campaigns || []).filter((row) => !isQaAttributionMarker(row.source, row.campaign, row.medium));
   const maxSource = Math.max(1, ...sourceRows.map((row) => number(row.leads)));
   const google90 = googleData?.periods.days_90;
   const indexAttention = number(googleData?.inspection.summary.not_indexed) + number(googleData?.inspection.summary.neutral);

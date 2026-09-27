@@ -7,27 +7,51 @@ export const QA_PAYOK_E2E_PROVIDER_ID = "1e584fde-67d7-42d1-be52-83c014218c09";
 
 const QA_FIXTURE_LEAD_IDS = new Set([QA_GOLDEN_MERCHANT_ID, QA_PAYSISKI_MERCHANT_ID]);
 const QA_FIXTURE_PROVIDER_IDS = new Set([QA_GOLDEN_PROVIDER_ID, QA_PAYOK_E2E_PROVIDER_ID]);
-const QA_FIXTURE_MARKERS = ["paysiski", "winpiski", "payok e2e test 20260826"];
+const QA_FIXTURE_MARKERS = [
+  "paysiski",
+  "winpiski",
+  "payok e2e test 20260826",
+  "autopilot e2e",
+  "autopilot test",
+  "screening canary",
+  "bix instant intake e2e",
+  "workspace-role-e2e",
+  "portal regression",
+];
 
-const containsQaFixtureMarker = (values: Array<string | null | undefined>) => {
+export const isQaAttributionMarker = (...values: Array<string | null | undefined>) => {
   const haystack = values.filter(Boolean).join(" ").toLowerCase();
-  return QA_FIXTURE_MARKERS.some((marker) => haystack.includes(marker));
+  return haystack.includes(".invalid") || QA_FIXTURE_MARKERS.some((marker) => haystack.includes(marker));
 };
 
 export const isQaFixtureLeadId = (leadId?: string | null) => Boolean(leadId && QA_FIXTURE_LEAD_IDS.has(leadId));
 export const isQaFixtureProviderId = (providerId?: string | null) => Boolean(providerId && QA_FIXTURE_PROVIDER_IDS.has(providerId));
 
-export const isQaFixtureLead = (lead: Pick<Lead, "lead_id" | "company" | "name" | "work_email" | "company_url">) => (
+export const isQaFixtureLead = (lead: Pick<Lead,
+  "lead_id" | "company" | "name" | "work_email" | "company_url" | "source_category" |
+  "source_platform" | "source_referrer" | "utm_source" | "utm_campaign" | "details"
+>) => (
   isQaFixtureLeadId(lead.lead_id)
-  || containsQaFixtureMarker([lead.company, lead.name, lead.work_email, lead.company_url])
+  || isQaAttributionMarker(
+    lead.company,
+    lead.name,
+    lead.work_email,
+    lead.company_url,
+    lead.source_category,
+    lead.source_platform,
+    lead.source_referrer,
+    lead.utm_source,
+    lead.utm_campaign,
+    lead.details,
+  )
 );
 export const isQaFixtureProvider = (provider: Pick<Provider, "id" | "brand_name" | "legal_name" | "internal_code" | "website">) => (
   isQaFixtureProviderId(provider.id)
-  || containsQaFixtureMarker([provider.brand_name, provider.legal_name, provider.internal_code, provider.website])
+  || isQaAttributionMarker(provider.brand_name, provider.legal_name, provider.internal_code, provider.website)
 );
 export const isQaFixtureRoute = (route: Pick<RouteCoverage, "provider_id" | "provider_name" | "provider_code" | "client_title">) => (
   isQaFixtureProviderId(route.provider_id)
-  || containsQaFixtureMarker([route.provider_name, route.provider_code, route.client_title])
+  || isQaAttributionMarker(route.provider_name, route.provider_code, route.client_title)
 );
 
 export const isQaFixtureTask = (task: {
@@ -39,7 +63,7 @@ export const isQaFixtureTask = (task: {
 }) => (
   isQaFixtureLeadId(task.lead_id)
   || task.metadata?.qa_fixture_suppressed === true
-  || containsQaFixtureMarker([task.title, task.details, task.automation_ref])
+  || isQaAttributionMarker(task.title, task.details, task.automation_ref)
 );
 
 export const isQaFixturePath = (path?: string | null) => {

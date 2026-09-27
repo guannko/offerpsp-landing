@@ -1,5 +1,22 @@
 import assert from "node:assert/strict";
-import { isQaFixtureProvider, isQaFixtureRoute, isQaFixtureTask } from "../src/lib/qaFixtures.ts";
+import { isQaAttributionMarker, isQaFixtureLead, isQaFixtureProvider, isQaFixtureRoute, isQaFixtureTask } from "../src/lib/qaFixtures.ts";
+
+assert.equal(isQaFixtureLead({
+  lead_id: "11111111-1111-4111-8111-111111111111",
+  company: "Ordinary Ltd",
+  name: "QA runner",
+  work_email: "runner@example.com",
+  company_url: "https://example.com",
+  source_category: "test",
+  source_platform: "BIX INSTANT INTAKE E2E",
+  source_referrer: null,
+  utm_source: null,
+  utm_campaign: "portal regression",
+  details: null,
+}), true, "historical QA attribution markers must hide the lead even when its company looks ordinary");
+
+assert.equal(isQaAttributionMarker("organic", "normal launch"), false, "ordinary attribution must remain visible");
+assert.equal(isQaAttributionMarker("qa-user@example.invalid"), true, ".invalid identities are synthetic");
 
 assert.equal(isQaFixtureTask({
   lead_id: "0d982f0b-7b8f-4caa-9e36-8481b181b4ae",
@@ -33,4 +50,4 @@ assert.equal(isQaFixtureRoute({
   client_title: "E2E route",
 }), true, "PAYOK E2E routes must stay outside catalogues, filters and counters");
 
-process.stdout.write("PASS QA fixture tasks stay outside ordinary Operations\n");
+process.stdout.write("PASS QA fixtures stay outside operational views and attribution\n");

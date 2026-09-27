@@ -13,6 +13,7 @@ const AgentWorkspace = lazy(() => import("./pages/AgentWorkspace"));
 const CompliancePage = lazy(() => import("./pages/CompliancePage"));
 const SeoGeoPage = lazy(() => import("./pages/SeoGeoPage"));
 const SystemActions = lazy(() => import("./pages/SystemActions"));
+const QaDiagnosticsPage = lazy(() => import("./pages/QaDiagnosticsPage"));
 const platformPage = <T extends keyof typeof import("./pages/Platform")>(name: T) =>
   lazy(() => import("./pages/Platform").then((module) => ({ default: module[name] })));
 const captainPage = <T extends keyof typeof import("./pages/CaptainPages")>(name: T) =>
@@ -62,6 +63,7 @@ export default function App() {
       <Route path="/analytics" element={<AnalyticsPage/>}/>
       <Route path="/seo-geo" element={<SeoGeoPage/>}/>
       <Route path="/integrations" element={<IntegrationsWorkspace/>}/>
+      <Route path="/diagnostics/qa" element={<QaDiagnosticsPage/>}/>
     </Route>
     <Route path="*" element={<NotFound/>}/>
   </Routes></Suspense></ControlBridgeProvider></BrowserRouter>;

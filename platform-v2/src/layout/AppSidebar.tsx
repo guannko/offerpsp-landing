@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router";
 import { AngleLeftIcon, AngleRightIcon, HorizontaLDots } from "../icons";
 import { platformModules } from "../config/modules";
@@ -13,8 +14,27 @@ const groupLabels = {
 export default function AppSidebar() {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleSidebar, toggleMobileSidebar } = useSidebar();
   const location = useLocation();
-  const { moduleEntitlements } = useControlBridge();
+  const { moduleEntitlements, loading, refreshing, ready, error, lastUpdatedAt } = useControlBridge();
+  const [buildManifest, setBuildManifest] = useState<{ commit?: string; built_at?: string; deployment_id?: string } | null>(null);
   const showLabels = isExpanded || isHovered || isMobileOpen;
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch("/build-manifest.json", { cache: "no-store", signal: controller.signal })
+      .then((response) => response.ok ? response.json() : null)
+      .then((manifest) => setBuildManifest(manifest && typeof manifest === "object" ? manifest : null))
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, []);
+  const bridgeState = loading
+    ? { label: "Проверяем рабочие данные", detail: "Статус ещё не подтверждён.", dot: "bg-gray-400" }
+    : ready && !error
+      ? { label: "Рабочие данные доступны", detail: lastUpdatedAt ? `Проверено ${lastUpdatedAt.toLocaleString("ru-RU")}.` : "Доступ подтверждён текущей сессией.", dot: "bg-success-500" }
+      : ready
+        ? { label: "Данные доступны частично", detail: error || "Один из запросов завершился ошибкой.", dot: "bg-warning-500" }
+        : { label: "Рабочие данные недоступны", detail: error || "Подключение не подтверждено.", dot: "bg-error-500" };
+  const buildLabel = buildManifest?.commit
+    ? `Сборка ${buildManifest.commit.slice(0, 8)}${buildManifest.built_at ? ` · ${new Date(buildManifest.built_at).toLocaleString("ru-RU")}` : ""}`
+    : "Версия сборки не подтверждена";
 
   return (
     <aside
@@ -58,7 +78,7 @@ export default function AppSidebar() {
             </div>;
           })}
         </nav>
-        {showLabels && <div className="mt-auto rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-white/[0.03]"><div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-success-500"/><strong className="text-xs text-gray-700 dark:text-gray-300">Production работает</strong></div><p className="mt-2 text-[11px] leading-4 text-gray-400">Control Bridge подключён к рабочим данным. Legacy-панель сохранена для аварийного отката.</p></div>}
+        {showLabels && <div className="mt-auto rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-white/[0.03]"><div className="flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${bridgeState.dot}`}/><strong className="text-xs text-gray-700 dark:text-gray-300">{bridgeState.label}{refreshing ? " · обновление" : ""}</strong></div><p className="mt-2 text-[11px] leading-4 text-gray-400">{bridgeState.detail}</p><p className="mt-2 border-t border-gray-200 pt-2 text-[10px] leading-4 text-gray-400 dark:border-gray-700" title={buildManifest?.deployment_id || undefined}>{buildLabel}</p></div>}
       </div>
     </aside>
   );
