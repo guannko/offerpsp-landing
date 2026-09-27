@@ -341,6 +341,7 @@ async function applyMigrations() {
     "20260927130000_offerpsp_explicit_expiry_only.sql",
     "20260927143000_offerpsp_freshness_quarantine.sql",
     "20260927144500_offerpsp_freshness_confirmation_quarantine.sql",
+    "20260927160000_offerpsp_operational_tail_hygiene.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -370,6 +371,63 @@ async function applyMigrations() {
           ('1e584fde-67d7-42d1-be52-83c014218c09', '90dff792-bf79-4fa2-ad00-e38b9bf24216', 'PAYOK E2E route 1', 'payin', 'draft'),
           ('1e584fde-67d7-42d1-be52-83c014218c09', '90dff792-bf79-4fa2-ad00-e38b9bf24216', 'PAYOK E2E route 2', 'payout', 'draft'),
           ('1e584fde-67d7-42d1-be52-83c014218c09', '90dff792-bf79-4fa2-ad00-e38b9bf24216', 'PAYOK E2E route 3', 'both', 'draft');
+      `);
+    }
+    if (migrationName === "20260927160000_offerpsp_operational_tail_hygiene.sql") {
+      await db.exec(`
+        insert into private.aibot_execution_journal(
+          id, profile_key, action_type, description, status, entity_type,
+          created_at, updated_at
+        ) values (
+          '94000000-0000-4000-8000-000000000001', 'BIXOFFPSP',
+          'create_email_draft', 'Superseded validator draft', 'planned', 'psp',
+          '2026-08-18 20:22:58+00', '2026-08-18 20:22:58+00'
+        );
+
+        insert into public.offerpsp_leads(
+          lead_id, name, work_email, company, vertical, geos, source,
+          consent, status, record_state
+        ) values (
+          '94000000-0000-4000-8000-000000000002', 'Archived fixture',
+          'archived-tail@example.com', 'Archived tail fixture', 'SaaS', 'EU',
+          'offerpsp.com', true, 'closed', 'archived'
+        );
+        insert into private.offerpsp_intake_auto_replies(
+          lead_id, source_hash, reply_class, status, reason_code
+        ) values (
+          '94000000-0000-4000-8000-000000000002', 'validator-tail',
+          'missing_information', 'review_required', 'screening_stale'
+        );
+
+        insert into private.offerpsp_providers(
+          id, internal_code, brand_name, relationship_status
+        ) values (
+          '94000000-0000-4000-8000-000000000003', 'PSP-940003',
+          'Archived anomaly validator', 'archived'
+        );
+        insert into private.offerpsp_rate_card_batches(
+          id, provider_id, batch_version, source_type, source_text, parser_version
+        ) values (
+          '94000000-0000-4000-8000-000000000004',
+          '94000000-0000-4000-8000-000000000003', 1, 'manual',
+          'Archived anomaly validator source', 'validator-v1'
+        );
+        insert into private.offerpsp_offer_routes(
+          id, provider_id, batch_id, internal_code, client_title, flow, status
+        ) values (
+          '94000000-0000-4000-8000-000000000005',
+          '94000000-0000-4000-8000-000000000003',
+          '94000000-0000-4000-8000-000000000004', 'OFF-940005',
+          'Archived anomaly validator route', 'payin', 'archived'
+        );
+        insert into private.offerpsp_route_anomalies(
+          id, batch_id, route_id, anomaly_code, severity, message, status
+        ) values (
+          '94000000-0000-4000-8000-000000000006',
+          '94000000-0000-4000-8000-000000000004',
+          '94000000-0000-4000-8000-000000000005',
+          'validator_archived_route', 'warning', 'Validator archived route warning', 'open'
+        );
       `);
     }
     if (migrationName === "20260901185355_offerpsp_email_trash_retention.sql") {
@@ -4507,6 +4565,97 @@ async function verifyOperationalQaAndMailHygiene() {
   process.stdout.write("PASS PAYOK E2E isolation and Radio Room mail hygiene\n");
 }
 
+async function verifyOperationalTailHygiene() {
+  const backfill = await query(`select
+    (select status from private.aibot_execution_journal
+      where id='94000000-0000-4000-8000-000000000001'::uuid) as journal_status,
+    (select status from private.offerpsp_intake_auto_replies
+      where lead_id='94000000-0000-4000-8000-000000000002'::uuid) as reply_status,
+    (select status from private.offerpsp_route_anomalies
+      where id='94000000-0000-4000-8000-000000000006'::uuid) as anomaly_status,
+    (select count(*)::integer from private.offerpsp_supply_activities
+      where route_id='94000000-0000-4000-8000-000000000005'::uuid
+        and action_type='anomaly_ignored') as anomaly_audit_count
+  `);
+  if (backfill.rows[0].journal_status !== "cancelled"
+      || backfill.rows[0].reply_status !== "cancelled"
+      || backfill.rows[0].anomaly_status !== "ignored"
+      || backfill.rows[0].anomaly_audit_count !== 1) {
+    throw new Error(`Operational tail backfill failed: ${JSON.stringify(backfill.rows[0])}`);
+  }
+
+  const grants = await query(`select
+    has_function_privilege('authenticated', 'private.offerpsp_cancel_inactive_intake_auto_reply(uuid,text,uuid)', 'execute') as authenticated_reply_helper,
+    has_function_privilege('service_role', 'private.offerpsp_cancel_inactive_intake_auto_reply(uuid,text,uuid)', 'execute') as service_reply_helper,
+    has_function_privilege('authenticated', 'private.offerpsp_ignore_archived_route_anomalies(uuid,uuid,text)', 'execute') as authenticated_anomaly_helper,
+    has_function_privilege('service_role', 'private.offerpsp_ignore_archived_route_anomalies(uuid,uuid,text)', 'execute') as service_anomaly_helper
+  `);
+  if (grants.rows[0].authenticated_reply_helper
+      || grants.rows[0].service_reply_helper
+      || grants.rows[0].authenticated_anomaly_helper
+      || grants.rows[0].service_anomaly_helper) {
+    throw new Error(`Operational tail trigger helpers are externally executable: ${JSON.stringify(grants.rows[0])}`);
+  }
+
+  await query("begin");
+  try {
+    await query(`insert into public.offerpsp_leads(
+      lead_id,name,work_email,company,vertical,geos,source,consent,status,record_state
+    ) values (
+      '94000000-0000-4000-8000-000000000010','Task fixture','task-tail@example.com',
+      'Task tail fixture','SaaS','EU','offerpsp.com',true,'new','active'
+    )`);
+    await query(`insert into private.offerpsp_intake_auto_replies(
+      lead_id,source_hash,reply_class,status,reason_code
+    ) values (
+      '94000000-0000-4000-8000-000000000010','validator-task-tail',
+      'missing_information','review_required','response_task_inactive'
+    ) on conflict (lead_id) do update set
+      status=excluded.status, reason_code=excluded.reason_code, source_hash=excluded.source_hash`);
+    await query(`update public.offerpsp_tasks
+      set status='cancelled', completed_at=now(), updated_at=now()
+      where lead_id='94000000-0000-4000-8000-000000000010'::uuid
+        and automation_ref='intake_response_v1'`);
+    const taskReply = await query(`select status,reason_code
+      from private.offerpsp_intake_auto_replies
+      where lead_id='94000000-0000-4000-8000-000000000010'::uuid`);
+    if (taskReply.rows[0].status !== "cancelled"
+        || taskReply.rows[0].reason_code !== "intake_task_cancelled") {
+      throw new Error(`Completed intake task left an active auto reply: ${JSON.stringify(taskReply.rows[0])}`);
+    }
+
+    await query(`insert into private.offerpsp_offer_routes(
+      id,provider_id,batch_id,internal_code,client_title,flow,status
+    ) values (
+      '94000000-0000-4000-8000-000000000011',
+      '94000000-0000-4000-8000-000000000003',
+      '94000000-0000-4000-8000-000000000004','OFF-940011',
+      'Route transition validator','payin','draft'
+    )`);
+    await query(`insert into private.offerpsp_route_anomalies(
+      id,batch_id,route_id,anomaly_code,severity,message,status
+    ) values (
+      '94000000-0000-4000-8000-000000000012',
+      '94000000-0000-4000-8000-000000000004',
+      '94000000-0000-4000-8000-000000000011',
+      'validator_route_transition','warning','Route transition warning','open'
+    )`);
+    await query(`update private.offerpsp_offer_routes set status='archived'
+      where id='94000000-0000-4000-8000-000000000011'::uuid`);
+    const routeAnomaly = await query(`select status,resolution_note
+      from private.offerpsp_route_anomalies
+      where id='94000000-0000-4000-8000-000000000012'::uuid`);
+    if (routeAnomaly.rows[0].status !== "ignored"
+        || !String(routeAnomaly.rows[0].resolution_note || "").includes("Route archived")) {
+      throw new Error(`Archived route left an open anomaly: ${JSON.stringify(routeAnomaly.rows[0])}`);
+    }
+  } finally {
+    await query("rollback");
+  }
+
+  process.stdout.write("PASS operational tail lifecycle cleanup and audit preservation\n");
+}
+
 try {
   verifyCanonicalGeoHeaderParsing();
   verifyWorldwideCoverageParsing();
@@ -4535,6 +4684,7 @@ try {
   await verifySecurityAndLifecycleRemediation();
   await verifyBixResilience();
   await verifyOperationalQaAndMailHygiene();
+  await verifyOperationalTailHygiene();
   await verifyIncrementalDraftImports();
   await verifyRateCardBatchHistory();
   await verifyAtomicRouteReplacement();
