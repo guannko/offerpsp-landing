@@ -8,7 +8,9 @@ integrations, n8n recovery, Supabase security posture and production deployment.
 > debt” were subsequently closed or classified with production evidence. Build traceability is
 > exact, the alleged duplicate sidebar control is absent from the live DOM, all foreign keys are
 > covered, the RLS and definer findings are intentional guarded boundaries, the local n8n MCP uses
-> `@latest`, and the residual deprecation is inside Vercel's official Node helper. GCP reserve is an
+> `@latest`, and the residual deprecation is inside Vercel's official Node helper. Production Auth
+> now enforces secure password change, current-password verification, leaked-password rejection and
+> an 8-character minimum; a fresh advisor run no longer reports that warning. GCP reserve is an
 > optional paid resilience decision and was not provisioned without cost approval. The detailed
 > evidence is recorded at the top of `TASKS.md`.
 
