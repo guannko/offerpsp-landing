@@ -5,7 +5,7 @@ Updated: 2026-09-27
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
-## Backlog — entity merge and corporate relationships
+## Entity merge and corporate relationships — production 2026-09-27
 
 - `VERIFIED locally`: a staff-only entity graph now supports directional corporate and operational
   relationships between organizations and PSPs. Verified links require written evidence, parent
@@ -25,7 +25,12 @@ Code or a passing local test is not evidence that production has been updated.
 - `VERIFIED locally`: Radio Room reads the linked merchant/PSP entity graph and shows the canonical
   card, verified relationships and merged aliases in a collapsed context block. Unsupported or
   unlinked email threads are labelled honestly instead of being attached to a similar name.
-- Production migration and deployment are still pending; no production entities have been merged.
+- `VERIFIED production database`: migrations `offerpsp_reversible_entity_merge` and
+  `offerpsp_entity_merge_actor_indexes` are recorded. The merge ledger is empty: no production
+  entity has been merged. Anonymous execution and direct authenticated ledger reads are denied.
+- PR #9 is the controlled UI deployment path. Vercel Preview, lint, build and control-integrity
+  checks pass; the complete migration validator reaches only the known ignored private BR-Pay
+  fixture boundary after all merge regressions pass.
 - Regression scenario: `Merchant Bridge Advisory / merchantbridgeadvisory.com / John` and
   `Merchantpayd / merchantpayd.com / Danil` must remain separate unless later evidence proves a
   relationship; partial name similarity is insufficient.
