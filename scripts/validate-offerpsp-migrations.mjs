@@ -347,6 +347,7 @@ async function applyMigrations() {
     "20260927200000_offerpsp_entity_relationships.sql",
     "20260927203000_offerpsp_entity_relationship_actor_indexes.sql",
     "20260927213000_offerpsp_reversible_entity_merge.sql",
+    "20260927214500_offerpsp_entity_merge_actor_indexes.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -1501,7 +1502,9 @@ async function verifyEntityRelationships() {
       has_table_privilege('authenticated', 'private.offerpsp_entity_merges', 'select') as authenticated_merge_table,
       to_regclass('private.offerpsp_entity_relationships_created_by_idx') is not null as created_by_index,
       to_regclass('private.offerpsp_entity_relationships_verified_by_idx') is not null as verified_by_index,
-      to_regclass('private.offerpsp_entity_relationships_ended_by_idx') is not null as ended_by_index
+      to_regclass('private.offerpsp_entity_relationships_ended_by_idx') is not null as ended_by_index,
+      to_regclass('public.offerpsp_organizations_merged_by_idx') is not null as organization_merged_by_index,
+      to_regclass('private.offerpsp_providers_merged_by_idx') is not null as provider_merged_by_index
     `)).rows[0];
     if (privileges.authenticated_table || privileges.anon_workspace || privileges.anon_save
         || privileges.anon_prepare_merge || privileges.authenticated_merge_table
@@ -1509,7 +1512,8 @@ async function verifyEntityRelationships() {
         || !privileges.authenticated_preview || !privileges.authenticated_prepare_merge
         || !privileges.authenticated_execute_merge || !privileges.authenticated_rollback_merge
         || !privileges.authenticated_radio_context || !privileges.created_by_index
-        || !privileges.verified_by_index || !privileges.ended_by_index) {
+        || !privileges.verified_by_index || !privileges.ended_by_index
+        || !privileges.organization_merged_by_index || !privileges.provider_merged_by_index) {
       throw new Error(`Entity relationship security boundary is incorrect: ${JSON.stringify(privileges)}`);
     }
 
