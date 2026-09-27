@@ -5,6 +5,26 @@ Updated: 2026-09-27
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## Backlog — entity merge and corporate relationships
+
+- Add a staff-only duplicate review for merchants, PSPs and organizations. Candidate matches must
+  be based on the full company name, exact email/website domains, legal entity identifiers and
+  manually confirmed evidence; a similar fragment of a name must never merge records.
+- Add a reversible `merge into canonical card` operation for records proven to be the same
+  counterparty. Before execution it must show an immutable impact preview covering contacts,
+  aliases, email threads, offers/routes, agreements, tasks, notes and audit history. The source
+  card must be retained as a merged alias with `merged_into_id`; no communication or history may
+  be deleted, and a rollback path is required during the observation window.
+- Add explicit directional relationships for distinct legal entities: parent company,
+  subsidiary, trading brand and same corporate group. Related cards remain separate and keep their
+  own domains, contacts, licences, contracts, offers and communication history.
+- Show both the canonical identity and verified relationships in the staff workspace and Radio
+  Room. Automatic suggestions are allowed, but merge/relationship confirmation is always a staff
+  decision with actor, timestamp, evidence and reason in the audit trail.
+- Regression scenario: `Merchant Bridge Advisory / merchantbridgeadvisory.com / John` and
+  `Merchantpayd / merchantpayd.com / Danil` must remain separate unless later evidence proves a
+  relationship; partial name similarity is insufficient.
+
 ### Operational tail lifecycle — production 2026-09-27
 
 - `VERIFIED`: the three abandoned August AIBot draft/send intentions are retained in the
