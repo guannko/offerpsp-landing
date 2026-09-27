@@ -6,7 +6,7 @@ import path from "node:path";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const read = (relativePath) => readFile(path.join(root, relativePath), "utf8");
 
-const [captain, merchant, integrations, platform, modules, ui, context, seoGeo, qaFixtures, header, compliance, operations, telegram, intakeObservability, researchEntityEditor, entityRelationships, sidebar, sidebarContext, qaDiagnostics, app, buildManifestScript] = await Promise.all([
+const [captain, merchant, integrations, platform, modules, ui, context, seoGeo, qaFixtures, header, compliance, operations, telegram, intakeObservability, researchEntityEditor, entityRelationships, sidebar, sidebarContext, qaDiagnostics, app, buildManifestScript, productionDeployScript] = await Promise.all([
   read("platform-v2/src/pages/CaptainPages.tsx"),
   read("platform-v2/src/pages/MerchantWorkspace.tsx"),
   read("platform-v2/src/pages/IntegrationsWorkspace.tsx"),
@@ -28,6 +28,7 @@ const [captain, merchant, integrations, platform, modules, ui, context, seoGeo, 
   read("platform-v2/src/pages/QaDiagnosticsPage.tsx"),
   read("platform-v2/src/App.tsx"),
   read("platform-v2/scripts/write-build-manifest.mjs"),
+  read("platform-v2/scripts/deploy-production.mjs"),
 ]);
 const dealDesk = await read("platform-v2/src/pages/DealDeskPanel.tsx");
 
@@ -45,7 +46,12 @@ assert.match(sidebar, /ready && !error/);
 assert.match(sidebar, /lastUpdatedAt/);
 assert.match(sidebar, /build-manifest\.json/);
 assert.match(buildManifestScript, /VERCEL_GIT_COMMIT_SHA/);
+assert.match(buildManifestScript, /OFFERPSP_BUILD_COMMIT_SHA/);
 assert.match(buildManifestScript, /git.*rev-parse/);
+assert.match(productionDeployScript, /OFFERPSP_BUILD_COMMIT_SHA/);
+assert.match(productionDeployScript, /--build-env/);
+assert.match(productionDeployScript, /status.*--porcelain.*--untracked-files=normal/);
+assert.match(productionDeployScript, /Refusing to deploy a dirty working tree/);
 
 assert.match(captain, /Вернуть в непрочитанные/);
 assert.match(captain, /p_mark_read: markRead/);
