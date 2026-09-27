@@ -338,6 +338,7 @@ async function applyMigrations() {
     "20260927113000_offerpsp_event_driven_freshness.sql",
     "20260927120000_offerpsp_manual_offer_updates_only.sql",
     "20260927121500_offerpsp_disable_freshness_sync.sql",
+    "20260927130000_offerpsp_explicit_expiry_only.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -3647,6 +3648,15 @@ async function verifyPrivateSourceStorage() {
 async function verifyFreshnessReminders() {
   await setUser(STAFF_ID);
   await setRole("authenticated");
+  const portalDefinition = (await query(`select
+    pg_get_functiondef(
+      'public.get_offerpsp_provider_portal_workspace(uuid)'::regprocedure
+    ) as definition`)).rows[0].definition.toLowerCase();
+  if (portalDefinition.includes("make_interval")
+      || portalDefinition.includes("r.freshness_days")
+      || !portalDefinition.includes("r.expires_at < current_date")) {
+    throw new Error("Provider portal still infers route staleness from elapsed time");
+  }
   const provider = await query(
     "select public.upsert_offerpsp_provider('Freshness Reminder Fixture', null, null, null, 'active', 1, true, 'Validation only') as value",
   );

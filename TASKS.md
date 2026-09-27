@@ -14,6 +14,9 @@ Code or a passing local test is not evidence that production has been updated.
   are not modified by the compatibility sync.
 - Shortlist creation and sharing do not create age-based tasks or block an offer because of its
   source date. Existing source and confirmation timestamps remain available as historical evidence.
+- Provider portal routes become stale only when the offer has an explicit `expires_at` date in the
+  past. `freshness_days`, source dates and verification dates are retained as legacy/informational
+  metadata and have no operational effect.
 - The obsolete BR-Pay, Antarex and PAYOK confirmation tasks and the completed first outreach-wave
   task are closed with their audit history preserved. Production has zero active automatic
   freshness triggers, tasks and calendar reminders, and zero overdue tasks after the cleanup.
