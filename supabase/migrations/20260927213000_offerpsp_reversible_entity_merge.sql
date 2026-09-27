@@ -1,6 +1,6 @@
 -- Reversible logical entity merge and Radio Room relationship context.
 -- A merge never deletes or rewrites commercial history. The duplicate card is
--- archived as an alias of the canonical card and can be restored for 72 hours.
+-- retained as an alias of the canonical card and can be restored for 72 hours.
 
 alter table public.offerpsp_organizations
   add column if not exists merged_into_id uuid references public.offerpsp_organizations(id) on delete restrict,
@@ -202,6 +202,7 @@ declare
   v_exact_duplicate boolean := false;
   v_source_has_children boolean := false;
   v_same_organization_type boolean := true;
+  v_has_active_portal_access boolean := false;
   v_available boolean := false;
   v_blocking_reason text;
 begin
@@ -225,9 +226,17 @@ begin
   if p_entity_type = 'organization' then
     select exists(select 1 from public.offerpsp_organizations where merged_into_id = p_source_entity_id)
       into v_source_has_children;
+    select exists(
+      select 1 from public.offerpsp_organization_members
+      where organization_id in (p_source_entity_id, p_target_entity_id) and active
+    ) into v_has_active_portal_access;
   else
     select exists(select 1 from private.offerpsp_providers where merged_into_id = p_source_entity_id)
       into v_source_has_children;
+    select exists(
+      select 1 from public.offerpsp_provider_memberships
+      where provider_id in (p_source_entity_id, p_target_entity_id) and active
+    ) into v_has_active_portal_access;
   end if;
 
   for v_item in
@@ -307,13 +316,15 @@ begin
     and v_same_organization_type
     and v_source ->> 'merged_into_id' is null
     and v_target ->> 'merged_into_id' is null
-    and not v_source_has_children;
+    and not v_source_has_children
+    and not v_has_active_portal_access;
   v_blocking_reason := case
     when not v_exact_duplicate then 'Exact duplicate evidence is required'
     when not v_same_organization_type then 'Merchant and agent organizations cannot be merged'
     when v_source ->> 'merged_into_id' is not null then 'Source entity is already merged'
     when v_target ->> 'merged_into_id' is not null then 'Target entity is not canonical'
     when v_source_has_children then 'Source is canonical for other merged aliases'
+    when v_has_active_portal_access then 'Move or revoke active portal memberships before merging'
     else null end;
 
   return jsonb_build_object(
@@ -327,7 +338,7 @@ begin
         or (r.target_entity_type = p_entity_type and r.target_entity_id = p_source_entity_id))),
     'exact_duplicate', v_exact_duplicate, 'merge_available', v_available,
     'blocking_reason', v_blocking_reason, 'observation_hours', 72,
-    'data_policy', 'Source history stays in place and is resolved through the canonical card'
+    'data_policy', 'Source state and history stay in place and are resolved through the canonical card'
   );
 end;
 $$;
@@ -448,13 +459,11 @@ begin
 
   if v_merge.entity_type = 'organization' then
     update public.offerpsp_organizations set
-      merged_into_id = v_merge.target_entity_id, merged_at = now(), merged_by = auth.uid(),
-      status = 'archived', archived_at = now(), archived_by = auth.uid()
+      merged_into_id = v_merge.target_entity_id, merged_at = now(), merged_by = auth.uid()
     where id = v_merge.source_entity_id;
   else
     update private.offerpsp_providers set
-      merged_into_id = v_merge.target_entity_id, merged_at = now(), merged_by = auth.uid(),
-      relationship_status = 'archived', archived_at = now(), archived_by = auth.uid()
+      merged_into_id = v_merge.target_entity_id, merged_at = now(), merged_by = auth.uid()
     where id = v_merge.source_entity_id;
   end if;
 
@@ -500,17 +509,11 @@ begin
 
   if v_merge.entity_type = 'organization' then
     update public.offerpsp_organizations set
-      merged_into_id = null, merged_at = null, merged_by = null,
-      status = v_merge.source_before ->> 'status',
-      archived_at = nullif(v_merge.source_before ->> 'archived_at', '')::timestamptz,
-      archived_by = nullif(v_merge.source_before ->> 'archived_by', '')::uuid
+      merged_into_id = null, merged_at = null, merged_by = null
     where id = v_merge.source_entity_id and merged_into_id = v_merge.target_entity_id;
   else
     update private.offerpsp_providers set
-      merged_into_id = null, merged_at = null, merged_by = null,
-      relationship_status = v_merge.source_before ->> 'status',
-      archived_at = nullif(v_merge.source_before ->> 'archived_at', '')::timestamptz,
-      archived_by = nullif(v_merge.source_before ->> 'archived_by', '')::uuid
+      merged_into_id = null, merged_at = null, merged_by = null
     where id = v_merge.source_entity_id and merged_into_id = v_merge.target_entity_id;
   end if;
   if not found then raise exception 'OfferPSP merged source state changed; rollback stopped'; end if;
@@ -642,6 +645,265 @@ begin
 end;
 $$;
 
+-- Resolve a merged PSP through one staff workspace while preserving every
+-- underlying contact, offer, margin and audit record on its original provider.
+alter function public.get_offerpsp_supply_workspace(uuid)
+  rename to offerpsp_supply_workspace_base;
+alter function public.offerpsp_supply_workspace_base(uuid)
+  set schema private;
+revoke all on function private.offerpsp_supply_workspace_base(uuid)
+  from public, anon, authenticated;
+grant execute on function private.offerpsp_supply_workspace_base(uuid) to service_role;
+
+create or replace function public.get_offerpsp_supply_workspace(p_provider_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_canonical_id uuid;
+  v_workspace jsonb;
+  v_source_workspace jsonb;
+  v_source record;
+  v_merged_sources jsonb;
+begin
+  if not public.is_offerpsp_staff() then raise exception 'OfferPSP staff access required'; end if;
+  if not exists(select 1 from private.offerpsp_providers where id = p_provider_id) then
+    raise exception 'PSP provider not found';
+  end if;
+
+  v_canonical_id := private.offerpsp_canonical_entity_id('provider', p_provider_id);
+  v_workspace := private.offerpsp_supply_workspace_base(v_canonical_id);
+
+  for v_source in
+    select id from private.offerpsp_providers
+    where merged_into_id = v_canonical_id order by merged_at, id
+  loop
+    v_source_workspace := private.offerpsp_supply_workspace_base(v_source.id);
+    v_workspace := jsonb_set(v_workspace, '{contacts}',
+      coalesce(v_workspace -> 'contacts', '[]'::jsonb)
+        || coalesce(v_source_workspace -> 'contacts', '[]'::jsonb), true);
+    v_workspace := jsonb_set(v_workspace, '{margin_policies}',
+      coalesce(v_workspace -> 'margin_policies', '[]'::jsonb)
+        || coalesce(v_source_workspace -> 'margin_policies', '[]'::jsonb), true);
+    v_workspace := jsonb_set(v_workspace, '{batches}',
+      coalesce(v_workspace -> 'batches', '[]'::jsonb)
+        || coalesce(v_source_workspace -> 'batches', '[]'::jsonb), true);
+    v_workspace := jsonb_set(v_workspace, '{routes}',
+      coalesce(v_workspace -> 'routes', '[]'::jsonb)
+        || coalesce(v_source_workspace -> 'routes', '[]'::jsonb), true);
+    v_workspace := jsonb_set(v_workspace, '{activity}',
+      coalesce(v_workspace -> 'activity', '[]'::jsonb)
+        || coalesce(v_source_workspace -> 'activity', '[]'::jsonb), true);
+  end loop;
+
+  select coalesce(jsonb_agg(private.offerpsp_entity_summary('provider', p.id)
+    order by p.merged_at desc), '[]'::jsonb)
+  into v_merged_sources
+  from private.offerpsp_providers p where p.merged_into_id = v_canonical_id;
+
+  return v_workspace || jsonb_build_object(
+    'requested_provider_id', p_provider_id,
+    'canonical_provider_id', v_canonical_id,
+    'merged_sources', v_merged_sources
+  );
+end;
+$$;
+
+-- The registry contains one canonical PSP card. Batches and route counts from
+-- retained aliases are projected onto that card, so matching data stays live.
+create or replace function public.list_offerpsp_supply()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.is_offerpsp_staff() then raise exception 'OfferPSP staff access required'; end if;
+  return jsonb_build_object(
+    'providers', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', p.id, 'legacy_psp_id', p.legacy_psp_id, 'internal_code', p.internal_code,
+        'brand_name', p.brand_name, 'legal_name', p.legal_name, 'website', p.website,
+        'relationship_status', p.relationship_status, 'strategic_priority', p.strategic_priority,
+        'margin_included_default', p.margin_included_default, 'last_verified_at', p.last_verified_at,
+        'merged_source_count', (select count(*) from private.offerpsp_providers s where s.merged_into_id = p.id),
+        'batch_count', (select count(*) from private.offerpsp_rate_card_batches b
+          join private.offerpsp_providers source on source.id = b.provider_id
+          where coalesce(source.merged_into_id, source.id) = p.id),
+        'published_route_count', (select count(*) from private.offerpsp_offer_routes r
+          join private.offerpsp_providers source on source.id = r.provider_id
+          where coalesce(source.merged_into_id, source.id) = p.id and r.status = 'published')
+      ) order by p.strategic_priority desc, p.brand_name)
+      from private.offerpsp_providers p
+      where p.merged_into_id is null and p.relationship_status <> 'archived'
+    ), '[]'::jsonb),
+    'batches', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', b.id, 'provider_id', canonical.id, 'source_provider_id', source.id,
+        'provider_code', canonical.internal_code, 'provider_name', canonical.brand_name,
+        'batch_version', b.batch_version, 'source_type', b.source_type,
+        'source_reference', b.source_reference, 'source_effective_date', b.source_effective_date,
+        'received_at', b.received_at, 'status', b.status, 'parser_version', b.parser_version,
+        'route_count', (select count(*) from private.offerpsp_offer_routes r where r.batch_id = b.id),
+        'open_anomaly_count', (select count(*) from private.offerpsp_route_anomalies a
+          where a.batch_id = b.id and a.status = 'open')
+      ) order by b.received_at desc)
+      from private.offerpsp_rate_card_batches b
+      join private.offerpsp_providers source on source.id = b.provider_id
+      join private.offerpsp_providers canonical on canonical.id = coalesce(source.merged_into_id, source.id)
+      where canonical.relationship_status <> 'archived'
+    ), '[]'::jsonb)
+  );
+end;
+$$;
+
+-- Canonicalize provider labels in the coverage matrix without rewriting the
+-- original route owner. Route actions still use the immutable route id.
+alter function public.get_offerpsp_supply_coverage()
+  rename to offerpsp_supply_coverage_base;
+alter function public.offerpsp_supply_coverage_base()
+  set schema private;
+revoke all on function private.offerpsp_supply_coverage_base()
+  from public, anon, authenticated;
+grant execute on function private.offerpsp_supply_coverage_base() to service_role;
+
+create or replace function public.get_offerpsp_supply_coverage()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare v_base jsonb;
+begin
+  if not public.is_offerpsp_staff() then raise exception 'OfferPSP staff access required'; end if;
+  v_base := private.offerpsp_supply_coverage_base();
+  return jsonb_build_object(
+    'routes', coalesce((
+      select jsonb_agg(item || jsonb_build_object(
+        'source_provider_id', source.id,
+        'provider_id', canonical.id,
+        'provider_name', canonical.brand_name,
+        'provider_code', canonical.internal_code
+      ))
+      from jsonb_array_elements(coalesce(v_base -> 'routes', '[]'::jsonb)) item
+      join private.offerpsp_providers source on source.id = (item ->> 'provider_id')::uuid
+      join private.offerpsp_providers canonical on canonical.id = coalesce(source.merged_into_id, source.id)
+    ), '[]'::jsonb),
+    'generated_at', v_base -> 'generated_at'
+  );
+end;
+$$;
+
+-- Staff opening a lead that belongs to a retained organization alias sees the
+-- canonical company and the complete family document set. Client workspaces
+-- remain unchanged; active portal memberships block a merge in the preview.
+alter function public.get_offerpsp_company_workspace(uuid)
+  rename to offerpsp_company_workspace_base;
+alter function public.offerpsp_company_workspace_base(uuid)
+  set schema private;
+revoke all on function private.offerpsp_company_workspace_base(uuid)
+  from public, anon, authenticated;
+grant execute on function private.offerpsp_company_workspace_base(uuid) to service_role;
+
+create or replace function public.get_offerpsp_company_workspace(p_lead_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_workspace jsonb;
+  v_requested_id uuid;
+  v_canonical_id uuid;
+  v_profile jsonb;
+  v_documents jsonb;
+  v_merged_sources jsonb;
+begin
+  v_workspace := private.offerpsp_company_workspace_base(p_lead_id);
+  if not public.is_offerpsp_staff() or v_workspace -> 'organization' = 'null'::jsonb then
+    return v_workspace;
+  end if;
+  v_requested_id := (v_workspace -> 'organization' ->> 'id')::uuid;
+  v_canonical_id := private.offerpsp_canonical_entity_id('organization', v_requested_id);
+
+  select jsonb_strip_nulls(jsonb_build_object(
+    'id', o.id, 'internal_code', o.internal_code, 'name', o.name,
+    'legal_name', o.legal_name, 'registration_number', o.registration_number,
+    'registration_jurisdiction', o.registration_jurisdiction,
+    'registered_address', o.registered_address, 'operating_address', o.operating_address,
+    'website_url', o.website_url, 'description', o.description,
+    'license_status', o.license_status, 'license_jurisdiction', o.license_jurisdiction,
+    'license_number', o.license_number, 'verification_status', o.verification_status,
+    'verified_at', o.verified_at, 'updated_at', o.updated_at
+  )) into v_profile from public.offerpsp_organizations o where o.id = v_canonical_id;
+
+  select coalesce(jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
+    'id', d.id, 'organization_id', d.organization_id, 'document_type', d.document_type,
+    'title', d.title, 'file_name', d.file_name, 'storage_path', d.storage_path,
+    'mime_type', d.mime_type, 'size_bytes', d.size_bytes, 'status', d.status,
+    'issued_at', d.issued_at, 'expires_at', d.expires_at, 'client_note', d.client_note,
+    'review_note', case when d.status = 'rejected' then d.review_note else null end,
+    'created_at', d.created_at, 'updated_at', d.updated_at
+  )) order by (d.status <> 'archived') desc, d.updated_at desc), '[]'::jsonb)
+  into v_documents
+  from private.offerpsp_organization_documents d
+  where d.organization_id = v_canonical_id or d.organization_id in (
+    select id from public.offerpsp_organizations where merged_into_id = v_canonical_id
+  );
+
+  select coalesce(jsonb_agg(private.offerpsp_entity_summary('organization', o.id)
+    order by o.merged_at desc), '[]'::jsonb)
+  into v_merged_sources from public.offerpsp_organizations o where o.merged_into_id = v_canonical_id;
+
+  return jsonb_build_object(
+    'organization', v_profile,
+    'profile_completion', private.offerpsp_profile_completion(v_canonical_id),
+    'documents', v_documents,
+    'requested_organization_id', v_requested_id,
+    'canonical_organization_id', v_canonical_id,
+    'merged_sources', v_merged_sources
+  );
+end;
+$$;
+
+create or replace function private.reject_offerpsp_merged_portal_membership()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if not new.active then return new; end if;
+  if tg_table_name = 'offerpsp_organization_members' and exists(
+    select 1 from public.offerpsp_organizations
+    where id = (to_jsonb(new) ->> 'organization_id')::uuid and merged_into_id is not null
+  ) then raise exception 'Active portal access cannot be assigned to a merged organization alias'; end if;
+  if tg_table_name = 'offerpsp_provider_memberships' and exists(
+    select 1 from private.offerpsp_providers
+    where id = (to_jsonb(new) ->> 'provider_id')::uuid and merged_into_id is not null
+  ) then raise exception 'Active portal access cannot be assigned to a merged provider alias'; end if;
+  return new;
+end;
+$$;
+
+revoke all on function private.reject_offerpsp_merged_portal_membership()
+  from public, anon, authenticated;
+drop trigger if exists offerpsp_organization_members_reject_merged_alias
+  on public.offerpsp_organization_members;
+create trigger offerpsp_organization_members_reject_merged_alias
+before insert or update of organization_id, active on public.offerpsp_organization_members
+for each row execute function private.reject_offerpsp_merged_portal_membership();
+drop trigger if exists offerpsp_provider_memberships_reject_merged_alias
+  on public.offerpsp_provider_memberships;
+create trigger offerpsp_provider_memberships_reject_merged_alias
+before insert or update of provider_id, active on public.offerpsp_provider_memberships
+for each row execute function private.reject_offerpsp_merged_portal_membership();
+
 create or replace function public.get_offerpsp_email_thread_entity_context(p_thread_id uuid)
 returns jsonb
 language plpgsql
@@ -752,6 +1014,14 @@ revoke all on function public.get_offerpsp_entity_relationship_workspace(text,uu
   from public, anon, authenticated, service_role;
 revoke all on function public.get_offerpsp_email_thread_entity_context(uuid)
   from public, anon, authenticated, service_role;
+revoke all on function public.get_offerpsp_supply_workspace(uuid)
+  from public, anon, authenticated, service_role;
+revoke all on function public.list_offerpsp_supply()
+  from public, anon, authenticated, service_role;
+revoke all on function public.get_offerpsp_supply_coverage()
+  from public, anon, authenticated, service_role;
+revoke all on function public.get_offerpsp_company_workspace(uuid)
+  from public, anon, authenticated, service_role;
 revoke all on function public.upsert_offerpsp_lead_intake(jsonb)
   from public, anon, authenticated, service_role;
 
@@ -761,6 +1031,10 @@ grant execute on function public.execute_offerpsp_entity_merge(uuid,uuid) to aut
 grant execute on function public.rollback_offerpsp_entity_merge(uuid,text) to authenticated;
 grant execute on function public.get_offerpsp_entity_relationship_workspace(text,uuid) to authenticated;
 grant execute on function public.get_offerpsp_email_thread_entity_context(uuid) to authenticated;
+grant execute on function public.get_offerpsp_supply_workspace(uuid) to authenticated;
+grant execute on function public.list_offerpsp_supply() to authenticated;
+grant execute on function public.get_offerpsp_supply_coverage() to authenticated;
+grant execute on function public.get_offerpsp_company_workspace(uuid) to authenticated;
 grant execute on function public.upsert_offerpsp_lead_intake(jsonb) to service_role;
 
 comment on table private.offerpsp_entity_merges is

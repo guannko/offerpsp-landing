@@ -1325,7 +1325,12 @@ async function verifyEntityRelationships() {
       "select public.execute_offerpsp_entity_merge($1, $2) as value",
       [prepared.merge_id, prepared.confirmation_token],
     )).rows[0].value;
+    const sourceAfterMerge = (await query(
+      "select status, merged_into_id from public.offerpsp_organizations where id = $1",
+      [duplicateId],
+    )).rows[0];
     if (executed.status !== "executed" || executed.source.merged_into_id !== parentId
+        || sourceAfterMerge.status !== "active" || sourceAfterMerge.merged_into_id !== parentId
         || !executed.rollback_available || !executed.observation_until) {
       throw new Error(`Reversible logical merge did not execute: ${JSON.stringify(executed)}`);
     }
@@ -1336,9 +1341,28 @@ async function verifyEntityRelationships() {
     )).rows[0].value;
     if (mergedWorkspace.entity.id !== parentId
         || !mergedWorkspace.merged_sources.some((item) => item.id === duplicateId)
+        || mergedWorkspace.duplicate_candidates.some((item) => item.id === duplicateId)
+        || mergedWorkspace.selectable_targets.some((item) => item.id === duplicateId)
         || !mergedWorkspace.active_merges.some((item) => item.id === prepared.merge_id
           && item.rollback_available === true)) {
       throw new Error(`Merged alias did not resolve to the canonical workspace: ${JSON.stringify(mergedWorkspace)}`);
+    }
+
+    const mergedLead = (await query(`insert into public.offerpsp_leads(
+      name, work_email, company, vertical, geos, methods, consent, merchant_organization_id
+    ) values (
+      'Merged company fixture', 'merged-company@example.invalid', 'North Star Duplicate',
+      'iGaming', 'EU', 'Cards', true, $1
+    ) returning lead_id`, [duplicateId])).rows[0];
+    const companyWorkspace = (await query(
+      "select public.get_offerpsp_company_workspace($1) as value",
+      [mergedLead.lead_id],
+    )).rows[0].value;
+    if (companyWorkspace.organization.id !== parentId
+        || companyWorkspace.requested_organization_id !== duplicateId
+        || companyWorkspace.canonical_organization_id !== parentId
+        || !companyWorkspace.merged_sources.some((item) => item.id === duplicateId)) {
+      throw new Error(`Merged organization did not resolve to one company workspace: ${JSON.stringify(companyWorkspace)}`);
     }
 
     const rolledBack = (await query(
@@ -1352,8 +1376,14 @@ async function verifyEntityRelationships() {
 
     const providerId = "95000000-0000-4000-8000-000000000006";
     const threadId = "95000000-0000-4000-8000-000000000007";
+    const duplicateProviderId = "95000000-0000-4000-8000-000000000008";
     await query(`insert into private.offerpsp_providers(id, brand_name, legal_name, website)
-      values ($1, 'Radio PSP', 'Radio PSP Limited', 'https://radio-psp.example')`, [providerId]);
+      values
+        ($1, 'Radio PSP', 'Radio PSP Limited', 'https://radio-psp.example'),
+        ($2, 'Radio PSP duplicate', 'Radio PSP Limited', 'https://www.radio-psp.example/contact')`,
+    [providerId, duplicateProviderId]);
+    await query(`insert into private.offerpsp_provider_contacts(provider_id, full_name, email)
+      values ($1, 'Alias account manager', 'alias@radio-psp.example')`, [duplicateProviderId]);
     await query(`select public.save_offerpsp_entity_relationship(
       'provider', $1, 'organization', $2, 'processing_partner', 'verified',
       'Confirmed in a signed processing agreement', null
@@ -1361,7 +1391,47 @@ async function verifyEntityRelationships() {
     await query(`insert into public.offerpsp_email_threads(
       id, thread_key, subject, participant_email, counterparty_type, counterparty_id
     ) values ($1, 'relationship-radio-fixture', 'Relationship context',
-      'partner@radio-psp.example', 'provider', $2::text)`, [threadId, providerId]);
+      'partner@radio-psp.example', 'provider', $2::text)`, [threadId, duplicateProviderId]);
+
+    const providerPrepared = (await query(`select public.prepare_offerpsp_entity_merge(
+      'provider', $1, $2, 'Exact provider legal name and domain match'
+    ) as value`, [duplicateProviderId, providerId])).rows[0].value;
+    const providerExecuted = (await query(
+      "select public.execute_offerpsp_entity_merge($1, $2) as value",
+      [providerPrepared.merge_id, providerPrepared.confirmation_token],
+    )).rows[0].value;
+    const providerWorkspace = (await query(
+      "select public.get_offerpsp_supply_workspace($1) as value",
+      [duplicateProviderId],
+    )).rows[0].value;
+    const supplyRegistry = (await query("select public.list_offerpsp_supply() as value")).rows[0].value;
+    const providerSourceState = (await query(
+      "select relationship_status, merged_into_id from private.offerpsp_providers where id = $1",
+      [duplicateProviderId],
+    )).rows[0];
+    if (providerExecuted.status !== "executed"
+        || providerWorkspace.provider.id !== providerId
+        || providerWorkspace.requested_provider_id !== duplicateProviderId
+        || providerWorkspace.canonical_provider_id !== providerId
+        || !providerWorkspace.contacts.some((item) => item.email === "alias@radio-psp.example")
+        || !providerWorkspace.merged_sources.some((item) => item.id === duplicateProviderId)
+        || providerSourceState.relationship_status !== "prospect"
+        || providerSourceState.merged_into_id !== providerId
+        || supplyRegistry.providers.some((item) => item.id === duplicateProviderId)
+        || !supplyRegistry.providers.some((item) => item.id === providerId && Number(item.merged_source_count) === 1)) {
+      throw new Error(`Provider logical merge did not preserve one working canonical card: ${JSON.stringify({
+        providerExecuted, providerWorkspace, providerSourceState,
+      })}`);
+    }
+
+    await setRole("service_role");
+    await expectTransactionFailure(
+      `insert into public.offerpsp_provider_memberships(provider_id, user_id, role, active)
+       values ($1, $2, 'owner', true)`,
+      [duplicateProviderId, OTHER_CLIENT_ID],
+      "Active portal access cannot be assigned to a merged provider alias",
+    );
+    await setRole("authenticated");
     const radioContext = (await query(
       "select public.get_offerpsp_email_thread_entity_context($1) as value",
       [threadId],
@@ -1370,6 +1440,16 @@ async function verifyEntityRelationships() {
         || radioContext.workspace.entity.id !== providerId
         || !radioContext.workspace.relationships.some((item) => item.other_entity.id === parentId)) {
       throw new Error(`Radio Room relationship context is incomplete: ${JSON.stringify(radioContext)}`);
+    }
+
+    const providerRolledBack = (await query(
+      "select public.rollback_offerpsp_entity_merge($1, 'Provider fixture rollback inside observation window') as value",
+      [providerPrepared.merge_id],
+    )).rows[0].value;
+    if (providerRolledBack.status !== "rolled_back"
+        || providerRolledBack.source.merged_into_id !== null
+        || providerRolledBack.source.status !== "prospect") {
+      throw new Error(`Provider logical merge rollback changed operational state: ${JSON.stringify(providerRolledBack)}`);
     }
 
     const ended = (await query(

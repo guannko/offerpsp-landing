@@ -16,7 +16,7 @@ type Provider = {
   relationship_status?: string; relationship_tier?: string; strategic_priority?: number;
   margin_included_default?: boolean; relationship_notes?: string; last_verified_at?: string;
 };
-type Contact = { id: string; full_name: string; role_title?: string; region?: string; telegram?: string; email?: string; phone?: string; preferred_channel?: string; active?: boolean; notes?: string };
+type Contact = { id: string; provider_id?: string; full_name: string; role_title?: string; region?: string; telegram?: string; email?: string; phone?: string; preferred_channel?: string; active?: boolean; notes?: string };
 type Margin = { id: string; route_id?: string | null; flow: string; mode: string; percent_value?: number | null; fixed_value?: number | null; fixed_currency?: string | null; active?: boolean; effective_to?: string | null };
 type Route = {
   id: string; batch_id: string; internal_code: string; client_title: string; status: string; batch_version?: number; batch_status?: string;
@@ -36,7 +36,7 @@ type ReplacementReview = {
   review: { status?: "pending" | "confirmed" | "independent"; confidence?: string; candidate_route_id?: string | null; candidate_count?: number };
   candidates: ReplacementCandidate[];
 };
-type Workspace = { provider: Provider; contacts: Contact[]; margin_policies: Margin[]; routes: Route[]; batches: JsonRow[]; activity: JsonRow[] };
+type Workspace = { provider: Provider; requested_provider_id?: string; canonical_provider_id?: string; contacts: Contact[]; margin_policies: Margin[]; routes: Route[]; batches: JsonRow[]; activity: JsonRow[] };
 type MarginDraft = { route_id:string; flow:string; mode:string; percent_value:string; fixed_value:string; fixed_currency:string; notes:string };
 type DefaultMarkupDraft = { payin: string; payout: string; notes: string };
 type ProviderMember = { id: string; provider_id: string; user_id: string; email: string; role: "owner" | "admin" | "editor" | "viewer"; active: boolean; updated_at?: string };
@@ -103,6 +103,10 @@ export default function ProviderWorkspace() {
     if (error) setMessage({ tone: "error", text: error.message });
     else {
       const next = data as Workspace;
+      if (next.provider.id !== providerId) {
+        navigate(`/psps/${next.provider.id}?${params.toString()}`, { replace: true });
+        return;
+      }
       setWorkspace(next);
       setProviderDraft(next.provider);
       setDefaultMarkupDraft({
@@ -117,7 +121,7 @@ export default function ProviderWorkspace() {
       }
     }
     setLoading(false);
-  }, [isNew, params, providerId, setParams]);
+  }, [isNew, navigate, params, providerId, setParams]);
 
   useEffect(() => { void load(); }, [load]);
   const loadMembers = useCallback(async () => {
@@ -181,7 +185,7 @@ export default function ProviderWorkspace() {
   async function saveContact() {
     if (!providerId || isNew) return;
     const saved = await execute("contact", async () => {
-      const result = await supabase.rpc("save_offerpsp_provider_contact", { p_provider_id: providerId, p_contact_id: contactDraft.id || null, p_payload: contactDraft });
+      const result = await supabase.rpc("save_offerpsp_provider_contact", { p_provider_id: contactDraft.provider_id || providerId, p_contact_id: contactDraft.id || null, p_payload: contactDraft });
       return { data: result.data, error: result.error };
     }, "Контакт PSP сохранён.");
     if (saved) setContactDraft({ active: true, preferred_channel: "telegram" });

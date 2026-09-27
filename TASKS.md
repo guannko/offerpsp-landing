@@ -17,7 +17,7 @@ Code or a passing local test is not evidence that production has been updated.
 - `VERIFIED locally`: the staff workspace shows relationships, exact duplicate candidates and a
   reversible logical `merge into canonical card` flow. Execution requires an immutable impact
   preview, a 15-minute one-time confirmation token, a written reason and the explicit word
-  `ОБЪЕДИНИТЬ`. The source stays as an archived alias; commercial records and audit history are not
+  `ОБЪЕДИНИТЬ`. The source stays as a hidden merged alias; commercial records and audit history are not
   deleted or rewritten. Staff can restore the source during a 72-hour observation window.
 - `VERIFIED locally`: merged aliases resolve to the canonical workspace, are excluded from future
   relationship and merge targets, and future merchant intake using a historical alias resolves to
