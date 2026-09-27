@@ -344,6 +344,7 @@ async function applyMigrations() {
     "20260927160000_offerpsp_operational_tail_hygiene.sql",
     "20260927183000_offerpsp_truthful_operational_state.sql",
     "20260927190000_offerpsp_truthful_operational_state_review_fixes.sql",
+    "20260927200000_offerpsp_entity_relationships.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -1229,6 +1230,116 @@ async function verifyProviderPortalBoundary() {
     await setUser(STAFF_ID);
   }
   process.stdout.write("PASS closed PSP portal ownership, viewer isolation and review-only submission\n");
+}
+
+async function verifyEntityRelationships() {
+  await query("begin");
+  const expectTransactionFailure = async (sql, params, expectedMessage) => {
+    await query("savepoint entity_relationship_expected_failure");
+    try {
+      await query(sql, params);
+    } catch (error) {
+      await query("rollback to savepoint entity_relationship_expected_failure");
+      if (!String(error.message).includes(expectedMessage)) {
+        throw new Error(`Expected failure containing "${expectedMessage}", received: ${error.message}`);
+      }
+      return;
+    }
+    await query("release savepoint entity_relationship_expected_failure");
+    throw new Error(`Expected query to fail with "${expectedMessage}"`);
+  };
+  try {
+    await setRole("authenticated");
+    await setUser(STAFF_ID);
+    const parentId = "95000000-0000-4000-8000-000000000001";
+    const childId = "95000000-0000-4000-8000-000000000002";
+    const duplicateId = "95000000-0000-4000-8000-000000000003";
+    const advisoryId = "95000000-0000-4000-8000-000000000004";
+    const merchantpaydId = "95000000-0000-4000-8000-000000000005";
+    await query(`insert into public.offerpsp_organizations(
+      id, organization_type, name, legal_name, registration_number, website_url, created_by
+    ) values
+      ($1, 'merchant', 'North Star Pay', 'North Star Pay Limited', 'REG-REL-100', 'https://north-star-pay.example', $6),
+      ($2, 'merchant', 'North Star Brand', 'North Star Brand Limited', 'REG-REL-200', 'https://north-star-brand.example', $6),
+      ($3, 'merchant', 'North Star Duplicate', 'North Star Duplicate Limited', 'REG-REL-100', 'https://www.north-star-pay.example/contact', $6),
+      ($4, 'agent', 'Merchant Bridge Advisory', 'Merchant Bridge Advisory Ltd', null, 'https://merchantbridgeadvisory.com', $6),
+      ($5, 'agent', 'Merchantpayd', 'Merchantpayd Ltd', null, 'https://merchantpayd.com', $6)`,
+    [parentId, childId, duplicateId, advisoryId, merchantpaydId, STAFF_ID]);
+
+    const relationship = (await query(`select public.save_offerpsp_entity_relationship(
+      'organization', $1, 'organization', $2, 'parent_of', 'verified',
+      'Confirmed by the corporate registry', 'https://registry.example/relation'
+    ) as value`, [parentId, childId])).rows[0].value;
+    if (relationship.relationship_type !== "parent_of" || relationship.status !== "verified") {
+      throw new Error(`Verified entity relationship was not saved: ${JSON.stringify(relationship)}`);
+    }
+
+    await expectTransactionFailure(`select public.save_offerpsp_entity_relationship(
+      'organization', $1, 'organization', $2, 'parent_of', 'verified',
+      'Would create a parent cycle', null
+    )`, [childId, parentId], "would create a cycle");
+
+    const workspace = (await query(
+      "select public.get_offerpsp_entity_relationship_workspace('organization', $1) as value",
+      [parentId],
+    )).rows[0].value;
+    if (workspace.relationships.length !== 1
+        || !workspace.duplicate_candidates.some((item) => item.id === duplicateId
+          && item.signals.includes("registration_number") && item.signals.includes("domain"))) {
+      throw new Error(`Entity relationship workspace omitted live graph or exact duplicate: ${JSON.stringify(workspace)}`);
+    }
+
+    const advisoryWorkspace = (await query(
+      "select public.get_offerpsp_entity_relationship_workspace('organization', $1) as value",
+      [advisoryId],
+    )).rows[0].value;
+    if (advisoryWorkspace.duplicate_candidates.some((item) => item.id === merchantpaydId)) {
+      throw new Error("Merchant Bridge Advisory and Merchantpayd were falsely classified as duplicates");
+    }
+
+    const preview = (await query(
+      "select public.preview_offerpsp_entity_merge('organization', $1, $2) as value",
+      [duplicateId, parentId],
+    )).rows[0].value;
+    if (preview.mode !== "preview_only" || preview.merge_available !== false
+        || preview.source.id !== duplicateId || preview.target.id !== parentId
+        || Number(preview.source_alias_count) < 1) {
+      throw new Error(`Merge impact preview is incomplete or unsafe: ${JSON.stringify(preview)}`);
+    }
+
+    const ended = (await query(
+      "select public.end_offerpsp_entity_relationship($1, 'Corporate structure changed') as value",
+      [relationship.id],
+    )).rows[0].value;
+    if (ended.status !== "ended" || !ended.ended_at) {
+      throw new Error(`Entity relationship history was not closed: ${JSON.stringify(ended)}`);
+    }
+
+    const privileges = (await query(`select
+      has_table_privilege('authenticated', 'private.offerpsp_entity_relationships', 'select') as authenticated_table,
+      has_function_privilege('anon', 'public.get_offerpsp_entity_relationship_workspace(text,uuid)', 'execute') as anon_workspace,
+      has_function_privilege('anon', 'public.save_offerpsp_entity_relationship(text,uuid,text,uuid,text,text,text,text)', 'execute') as anon_save,
+      has_function_privilege('authenticated', 'public.get_offerpsp_entity_relationship_workspace(text,uuid)', 'execute') as authenticated_workspace,
+      has_function_privilege('authenticated', 'public.save_offerpsp_entity_relationship(text,uuid,text,uuid,text,text,text,text)', 'execute') as authenticated_save,
+      has_function_privilege('authenticated', 'public.preview_offerpsp_entity_merge(text,uuid,uuid)', 'execute') as authenticated_preview
+    `)).rows[0];
+    if (privileges.authenticated_table || privileges.anon_workspace || privileges.anon_save
+        || !privileges.authenticated_workspace || !privileges.authenticated_save
+        || !privileges.authenticated_preview) {
+      throw new Error(`Entity relationship security boundary is incorrect: ${JSON.stringify(privileges)}`);
+    }
+
+    await setUser(CLIENT_ID);
+    await expectTransactionFailure(
+      "select public.get_offerpsp_entity_relationship_workspace('organization', $1)",
+      [parentId], "OfferPSP staff access required",
+    );
+  } finally {
+    await query("rollback");
+    await setRole("authenticated");
+    await setUser(STAFF_ID);
+  }
+  process.stdout.write("PASS evidence-backed entity relationships, exact duplicate review and merge preview\n");
 }
 
 async function verifyAtomicRouteReplacement() {
@@ -4764,6 +4875,7 @@ try {
   await verifyNewSecurityDefinerDelta();
   await seedUsers();
   await verifyCompanyIntakeDeduplication();
+  await verifyEntityRelationships();
   await verifyProviderPortalBoundary();
   await verifyGeoRegionAliases();
   await verifyContactTimelineCooldown();

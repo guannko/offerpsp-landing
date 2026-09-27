@@ -5,6 +5,30 @@ Updated: 2026-09-27
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## Backlog — entity merge and corporate relationships
+
+- `VERIFIED locally`: a staff-only entity graph now supports directional corporate and operational
+  relationships between organizations and PSPs. Verified links require written evidence, parent
+  cycles are rejected, ended links retain their audit history, and the private relation table is
+  unavailable to browser roles except through staff-only RPCs.
+- `VERIFIED locally`: duplicate review uses exact registration number, normalized website domain,
+  full legal/brand name or an exact registered alias. A similar fragment of a name never creates a
+  candidate; the regression case for Merchant Bridge Advisory and Merchantpayd passes.
+- `VERIFIED locally`: the staff workspace shows relationships and exact duplicate candidates. Its
+  read-only merge preview calculates conflicting fields, aliases, links and every current foreign-
+  key dependency dynamically without changing either record.
+- Add a reversible `merge into canonical card` operation for records proven to be the same
+  counterparty. Before execution it must show an immutable impact preview covering contacts,
+  aliases, email threads, offers/routes, agreements, tasks, notes and audit history. The source
+  card must be retained as a merged alias with `merged_into_id`; no communication or history may
+  be deleted, and a rollback path is required during the observation window.
+- Still pending: expose verified relationship context in Radio Room, then design the physical merge
+  executor with immutable preview tokens, per-table conflict policies and an observation-window
+  rollback. Until that exists, the UI deliberately exposes preview only and cannot merge records.
+- Regression scenario: `Merchant Bridge Advisory / merchantbridgeadvisory.com / John` and
+  `Merchantpayd / merchantpayd.com / Danil` must remain separate unless later evidence proves a
+  relationship; partial name similarity is insufficient.
+
 ### Operational tail lifecycle — production 2026-09-27
 
 - `VERIFIED`: the three abandoned August AIBot draft/send intentions are retained in the

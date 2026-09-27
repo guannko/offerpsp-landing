@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { EmptyState, Panel, StatusPill } from "./Ui";
 import EntityAliasEditor from "./EntityAliasEditor";
+import EntityRelationshipsPanel from "./EntityRelationshipsPanel";
 
 type CompanyProfile = {
   id: string;
@@ -225,6 +226,11 @@ export default function MerchantCompanyWorkspace({ leadId, onChanged }: { leadId
 
     <EntityAliasEditor
       key={`${workspace.organization.id}:${workspace.organization.updated_at || ""}`}
+      entityType="organization"
+      entityId={workspace.organization.id}
+    />
+
+    <EntityRelationshipsPanel
       entityType="organization"
       entityId={workspace.organization.id}
     />
