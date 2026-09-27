@@ -50,6 +50,8 @@ assert.match(buildManifestScript, /OFFERPSP_BUILD_COMMIT_SHA/);
 assert.match(buildManifestScript, /git.*rev-parse/);
 assert.match(productionDeployScript, /OFFERPSP_BUILD_COMMIT_SHA/);
 assert.match(productionDeployScript, /--build-env/);
+assert.match(productionDeployScript, /status.*--porcelain.*--untracked-files=normal/);
+assert.match(productionDeployScript, /Refusing to deploy a dirty working tree/);
 
 assert.match(captain, /Вернуть в непрочитанные/);
 assert.match(captain, /p_mark_read: markRead/);

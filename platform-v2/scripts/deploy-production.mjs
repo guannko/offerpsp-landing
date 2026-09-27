@@ -9,6 +9,11 @@ function gitValue(args) {
   return execFileSync("git", args, { cwd: repositoryRoot, encoding: "utf8" }).trim();
 }
 
+const dirtyFiles = gitValue(["status", "--porcelain", "--untracked-files=normal"]);
+if (dirtyFiles) {
+  throw new Error("Refusing to deploy a dirty working tree; commit or remove local changes first");
+}
+
 const commit = gitValue(["rev-parse", "HEAD"]);
 const branch = gitValue(["rev-parse", "--abbrev-ref", "HEAD"]);
 if (!/^[0-9a-f]{40}$/i.test(commit)) throw new Error("Unable to resolve the Git commit for deployment");
