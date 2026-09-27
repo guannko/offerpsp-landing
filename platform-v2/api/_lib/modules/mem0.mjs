@@ -1,4 +1,3 @@
-import { MemoryClient } from "mem0ai";
 import { moduleMode, moduleState, optionalUrl } from "./config.mjs";
 
 const ALLOWED_CATEGORIES = new Set(["decision", "procedure", "preference", "relationship", "verified_fact"]);
@@ -18,14 +17,16 @@ export function getSemanticMemoryConfig() {
   };
 }
 
-export function createSemanticMemoryClient(config = getSemanticMemoryConfig()) {
+export async function createSemanticMemoryClient(config = getSemanticMemoryConfig()) {
   if (!config.state.enabled) throw new Error("Mem0 is disabled or unconfigured");
+  const { MemoryClient } = await import("mem0ai");
   return new MemoryClient({ apiKey: config.apiKey, ...(config.host ? { host: config.host } : {}) });
 }
 
 export async function probeSemanticMemory(config = getSemanticMemoryConfig(), client = null) {
   if (!config.state.enabled) return { ...config.state, healthy: false, reason: "disabled_or_unconfigured" };
-  await (client || createSemanticMemoryClient(config)).ping();
+  const resolvedClient = client || await createSemanticMemoryClient(config);
+  await resolvedClient.ping();
   return { ...config.state, healthy: true, status: "available" };
 }
 
@@ -42,7 +43,8 @@ export function validateMemoryCandidate(candidate) {
 export async function searchSemanticMemory(query, options = {}, config = getSemanticMemoryConfig(), client = null) {
   const term = String(query || "").trim();
   if (term.length < 2) return [];
-  const response = await (client || createSemanticMemoryClient(config)).search(term, {
+  const resolvedClient = client || await createSemanticMemoryClient(config);
+  const response = await resolvedClient.search(term, {
     filters: { user_id: config.profile },
     topK: Math.min(Math.max(Number(options.limit || 8), 1), 20),
   });
@@ -55,7 +57,8 @@ export async function rememberSemanticCandidate(candidate, config = getSemanticM
     return { stored: false, shadow: true, candidate: value };
   }
   if (config.mode !== "active") throw new Error("Semantic memory writes are disabled");
-  const response = await (client || createSemanticMemoryClient(config)).add(
+  const resolvedClient = client || await createSemanticMemoryClient(config);
+  const response = await resolvedClient.add(
     [{ role: "user", content: value.content }],
     {
       userId: config.profile,

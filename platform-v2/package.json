@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "node scripts/write-build-manifest.mjs && tsc -b && vite build",
+    "deploy:production": "node scripts/deploy-production.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "test:pdf-extractor": "node scripts/test-pdf-extractor.mjs",

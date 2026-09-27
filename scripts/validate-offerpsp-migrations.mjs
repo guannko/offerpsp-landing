@@ -348,6 +348,7 @@ async function applyMigrations() {
     "20260927203000_offerpsp_entity_relationship_actor_indexes.sql",
     "20260927213000_offerpsp_reversible_entity_merge.sql",
     "20260927214500_offerpsp_entity_merge_actor_indexes.sql",
+    "20260927224057_offerpsp_cover_foreign_keys.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
