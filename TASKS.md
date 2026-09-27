@@ -5,6 +5,26 @@ Updated: 2026-09-27
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## Captain's Bridge compact UI and post-release audit — production 2026-09-27
+
+- `VERIFIED`: PR #10 merged as `fe60a1240945483ffb55205080b26422a8b9ef37`. The staff UI now uses
+  a compact explicit-collapse sidebar, denser header, cards and page spacing without changing
+  OfferPSP business logic.
+- `VERIFIED`: PR #11 merged as `f280cd111777b719c7727c1fb6e1e8900b16b8d3`. QA/E2E/Canary
+  entities are excluded from operational relationship, duplicate and merge selectors. The live
+  Merchant Bridge workspace shows real PSP/company targets only.
+- `VERIFIED`: Captain's Bridge deployment `dpl_EaWNgh9sbXyYv6aknkNixrAXzjsQ` is `READY`, targets
+  production and owns the stable `https://ops-7q4m2x9k8v3n.vercel.app` alias. The public
+  `https://offerpsp.com` site remains the matching landing page.
+- `VERIFIED`: fresh system health confirms authenticated Supabase, email, Telegram and both n8n
+  gateways; GoRules, Meilisearch and Vercel Web Analytics are healthy. Fresh deployment logs contain
+  no 5xx responses; only the known dependency-level `url.parse()` deprecation appears on HTTP 200.
+- `PARTIAL`: the complete local migration validator passed all schema and merge checks before the
+  clean worktree reached the absent ignored private BR-Pay import fixture. No real entity was merged
+  during the audit.
+- Full evidence and remaining non-blocking debt are recorded in
+  `docs/OFFERPSP-POST-RELEASE-AUDIT-2026-09-27.md`.
+
 ## Entity merge and corporate relationships — production 2026-09-27
 
 - `VERIFIED locally`: a staff-only entity graph now supports directional corporate and operational
