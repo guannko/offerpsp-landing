@@ -5,7 +5,7 @@ Updated: 2026-09-27
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
-## Backlog — entity merge and corporate relationships
+## Entity merge and corporate relationships — production 2026-09-27
 
 - `VERIFIED locally`: a staff-only entity graph now supports directional corporate and operational
   relationships between organizations and PSPs. Verified links require written evidence, parent
@@ -14,17 +14,23 @@ Code or a passing local test is not evidence that production has been updated.
 - `VERIFIED locally`: duplicate review uses exact registration number, normalized website domain,
   full legal/brand name or an exact registered alias. A similar fragment of a name never creates a
   candidate; the regression case for Merchant Bridge Advisory and Merchantpayd passes.
-- `VERIFIED locally`: the staff workspace shows relationships and exact duplicate candidates. Its
-  read-only merge preview calculates conflicting fields, aliases, links and every current foreign-
-  key dependency dynamically without changing either record.
-- Add a reversible `merge into canonical card` operation for records proven to be the same
-  counterparty. Before execution it must show an immutable impact preview covering contacts,
-  aliases, email threads, offers/routes, agreements, tasks, notes and audit history. The source
-  card must be retained as a merged alias with `merged_into_id`; no communication or history may
-  be deleted, and a rollback path is required during the observation window.
-- Still pending: expose verified relationship context in Radio Room, then design the physical merge
-  executor with immutable preview tokens, per-table conflict policies and an observation-window
-  rollback. Until that exists, the UI deliberately exposes preview only and cannot merge records.
+- `VERIFIED locally`: the staff workspace shows relationships, exact duplicate candidates and a
+  reversible logical `merge into canonical card` flow. Execution requires an immutable impact
+  preview, a 15-minute one-time confirmation token, a written reason and the explicit word
+  `ОБЪЕДИНИТЬ`. The source stays as a hidden merged alias; commercial records and audit history are not
+  deleted or rewritten. Staff can restore the source during a 72-hour observation window.
+- `VERIFIED locally`: merged aliases resolve to the canonical workspace, are excluded from future
+  relationship and merge targets, and future merchant intake using a historical alias resolves to
+  the canonical organization. Merchant organizations cannot be merged with agent organizations.
+- `VERIFIED locally`: Radio Room reads the linked merchant/PSP entity graph and shows the canonical
+  card, verified relationships and merged aliases in a collapsed context block. Unsupported or
+  unlinked email threads are labelled honestly instead of being attached to a similar name.
+- `VERIFIED production database`: migrations `offerpsp_reversible_entity_merge` and
+  `offerpsp_entity_merge_actor_indexes` are recorded. The merge ledger is empty: no production
+  entity has been merged. Anonymous execution and direct authenticated ledger reads are denied.
+- PR #9 is the controlled UI deployment path. Vercel Preview, lint, build and control-integrity
+  checks pass; the complete migration validator reaches only the known ignored private BR-Pay
+  fixture boundary after all merge regressions pass.
 - Regression scenario: `Merchant Bridge Advisory / merchantbridgeadvisory.com / John` and
   `Merchantpayd / merchantpayd.com / Danil` must remain separate unless later evidence proves a
   relationship; partial name similarity is insufficient.

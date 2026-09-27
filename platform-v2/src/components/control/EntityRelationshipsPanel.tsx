@@ -7,11 +7,14 @@ type EntitySummary = {
   entity_type: EntityType;
   id: string;
   internal_code?: string | null;
+  organization_type?: "merchant" | "agent" | null;
   name: string;
   legal_name?: string | null;
   website?: string | null;
   registration_number?: string | null;
   status?: string | null;
+  merged_into_id?: string | null;
+  merged_at?: string | null;
 };
 type Relationship = {
   id: string;
@@ -26,22 +29,45 @@ type Relationship = {
 type DuplicateCandidate = EntitySummary & { signals: string[]; score: number };
 type Workspace = {
   entity: EntitySummary;
+  requested_entity?: EntitySummary;
+  canonical_entity?: EntitySummary;
   relationships: Relationship[];
   duplicate_candidates: DuplicateCandidate[];
   selectable_targets: EntitySummary[];
+  merged_sources: EntitySummary[];
+  active_merges: ActiveMerge[];
 };
-type MergeReference = { schema: string; table: string; column: string; source_rows: number };
+type ActiveMerge = {
+  id: string;
+  source_entity_id: string;
+  target_entity_id: string;
+  reason: string;
+  status: "executed";
+  executed_at: string;
+  observation_until: string;
+  rollback_available: boolean;
+};
+type MergeReference = { schema: string; table: string; column: string; source_rows: number; policy?: string };
 type MergeConflict = { field: string; source_value: unknown; target_value: unknown };
 type MergePreview = {
-  mode: "preview_only";
+  mode: "reversible_logical_merge";
   source: EntitySummary;
   target: EntitySummary;
   field_conflicts: MergeConflict[];
   dependent_references: MergeReference[];
   source_alias_count: number;
   source_relationship_count: number;
-  merge_available: false;
-  blocking_reason: string;
+  exact_duplicate: boolean;
+  merge_available: boolean;
+  blocking_reason?: string | null;
+  observation_hours: number;
+  data_policy: string;
+};
+type PreparedMerge = {
+  merge_id: string;
+  confirmation_token: string;
+  token_expires_at: string;
+  preview: MergePreview;
 };
 
 const relationshipLabels: Record<string, string> = {
@@ -98,6 +124,9 @@ export default function EntityRelationshipsPanel({
   const [evidenceUrl, setEvidenceUrl] = useState("");
   const [targetSearch, setTargetSearch] = useState("");
   const [preview, setPreview] = useState<MergePreview | null>(null);
+  const [mergeReason, setMergeReason] = useState("");
+  const [preparedMerge, setPreparedMerge] = useState<PreparedMerge | null>(null);
+  const [mergeConfirmation, setMergeConfirmation] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -130,7 +159,7 @@ export default function EntityRelationshipsPanel({
     setBusy("save"); setMessage(null);
     const result = await supabase.rpc("save_offerpsp_entity_relationship", {
       p_source_entity_type: entityType,
-      p_source_entity_id: entityId,
+      p_source_entity_id: workspace?.canonical_entity?.id || workspace?.entity.id || entityId,
       p_target_entity_type: targetType,
       p_target_entity_id: targetId,
       p_relationship_type: relationshipType,
@@ -169,13 +198,68 @@ export default function EntityRelationshipsPanel({
 
   async function previewMerge(candidate: DuplicateCandidate) {
     setBusy(`preview:${candidate.id}`); setMessage(null); setPreview(null);
+    setPreparedMerge(null); setMergeReason(""); setMergeConfirmation("");
     const result = await supabase.rpc("preview_offerpsp_entity_merge", {
       p_entity_type: entityType,
       p_source_entity_id: candidate.id,
-      p_target_entity_id: entityId,
+      p_target_entity_id: workspace?.canonical_entity?.id || workspace?.entity.id || entityId,
     });
     if (result.error) setMessage({ tone: "error", text: result.error.message });
     else setPreview(result.data as MergePreview);
+    setBusy(null);
+  }
+
+  async function prepareMerge() {
+    if (!preview?.merge_available) return;
+    if (mergeReason.trim().length < 10) {
+      setMessage({ tone: "error", text: "Укажите причину объединения минимум из 10 символов." });
+      return;
+    }
+    setBusy("prepare-merge"); setMessage(null);
+    const result = await supabase.rpc("prepare_offerpsp_entity_merge", {
+      p_entity_type: entityType,
+      p_source_entity_id: preview.source.id,
+      p_target_entity_id: preview.target.id,
+      p_reason: mergeReason.trim(),
+    });
+    if (result.error) setMessage({ tone: "error", text: result.error.message });
+    else setPreparedMerge(result.data as PreparedMerge);
+    setBusy(null);
+  }
+
+  async function executeMerge() {
+    if (!preparedMerge || mergeConfirmation.trim() !== "ОБЪЕДИНИТЬ") return;
+    setBusy("execute-merge"); setMessage(null);
+    const result = await supabase.rpc("execute_offerpsp_entity_merge", {
+      p_merge_id: preparedMerge.merge_id,
+      p_confirmation_token: preparedMerge.confirmation_token,
+    });
+    if (result.error) setMessage({ tone: "error", text: result.error.message });
+    else {
+      setMessage({ tone: "success", text: "Карточки логически объединены. История сохранена; откат доступен 72 часа." });
+      setPreview(null); setPreparedMerge(null); setMergeReason(""); setMergeConfirmation("");
+      await load();
+    }
+    setBusy(null);
+  }
+
+  async function rollbackMerge(item: ActiveMerge) {
+    const reason = window.prompt("Почему нужно отменить объединение? Укажите не менее 10 символов.");
+    if (!reason) return;
+    if (reason.trim().length < 10) {
+      setMessage({ tone: "error", text: "Укажите причину отката минимум из 10 символов." });
+      return;
+    }
+    setBusy(`rollback:${item.id}`); setMessage(null);
+    const result = await supabase.rpc("rollback_offerpsp_entity_merge", {
+      p_merge_id: item.id,
+      p_reason: reason.trim(),
+    });
+    if (result.error) setMessage({ tone: "error", text: result.error.message });
+    else {
+      setMessage({ tone: "success", text: "Объединение отменено, исходная карточка восстановлена." });
+      await load();
+    }
     setBusy(null);
   }
 
@@ -226,6 +310,20 @@ export default function EntityRelationshipsPanel({
         </div>
       </div>
 
+      {((workspace.merged_sources || []).length > 0 || (workspace.active_merges || []).length > 0) && <div className="mt-8 border-t border-gray-200 pt-6 dark:border-gray-700">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Объединённые карточки</h3>
+        <p className="mt-1 text-xs text-gray-400">Исходные записи и вся их коммерческая история сохранены. Рубка показывает их через основную карточку.</p>
+        <div className="mt-4 space-y-3">
+          {(workspace.merged_sources || []).map((item) => {
+            const merge = (workspace.active_merges || []).find((entry) => entry.source_entity_id === item.id);
+            return <article key={item.id} className="flex flex-col gap-3 rounded-xl border border-gray-200 p-4 dark:border-gray-700 sm:flex-row sm:items-center sm:justify-between">
+              <div><strong className="text-sm text-gray-900 dark:text-white">{entityLabel(item)}</strong><p className="mt-1 text-xs text-gray-500">Историческая карточка · {item.internal_code || "без кода"}{merge?.executed_at ? ` · объединена ${new Date(merge.executed_at).toLocaleString("ru-RU")}` : ""}</p>{merge?.reason && <p className="mt-2 text-xs text-gray-400">{merge.reason}</p>}</div>
+              {merge?.rollback_available ? <button disabled={Boolean(busy)} onClick={() => void rollbackMerge(merge)} className="rounded-lg border border-warning-300 px-4 py-2.5 text-xs font-semibold text-warning-700 disabled:opacity-40 dark:text-warning-300">{busy === `rollback:${merge.id}` ? "Восстанавливаю…" : "Отменить объединение"}</button> : <span className="text-xs font-semibold text-gray-400">Окно отката закрыто</span>}
+            </article>;
+          })}
+        </div>
+      </div>}
+
       <div className="mt-8 border-t border-gray-200 pt-6 dark:border-gray-700">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Точные кандидаты в дубли</h3>
         <p className="mt-1 text-xs text-gray-400">Совпадение части названия не считается сигналом. Merchant Bridge Advisory и Merchantpayd останутся разными карточками без точного доказательства.</p>
@@ -239,12 +337,20 @@ export default function EntityRelationshipsPanel({
       </div>
 
       {preview && <div className="mt-6 rounded-2xl border border-brand-200 bg-brand-50/50 p-5 dark:border-brand-500/20 dark:bg-brand-500/5">
-        <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[.16em] text-brand-600">Merge preview · без изменений</p><h3 className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">{preview.source.name} → {preview.target.name}</h3></div><button onClick={() => setPreview(null)} className="text-sm font-semibold text-gray-500">Закрыть</button></div>
+        <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[.16em] text-brand-600">Merge preview · без изменений</p><h3 className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">{preview.source.name} → {preview.target.name}</h3></div><button onClick={() => { setPreview(null); setPreparedMerge(null); }} className="text-sm font-semibold text-gray-500">Закрыть</button></div>
         <div className="mt-5 grid gap-5 lg:grid-cols-2">
           <div><h4 className="text-sm font-semibold text-gray-900 dark:text-white">Конфликты полей</h4><div className="mt-2 space-y-2">{preview.field_conflicts.map((item) => <div key={item.field} className="rounded-lg bg-white p-3 text-xs dark:bg-gray-900"><strong>{fieldLabels[item.field] || item.field}</strong><p className="mt-1 text-gray-500">Источник: {formatValue(item.source_value)}</p><p className="text-gray-500">Основная карточка: {formatValue(item.target_value)}</p></div>)}{!preview.field_conflicts.length && <p className="text-sm text-gray-500">Конфликтов заполненных полей нет.</p>}</div></div>
-          <div><h4 className="text-sm font-semibold text-gray-900 dark:text-white">Зависимые записи</h4><div className="mt-2 space-y-2">{preview.dependent_references.map((item) => <div key={`${item.schema}.${item.table}.${item.column}`} className="flex justify-between rounded-lg bg-white p-3 text-xs dark:bg-gray-900"><span>{item.schema}.{item.table}</span><strong>{item.source_rows}</strong></div>)}{!preview.dependent_references.length && <p className="text-sm text-gray-500">Зависимых записей не найдено.</p>}</div><p className="mt-3 text-xs text-gray-500">Aliases: {preview.source_alias_count} · Активные связи: {preview.source_relationship_count}</p></div>
+          <div><h4 className="text-sm font-semibold text-gray-900 dark:text-white">Зависимые записи</h4><div className="mt-2 space-y-2">{preview.dependent_references.map((item) => <div key={`${item.schema}.${item.table}.${item.column}`} className="flex items-center justify-between gap-3 rounded-lg bg-white p-3 text-xs dark:bg-gray-900"><span>{item.schema}.{item.table}<small className="ml-2 text-gray-400">{item.policy === "immutable_history" ? "история неизменна" : "через alias"}</small></span><strong>{item.source_rows}</strong></div>)}{!preview.dependent_references.length && <p className="text-sm text-gray-500">Зависимых записей не найдено.</p>}</div><p className="mt-3 text-xs text-gray-500">Aliases: {preview.source_alias_count} · Активные связи: {preview.source_relationship_count}</p></div>
         </div>
-        <p className="mt-5 rounded-lg border border-warning-200 bg-white px-4 py-3 text-sm text-warning-700 dark:border-warning-500/20 dark:bg-gray-900 dark:text-warning-300">Объединение заблокировано: сначала для каждой зависимой таблицы должна быть утверждена политика конфликтов. Preview ничего не изменил.</p>
+        <p className="mt-5 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">История не переносится и не удаляется: исходная карточка останется скрытым alias основной, а её рабочие данные продолжат учитываться. Автоматический откат доступен {preview.observation_hours} часа.</p>
+        {!preview.merge_available ? <p className="mt-3 rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-700 dark:border-warning-500/20 dark:bg-warning-500/10 dark:text-warning-300">Объединение заблокировано: {preview.blocking_reason || "нет достаточного точного подтверждения"}.</p> : !preparedMerge ? <div className="mt-4 space-y-3">
+          <textarea className={areaClass} value={mergeReason} onChange={(event) => setMergeReason(event.target.value)} placeholder="Причина объединения и проверенное доказательство…"/>
+          <button disabled={Boolean(busy) || mergeReason.trim().length < 10} onClick={() => void prepareMerge()} className="rounded-lg bg-brand-500 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy === "prepare-merge" ? "Фиксирую preview…" : "Подготовить объединение"}</button>
+        </div> : <div className="mt-4 rounded-xl border border-error-200 bg-white p-4 dark:border-error-500/20 dark:bg-gray-900">
+          <strong className="text-sm text-error-700 dark:text-error-300">Финальное подтверждение</strong>
+          <p className="mt-2 text-xs leading-5 text-gray-500">Preview зафиксирован до {new Date(preparedMerge.token_expires_at).toLocaleString("ru-RU")}. Для выполнения введите <strong>ОБЪЕДИНИТЬ</strong>. Данные не удаляются.</p>
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row"><input className={fieldClass} value={mergeConfirmation} onChange={(event) => setMergeConfirmation(event.target.value)} placeholder="ОБЪЕДИНИТЬ"/><button disabled={Boolean(busy) || mergeConfirmation.trim() !== "ОБЪЕДИНИТЬ"} onClick={() => void executeMerge()} className="shrink-0 rounded-lg bg-error-600 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy === "execute-merge" ? "Объединяю…" : "Подтвердить"}</button></div>
+        </div>}
       </div>}
     </>}
   </Panel>;
