@@ -162,11 +162,15 @@ if (process.env.VERCEL !== "1") {
   assert.match(trashMigration, /perform cron\.schedule/);
   assert.match(trashMigration, /trashed_from_status/);
   const truthfulStateMigration = await read("supabase/migrations/20260927183000_offerpsp_truthful_operational_state.sql");
+  const truthfulStateReviewFixes = await read("supabase/migrations/20260927190000_offerpsp_truthful_operational_state_review_fixes.sql");
   assert.match(truthfulStateMigration, /add column if not exists response_expected boolean not null default false/);
   assert.match(truthfulStateMigration, /new\.status = 'sent' and coalesce\(new\.response_expected, false\)/);
   assert.match(truthfulStateMigration, /set_offerpsp_email_draft_response_expected/);
   assert.match(truthfulStateMigration, /not private\.offerpsp_is_qa_lead/);
   assert.match(truthfulStateMigration, /last_message\.direction = 'inbound'/);
+  assert.match(truthfulStateReviewFixes, /when new\.status = 'sent' and not v_waiting/);
+  assert.match(truthfulStateReviewFixes, /language sql\s+stable\s+security invoker/);
+  assert.match(truthfulStateReviewFixes, /like '%\.invalid%'/);
 }
 
 console.log("Control integrity regression tests passed");

@@ -506,6 +506,9 @@ export function CommunicationsWorkspace() {
   }
 
   function startNewEmail() {
+    const next = new URLSearchParams(searchParams);
+    next.delete("draft");
+    setSearchParams(next, { replace: true });
     setActiveDraftId(null);
     setTo(""); setSubject(""); setBody(""); setLeadId(""); setResponseExpected(false);
     setSection("compose");
@@ -513,6 +516,10 @@ export function CommunicationsWorkspace() {
 
   function startReply() {
     if (!selectedThread) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("draft");
+    setSearchParams(next, { replace: true });
+    setActiveDraftId(null);
     setTo(selectedThread.participant_email);
     setSubject(/^re:/i.test(selectedThread.subject) ? selectedThread.subject : `Re: ${selectedThread.subject}`);
     setBody("");
