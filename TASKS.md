@@ -33,12 +33,15 @@ Code or a passing local test is not evidence that production has been updated.
   issue rather than OfferPSP technical debt.
 - Fresh production health confirms authenticated Supabase, email, Telegram and both n8n gateways;
   GoRules, Meilisearch, Vercel Web Analytics and MCP staff authorization are healthy.
+- `VERIFIED`: the active production email/password path is now hardened in Supabase Auth. Secure
+  password change, current-password verification and leaked-password rejection are enabled, and the
+  minimum password length is 8 characters. A fresh security-advisor run no longer reports
+  `auth_leaked_password_protection`.
 - The remaining advisor information is not actionable debt: the temporary freshness quarantine
   table is retained for the agreed 1–3 day rollback window; new/low-traffic indexes need observation
-  before any removal; fixed Auth DB connections matter only when the database instance is resized;
-  leaked-password protection is not used by the current Google OAuth/magic-link-only application
-  flow. Optional GCP reserve provisioning remains a separate paid resilience decision, not an
-  incomplete OfferPSP release.
+  before any removal; fixed Auth DB connections matter only when the database instance is resized.
+  Optional GCP reserve provisioning remains a separate paid resilience decision, not an incomplete
+  OfferPSP release.
 
 ## Captain's Bridge compact UI and post-release audit — production 2026-09-27
 
@@ -1201,9 +1204,10 @@ two account-level security operations remain explicitly listed below.
 - [x] Published Captain's Bridge production deployment `dpl_436G6vN7L3eo5A9JaGD6df5rMFfo`
   (`READY`) at `https://ops-7q4m2x9k8v3n.vercel.app`. Public `https://offerpsp.com`, merchant `/portal/`
   and PSP `/psp/` remain separate production surfaces.
-- [x] Verified Supabase leaked-password protection is unavailable on the current Free plan. The
-  invite-only merchant and PSP cabinets use passwordless magic links, so the unavailable password
-  check is not a current authentication gap; revisit it only with a Pro upgrade or password login.
+- [x] Superseded the earlier Free-plan/passwordless assessment on 2026-09-28 after verifying that the
+  production email provider and password path are active. Enabled secure password change,
+  current-password verification, leaked-password rejection and an 8-character minimum; the fresh
+  Supabase security advisor no longer reports the leaked-password warning.
 - [ ] Rotate the previously exposed Telegram bot token in a coordinated maintenance window and
   replace it atomically in every dependent workflow/environment. Boris explicitly deferred this
   maintenance on 2026-08-27.
