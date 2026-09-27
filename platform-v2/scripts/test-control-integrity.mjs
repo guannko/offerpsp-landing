@@ -96,6 +96,8 @@ assert.match(integrations, /controller\.abort\(\)/);
 assert.match(integrations, /нет подтверждённой доставки/);
 assert.match(integrations, /last_delivery_at/);
 assert.match(platform, /Полный production‑цикл субагента ещё не проверен/);
+assert.match(platform, /Вручную создать общий Telegram‑чат/);
+assert.match(platform, /Вручную создать встречу/);
 assert.match(dealDesk, /Рубка сама сообщение не отправляет/);
 assert.match(dealDesk, /Рубка встречу не создаёт/);
 assert.doesNotMatch(dealDesk, />Отправить PSP</);

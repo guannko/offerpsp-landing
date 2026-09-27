@@ -234,11 +234,11 @@ export function DealDeskPage() {
   const { leads } = useControlBridge();
   const deals = leads.filter((lead) => isVisibleBusinessLead(lead) && dealStatuses.includes(lead.status || ""));
   const nextAction = (status?: string | null) => {
-    if (status === "option_selected") return "Проверить досье и передать PSP";
+    if (status === "option_selected") return "Проверить досье и вручную передать PSP";
     if (status === "provider_reviewing") return "Получить решение PSP";
     if (status === "provider_needs_info") return "Запросить недостающие данные";
-    if (status === "provider_accepted") return "Создать общий Telegram‑чат";
-    if (status === "telegram_created") return "Назначить Zoom";
+    if (status === "provider_accepted") return "Вручную создать общий Telegram‑чат";
+    if (status === "telegram_created") return "Вручную создать встречу";
     if (["zoom_scheduled", "negotiating"].includes(status || "")) return "Зафиксировать результат";
     if (["won", "lost"].includes(status || "")) return "Сделка закрыта";
     return "Открыть Deal Desk";
