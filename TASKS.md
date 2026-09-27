@@ -29,6 +29,10 @@ Code or a passing local test is not evidence that production has been updated.
   production releases must use the normal remote Vercel build instead of a prebuilt artifact.
 - Local verification: full migration validation, control-integrity, intake brief/normalizer,
   30 intake/Telegram tests, ESLint, production build and `git diff --check` pass.
+- `VERIFIED`: source-built deployment `dpl_4GBD3FDuEPidCsytdEEPb7yeL1i6` is `READY` and aliased to
+  the staff production URL. The installed Bridge shows 88 routes / 4 PSP in Offers, 72/88 published
+  routes / 4 working PSP in Analytics and 22 unread / 2 awaiting reply / 1 overdue in Radio Room.
+  First full post-cutover Titan execution `640788` completed in 3.8 seconds with `failed: 0`.
 
 ### Captain's Bridge native-runtime recovery — production 2026-09-27
 
