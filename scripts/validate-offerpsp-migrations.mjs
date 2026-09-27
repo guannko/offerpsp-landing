@@ -345,6 +345,7 @@ async function applyMigrations() {
     "20260927183000_offerpsp_truthful_operational_state.sql",
     "20260927190000_offerpsp_truthful_operational_state_review_fixes.sql",
     "20260927200000_offerpsp_entity_relationships.sql",
+    "20260927203000_offerpsp_entity_relationship_actor_indexes.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -1321,11 +1322,15 @@ async function verifyEntityRelationships() {
       has_function_privilege('anon', 'public.save_offerpsp_entity_relationship(text,uuid,text,uuid,text,text,text,text)', 'execute') as anon_save,
       has_function_privilege('authenticated', 'public.get_offerpsp_entity_relationship_workspace(text,uuid)', 'execute') as authenticated_workspace,
       has_function_privilege('authenticated', 'public.save_offerpsp_entity_relationship(text,uuid,text,uuid,text,text,text,text)', 'execute') as authenticated_save,
-      has_function_privilege('authenticated', 'public.preview_offerpsp_entity_merge(text,uuid,uuid)', 'execute') as authenticated_preview
+      has_function_privilege('authenticated', 'public.preview_offerpsp_entity_merge(text,uuid,uuid)', 'execute') as authenticated_preview,
+      to_regclass('private.offerpsp_entity_relationships_created_by_idx') is not null as created_by_index,
+      to_regclass('private.offerpsp_entity_relationships_verified_by_idx') is not null as verified_by_index,
+      to_regclass('private.offerpsp_entity_relationships_ended_by_idx') is not null as ended_by_index
     `)).rows[0];
     if (privileges.authenticated_table || privileges.anon_workspace || privileges.anon_save
         || !privileges.authenticated_workspace || !privileges.authenticated_save
-        || !privileges.authenticated_preview) {
+        || !privileges.authenticated_preview || !privileges.created_by_index
+        || !privileges.verified_by_index || !privileges.ended_by_index) {
       throw new Error(`Entity relationship security boundary is incorrect: ${JSON.stringify(privileges)}`);
     }
 
