@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import PageMeta from "../components/common/PageMeta";
 import { EmptyState, ErrorBanner, Metric, PageHeading, Panel, SkeletonPage, StatusPill, humanizeCode, statusLabels } from "../components/control/Ui";
@@ -73,11 +73,13 @@ const stripHtml = (value: string) => {
 
 function EmailMessageBody({ textBody, htmlBody }: { textBody?: string | null; htmlBody?: string | null }) {
   const [showQuoted, setShowQuoted] = useState(false);
+  const [showSignature, setShowSignature] = useState(false);
   const source = textBody || (htmlBody ? stripHtml(htmlBody) : "");
-  const { currentText, quotedText } = useMemo(() => splitEmailBody(source), [source]);
+  const { currentText, quotedText, signatureText } = useMemo(() => splitEmailBody(source), [source]);
 
   return <div className="mt-4">
     <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700 dark:text-gray-200">{currentText || "Пустое письмо"}</p>
+    {signatureText && <div className="mt-3"><button type="button" onClick={()=>setShowSignature((value)=>!value)} className="text-xs font-semibold text-gray-400 hover:text-brand-600">{showSignature?"Скрыть подпись":"Показать подпись"}</button>{showSignature&&<pre className="mt-2 whitespace-pre-wrap rounded-xl bg-gray-50 p-3 font-sans text-xs leading-5 text-gray-500 dark:bg-white/[0.03] dark:text-gray-400">{signatureText}</pre>}</div>}
     {quotedText && <div className="mt-4 border-t border-black/5 pt-3 dark:border-white/10">
       <button type="button" onClick={()=>setShowQuoted((value)=>!value)} className="text-xs font-semibold text-gray-500 hover:text-brand-600">
         {showQuoted ? "Скрыть предыдущую переписку" : "Показать предыдущую переписку"}
@@ -413,7 +415,7 @@ export function CommunicationsWorkspace() {
     setBusy(false);
   }
 
-  async function openThread(id: string) {
+  const openThread = useCallback(async (id: string) => {
     setThreadId(id); setSection("mail");
     const thread = mailCenter.threads.find((item) => item.id === id);
     if (thread?.unread_count) {
@@ -423,7 +425,37 @@ export function CommunicationsWorkspace() {
       await refresh();
       setBusy(false);
     }
-  }
+  }, [mailCenter.threads, refresh]);
+
+  useEffect(() => {
+    const requestedThread = searchParams.get("thread");
+    if (!requestedThread || requestedThread === selectedThreadId) return;
+    if (!mailCenter.threads.some((thread) => thread.id === requestedThread)) return;
+    void openThread(requestedThread);
+  }, [mailCenter.threads, openThread, searchParams, selectedThreadId]);
+
+  useEffect(() => {
+    if (searchParams.get("compose") !== "1") return;
+    setSection("compose");
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (section !== "mail") return;
+    const handleThreadNavigation = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.matches("input, textarea, select, [contenteditable='true']")) return;
+      if (!["j", "k", "ArrowDown", "ArrowUp"].includes(event.key)) return;
+      const currentIndex = visibleThreads.findIndex((thread) => thread.id === selectedThreadId);
+      const direction = event.key === "j" || event.key === "ArrowDown" ? 1 : -1;
+      const nextIndex = Math.min(Math.max((currentIndex < 0 ? 0 : currentIndex) + direction, 0), visibleThreads.length - 1);
+      const nextThread = visibleThreads[nextIndex];
+      if (!nextThread || nextThread.id === selectedThreadId) return;
+      event.preventDefault();
+      void openThread(nextThread.id);
+    };
+    document.addEventListener("keydown", handleThreadNavigation);
+    return () => document.removeEventListener("keydown", handleThreadNavigation);
+  }, [openThread, section, selectedThreadId, visibleThreads]);
 
   async function changeThreadState(status: "open" | "awaiting_reply" | "follow_up" | "closed" | "archived" | "trashed" | "restore") {
     if (!selectedThread) return;
@@ -738,7 +770,7 @@ export function CommunicationsWorkspace() {
       <Panel className="hidden min-w-0 2xl:block"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Папки</p><nav className="mt-3 space-y-1">{mailFolderOptions.map((folder)=><button key={folder.id} onClick={()=>setMailScope(folder.id)} className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition ${mailScope===folder.id?"bg-brand-50 font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-300":"text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"}`}><span>{folder.label}</span><span className="text-xs text-gray-400">{folder.count}</span></button>)}<button onClick={()=>pendingDrafts[0]?setSearchParams({draft:String(pendingDrafts[0].id)}):setSection("compose")} className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"><span>Черновики</span><span className="text-xs text-gray-400">{pendingDrafts.length}</span></button></nav></Panel>
       <Panel className="min-w-0 !p-3"><div className="flex items-center justify-between gap-3"><div className="flex items-baseline gap-2"><h2 className="text-base font-semibold text-gray-900 dark:text-white">Переписки</h2><span className="text-xs text-gray-400">{visibleThreads.length}</span></div><select aria-label="Папка почты" className="h-9 max-w-44 rounded-lg border border-gray-300 bg-transparent px-2.5 text-xs text-gray-700 outline-none dark:border-gray-700 dark:text-gray-200 2xl:hidden" value={mailScope} onChange={(event)=>setMailScope(event.target.value as typeof mailScope)}>{mailFolderOptions.map((folder)=><option key={folder.id} value={folder.id}>{folder.label} · {folder.count}</option>)}</select></div><input className={`${field} mt-3 !h-10`} value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Поиск по перепискам…"/><div className="mt-2 max-h-[820px] space-y-1 overflow-y-auto pr-1">{visibleThreads.map((thread)=>{const last=lastMessageByThread.get(thread.id);const outbound=last?.direction==="outbound";const overdue=isOverdueThread(thread);const preview=splitEmailBody(last?.text_body || (last?.html_body ? stripHtml(last.html_body) : "")).currentText;const exceptionalStatus=thread.status!=="open";return <button key={thread.id} onClick={()=>void openThread(thread.id)} className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${selectedThread?.id===thread.id?"border-brand-200 bg-brand-50 dark:border-brand-500/30 dark:bg-brand-500/10":"border-transparent hover:border-gray-200 hover:bg-gray-50 dark:hover:border-gray-700 dark:hover:bg-white/[0.03]"}`}><div className="flex items-center justify-between gap-3"><span className={`text-[10px] font-semibold uppercase tracking-wide ${outbound?"text-brand-600":"text-success-600"}`}>{outbound?"Исходящее →":"← Входящее"}</span><span className="shrink-0 text-[10px] text-gray-400">{formatDate(last ? messageDate(last) : thread.last_message_at)}</span></div><strong className="mt-1 block line-clamp-1 text-sm text-gray-900 dark:text-white">{thread.subject || "Без темы"}</strong><div className="mt-1 flex items-center justify-between gap-2"><span className="min-w-0 truncate text-[11px] text-gray-500">{thread.participant_email}</span><div className="flex shrink-0 items-center gap-1">{thread.is_flagged&&<span title="С флагом" className="text-[11px] text-warning-600">⚑</span>}{exceptionalStatus&&<span className="max-w-28 truncate text-[10px] font-medium text-gray-500">{mailThreadLabels[thread.status]?.label || humanizeCode(thread.status)}</span>}{thread.unread_count>0&&<span className="rounded-full bg-brand-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">{thread.unread_count}</span>}</div></div><p className="mt-1.5 line-clamp-1 text-[11px] leading-4 text-gray-400">{preview || (last?.html_body ? "HTML-письмо" : "Сообщений в цепочке пока нет")}</p>{(thread.priority&&!['normal','low'].includes(thread.priority)||thread.follow_up_at)&&<div className="mt-1.5 flex flex-wrap gap-1.5">{thread.priority&&!["normal","low"].includes(thread.priority)&&<span className="rounded-full bg-error-50 px-2 py-0.5 text-[10px] font-semibold text-error-700">{priorityLabels[thread.priority]}</span>}{thread.follow_up_at&&<span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${overdue?"bg-error-50 text-error-700":"bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300"}`}>{overdue?"Просрочено":"До"} {formatDate(thread.follow_up_at)}</span>}</div>}</button>})}{!visibleThreads.length&&<EmptyState title="Писем не найдено" description="Измените папку, поиск или создайте новое письмо."/>}</div></Panel>
       <Panel className="min-w-0">{selectedThread && selectedThreadState ? <>
-        <div className="flex flex-col gap-4 border-b border-gray-100 pb-5 dark:border-gray-800 lg:flex-row lg:items-start lg:justify-between">
+        <div className="sticky top-14 z-10 -mx-4 -mt-4 flex flex-col gap-4 border-b border-gray-100 bg-white/95 px-4 pb-4 pt-4 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95 sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${lastSelectedMessage?.direction==="outbound"?"border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300":"border-success-200 bg-success-50 text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-300"}`}>{lastSelectedMessage?.direction==="outbound"?"Последнее: исходящее":"Последнее: входящее"}</span>

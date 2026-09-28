@@ -17,9 +17,8 @@ On Sat, Sep 26, 2026 at 4:01 PM Borys Kononenko <bizdev@offerpsp.com> wrote:
 const splitJohnReply = splitEmailBody(johnReply);
 assert.equal(splitJohnReply.currentText, `Hi,
 
-RUB processing is possible but fees are on an "on demand" basis only.
-
-Thanks,
+RUB processing is possible but fees are on an "on demand" basis only.`);
+assert.equal(splitJohnReply.signatureText, `Thanks,
 John`);
 assert.match(splitJohnReply.quotedText || "", /Thank you — this is very interesting/);
 assert.doesNotMatch(splitJohnReply.quotedText || "", /^>/m);
@@ -37,11 +36,13 @@ assert.match(forwarded.quotedText || "", /Old message/);
 assert.deepEqual(splitEmailBody("A complete standalone message."), {
   currentText: "A complete standalone message.",
   quotedText: null,
+  signatureText: null,
 });
 
 assert.deepEqual(splitEmailBody("> quoted-only message"), {
   currentText: "> quoted-only message",
   quotedText: null,
+  signatureText: null,
 });
 
 const sorted = sortEmailMessagesChronologically([
@@ -51,4 +52,3 @@ const sorted = sortEmailMessagesChronologically([
 assert.deepEqual(sorted.map((message) => message.id), ["old", "new"]);
 
 process.stdout.write("PASS email thread ordering and quoted-history folding\n");
-

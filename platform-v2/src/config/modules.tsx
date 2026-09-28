@@ -23,7 +23,7 @@ export type PlatformModule = {
   path: string;
   icon: ReactNode;
   enabled: boolean;
-  group: "operations" | "growth" | "control";
+  group: "today" | "registry" | "commercial" | "control";
   badge?: string;
   requiresEntitlement?: string;
 };
@@ -51,19 +51,19 @@ export const featureFlags = {
 } as const;
 
 export const platformModules: PlatformModule[] = [
-  { id: "commandCenter", label: "Командный центр", shortLabel: "Центр", path: "/", icon: <GridIcon />, enabled: featureFlags.commandCenter, group: "operations" },
-  { id: "inbox", label: "Входящие", shortLabel: "Входящие", path: "/inbox", icon: <ListIcon />, enabled: featureFlags.inbox, group: "operations" },
-  { id: "pipeline", label: "Обзор воронки", shortLabel: "Воронка", path: "/pipeline", icon: <TableIcon />, enabled: featureFlags.pipeline, group: "operations" },
-  { id: "merchants", label: "Мерчи", shortLabel: "Мерчи", path: "/merchants", icon: <GroupIcon />, enabled: featureFlags.merchants, group: "operations" },
-  { id: "casinos", label: "Казино", shortLabel: "Казино", path: "/casinos", icon: <BoltIcon />, enabled: featureFlags.casinos, group: "operations" },
-  { id: "providers", label: "PSP", shortLabel: "PSP", path: "/psps", icon: <BoxCubeIcon />, enabled: featureFlags.providers, group: "operations" },
-  { id: "offers", label: "Офферы", shortLabel: "Офферы", path: "/offers", icon: <PageIcon />, enabled: featureFlags.offers, group: "operations" },
-  { id: "compliance", label: "Проверка лидов", shortLabel: "Compliance", path: "/compliance", icon: <TaskIcon />, enabled: featureFlags.compliance, group: "operations", badge: "PRO", requiresEntitlement: "pre_compliance" },
-  { id: "matching", label: "Подбор решений", shortLabel: "Matching", path: "/matching", icon: <ShootingStarIcon />, enabled: featureFlags.matching, group: "operations" },
-  { id: "dealDesk", label: "Сделки", shortLabel: "Сделки", path: "/deals", icon: <TaskIcon />, enabled: featureFlags.dealDesk, group: "operations" },
-  { id: "communications", label: "Радиорубка", shortLabel: "Почта", path: "/communications", icon: <ChatIcon />, enabled: featureFlags.communications, group: "growth" },
-  { id: "tasks", label: "Задачи и календарь", shortLabel: "Задачи", path: "/operations", icon: <TaskIcon />, enabled: featureFlags.tasks, group: "growth" },
-  { id: "agents", label: "Субагенты", shortLabel: "Агенты", path: "/agents", icon: <UserCircleIcon />, enabled: featureFlags.agents, group: "growth" },
+  { id: "commandCenter", label: "Сегодня", shortLabel: "Сегодня", path: "/", icon: <GridIcon />, enabled: featureFlags.commandCenter, group: "today" },
+  { id: "inbox", label: "Входящие заявки", shortLabel: "Входящие", path: "/inbox", icon: <ListIcon />, enabled: featureFlags.inbox, group: "today" },
+  { id: "compliance", label: "Проверка лидов", shortLabel: "Проверка", path: "/compliance", icon: <TaskIcon />, enabled: featureFlags.compliance, group: "today", badge: "PRO", requiresEntitlement: "pre_compliance" },
+  { id: "tasks", label: "Задачи и календарь", shortLabel: "Задачи", path: "/operations", icon: <TaskIcon />, enabled: featureFlags.tasks, group: "today" },
+  { id: "merchants", label: "Мерчи", shortLabel: "Мерчи", path: "/merchants", icon: <GroupIcon />, enabled: featureFlags.merchants, group: "registry" },
+  { id: "providers", label: "PSP", shortLabel: "PSP", path: "/psps", icon: <BoxCubeIcon />, enabled: featureFlags.providers, group: "registry" },
+  { id: "offers", label: "Офферы", shortLabel: "Офферы", path: "/offers", icon: <PageIcon />, enabled: featureFlags.offers, group: "registry" },
+  { id: "casinos", label: "Казино", shortLabel: "Казино", path: "/casinos", icon: <BoltIcon />, enabled: featureFlags.casinos, group: "registry" },
+  { id: "pipeline", label: "Обзор воронки", shortLabel: "Воронка", path: "/pipeline", icon: <TableIcon />, enabled: featureFlags.pipeline, group: "commercial" },
+  { id: "dealDesk", label: "Сделки", shortLabel: "Сделки", path: "/deals", icon: <TaskIcon />, enabled: featureFlags.dealDesk, group: "commercial" },
+  { id: "communications", label: "Радиорубка", shortLabel: "Почта", path: "/communications", icon: <ChatIcon />, enabled: featureFlags.communications, group: "commercial" },
+  { id: "matching", label: "Подбор решений", shortLabel: "Matching", path: "/matching", icon: <ShootingStarIcon />, enabled: featureFlags.matching, group: "commercial" },
+  { id: "agents", label: "Субагенты", shortLabel: "Агенты", path: "/agents", icon: <UserCircleIcon />, enabled: featureFlags.agents, group: "commercial" },
   { id: "analytics", label: "Аналитика", shortLabel: "Аналитика", path: "/analytics", icon: <PieChartIcon />, enabled: featureFlags.analytics, group: "control" },
   { id: "systemActions", label: "Действия системы", shortLabel: "Действия", path: "/system-actions", icon: <ListIcon />, enabled: true, group: "control" },
   { id: "seoGeo", label: "SEO / GEO", shortLabel: "SEO / GEO", path: "/seo-geo", icon: <ShootingStarIcon />, enabled: featureFlags.seoGeo, group: "control" },

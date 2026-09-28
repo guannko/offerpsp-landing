@@ -16,6 +16,8 @@ import { supabase } from "../lib/supabase";
 import { extractOfferSource, safeStorageName } from "../lib/offerSourceFiles";
 import { isQaFixtureLead, isQaFixtureLeadId, isQaFixtureProvider, isQaFixtureProviderId, isQaFixtureRoute } from "../lib/qaFixtures";
 import ResearchEntityEditor from "../components/control/ResearchEntityEditor";
+import RecordPreviewDrawer from "../components/control/RecordPreviewDrawer";
+import { useStoredState } from "../lib/uiPreferences";
 import type { AgentPspProvider, Lead, OfferIngestionJob, RouteCoverage, StaffMember } from "../types/offerpsp";
 
 const activeStatuses = ["new", "qualifying", "needs_clarification", "matching", "matched", "shortlist_ready", "shared", "option_selected", "dossier_ready", "provider_reviewing", "provider_needs_info", "provider_accepted", "telegram_created", "zoom_scheduled", "negotiating"];
@@ -249,9 +251,12 @@ export function DealDeskPage() {
 export function MerchantsPage() {
   const { leads } = useControlBridge();
   const merchantLeads = useMemo(() => leads.filter((lead) => !isQaFixtureLead(lead)), [leads]);
-  const [scope, setScope] = useState<MerchantScope>("active");
-  const [riskScope, setRiskScope] = useState<"all" | "low" | "high" | "unknown">("all");
+  const [scope, setScope] = useStoredState<MerchantScope>("offerpsp.merchants.scope", "active");
+  const [riskScope, setRiskScope] = useStoredState<"all" | "low" | "high" | "unknown">("offerpsp.merchants.risk", "all");
+  const [density, setDensity] = useStoredState<MerchantDensity>("offerpsp.merchants.density", "comfortable");
+  const [visibleColumns, setVisibleColumns] = useStoredState<MerchantColumn[]>("offerpsp.merchants.columns", ["contact", "request", "risk", "stage", "updated"]);
   const [query, setQuery] = useState("");
+  const [previewLead, setPreviewLead] = useState<Lead | null>(null);
   const counts = useMemo(() => {
     const result = Object.fromEntries(merchantStages.map((item) => [item.key, 0])) as Record<MerchantStageKey, number>;
     merchantLeads.forEach((lead) => {
@@ -263,9 +268,13 @@ export function MerchantsPage() {
   const visible = merchantLeads.filter((lead) => {
     const stage = merchantStage(lead);
     const hidden = lead.record_state === "archived";
-    if (scope === "hidden" && !hidden) return false;
-    if (scope === "active" && (hidden || stage === "history")) return false;
-    if (scope !== "active" && scope !== "all" && scope !== "hidden" && (hidden || stage !== scope)) return false;
+    if (scope === "unassigned") {
+      if (hidden || stage === "history" || lead.assigned_to) return false;
+    } else {
+      if (scope === "hidden" && !hidden) return false;
+      if (scope === "active" && (hidden || stage === "history")) return false;
+      if (scope !== "active" && scope !== "all" && scope !== "hidden" && (hidden || stage !== scope)) return false;
+    }
     if (riskScope !== "all" && (lead.risk_segment || "unknown") !== riskScope) return false;
     if (!query.trim()) return true;
     return [lead.company, lead.name, lead.work_email, lead.telegram, lead.vertical, lead.company_url]
@@ -277,8 +286,10 @@ export function MerchantsPage() {
   });
   const hiddenCount = merchantLeads.filter((lead) => lead.record_state === "archived").length;
   const activeCount = merchantLeads.length - counts.history - hiddenCount;
+  const unassignedCount = merchantLeads.filter((lead) => lead.record_state !== "archived" && merchantStage(lead) !== "history" && !lead.assigned_to).length;
   const merchantViews = [
     { key: "active", label: "Все активные", count: activeCount, hint: "текущая работа" },
+    { key: "unassigned", label: "Без владельца", count: unassignedCount, hint: "нужно назначить ответственного" },
     ...merchantStages.map((item) => ({ key: item.key, label: item.label, count: counts[item.key], hint: item.hint })),
     { key: "hidden", label: "Скрытые", count: hiddenCount, hint: "вне рабочей очереди" },
     { key: "all", label: "Все", count: merchantLeads.length, hint: "полный реестр" },
@@ -286,12 +297,21 @@ export function MerchantsPage() {
   return <PageFrame title="Мерчи" description="Реестр мерчей и заявок."><PageHeading eyebrow="CRM" title="Мерчи" description="Сразу видно, кто новый, кому отправлены офферы, кто уже у PSP и кто начал работать."/>
     <Panel className="mb-5 !p-0">
       <div className="overflow-x-auto border-b border-gray-100 px-4 pt-3 dark:border-gray-800"><div className="flex min-w-max gap-1" aria-label="Представления реестра мерчей">{merchantViews.map((item) => <button key={item.key} onClick={() => setScope(item.key as MerchantScope)} title={item.hint} className={`border-b-2 px-3 py-2.5 text-left text-sm transition ${scope === item.key ? "border-brand-500 text-brand-600 dark:text-brand-300" : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"}`}><span>{item.label}</span><strong className={`ml-2 rounded-full px-2 py-0.5 text-xs ${scope === item.key ? "bg-brand-50 dark:bg-brand-500/15" : "bg-gray-100 dark:bg-white/5"}`}>{item.count}</strong></button>)}</div></div>
-      <div className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between"><p className="text-xs text-gray-400">Показано {visible.length} из {merchantLeads.length}. Этапы — сохранённые рабочие представления одного реестра.</p><div className="flex w-full flex-col gap-2 sm:flex-row lg:max-w-xl"><select value={riskScope} onChange={(event)=>setRiskScope(event.target.value as typeof riskScope)} className="h-10 rounded-lg border border-gray-200 px-3 text-sm outline-none focus:border-brand-400 dark:border-gray-700 dark:bg-gray-900 dark:text-white"><option value="all">Любая категория</option><option value="low">Low-risk</option><option value="high">High-risk</option><option value="unknown">Не определена</option></select><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Найти компанию, контакт или email…" className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm outline-none focus:border-brand-400 dark:border-gray-700 dark:bg-gray-900 dark:text-white"/></div></div>
-    </Panel><LeadTable leads={visible}/></PageFrame>;
+      <div className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between"><p className="text-xs text-gray-400">Показано {visible.length} из {merchantLeads.length}. Этапы — сохранённые рабочие представления одного реестра.</p><div className="flex w-full flex-col gap-2 sm:flex-row lg:max-w-2xl"><select value={riskScope} onChange={(event)=>setRiskScope(event.target.value as typeof riskScope)} className="h-10 rounded-lg border border-gray-200 px-3 text-sm outline-none focus:border-brand-400 dark:border-gray-700 dark:bg-gray-900 dark:text-white"><option value="all">Любая категория</option><option value="low">Low-risk</option><option value="high">High-risk</option><option value="unknown">Не определена</option></select><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Найти компанию, контакт или email…" className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm outline-none focus:border-brand-400 dark:border-gray-700 dark:bg-gray-900 dark:text-white"/><details className="relative"><summary className="flex h-10 cursor-pointer list-none items-center justify-center whitespace-nowrap rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-600 dark:border-gray-700 dark:text-gray-300">Вид таблицы</summary><div className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-lg dark:border-gray-700 dark:bg-gray-900"><label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-gray-400">Плотность</label><select value={density} onChange={(event)=>setDensity(event.target.value as MerchantDensity)} className="h-9 w-full rounded-lg border border-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-950 dark:text-white"><option value="comfortable">Обычная</option><option value="compact">Компактная</option></select><p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wide text-gray-400">Колонки</p>{merchantColumnOptions.map((column)=><label key={column.key} className="flex items-center gap-2 py-1.5 text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" checked={visibleColumns.includes(column.key)} onChange={(event)=>setVisibleColumns((current)=>event.target.checked?[...new Set([...current,column.key])]:current.filter((item)=>item!==column.key))} className="h-4 w-4 accent-[#ff477d]"/>{column.label}</label>)}</div></details></div></div>
+    </Panel><LeadTable leads={visible} onPreview={setPreviewLead} density={density} visibleColumns={visibleColumns}/>{previewLead&&<RecordPreviewDrawer open onClose={()=>setPreviewLead(null)} eyebrow="Быстрый просмотр · Мерч" title={previewLead.company||previewLead.name||"Без названия"} subtitle={previewLead.company_url||previewLead.work_email} status={previewLead.status} path={`/merchants/${previewLead.lead_id}`} fields={[{label:"Контакт",value:previewLead.name||previewLead.work_email||previewLead.telegram||"—"},{label:"Вертикаль",value:previewLead.vertical||"—"},{label:"GEO",value:list(previewLead.geos)},{label:"Методы",value:list(previewLead.methods)},{label:"Объём",value:previewLead.monthly_volume||previewLead.expected_monthly_volume||"—"},{label:"Этап",value:merchantStageMeta(previewLead).detail},{label:"Обновлено",value:date(previewLead.updated_at||previewLead.submitted_at)}]}/>}</PageFrame>;
 }
 
 type MerchantStageKey = "new" | "matching" | "client" | "psp" | "launch" | "live" | "history";
-type MerchantScope = "active" | "hidden" | "all" | MerchantStageKey;
+type MerchantScope = "active" | "unassigned" | "hidden" | "all" | MerchantStageKey;
+type MerchantColumn = "contact" | "request" | "risk" | "stage" | "updated";
+type MerchantDensity = "compact" | "comfortable";
+const merchantColumnOptions: Array<{ key: MerchantColumn; label: string }> = [
+  { key: "contact", label: "Контакт" },
+  { key: "request", label: "Запрос" },
+  { key: "risk", label: "Категория" },
+  { key: "stage", label: "Этап работы" },
+  { key: "updated", label: "Обновлено" },
+];
 
 const merchantStages: Array<{ key: MerchantStageKey; label: string; hint: string }> = [
   { key: "new", label: "Новые", hint: "ещё не разобраны" },
@@ -351,20 +371,21 @@ function merchantStageMeta(lead: Lead) {
   return { stage, label: merchantStages.find((item) => item.key === stage)?.label || stage, detail: details[status] || status, className: styles[stage] };
 }
 
-function LeadTable({ leads }: { leads: Lead[] }) {
+function LeadTable({ leads, onPreview, density, visibleColumns }: { leads: Lead[]; onPreview: (lead: Lead) => void; density: MerchantDensity; visibleColumns: MerchantColumn[] }) {
   if (!leads.length) return <Panel><EmptyState title="Заявок пока нет" description="Новые мерчи появятся здесь из формы, агента или ручного добавления."/></Panel>;
+  const cellSpacing = density === "compact" ? "px-4 py-2.5" : "px-5 py-4";
   return <>
-    <div className="space-y-3 md:hidden">{leads.map((lead)=>{ const stage = merchantStageMeta(lead); return <Link key={lead.lead_id} to={`/merchants/${lead.lead_id}`} className="block rounded-2xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><strong className="block truncate text-sm text-gray-900 dark:text-white">{lead.company || "Без названия"}</strong><span className="mt-1 block truncate text-xs text-gray-400">{lead.name || lead.work_email || lead.telegram || "Контакт не указан"}</span></div><span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${stage.className}`}>{stage.label}</span></div><div className="mt-3 flex items-center gap-2"><RiskBadge segment={lead.risk_segment}/><p className="text-xs font-medium text-gray-600 dark:text-gray-300">{stage.detail}</p></div><div className="mt-4 grid grid-cols-2 gap-3 border-t border-gray-100 pt-3 text-xs dark:border-gray-800"><div><span className="block text-gray-400">Запрос</span><strong className="mt-1 block text-gray-700 dark:text-gray-300">{lead.vertical || "—"} · {list(lead.geos)}</strong></div><div><span className="block text-gray-400">Обновлено</span><strong className="mt-1 block text-gray-700 dark:text-gray-300">{date(lead.updated_at || lead.submitted_at)}</strong></div></div></Link>;})}</div>
+    <div className="space-y-3 md:hidden">{leads.map((lead)=>{ const stage = merchantStageMeta(lead); return <Link key={lead.lead_id} to={`/merchants/${lead.lead_id}`} className={`block rounded-2xl border border-gray-200 bg-white shadow-theme-xs dark:border-gray-800 dark:bg-gray-900 ${density === "compact" ? "p-3" : "p-4"}`}><div className="flex items-start justify-between gap-3"><div className="min-w-0"><strong className="block truncate text-sm text-gray-900 dark:text-white">{lead.company || "Без названия"}</strong><span className="mt-1 block truncate text-xs text-gray-400">{lead.name || lead.work_email || lead.telegram || "Контакт не указан"}</span></div><span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${stage.className}`}>{stage.label}</span></div><div className="mt-3 flex items-center gap-2"><RiskBadge segment={lead.risk_segment}/><p className="text-xs font-medium text-gray-600 dark:text-gray-300">{stage.detail}</p></div><div className="mt-4 grid grid-cols-2 gap-3 border-t border-gray-100 pt-3 text-xs dark:border-gray-800"><div><span className="block text-gray-400">Запрос</span><strong className="mt-1 block text-gray-700 dark:text-gray-300">{lead.vertical || "—"} · {list(lead.geos)}</strong></div><div><span className="block text-gray-400">Обновлено</span><strong className="mt-1 block text-gray-700 dark:text-gray-300">{date(lead.updated_at || lead.submitted_at)}</strong></div></div></Link>;})}</div>
     <Panel className="hidden overflow-hidden !p-0 md:block">
     <div className="overflow-x-auto"><table className="min-w-full">
-      <thead className="bg-gray-50 dark:bg-white/[0.03]"><tr>{["Компания", "Контакт", "Запрос", "Категория", "Этап работы", "Обновлено", "Действие"].map((head) => <th key={head} className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">{head}</th>)}</tr></thead>
+      <thead className="bg-gray-50 dark:bg-white/[0.03]"><tr><th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Компания</th>{merchantColumnOptions.filter((column)=>visibleColumns.includes(column.key)).map((column) => <th key={column.key} className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">{column.label}</th>)}<th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Действие</th></tr></thead>
       <tbody className="divide-y divide-gray-100 dark:divide-gray-800">{leads.map((lead) => { const stage = merchantStageMeta(lead); return <tr key={lead.lead_id} className="hover:bg-gray-50/70 dark:hover:bg-white/[0.02]">
-        <td className="px-5 py-4"><strong className="block text-sm text-gray-900 dark:text-white">{lead.company || "Без названия"}</strong><span className="mt-1 block text-xs text-gray-400">{lead.company_url || lead.lead_id.slice(0, 8)}</span></td>
-        <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">{lead.name || "—"}<span className="block text-xs text-gray-400">{lead.work_email || lead.telegram || "—"}</span></td>
-        <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">{lead.vertical || "—"}<span className="block text-xs text-gray-400">{list(lead.geos)} · {list(lead.methods)}</span></td>
-        <td className="px-5 py-4"><RiskBadge segment={lead.risk_segment}/></td>
-        <td className="px-5 py-4"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${stage.className}`}>{stage.label}</span><span className="mt-1.5 block max-w-[220px] text-xs text-gray-500">{stage.detail}</span></td><td className="px-5 py-4 text-sm text-gray-500">{date(lead.updated_at || lead.submitted_at)}</td>
-        <td className="px-5 py-4"><Link to={`/merchants/${lead.lead_id}`} className="text-sm font-medium text-brand-500 hover:text-brand-600">Открыть →</Link></td>
+        <td className={cellSpacing}><strong className="block text-sm text-gray-900 dark:text-white">{lead.company || "Без названия"}</strong><span className="mt-1 block text-xs text-gray-400">{lead.company_url || lead.lead_id.slice(0, 8)}</span></td>
+        {visibleColumns.includes("contact")&&<td className={`${cellSpacing} text-sm text-gray-600 dark:text-gray-300`}>{lead.name || "—"}<span className="block text-xs text-gray-400">{lead.work_email || lead.telegram || "—"}</span></td>}
+        {visibleColumns.includes("request")&&<td className={`${cellSpacing} text-sm text-gray-600 dark:text-gray-300`}>{lead.vertical || "—"}<span className="block text-xs text-gray-400">{list(lead.geos)} · {list(lead.methods)}</span></td>}
+        {visibleColumns.includes("risk")&&<td className={cellSpacing}><RiskBadge segment={lead.risk_segment}/></td>}
+        {visibleColumns.includes("stage")&&<td className={cellSpacing}><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${stage.className}`}>{stage.label}</span><span className="mt-1.5 block max-w-[220px] text-xs text-gray-500">{stage.detail}</span></td>}{visibleColumns.includes("updated")&&<td className={`${cellSpacing} text-sm text-gray-500`}>{date(lead.updated_at || lead.submitted_at)}</td>}
+        <td className={cellSpacing}><div className="flex items-center gap-3"><button type="button" onClick={()=>onPreview(lead)} className="text-sm font-medium text-gray-500 hover:text-brand-600">Быстро</button><Link to={`/merchants/${lead.lead_id}`} className="text-sm font-medium text-brand-500 hover:text-brand-600">Карточка →</Link></div></td>
       </tr>;})}</tbody>
     </table></div>
   </Panel></>;
@@ -380,9 +401,11 @@ export function ProvidersPage() {
   const { providers, captainsBridge, refresh } = useControlBridge();
   const registryProviders = useMemo(() => providers.filter((provider) => !isQaFixtureProvider(provider)), [providers]);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [scope, setScope] = useState<"active" | "pipeline" | "inactive" | "hidden" | "all">("active");
+  const [scope, setScope] = useStoredState<"active" | "pipeline" | "inactive" | "hidden" | "all">("offerpsp.providers.scope", "active");
   const [query, setQuery] = useState("");
   const [editor, setEditor] = useState<{ record?: AgentPspProvider } | null>(null);
+  const [previewProviderId, setPreviewProviderId] = useState<string | null>(null);
+  const previewProvider = registryProviders.find((provider)=>provider.id===previewProviderId) || null;
   const needle = query.trim().toLowerCase();
   const privateHidden = (provider: (typeof providers)[number]) => provider.relationship_status === "archived";
   const researchHidden = (provider: AgentPspProvider) => provider.record_state === "archived";
@@ -426,10 +449,10 @@ export function ProvidersPage() {
   ] as const;
   return <PageFrame title="PSP" description="Единый реестр PSP и партнёров."><PageHeading eyebrow="Counterparty organizer" title="PSP" description="Действующие партнёры, новые PSP из AIBot и история переговоров находятся в одном разделе. Настоящие названия и контакты видит только команда." action={<button onClick={()=>setEditor({})} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white">+ Добавить PSP</button>}/>
     <Panel className="mb-5 !p-0"><div className="overflow-x-auto border-b border-gray-100 px-4 pt-3 dark:border-gray-800"><div className="flex min-w-max gap-1" aria-label="Представления реестра PSP">{providerViews.map(([value,label,count]) => <button key={value} onClick={() => setScope(value)} className={`border-b-2 px-3 py-2.5 text-sm transition ${scope === value ? "border-brand-500 text-brand-600 dark:text-brand-300" : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"}`}><span>{label}</span><strong className={`ml-2 rounded-full px-2 py-0.5 text-xs ${scope === value ? "bg-brand-50 dark:bg-brand-500/15" : "bg-gray-100 dark:bg-white/5"}`}>{count}</strong></button>)}</div></div><div className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between"><p className="text-xs text-gray-400">Показано {privateVisible.length + researchVisible.length} из {allCount}. Метрики и фильтры объединены в рабочие представления.</p><input className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm outline-none focus:border-brand-400 dark:border-gray-700 dark:bg-gray-900 dark:text-white lg:max-w-sm" value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="PSP, GEO, метод, контакт…"/></div></Panel>
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">{privateVisible.map((provider) => <Panel key={`partner-${provider.id}`}><div className="flex items-start justify-between"><div><span className="text-xs font-semibold uppercase tracking-wide text-brand-500">Партнёр · {provider.internal_code || "PSP"}</span><h2 className="mt-2 text-xl font-semibold text-gray-900 dark:text-white">{provider.brand_name}</h2><p className="mt-1 text-sm text-gray-500">{provider.legal_name || provider.website || "Юридические данные не заполнены"}</p></div><StatusPill status={provider.relationship_status}/></div><div className="mt-5 grid grid-cols-3 gap-3 border-t border-gray-100 pt-4 text-center dark:border-gray-800"><div><strong className="block text-lg text-gray-900 dark:text-white">{provider.route_count || 0}</strong><span className="text-xs text-gray-400">офферов</span></div><div><strong className="block text-lg text-gray-900 dark:text-white">{provider.published_route_count || 0}</strong><span className="text-xs text-gray-400">live</span></div><div><strong className="block text-lg text-gray-900 dark:text-white">{provider.strategic_priority ?? "—"}</strong><span className="text-xs text-gray-400">приоритет</span></div></div><Link to={`/psps/${provider.id}`} className="mt-5 block w-full rounded-lg border border-gray-200 px-4 py-2 text-center text-sm font-medium text-gray-700 hover:border-brand-300 hover:text-brand-500 dark:border-gray-700 dark:text-gray-300">Открыть workspace</Link></Panel>)}
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">{privateVisible.map((provider) => <Panel key={`partner-${provider.id}`}><div className="flex items-start justify-between"><div><span className="text-xs font-semibold uppercase tracking-wide text-brand-500">Партнёр · {provider.internal_code || "PSP"}</span><h2 className="mt-2 text-xl font-semibold text-gray-900 dark:text-white">{provider.brand_name}</h2><p className="mt-1 text-sm text-gray-500">{provider.legal_name || provider.website || "Юридические данные не заполнены"}</p></div><StatusPill status={provider.relationship_status}/></div><div className="mt-5 grid grid-cols-3 gap-3 border-t border-gray-100 pt-4 text-center dark:border-gray-800"><div><strong className="block text-lg text-gray-900 dark:text-white">{provider.route_count || 0}</strong><span className="text-xs text-gray-400">офферов</span></div><div><strong className="block text-lg text-gray-900 dark:text-white">{provider.published_route_count || 0}</strong><span className="text-xs text-gray-400">live</span></div><div><strong className="block text-lg text-gray-900 dark:text-white">{provider.strategic_priority ?? "—"}</strong><span className="text-xs text-gray-400">приоритет</span></div></div><div className="mt-5 grid grid-cols-2 gap-2"><button type="button" onClick={()=>setPreviewProviderId(provider.id)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:border-brand-300 hover:text-brand-500 dark:border-gray-700 dark:text-gray-300">Быстро</button><Link to={`/psps/${provider.id}`} className="rounded-lg bg-brand-500 px-3 py-2 text-center text-sm font-medium text-white hover:bg-brand-600">Workspace →</Link></div></Panel>)}
       {researchVisible.map((provider)=><Panel key={`research-${provider.id}`}><div className="flex items-start justify-between gap-3"><div><span className="text-xs font-semibold uppercase tracking-wide text-theme-purple-500">Кандидат · AIBot</span><h2 className="mt-2 text-xl font-semibold text-gray-900 dark:text-white">{provider.name}</h2><p className="mt-1 text-sm text-gray-500">{provider.specialization || provider.website || "Профиль ещё не заполнен"}</p></div><StatusPill status={provider.provider_status || provider.contact_status}/></div><div className="mt-4 space-y-2 border-t border-gray-100 pt-4 text-sm text-gray-500 dark:border-gray-800"><p>GEO: {(provider.supported_countries || []).join(", ") || provider.geo || "—"}</p><p className="truncate">Методы: {(provider.payment_methods || []).join(", ") || provider.methods || "—"}</p><p className="truncate">Контакт: {provider.email || provider.telegram || "не найден"}</p></div><button onClick={()=>setEditor({record:provider})} className="mt-5 w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:border-brand-300 hover:text-brand-500 dark:border-gray-700 dark:text-gray-300">Открыть органайзер</button></Panel>)}
       {!privateVisible.length && !researchVisible.length && <Panel className="lg:col-span-2 xl:col-span-3"><EmptyState title="PSP не найдены" description="Измените фильтр или добавьте нового партнёра."/></Panel>}
-    </div>{editor && <ResearchEntityEditor entityType="psp" record={editor.record} onClose={closeResearchEditor} onSaved={refresh}/>}</PageFrame>;
+    </div>{editor && <ResearchEntityEditor entityType="psp" record={editor.record} onClose={closeResearchEditor} onSaved={refresh}/>} {previewProvider&&<RecordPreviewDrawer open onClose={()=>setPreviewProviderId(null)} eyebrow="Быстрый просмотр · PSP" title={previewProvider.brand_name} subtitle={previewProvider.legal_name||previewProvider.website} status={previewProvider.relationship_status} path={`/psps/${previewProvider.id}`} fields={[{label:"Код",value:previewProvider.internal_code||"—"},{label:"Сайт",value:previewProvider.website||"—"},{label:"Офферы",value:`${previewProvider.route_count||0} всего · ${previewProvider.published_route_count||0} опубликовано`},{label:"Приоритет",value:previewProvider.strategic_priority??"—"},{label:"Маржа включена",value:previewProvider.margin_included_default?"Да":"Нет / не указано"},{label:"Условия сверены",value:date(previewProvider.last_verified_at)}]}/>}</PageFrame>;
 }
 
 function OfferIntakePanel({ providerNames, onImported }: { providerNames: string[]; onImported: () => Promise<void> }) {
@@ -597,24 +620,28 @@ export function OffersPage() {
   const registryProviders = useMemo(() => allRegistryProviders.filter((provider) => !isQaFixtureProvider(provider)), [allRegistryProviders]);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [workspace, setWorkspace] = useState<"catalog" | "intake" | "updates">(
+  const [workspace, setWorkspace] = useStoredState<"catalog" | "intake" | "updates">("offerpsp.offers.workspace",
     searchParams.get("workspace") === "intake" ? "intake" :
     searchParams.get("workspace") === "updates" ? "updates" : "catalog"
   );
-  const [status, setStatus] = useState("all");
+  const [status, setStatus] = useStoredState("offerpsp.offers.status", "all");
   const [providerId, setProviderId] = useState("all");
   const [geo, setGeo] = useState("all");
   const [currency, setCurrency] = useState("all");
   const [method, setMethod] = useState("all");
   const [flow, setFlow] = useState("all");
-  const [riskSegment, setRiskSegment] = useState("all");
-  const [health, setHealth] = useState("all");
+  const [riskSegment, setRiskSegment] = useStoredState("offerpsp.offers.risk", "all");
+  const [health, setHealth] = useStoredState("offerpsp.offers.health", "all");
   const [query, setQuery] = useState("");
   const [expandedProviderIds, setExpandedProviderIds] = useState<Set<string>>(new Set());
   const [creating, setCreating] = useState(false);
   const [creatingBusy, setCreatingBusy] = useState(false);
   const [creatingError, setCreatingError] = useState<string | null>(null);
   const [offerDraft, setOfferDraft] = useState({ provider_id: "", client_title: "", flow: "payin", risk_mode: "high", geos: "", currencies: "", methods: "", source_reference: "" });
+  useEffect(() => {
+    const requested = searchParams.get("workspace");
+    if (requested === "intake" || requested === "updates" || requested === "catalog") setWorkspace(requested);
+  }, [searchParams, setWorkspace]);
   const providers = useMemo(() => Array.from(new Map(operationalRoutes.map((route)=>[route.provider_id, { id: route.provider_id, name: route.provider_name || route.provider_code || "Без названия", code: route.provider_code }])).values()).sort((a,b)=>a.name.localeCompare(b.name)), [operationalRoutes]);
   const geos = useMemo(()=>Array.from(new Set(operationalRoutes.flatMap((route)=>route.geos || []).filter(Boolean))).sort(), [operationalRoutes]);
   const currencies = useMemo(()=>Array.from(new Set(operationalRoutes.flatMap((route)=>route.currencies || []).filter(Boolean))).sort(), [operationalRoutes]);
