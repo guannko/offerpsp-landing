@@ -63,7 +63,7 @@ assert.match(todayWorkspace, /Только реальные письма, зад
 assert.match(previewDrawer, /Быстрый просмотр/);
 assert.match(previewDrawer, /данные не изменяются/);
 assert.match(uiPreferences, /localStorage\.setItem/);
-assert.match(uiPreferences, /searchParams\.has\("qa"\)/);
+assert.match(uiPreferences, /\["qa", "release", "check"\]/);
 assert.match(uiPreferences, /isQaFixturePath/);
 assert.match(platform, /offerpsp\.offers\.expandedProviders/);
 assert.match(platform, /expandedProviderSet/);
