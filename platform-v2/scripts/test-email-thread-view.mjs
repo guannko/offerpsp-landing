@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { sortEmailMessagesChronologically, splitEmailBody } from "../src/lib/emailThread.ts";
+import { presentEmailBody, sortEmailMessagesChronologically, splitEmailBody } from "../src/lib/emailThread.ts";
 
 const johnReply = `Hi,
 
@@ -51,4 +51,25 @@ const sorted = sortEmailMessagesChronologically([
 ]);
 assert.deepEqual(sorted.map((message) => message.id), ["old", "new"]);
 
-process.stdout.write("PASS email thread ordering and quoted-history folding\n");
+const trustlyNewsletter = presentEmailBody(`See you at booth E611
+https://explore.trustly.com/e/730493/2026-09-28/4dqyn7/2689550868/h/long-token
+View in browser
+https://explore.trustly.com/webmail/730493/2689550868/long-token
+
+We’re here. Meet for a coffee?
+SBC Lisbon is underway.
+Find us at Booth #E611.
+
+or Unsubscribe
+https://explore.trustly.com/unsubscribeConfirm/730493/long-token
+© 2026 Trustly. All rights reserved.`);
+assert.equal(trustlyNewsletter.contentText, `See you at booth E611
+
+We’re here. Meet for a coffee?
+SBC Lisbon is underway.
+Find us at Booth #E611.`);
+assert.equal(trustlyNewsletter.technicalLineCount, 6);
+assert.match(trustlyNewsletter.technicalText || "", /unsubscribeConfirm/);
+assert.doesNotMatch(trustlyNewsletter.contentText, /https:\/\//);
+
+process.stdout.write("PASS email ordering, quoted-history folding and technical-tail cleanup\n");
