@@ -31,6 +31,34 @@ const [captain, merchant, integrations, platform, modules, ui, context, seoGeo, 
   read("platform-v2/scripts/deploy-production.mjs"),
 ]);
 const dealDesk = await read("platform-v2/src/pages/DealDeskPanel.tsx");
+const [todayWorkspace, previewDrawer, uiPreferences] = await Promise.all([
+  read("platform-v2/src/pages/TodayWorkspace.tsx"),
+  read("platform-v2/src/components/control/RecordPreviewDrawer.tsx"),
+  read("platform-v2/src/lib/uiPreferences.ts"),
+]);
+
+assert.match(app, /TodayWorkspace/);
+assert.match(modules, /label: "Сегодня"/);
+assert.match(modules, /group: "today"/);
+assert.match(modules, /group: "registry"/);
+assert.match(modules, /group: "commercial"/);
+assert.match(sidebar, /Избранное/);
+assert.match(sidebar, /offerpsp\.favoriteModules/);
+assert.match(header, /Быстрые действия и недавнее/);
+assert.match(header, /ArrowDown/);
+assert.match(header, /rememberPath/);
+assert.match(todayWorkspace, /bridge\.mailCenter\.threads/);
+assert.match(todayWorkspace, /captainsBridge\.offerpsp_tasks/);
+assert.match(todayWorkspace, /ingestionJobs/);
+assert.match(todayWorkspace, /integration-health/);
+assert.match(todayWorkspace, /kind: "integration"/);
+assert.match(todayWorkspace, /Только реальные письма, задачи и блокировки/);
+assert.match(previewDrawer, /Быстрый просмотр/);
+assert.match(previewDrawer, /данные не изменяются/);
+assert.match(uiPreferences, /localStorage\.setItem/);
+assert.match(context, /pathname === "\/" \|\| pathname\.startsWith\("\/communications"\)/);
+assert.match(captain, /requestedThread/);
+assert.match(captain, /handleThreadNavigation/);
 
 assert.match(header, /Свернуть боковую панель/);
 assert.match(header, /Развернуть боковую панель/);
@@ -91,6 +119,10 @@ assert.match(captain, /setQuery\(""\)/);
 assert.match(captain, /setThreadId\(""\)/);
 assert.match(captain, /Поиск по перепискам/);
 assert.match(platform, /Представления реестра мерчей/);
+assert.match(platform, /Без владельца/);
+assert.match(platform, /offerpsp\.merchants\.density/);
+assert.match(platform, /offerpsp\.merchants\.columns/);
+assert.match(platform, /Вид таблицы/);
 assert.match(platform, /Представления реестра PSP/);
 assert.match(platform, /Представления каталога офферов/);
 assert.match(platform, /Дополнительные фильтры/);
@@ -100,6 +132,8 @@ assert.match(captain, /Черновики · \{pendingDrafts\.length\}/);
 assert.match(captain, /Просрочено/);
 assert.match(captain, /С флагом/);
 assert.match(captain, /История переписки ·/);
+assert.match(captain, /Показать подпись/);
+assert.match(captain, /sticky top-14/);
 assert.match(captain, /Управление цепочкой/);
 assert.match(captain, />Органайзер</);
 assert.ok(captain.indexOf('aria-label="Последнее письмо"') < captain.indexOf("Управление цепочкой"), "latest email must render before workflow controls");

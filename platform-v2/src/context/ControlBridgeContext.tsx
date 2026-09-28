@@ -160,8 +160,8 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const needsCaptains = ["/casinos", "/psps", "/intelligence", "/communications", "/operations", "/integrations"].some((path) => pathname.startsWith(path));
-    const needsMail = pathname.startsWith("/communications");
+    const needsCaptains = pathname === "/" || ["/casinos", "/psps", "/intelligence", "/communications", "/operations", "/integrations"].some((path) => pathname.startsWith(path));
+    const needsMail = pathname === "/" || pathname.startsWith("/communications");
     const needsSupplyOperations = pathname === "/";
     const skipped = Promise.resolve({ data: null, error: null });
     const cachedCore = force ? null : readCoreCache(user.id);

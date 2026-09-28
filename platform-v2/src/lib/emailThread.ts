@@ -7,6 +7,7 @@ type DatedEmailMessage = {
 export type SplitEmailBody = {
   currentText: string;
   quotedText: string | null;
+  signatureText: string | null;
 };
 
 const quoteHeaderPatterns = [
@@ -38,16 +39,16 @@ const cleanQuotedText = (value: string) => value
 
 export const splitEmailBody = (value?: string | null): SplitEmailBody => {
   const normalized = String(value || "").replace(/\r\n?/g, "\n").trim();
-  if (!normalized) return { currentText: "", quotedText: null };
+  if (!normalized) return { currentText: "", quotedText: null, signatureText: null };
 
   const lines = normalized.split("\n");
   const boundary = lines.findIndex((_, index) => isQuoteBoundary(lines, index));
-  if (boundary <= 0) return { currentText: normalized, quotedText: null };
-
-  const currentText = lines.slice(0, boundary).join("\n").trim();
-  const quotedText = cleanQuotedText(lines.slice(boundary).join("\n"));
-  if (!currentText || !quotedText) return { currentText: normalized, quotedText: null };
-  return { currentText, quotedText };
+  const currentLines = boundary > 0 ? lines.slice(0, boundary) : lines;
+  const signatureStart = currentLines.findIndex((line, index) => index >= Math.max(1, currentLines.length - 14) && /^(?:--\s*|thanks[!,]?|(?:best|kind|warm)?\s*regards[!,]?|с уважением[!,]?)$/i.test(line.trim()));
+  const signatureText = signatureStart > 0 ? currentLines.slice(signatureStart).join("\n").trim() : null;
+  const currentText = (signatureStart > 0 ? currentLines.slice(0, signatureStart) : currentLines).join("\n").trim();
+  const quotedText = boundary > 0 ? cleanQuotedText(lines.slice(boundary).join("\n")) : null;
+  return { currentText: currentText || normalized, quotedText: quotedText || null, signatureText };
 };
 
 export const emailMessageTimestamp = (message: DatedEmailMessage) => {
@@ -58,4 +59,3 @@ export const emailMessageTimestamp = (message: DatedEmailMessage) => {
 
 export const sortEmailMessagesChronologically = <T extends DatedEmailMessage>(messages: T[]) =>
   [...messages].sort((left, right) => emailMessageTimestamp(left) - emailMessageTimestamp(right));
-

@@ -4,10 +4,12 @@ import { HorizontaLDots } from "../icons";
 import { platformModules } from "../config/modules";
 import { useSidebar } from "../context/SidebarContext";
 import { useControlBridge } from "../context/ControlBridgeContext";
+import { useStoredState } from "../lib/uiPreferences";
 
 const groupLabels = {
-  operations: "Операции",
-  growth: "Рост и связь",
+  today: "Сегодня",
+  registry: "База",
+  commercial: "Коммерция",
   control: "Контроль",
 } as const;
 
@@ -16,6 +18,7 @@ export default function AppSidebar() {
   const location = useLocation();
   const { moduleEntitlements, loading, refreshing, ready, error, lastUpdatedAt } = useControlBridge();
   const [buildManifest, setBuildManifest] = useState<{ commit?: string; built_at?: string; deployment_id?: string } | null>(null);
+  const [favoriteIds, setFavoriteIds] = useStoredState<string[]>("offerpsp.favoriteModules", ["commandCenter", "communications", "offers"]);
   const showLabels = isExpanded || isMobileOpen;
   useEffect(() => {
     const controller = new AbortController();
@@ -35,6 +38,11 @@ export default function AppSidebar() {
   const buildLabel = buildManifest?.commit
     ? `Сборка ${buildManifest.commit.slice(0, 8)}${buildManifest.built_at ? ` · ${new Date(buildManifest.built_at).toLocaleString("ru-RU")}` : ""}`
     : "Версия сборки не подтверждена";
+  const availableModules = platformModules.filter((item) => item.enabled && (
+    !item.requiresEntitlement || moduleEntitlements.some((entitlement) => entitlement.module_key === item.requiresEntitlement && entitlement.enabled)
+  ));
+  const favorites = favoriteIds.map((id) => availableModules.find((item) => item.id === id)).filter(Boolean) as typeof availableModules;
+  const toggleFavorite = (id: string) => setFavoriteIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
 
   return (
     <aside
@@ -51,15 +59,17 @@ export default function AppSidebar() {
       </div>
       <div className="flex flex-1 flex-col overflow-y-auto pb-16 no-scrollbar">
         <nav className="space-y-4">
+          {favorites.length > 0 && <div>
+            <h2 className={`mb-1.5 flex h-5 items-center text-[9px] font-semibold uppercase tracking-[0.16em] text-gray-400 ${showLabels ? "justify-start px-2.5" : "justify-center"}`}>{showLabels ? "Избранное" : "★"}</h2>
+            <ul className="space-y-0.5">{favorites.map((item) => { const active = item.path === "/" ? location.pathname === "/" : location.pathname.startsWith(item.path); return <li key={`favorite-${item.id}`}><Link to={item.path} onClick={() => { if (isMobileOpen) toggleMobileSidebar(); }} title={!showLabels ? item.label : undefined} className={`menu-item group ${active ? "menu-item-active" : "menu-item-inactive"} ${showLabels ? "justify-start" : "justify-center"}`}><span className={`menu-item-icon-size ${active ? "menu-item-icon-active" : "menu-item-icon-inactive"}`}>{item.icon}</span>{showLabels && <><span className="menu-item-text">{item.label}</span><span className="ml-auto text-[11px] text-warning-500">★</span></>}</Link></li>; })}</ul>
+          </div>}
           {(Object.keys(groupLabels) as Array<keyof typeof groupLabels>).map((group) => {
-            const items = platformModules.filter((item) => item.group === group && item.enabled && (
-              !item.requiresEntitlement || moduleEntitlements.some((entitlement) => entitlement.module_key === item.requiresEntitlement && entitlement.enabled)
-            ));
+            const items = availableModules.filter((item) => item.group === group);
             return <div key={group}>
               <h2 className={`mb-1.5 flex h-5 items-center text-[9px] font-semibold uppercase tracking-[0.16em] text-gray-400 ${showLabels ? "justify-start px-2.5" : "justify-center"}`}>{showLabels ? groupLabels[group] : <HorizontaLDots className="size-4"/>}</h2>
               <ul className="space-y-0.5">{items.map((item) => {
                 const active = item.path === "/" ? location.pathname === "/" : location.pathname.startsWith(item.path);
-                return <li key={item.id}><Link to={item.path} onClick={() => { if (isMobileOpen) toggleMobileSidebar(); }} title={!showLabels ? item.label : undefined} className={`menu-item group ${active ? "menu-item-active" : "menu-item-inactive"} ${showLabels ? "justify-start" : "justify-center"}`}><span className={`menu-item-icon-size ${active ? "menu-item-icon-active" : "menu-item-icon-inactive"}`}>{item.icon}</span>{showLabels && <><span className="menu-item-text">{item.label}</span>{item.badge && <span className="ml-auto rounded-full bg-brand-50 px-2 py-0.5 text-[9px] font-bold text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">{item.badge}</span>}</>}</Link></li>;
+                return <li key={item.id} className="group/favorite relative"><Link to={item.path} onClick={() => { if (isMobileOpen) toggleMobileSidebar(); }} title={!showLabels ? item.label : undefined} className={`menu-item group ${active ? "menu-item-active" : "menu-item-inactive"} ${showLabels ? "justify-start pr-8" : "justify-center"}`}><span className={`menu-item-icon-size ${active ? "menu-item-icon-active" : "menu-item-icon-inactive"}`}>{item.icon}</span>{showLabels && <><span className="menu-item-text">{item.label}</span>{item.badge && <span className="ml-auto rounded-full bg-brand-50 px-2 py-0.5 text-[9px] font-bold text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">{item.badge}</span>}</>}</Link>{showLabels && <button type="button" onClick={() => toggleFavorite(item.id)} title={favoriteIds.includes(item.id) ? "Убрать из избранного" : "Добавить в избранное"} aria-label={favoriteIds.includes(item.id) ? `Убрать ${item.label} из избранного` : `Добавить ${item.label} в избранное`} className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs opacity-0 transition group-hover/favorite:opacity-100 focus:opacity-100 ${favoriteIds.includes(item.id) ? "text-warning-500 opacity-100" : "text-gray-300 hover:text-warning-500"}`}>{favoriteIds.includes(item.id) ? "★" : "☆"}</button>}</li>;
               })}</ul>
             </div>;
           })}
