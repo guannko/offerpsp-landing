@@ -9,6 +9,7 @@ import { emailMessageTimestamp, presentEmailBody, sortEmailMessagesChronological
 import { EnvelopeIcon, EyeIcon, MoreDotIcon, TrashBinIcon } from "../icons";
 import { isQaFixtureLead, isQaFixtureLeadId, isQaFixtureProvider, isQaFixtureProviderId } from "../lib/qaFixtures";
 import { supabase } from "../lib/supabase";
+import { useStoredState } from "../lib/uiPreferences";
 import type { CasinoLead, EmailAttachment, EmailMessage, EmailTemplate, EmailThread } from "../types/offerpsp";
 
 const field = "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:text-white";
@@ -192,6 +193,8 @@ export function CommunicationsWorkspace() {
   const [responseExpected, setResponseExpected] = useState(false);
   const [threadEntityContext, setThreadEntityContext] = useState<ThreadEntityContext | null>(null);
   const [threadEntityContextLoading, setThreadEntityContextLoading] = useState(false);
+  const [hideTrashNotice, setHideTrashNotice] = useStoredState("offerpsp.mail.hideTrashNotice", false);
+  const [trashNoticeVisible, setTrashNoticeVisible] = useState(false);
   const threadEntityRequestRef = useRef(0);
   const selectedThreadIdRef = useRef("");
 
@@ -472,15 +475,21 @@ export function CommunicationsWorkspace() {
     return () => document.removeEventListener("keydown", handleThreadNavigation);
   }, [openThread, section, selectedThreadId, visibleThreads]);
 
+  useEffect(() => {
+    if (!trashNoticeVisible) return;
+    const timeout = window.setTimeout(() => setTrashNoticeVisible(false), 8_000);
+    return () => window.clearTimeout(timeout);
+  }, [trashNoticeVisible]);
+
   async function changeThreadState(status: "open" | "awaiting_reply" | "follow_up" | "closed" | "archived" | "trashed" | "restore") {
     if (!selectedThread) return;
     setBusy(true); setMessage(null);
     const result = await supabase.rpc("set_offerpsp_email_thread_state", { p_thread_id: selectedThread.id, p_status: status, p_mark_read: null });
-    setMessage(result.error
-      ? { error: true, text: result.error.message }
-      : { text: status === "trashed"
-        ? "Переписка перемещена в корзину и будет окончательно удалена через 15 дней."
-        : status === "restore" ? "Переписка восстановлена из корзины." : "Статус переписки обновлён." });
+    if (result.error) setMessage({ error: true, text: result.error.message });
+    else if (status === "trashed") {
+      setMessage(null);
+      if (!hideTrashNotice) setTrashNoticeVisible(true);
+    } else setMessage({ text: status === "restore" ? "Переписка восстановлена из корзины." : "Статус переписки обновлён." });
     if (!result.error && ["trashed", "restore"].includes(status)) setThreadId("");
     await refresh(); setBusy(false);
   }
@@ -624,7 +633,7 @@ export function CommunicationsWorkspace() {
         body: JSON.stringify({
           message: prompt,
           session_id: `mail-summary-${selectedThread.id}`,
-          context: { path: "/communications", page: "Радиорубка", entity_type: "email_thread", entity_id: selectedThread.id, entity_name: selectedThread.subject },
+          context: { path: "/communications", page: "Радиорубка — Почта", entity_type: "email_thread", entity_id: selectedThread.id, entity_name: selectedThread.subject },
         }),
       });
       const payload = await response.json().catch(() => ({}));
@@ -828,14 +837,23 @@ export function CommunicationsWorkspace() {
     </article>;
   }
 
-  return <Frame title="Радиорубка" description="Почта и партнёрские коммуникации OfferPSP."><PageHeading eyebrow="Captain's Bridge / Radio room" title="Радиорубка" description="Почта, цепочки переговоров и следующий шаг по каждой партнёрской коммуникации." action={<button onClick={startNewEmail} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white">+ Новое письмо</button>}/>
+  return <Frame title="Радиорубка — Почта" description="Почта и партнёрские коммуникации OfferPSP.">
+    <div className="mb-3 flex min-h-10 flex-wrap items-center justify-between gap-3">
+      <h1 className="text-xl font-semibold leading-tight text-gray-900 dark:text-white sm:text-2xl">Радиорубка — Почта</h1>
+      <button onClick={startNewEmail} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white">+ Новое письмо</button>
+    </div>
     {message&&<div className={`mb-4 rounded-xl border px-4 py-3 text-sm ${message.error?"border-error-200 bg-error-50 text-error-700":"border-success-200 bg-success-50 text-success-700"}`}>{message.text}</div>}
+    {trashNoticeVisible&&<aside role="status" aria-live="polite" className="fixed bottom-5 right-5 z-50 w-[calc(100%-2.5rem)] max-w-sm rounded-xl border border-gray-200 bg-white p-4 shadow-theme-lg dark:border-gray-700 dark:bg-gray-900">
+      <div className="flex items-start justify-between gap-3"><div><strong className="text-sm text-gray-900 dark:text-white">Переписка перемещена в корзину</strong><p className="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">Она будет окончательно удалена через 15 дней. До этого её можно восстановить.</p></div><button type="button" onClick={()=>setTrashNoticeVisible(false)} aria-label="Закрыть уведомление" className="shrink-0 text-lg leading-none text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">×</button></div>
+      <button type="button" onClick={()=>{setHideTrashNotice(true);setTrashNoticeVisible(false);}} className="mt-3 text-xs font-semibold text-brand-600 hover:text-brand-700">Больше не показывать</button>
+    </aside>}
     <Panel className="mb-3 !p-3"><div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between"><div className="flex flex-wrap gap-1.5">{[
       ["mail", "Радиорубка", `${mailCenter.metrics.threads} цепочек`],
       ["compose", "Написать", "bizdev@offerpsp.com"],
       ["telegram", "Telegram / AIBot", `${captainsBridge.telegram_log.length} сообщений`],
-    ].map(([id,label,hint])=><button key={id} onClick={()=>setSection(id as typeof section)} className={`rounded-lg border px-3 py-2 text-left transition ${section===id?"border-brand-300 bg-brand-50 text-brand-700 dark:border-brand-500/40 dark:bg-brand-500/10 dark:text-brand-300":"border-gray-200 bg-white text-gray-600 hover:border-gray-300 dark:border-gray-700 dark:bg-transparent dark:text-gray-300"}`}><strong className="block text-xs">{label}</strong><span className="mt-0.5 block max-w-40 truncate text-[10px] text-gray-400">{hint}</span></button>)}</div><div aria-label="Быстрые фильтры почты" className="flex flex-wrap gap-1 text-[11px] text-gray-500 dark:text-gray-400">{mailQuickFilters.map((item)=>{const active=section==="mail"&&mailScope===item.scope;return <button key={item.scope} type="button" aria-pressed={active} title={`Открыть: ${item.label}`} onClick={()=>openMailScope(item.scope)} className={`group rounded-lg border px-2.5 py-1.5 text-left transition ${active?"border-brand-300 bg-brand-50 shadow-theme-xs dark:border-brand-500/40 dark:bg-brand-500/10":"border-transparent hover:border-gray-200 hover:bg-gray-50 dark:hover:border-gray-700 dark:hover:bg-white/5"}`}><strong className={`text-sm ${item.numberClass}`}>{item.count}</strong> {item.label}</button>})}</div></div>
-      {pendingDrafts.length>0&&<details className="group mt-3 border-t border-gray-100 pt-2 dark:border-gray-800"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"><span>Черновики · {pendingDrafts.length}</span><span className="text-[10px] font-medium text-gray-400 group-open:hidden">Показать</span><span className="hidden text-[10px] font-medium text-gray-400 group-open:inline">Свернуть</span></summary><div className="mt-2 flex flex-wrap gap-2">{pendingDrafts.map((draft)=><button key={draft.id} type="button" onClick={()=>setSearchParams({draft:String(draft.id)})} className="max-w-64 rounded-lg border border-gray-200 px-3 py-2 text-left hover:border-brand-300 dark:border-gray-700"><strong className="block truncate text-xs text-gray-800 dark:text-gray-200">{draft.subject || `Черновик #${draft.id}`}</strong><span className="block truncate text-[11px] text-gray-400">{draft.to_email || "нет получателя"}</span></button>)}</div></details>}
+    ].map(([id,label,hint])=><button key={id} onClick={()=>setSection(id as typeof section)} className={`rounded-lg border px-3 py-2 text-left transition ${section===id?"border-brand-300 bg-brand-50 text-brand-700 dark:border-brand-500/40 dark:bg-brand-500/10 dark:text-brand-300":"border-gray-200 bg-white text-gray-600 hover:border-gray-300 dark:border-gray-700 dark:bg-transparent dark:text-gray-300"}`}><strong className="block text-xs">{label}</strong><span className="mt-0.5 block max-w-40 truncate text-[10px] text-gray-400">{hint}</span></button>)}
+      {pendingDrafts.length>0?<details className="group relative"><summary aria-label="Открыть черновики" className="cursor-pointer list-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-gray-600 transition hover:border-gray-300 dark:border-gray-700 dark:bg-transparent dark:text-gray-300"><strong className="block text-xs">Черновики</strong><span className="mt-0.5 block text-[10px] text-gray-400">{pendingDrafts.length}</span></summary><div className="absolute left-0 z-30 mt-2 w-72 space-y-1 rounded-xl border border-gray-200 bg-white p-2 shadow-theme-lg dark:border-gray-700 dark:bg-gray-900">{pendingDrafts.map((draft)=><button key={draft.id} type="button" onClick={()=>setSearchParams({draft:String(draft.id)})} className="block w-full rounded-lg px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5"><strong className="block truncate text-xs text-gray-800 dark:text-gray-200">{draft.subject || `Черновик #${draft.id}`}</strong><span className="block truncate text-[11px] text-gray-400">{draft.to_email || "нет получателя"}</span></button>)}</div></details>:<button type="button" aria-label="Создать первое письмо" onClick={()=>setSection("compose")} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-gray-600 transition hover:border-gray-300 dark:border-gray-700 dark:bg-transparent dark:text-gray-300"><strong className="block text-xs">Черновики</strong><span className="mt-0.5 block text-[10px] text-gray-400">0</span></button>}
+    </div><div aria-label="Быстрые фильтры почты" className="flex flex-wrap gap-1 text-[11px] text-gray-500 dark:text-gray-400">{mailQuickFilters.map((item)=>{const active=section==="mail"&&mailScope===item.scope;return <button key={item.scope} type="button" aria-pressed={active} title={`Открыть: ${item.label}`} onClick={()=>openMailScope(item.scope)} className={`group rounded-lg border px-2.5 py-1.5 text-left transition ${active?"border-brand-300 bg-brand-50 shadow-theme-xs dark:border-brand-500/40 dark:bg-brand-500/10":"border-transparent hover:border-gray-200 hover:bg-gray-50 dark:hover:border-gray-700 dark:hover:bg-white/5"}`}><strong className={`text-sm ${item.numberClass}`}>{item.count}</strong> {item.label}</button>})}</div></div>
     </Panel>
     {section === "mail" ? <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[390px_minmax(0,1fr)] 2xl:grid-cols-[190px_350px_minmax(0,1fr)]">
       <Panel className="hidden min-w-0 2xl:block"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Папки</p><nav className="mt-3 space-y-1">{mailFolderOptions.map((folder)=><button key={folder.id} onClick={()=>setMailScope(folder.id)} className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition ${mailScope===folder.id?"bg-brand-50 font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-300":"text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"}`}><span>{folder.label}</span><span className="text-xs text-gray-400">{folder.count}</span></button>)}<button onClick={()=>pendingDrafts[0]?setSearchParams({draft:String(pendingDrafts[0].id)}):setSection("compose")} className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"><span>Черновики</span><span className="text-xs text-gray-400">{pendingDrafts.length}</span></button></nav></Panel>
