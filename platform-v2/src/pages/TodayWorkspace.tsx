@@ -22,6 +22,7 @@ type QueueItem = {
 
 const activeTask = (task: WorkTask) => !["done", "completed", "closed", "cancelled", "canceled"].includes(String(task.status || "").toLowerCase());
 const doneTask = (task: WorkTask) => ["done", "completed", "closed"].includes(String(task.status || "").toLowerCase());
+const botTaskNeedsIntervention = (task: WorkTask) => ["failed", "blocked"].includes(String(task.status || "").toLowerCase());
 const dueTime = (task: WorkTask) => task.due_at || task.scheduled_for || task.updated_at || task.created_at || null;
 const readableDate = (value?: string | null) => value ? new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(value)) : "без срока";
 const kindMeta: Record<QueueItem["kind"], { icon: string; label: string; className: string }> = {
@@ -102,23 +103,26 @@ export default function TodayWorkspace() {
       else if (thread.is_flagged) queue.push(mailItem(thread, "now", 4, "установлен флаг"));
     });
 
-    const tasks = [...bridge.captainsBridge.offerpsp_tasks, ...bridge.captainsBridge.bot_tasks];
-    tasks.forEach((task) => {
+    const tasks = [
+      ...bridge.captainsBridge.offerpsp_tasks.map((task) => ({ task, source: "operator" as const })),
+      ...bridge.captainsBridge.bot_tasks.filter(botTaskNeedsIntervention).map((task) => ({ task, source: "aibot" as const })),
+    ];
+    tasks.forEach(({ task, source }) => {
       const timestamp = dueTime(task);
       const future = timestamp && new Date(timestamp).getTime() > now;
-      const waiting = ["waiting", "blocked", "pending_external"].includes(String(task.status || "").toLowerCase());
+      const waiting = source === "operator" && ["waiting", "blocked", "pending_external"].includes(String(task.status || "").toLowerCase());
       if (doneTask(task) && new Date(task.completed_at || task.updated_at || task.created_at || 0).getTime() < todayStartedAt) return;
-      const taskScope: QueueScope = doneTask(task) ? "done" : waiting ? "waiting" : future ? "later" : "now";
+      const taskScope: QueueScope = doneTask(task) ? "done" : source === "aibot" ? "now" : waiting ? "waiting" : future ? "later" : "now";
       if (!activeTask(task) && taskScope !== "done") return;
       queue.push({
-        id: `task:${task.id}`,
+        id: `task:${source}:${task.id}`,
         scope: taskScope,
         kind: "task",
         title: task.title || task.task_type || "Рабочая задача",
-        detail: [task.merchant_name, task.assignee_name, task.details].filter(Boolean).join(" · ") || "Открыть карточку задачи",
+        detail: [source === "aibot" ? "AIBot требует вмешательства" : null, task.merchant_name, task.assignee_name, task.details].filter(Boolean).join(" · ") || "Открыть карточку задачи",
         path: task.lead_id ? `/merchants/${task.lead_id}` : "/operations",
         timestamp,
-        priority: typeof task.priority === "number" ? task.priority : /urgent|high/i.test(String(task.priority || "")) ? 5 : 2,
+        priority: source === "aibot" ? 7 : typeof task.priority === "number" ? task.priority : /urgent|high/i.test(String(task.priority || "")) ? 5 : 2,
       });
     });
 
