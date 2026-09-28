@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { isQaFixturePath } from "./qaFixtures";
 
 export function useStoredState<T>(key: string, fallback: T) {
   const [value, setValue] = useState<T>(() => {
@@ -21,17 +22,30 @@ export function useStoredState<T>(key: string, fallback: T) {
   return [value, setValue] as const;
 }
 
+function isWorkingPath(path: string) {
+  if (!path || path.startsWith("/signin") || isQaFixturePath(path)) return false;
+  try {
+    const url = new URL(path, "https://offerpsp.local");
+    return !url.searchParams.has("qa");
+  } catch {
+    return false;
+  }
+}
+
 export function readRecentPaths() {
   try {
     const parsed = JSON.parse(window.localStorage.getItem("offerpsp.recentPaths") || "[]");
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string").slice(0, 6) : [];
+    const stored = Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+    const recent = stored.filter(isWorkingPath).slice(0, 6);
+    if (recent.length !== stored.length) window.localStorage.setItem("offerpsp.recentPaths", JSON.stringify(recent));
+    return recent;
   } catch {
     return [];
   }
 }
 
 export function rememberPath(path: string) {
-  if (!path || path.startsWith("/signin")) return;
+  if (!isWorkingPath(path)) return;
   const recent = [path, ...readRecentPaths().filter((item) => item !== path)].slice(0, 6);
   try {
     window.localStorage.setItem("offerpsp.recentPaths", JSON.stringify(recent));

@@ -6,7 +6,7 @@ import { useControlBridge } from "../context/ControlBridgeContext";
 import { isQaFixtureLead, isQaFixtureLeadId } from "../lib/qaFixtures";
 import { supabase } from "../lib/supabase";
 import { useStoredState } from "../lib/uiPreferences";
-import type { EmailThread, WorkTask } from "../types/offerpsp";
+import type { EmailThread, OfferIngestionJob, WorkTask } from "../types/offerpsp";
 
 type QueueScope = "now" | "waiting" | "later" | "done";
 type QueueItem = {
@@ -48,6 +48,15 @@ function mailItem(thread: EmailThread, scope: QueueScope, priority: number, deta
     timestamp: thread.follow_up_at || thread.last_message_at,
     priority,
   };
+}
+
+function groupIngestionAttention(jobs: OfferIngestionJob[]) {
+  const grouped = new Map<string, OfferIngestionJob[]>();
+  jobs.forEach((job) => {
+    const key = job.provider_id || job.provider_name.trim().toLowerCase() || job.id;
+    grouped.set(key, [...(grouped.get(key) || []), job]);
+  });
+  return Array.from(grouped.values());
 }
 
 export default function TodayWorkspace() {
@@ -143,16 +152,27 @@ export default function TodayWorkspace() {
       queue.push({ id: `compliance:${item.lead_id}`, scope: "now", kind: "compliance", title: lead?.company || "Проверка лида", detail: `Статус: ${item.case_status}`, path: `/merchants/${item.lead_id}?tab=compliance`, priority: 5 });
     });
 
-    bridge.ingestionJobs.filter((job) => ["review", "failed", "duplicate"].includes(job.status) || Number(job.blocking_anomaly_count || 0) > 0).forEach((job) => queue.push({
-      id: `offer:${job.id}`,
-      scope: "now",
-      kind: "offer",
-      title: job.provider_name || "Источник оффера",
-      detail: job.error_message || `${job.route_count || 0} маршрутов · требуется решение`,
-      path: "/offers?workspace=intake",
-      timestamp: job.received_at,
-      priority: job.status === "failed" ? 6 : 3,
-    }));
+    const attentionIngestionJobs = bridge.ingestionJobs.filter((job) => ["review", "failed", "duplicate"].includes(job.status) || Number(job.blocking_anomaly_count || 0) > 0);
+    groupIngestionAttention(attentionIngestionJobs).forEach((jobs) => {
+      const failedJob = jobs.find((job) => job.status === "failed" || Boolean(job.error_message));
+      const primaryJob = failedJob || jobs[0];
+      const routeCount = jobs.reduce((sum, job) => sum + Number(job.route_count || 0), 0);
+      const anomalyCount = jobs.reduce((sum, job) => sum + Number(job.blocking_anomaly_count || 0), 0);
+      const linkedContext = jobs.length > 1 ? ` · связано источников: ${jobs.length}` : "";
+      const detail = failedJob?.error_message
+        ? `Ошибка импорта: ${failedJob.error_message}${linkedContext} · ${routeCount} маршрутов · ${anomalyCount} заметок`
+        : `${routeCount} маршрутов · ${anomalyCount} заметок${linkedContext} · требуется решение`;
+      queue.push({
+        id: `offer:${primaryJob.id}`,
+        scope: "now",
+        kind: "offer",
+        title: primaryJob.provider_name || "Источник оффера",
+        detail,
+        path: "/offers?workspace=intake",
+        timestamp: jobs.reduce((latest, job) => !latest || new Date(job.received_at) > new Date(latest) ? job.received_at : latest, ""),
+        priority: failedJob ? 6 : 3,
+      });
+    });
 
     integrationIssues.forEach((issue) => queue.push({
       id: `integration:${issue.key}`,
