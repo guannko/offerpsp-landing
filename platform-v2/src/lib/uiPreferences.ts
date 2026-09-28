@@ -22,13 +22,14 @@ export function useStoredState<T>(key: string, fallback: T) {
   return [value, setValue] as const;
 }
 
-function isWorkingPath(path: string) {
-  if (!path || path.startsWith("/signin") || isQaFixturePath(path)) return false;
+function normalizeWorkingPath(path: string) {
+  if (!path || path.startsWith("/signin") || isQaFixturePath(path)) return null;
   try {
     const url = new URL(path, "https://offerpsp.local");
-    return !url.searchParams.has("qa");
+    if (["qa", "release", "check"].some((param) => url.searchParams.has(param))) return null;
+    return `${url.pathname}${url.search}${url.hash}`;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -36,8 +37,9 @@ export function readRecentPaths() {
   try {
     const parsed = JSON.parse(window.localStorage.getItem("offerpsp.recentPaths") || "[]");
     const stored = Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
-    const recent = stored.filter(isWorkingPath).slice(0, 6);
-    if (recent.length !== stored.length) window.localStorage.setItem("offerpsp.recentPaths", JSON.stringify(recent));
+    const recent = stored.map(normalizeWorkingPath).filter((item): item is string => Boolean(item))
+      .filter((item, index, items) => items.indexOf(item) === index).slice(0, 6);
+    if (recent.length !== stored.length || recent.some((item, index) => item !== stored[index])) window.localStorage.setItem("offerpsp.recentPaths", JSON.stringify(recent));
     return recent;
   } catch {
     return [];
@@ -45,8 +47,9 @@ export function readRecentPaths() {
 }
 
 export function rememberPath(path: string) {
-  if (!isWorkingPath(path)) return;
-  const recent = [path, ...readRecentPaths().filter((item) => item !== path)].slice(0, 6);
+  const normalized = normalizeWorkingPath(path);
+  if (!normalized) return;
+  const recent = [normalized, ...readRecentPaths().filter((item) => item !== normalized)].slice(0, 6);
   try {
     window.localStorage.setItem("offerpsp.recentPaths", JSON.stringify(recent));
   } catch {
