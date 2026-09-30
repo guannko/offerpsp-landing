@@ -85,6 +85,7 @@ function EmailMessageBody({ textBody, htmlBody }: { textBody?: string | null; ht
 
   return <div className="mt-4">
     <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-sm leading-6 text-gray-700 dark:text-gray-200">{presentation.contentText || "Пустое письмо"}</p>
+    {presentation.actionLinks.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{presentation.actionLinks.map((link, index)=><a key={`${link.href}-${index}`} href={link.href} target="_blank" rel="noreferrer" title={link.href} className="inline-flex items-center rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-xs font-semibold text-brand-700 no-underline transition hover:border-brand-300 hover:bg-brand-100 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300 dark:hover:bg-brand-500/20">{link.label} ↗</a>)}</div>}
     {presentation.technicalText && <details className="group mt-3 rounded-lg border border-gray-200 bg-gray-50/70 dark:border-gray-800 dark:bg-white/[0.03]">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-xs font-semibold text-gray-500 hover:text-brand-600">
         <span>Служебные ссылки · {presentation.technicalLineCount}</span>
