@@ -51,6 +51,9 @@ assert.match(validateIntakeBrief(blankNumbers).missing.join(" "), /monthly volum
 assert.match(validateIntakeBrief(blankNumbers).missing.join(" "), /average ticket/);
 
 const page = await readFile(new URL("../index.html", import.meta.url), "utf8");
+assert.equal(validateIntakeBrief({ work_email: "alex@example.com" }).valid, false);
+assert.throws(() => buildIntakeBriefPayload({ work_email: "alex@example.com" }), /Incomplete merchant brief/);
+assert.match(page, /Fields marked \* are required/);
 for (const field of ["company_url", "license_status", "target_geos", "requested_currencies", "requested_flows",
   "requested_methods", "expected_monthly_volume", "average_ticket_amount", "traffic_types"]) {
   assert.match(page, new RegExp(`(?:name|data-unknown-for)=["']${field}["']`), `public brief must collect ${field}`);

@@ -352,6 +352,7 @@ async function applyMigrations() {
     "20260930135804_offerpsp_mailbox_consistency.sql",
     "20260930140822_offerpsp_intake_review_task_separation.sql",
     "20260930142224_offerpsp_merchant_operational_context.sql",
+    "20260930172000_offerpsp_sent_internal_recipient.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {

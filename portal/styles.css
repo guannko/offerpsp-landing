@@ -1700,6 +1700,12 @@ textarea::placeholder { color: #646a78; }
 .new-request-form input[readonly] { color: #858b98; background: rgba(255, 255, 255, .025); }
 .dialog-wide { grid-column: 1 / -1; }
 
+.brief-field { display: grid; gap: 7px; align-content: start; }
+.new-request-form .brief-unknown { display: flex; align-items: center; gap: 7px; font-weight: 500; }
+.new-request-form .brief-unknown input { width: 16px; min-height: 16px; margin: 0; accent-color: var(--coral); }
+.new-request-form input:disabled { opacity: .45; }
+.brief-hint { margin: 0 0 5px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+
 .request-consent {
   grid-template-columns: 18px minmax(0, 1fr);
   align-items: start;

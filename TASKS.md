@@ -5,6 +5,42 @@ Updated: 2026-09-30
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## Operational consistency release — production 2026-09-30
+
+- `VERIFIED`: PR #29 merged as `8516aa0eb08b11018f2f0543e307efd828f00802`.
+  Captain's Bridge deployment `dpl_32sdgxo5QhpFAW9V6TVcnXsJUUed` is READY; the canonical
+  `https://ops-7q4m2x9k8v3n.vercel.app/` build manifest reports that exact commit.
+  CLI monitoring timed out, but the actual deployment succeeded. The canonical alias initially
+  remained on the previous release and was explicitly reassigned after checking platform state.
+- `VERIFIED`: migrations `offerpsp_mailbox_consistency` (`20260930161854`),
+  `offerpsp_intake_review_task_separation` (`20260930161855`) and
+  `offerpsp_merchant_operational_context` (`20260930161857`) are applied.
+  Only Railon and Protocol/W1 received bounded-backfill review tasks, assigned to Boris.
+- `VERIFIED`: live MCP Railon workspace includes lead, compliance, saved company profile,
+  contact timeline, entity workspace, matches and next action. First response is done, dossier
+  review remains pending, compliance is manual_review, matching is empty and blocked.
+- `VERIFIED`: staff UI confirmed PressPay thread `466137d3-0fa1-49a2-b203-5e892c69b473`
+  belongs to research PSP 83. A 30-day Sent import is enabled; the thread now contains four
+  incoming and five outgoing messages, with corresponding canonical contact events. No emails
+  were sent, no offers published and no matching rebuilt during this release.
+- `VERIFIED`: an actual historical Sent self-copy exposed a retry loop. PostgreSQL logs identified
+  the exact recipient guard. Regression tests cover self mail, external CC, missing recipient,
+  sender-account fencing and deduplication; `offerpsp_sent_internal_recipient`
+  (`20260930190435`) is applied. Self copies remain excluded by the existing internal-mail
+  archive trigger. A subsequent poll returned success with zero failures and no pending messages.
+- `VERIFIED locally`: public and portal form checks reject email-only/incomplete briefs.
+  The portal previously collected legacy fields incompatible with the current n8n validator.
+  It now submits the same canonical brief as the public form, with required markers and explicit
+  unknown choices. Browser fixture tests do not submit to production or send notifications.
+- `VERIFIED locally`: the public release artifact preserves 56 unchanged live assets byte-for-byte.
+  Only index.html and the portal index/app/styles/intake helper differ. Two SEO pages, sitemap
+  and two PSP portal assets differ between repository output and production, so their LIVE bytes
+  are retained, not overwritten. Public deployment of this additional form repair is pending.
+- `PARTIAL`: Docker concurrency tests could not run because the Docker daemon socket is absent.
+  The PGlite intake/Telegram, acknowledgement, review, mail and QA regression suites pass.
+  The earlier full migration validator still requires the real ignored BR-Pay import fixture.
+- SEO/GEO source, subagent modules, Telegram chat creation and Zoom remain untouched.
+
 ## Operational consistency repair — local 2026-09-30
 
 - `VERIFIED locally`: implemented on `codex/offerpsp-operational-consistency`, based on

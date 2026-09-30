@@ -1,5 +1,7 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 import { isPortalTerminalStatus, portalEmptyStateKeys } from "/portal/request-state.js";
+import { collectPortalIntakeBrief, syncPortalIntakeUnknowns } from "/portal/intake-form.js?v=20260930";
+import { buildIntakeBriefPayload, validateIntakeBrief } from "/intake-brief.js";
 import {
   localizedClientNote,
   localizedCommercialLine,
@@ -52,6 +54,8 @@ const COPY = {
     creatingRequest: "Формируем оффер…", requestCreated: "Оффер сформирован и добавлен в кабинет.",
     requestCreateError: "Не удалось подтвердить формирование оффера. Повторите попытку или напишите команде.",
     requestRequired: "Заполните обязательные поля.",
+    briefRequiredHint: "Поля со * обязательны. Укажите значение или явно выберите «Пока не знаю». Email нужен для входа, но не заменяет заявку.",
+    notSureYet: "Пока не знаю", averageTicket: "Средний чек", ticketCurrency: "Валюта среднего чека",
     navCompany: "Компания", navDossier: "Досье", navOptions: "Варианты", navMessages: "Сообщения", requests: "Офферы",
     yourRequests: "Ваши офферы", searchPortfolio: "Компания, GEO, статус…", selectedRequest: "Выбранный оффер", nextStep: "Следующее действие",
     connections: "Знакомства и подключения", dealProgress: "Ход сделки", comparison: "Сравнение",
@@ -167,6 +171,8 @@ const COPY = {
     creatingRequest: "Building offer…", requestCreated: "The offer was created and added to your workspace.",
     requestCreateError: "We could not confirm the offer. Try again or contact the team.",
     requestRequired: "Complete the required fields.",
+    briefRequiredHint: "Fields marked * are required. Enter a value or explicitly choose ‘Not sure yet’. Email signs you in; it does not replace a request.",
+    notSureYet: "Not sure yet", averageTicket: "Average ticket", ticketCurrency: "Ticket currency",
     navCompany: "Company", navDossier: "Dossier", navOptions: "Options", navMessages: "Messages", requests: "Offers",
     yourRequests: "Your offers", searchPortfolio: "Company, GEO, status…", selectedRequest: "Selected offer", nextStep: "Next action",
     connections: "Introductions and connections", dealProgress: "Deal progress", comparison: "Comparison",
@@ -946,6 +952,7 @@ function openNewRequestDialog() {
   const merchantOrganization = state.organizations.find((organization) => organization.organization_type === "merchant");
   const userName = state.user.user_metadata?.full_name || state.user.user_metadata?.name || "";
   elements.newRequestForm.reset();
+  syncPortalIntakeUnknowns(elements.newRequestForm);
   delete elements.newRequestForm.dataset.submissionId;
   elements.newRequestName.value = state.profile?.contact_name || userName;
   elements.newRequestEmail.value = state.user.email || "";
@@ -1039,6 +1046,8 @@ elements.supportDialog.addEventListener("cancel", (event) => {
   if (elements.supportMessageForm.querySelector("button").disabled) event.preventDefault();
 });
 
+elements.newRequestForm.addEventListener("change", () => syncPortalIntakeUnknowns(elements.newRequestForm));
+
 elements.newRequestForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   setStatus(elements.newRequestStatus);
@@ -1048,17 +1057,17 @@ elements.newRequestForm.addEventListener("submit", async (event) => {
     return;
   }
 
+  const briefValues = collectPortalIntakeBrief(elements.newRequestForm, state.user.email);
+  const briefValidation = validateIntakeBrief(briefValues);
+  if (!briefValidation.valid) {
+    setStatus(elements.newRequestStatus, t("requestRequired"), "error");
+    return;
+  }
   const submissionId = elements.newRequestForm.dataset.submissionId || crypto.randomUUID();
   elements.newRequestForm.dataset.submissionId = submissionId;
   const payload = {
-    name: elements.newRequestName.value.trim(),
+    ...buildIntakeBriefPayload(briefValues),
     work_email: state.user.email,
-    company: elements.newRequestCompany.value.trim(),
-    company_url: elements.newRequestCompanyUrl.value.trim(),
-    vertical: elements.newRequestVertical.value,
-    monthly_volume: elements.newRequestVolume.value,
-    geos: elements.newRequestGeos.value.trim(),
-    methods: elements.newRequestMethods.value.trim(),
     telegram: elements.newRequestTelegram.value.trim(),
     details: elements.newRequestDetails.value.trim(),
     website_url: elements.newRequestWebsiteUrl.value,
