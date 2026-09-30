@@ -14,6 +14,7 @@ export type PresentableEmailBody = {
   contentText: string;
   technicalText: string | null;
   technicalLineCount: number;
+  actionLinks: Array<{ href: string; label: string }>;
 };
 
 const quoteHeaderPatterns = [
@@ -58,6 +59,7 @@ export const splitEmailBody = (value?: string | null): SplitEmailBody => {
 };
 
 const bareUrlPattern = /^https?:\/\/\S+$/i;
+const bracketedUrlPattern = /^<(https?:\/\/[^<>\s]+)>$/i;
 const technicalLabelPattern = /^(?:view (?:this email )?in (?:your )?browser|open in browser|unsubscribe|or unsubscribe|manage (?:email )?preferences|email preferences|privacy policy|all rights reserved\.?|©\s*\d{4}.*all rights reserved\.?)$/i;
 const trackingFragmentPattern = /^(?:e?hash|email_id|epc_hash|utm_[a-z_]+|mkt_tok)=[^\s]+$/i;
 
@@ -76,9 +78,15 @@ export const presentEmailBody = (value?: string | null): PresentableEmailBody =>
   const lines = String(value || "").replace(/\r\n?/g, "\n").split("\n");
   const contentLines: string[] = [];
   const technicalLines: string[] = [];
+  const actionLinks: Array<{ href: string; label: string }> = [];
 
   lines.forEach((line) => {
     const trimmed = line.trim();
+    const bracketedUrl = trimmed.match(bracketedUrlPattern)?.[1];
+    if (bracketedUrl) {
+      actionLinks.push({ href: bracketedUrl, label: "Открыть ссылку" });
+      return;
+    }
     const isTechnical = bareUrlPattern.test(trimmed)
       || technicalLabelPattern.test(trimmed)
       || trackingFragmentPattern.test(trimmed);
@@ -91,6 +99,7 @@ export const presentEmailBody = (value?: string | null): PresentableEmailBody =>
     contentText: contentText || collapseBlankLines(lines),
     technicalText: technicalText || null,
     technicalLineCount: technicalLines.filter((line) => line.trim()).length,
+    actionLinks,
   };
 };
 

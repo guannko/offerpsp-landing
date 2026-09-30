@@ -72,4 +72,30 @@ assert.equal(trustlyNewsletter.technicalLineCount, 6);
 assert.match(trustlyNewsletter.technicalText || "", /unsubscribeConfirm/);
 assert.doesNotMatch(trustlyNewsletter.contentText, /https:\/\//);
 
+const pressPayReply = presentEmailBody(`Hi Borys,
+
+Thanks for reaching out.
+
+Do you have time for a call next week? Sharing my calendar link
+<https://calendar.example.com/book/very-long-tracking-token?source=email>
+in case its easier for us to find a time to connect.
+
+Best,
+Assaf`);
+assert.equal(pressPayReply.contentText, `Hi Borys,
+
+Thanks for reaching out.
+
+Do you have time for a call next week? Sharing my calendar link
+in case its easier for us to find a time to connect.
+
+Best,
+Assaf`);
+assert.deepEqual(pressPayReply.actionLinks, [{
+  href: "https://calendar.example.com/book/very-long-tracking-token?source=email",
+  label: "Открыть ссылку",
+}]);
+assert.equal(pressPayReply.technicalLineCount, 0);
+assert.doesNotMatch(pressPayReply.contentText, /calendar\.example\.com/);
+
 process.stdout.write("PASS email ordering, quoted-history folding and technical-tail cleanup\n");
