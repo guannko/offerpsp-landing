@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import { useLocation } from "react-router";
 import { hasSupabaseConfig, supabase } from "../lib/supabase";
+import { keepReadSnapshot, shareRead } from "../lib/readSnapshot";
 import type {
   ControlBridgeData,
   AgentAssignment,
@@ -47,6 +48,8 @@ const emptyData: ControlBridgeData = {
   commissionSummary: {},
   captainsBridge: { casino_leads: [], psp_providers: [], email_drafts: [], telegram_log: [], bot_tasks: [], offerpsp_tasks: [] },
   mailCenter: { metrics: { threads: 0, unread: 0, awaiting_reply: 0, follow_up: 0, overdue_follow_up: 0, flagged: 0, trash: 0, attachments_to_review: 0 }, threads: [], messages: [], attachments: [], templates: [] },
+  mailCenterLoaded: false,
+  mailCenterError: null,
   loading: true,
   refreshing: false,
   ready: false,
@@ -198,7 +201,7 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
             cachedAt: Date.now(),
             error: firstError?.message || null,
           };
-          writeCoreCache(user.id, snapshot);
+          if (!firstError) writeCoreCache(user.id, snapshot);
           return snapshot;
         });
         coreRequests.set(user.id, request);
@@ -210,8 +213,8 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
       })();
     const [core, captainsResult, mailResult, ingestionResult] = await Promise.all([
       coreRequest,
-      needsCaptains ? supabase.rpc("get_offerpsp_captains_bridge") : skipped,
-      needsMail ? supabase.rpc("get_offerpsp_mail_center", { p_limit: 250 }) : skipped,
+      needsCaptains ? shareRead(`${user.id}:captains`, () => supabase.rpc("get_offerpsp_captains_bridge")) : skipped,
+      needsMail ? shareRead(`${user.id}:mail-index`, () => supabase.rpc("get_offerpsp_mail_index", { p_limit: 250 })) : skipped,
       needsSupplyOperations ? supabase.rpc("list_offerpsp_ingestion_jobs", { p_limit: 100 }) : skipped,
     ]);
 
@@ -232,8 +235,16 @@ export function ControlBridgeProvider({ children }: { children: ReactNode }) {
       moduleEntitlements: core.moduleEntitlements,
       complianceCases: core.complianceCases,
       commissionSummary: core.commissionSummary,
-      captainsBridge: needsCaptains ? (captainsResult.data || emptyData.captainsBridge) as CaptainsBridgeSnapshot : current.captainsBridge,
-      mailCenter: needsMail ? (mailResult.data || emptyData.mailCenter) as MailCenterSnapshot : current.mailCenter,
+      captainsBridge: needsCaptains ? keepReadSnapshot(current.captainsBridge,
+        captainsResult.data as CaptainsBridgeSnapshot | null, Boolean(captainsResult.error),
+        current.user?.id === user.id, emptyData.captainsBridge) : current.captainsBridge,
+      mailCenter: needsMail ? keepReadSnapshot(current.mailCenter,
+        mailResult.data as MailCenterSnapshot | null, Boolean(mailResult.error),
+        current.user?.id === user.id, emptyData.mailCenter) : current.mailCenter,
+      mailCenterLoaded: needsMail
+        ? Boolean(mailResult.data && !mailResult.error) || (current.user?.id === user.id && current.mailCenterLoaded)
+        : current.mailCenterLoaded,
+      mailCenterError: needsMail ? mailResult.error?.message || null : current.mailCenterError,
       loading: false,
       refreshing: false,
       ready: true,

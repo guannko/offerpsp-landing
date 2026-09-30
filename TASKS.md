@@ -5,6 +5,48 @@ Updated: 2026-09-30
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## Radio room load regression — production 2026-09-30
+
+- `VERIFIED`: Boris reported an empty Radio room after the consistency release. The live UI
+  showed a statement timeout and zero threads; PostgreSQL logs identified repeated failures of
+  `get_offerpsp_mail_center`. The database still contained 143 messages (68 inbound / 75 outbound),
+  64 threads (23 active / 40 archived / 1 trashed), and zero duplicate external Message-IDs.
+- The preceding report incorrectly treated one successful reload as sufficient evidence that
+  the timeout was transient. It was not a reliable production load check.
+- `VERIFIED locally`: added a staff-only text/search index and full-HTML read for one selected
+  thread. The legacy full-snapshot RPC is unchanged. Search text is not truncated; archived mail
+  remains available. Attachment limits now apply to selected threads, not the first N messages.
+- `VERIFIED locally`: concurrent reads share one pending request, failures are not cached,
+  failed refreshes preserve the last successful same-user snapshot, and initial-load failure
+  is shown as an error with retry rather than an empty inbox. Full-thread failures have a
+  separate retry; old-thread responses cannot overwrite a newly selected thread.
+- PGlite access/body/attachment/limit tests, read-recovery tests, lint/build, the eight operational
+  consistency suites, 30 intake/Telegram tests, MCP/OAuth, mailbox, delivery, QA, mail rendering,
+  public and portal brief regressions pass. No test sends external email or Telegram messages.
+- `VERIFIED`: migration `offerpsp_mail_index_and_thread_reads` (`20260930195955`) is applied.
+  Source-built deployment `dpl_2DcMz72roUw9UqsHak2SEevWvWEA` is READY; the stable Captain's
+  Bridge alias and build manifest report `0421116c91b801b744a7033c22f8a0bd233abfa4`.
+  The first manifest fetch immediately after alias reassignment still returned the old version;
+  subsequent platform inspection, canonical manifest and live UI confirmed the new version.
+- `VERIFIED`: live Radio room shows 23 active threads, including Danil and John. PressPay opens
+  all nine messages, including the eight-message history. Returning from other modules still
+  shows the saved list while the selected full body loads independently. The index contains all
+  143 message records and nine attachment records; its payload is 2,068,227 bytes with untruncated
+  search text. Initial actual browser RPC execution times were 431 ms (index) and 86 ms (thread).
+- `VERIFIED`: live PSP registry has four working providers; offer catalogue shows four PSPs and
+  72 routes in the current view. Inbox retains the two owned intake cases, Operations retains the
+  separate Railon/Protocol review tasks, and Today shows the same review work. The historical
+  Merchant Bridge failed import remains visible for review and was not retried or published.
+- `VERIFIED`: the checked post-release database RPC log window has no errors; the new Vercel
+  deployment has no runtime error entries in the checked window. Mailbox execution `648316`
+  returned actual success with zero failures and zero deferred messages. Message/thread counts
+  and external Message-ID deduplication remain unchanged.
+- Both new reads require staff identity, use an empty search path and deny anon/service-role
+  execution. Security advisors retain 33 intentional deny-all RLS notices; authenticated
+  SECURITY DEFINER notices increase from 170 to 172 for these two guarded staff RPCs. This is not
+  presented as a zero-warning security audit.
+- SEO/GEO source, public deployment, subagents, Telegram chat creation and Zoom are unchanged.
+
 ## Operational consistency release — production 2026-09-30
 
 - `VERIFIED`: PR #29 merged as `8516aa0eb08b11018f2f0543e307efd828f00802`.
