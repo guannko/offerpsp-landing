@@ -1,5 +1,6 @@
 import { HttpError, staffSupabaseRequest } from "./staff-auth.mjs";
 import { createOperationEnvelope, createSupabasePrimaryDataPlane } from "./data-plane.mjs";
+import { merchantNextAction } from "../../shared/merchant-next-action.mjs";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ROUTE_CODE = /^OFF-[0-9]{6}$/;
@@ -334,11 +335,26 @@ export async function executeOfferPspTool(name, args, { request, context, callId
   if (name === "get_entity_workspace") {
     const type = clamp(input.entity_type, 40);
     const id = clamp(input.entity_id, 120);
-    if (type === "merchant") return rpc(context, "get_offerpsp_staff_request_workspace", { p_lead_id: requireUuid(id, "entity_id") });
+    if (type === "merchant") {
+      const leadId = requireUuid(id, "entity_id");
+      const [requestWorkspace, entityWorkspace, contactTimeline, operationalContext, matches] = await Promise.all([
+        rpc(context, "get_offerpsp_staff_request_workspace", { p_lead_id: leadId }),
+        rpc(context, "get_offerpsp_entity_workspace", { p_entity_type: "merchant", p_entity_id: leadId }),
+        rpc(context, "get_offerpsp_contact_timeline", { p_entity_type: "merchant", p_entity_id: leadId, p_limit: 100 }),
+        rpc(context, "get_offerpsp_merchant_operational_context", { p_lead_id: leadId }),
+        rpc(context, "list_offerpsp_route_matches", { p_lead_id: leadId }),
+      ]);
+      // Preserve the existing request contract, and expose the same related records as the UI.
+      const latestShortlist = [...(requestWorkspace?.shortlist_items || [])]
+        .sort((a, b) => Number(b.shortlist_version || 0) - Number(a.shortlist_version || 0))[0];
+      return { ...requestWorkspace, ...operationalContext, entity_workspace: entityWorkspace, contact_timeline: contactTimeline, matches,
+        next_action: merchantNextAction({ leadStatus: operationalContext?.lead?.status, recordState: operationalContext?.lead?.record_state,
+          complianceStatus: operationalContext?.compliance?.case?.case_status, shortlistStatus: latestShortlist?.shortlist_status, hasMatches: Boolean(matches?.length) }) };
+    }
     if (type === "deal") {
       const leadId = requireUuid(id, "entity_id");
       const [workspace, dealHistory] = await Promise.all([
-        rpc(context, "get_offerpsp_staff_request_workspace", { p_lead_id: leadId }),
+        executeOfferPspTool("get_entity_workspace", { entity_type: "merchant", entity_id: leadId }, { request, context, callId }),
         rpc(context, "get_offerpsp_deal_history", { p_lead_id: leadId }),
       ]);
       return { workspace, deal_history: dealHistory };

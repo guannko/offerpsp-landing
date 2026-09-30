@@ -13,6 +13,7 @@
     "test:offer-parser": "node scripts/test-offer-parser.mjs",
     "test:provider-source": "node scripts/test-provider-offer-source.mjs",
     "test:mailbox-poller": "node scripts/test-mailbox-poller.mjs",
+    "test:operational-consistency": "node --experimental-strip-types scripts/test-mail-work-queue.mjs && node --experimental-strip-types scripts/test-task-work-queue.mjs && node --experimental-strip-types scripts/test-mail-company-suggestion.mjs && node --experimental-strip-types scripts/test-merchant-request-patch.mjs && node scripts/test-merchant-next-action.mjs && node scripts/test-mailbox-consistency-postgres.mjs && node scripts/test-intake-review-task-postgres.mjs && node scripts/test-merchant-context-postgres.mjs",
     "test:sent-mail-archive": "node scripts/test-sent-mail-archive.mjs",
     "test:document-processing": "node scripts/test-document-processing-router.mjs",
     "check:function-storage": "node scripts/check-function-storage.mjs",

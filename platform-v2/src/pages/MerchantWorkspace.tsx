@@ -6,6 +6,8 @@ import { QuickStatusSelect, type QuickStatusOption } from "../components/control
 import { VisibilityToggleButton } from "../components/control/VisibilityToggleButton";
 import { useControlBridge } from "../context/ControlBridgeContext";
 import { supabase } from "../lib/supabase";
+import { isQaFixtureLead, isQaFixtureRoute } from "../lib/qaFixtures";
+import { merchantNextAction } from "../../shared/merchant-next-action.mjs";
 import DealDeskPanel, { type DealWorkspace } from "./DealDeskPanel";
 import MerchantProfileEditor from "../components/control/MerchantProfileEditor";
 import MerchantCompanyWorkspace from "../components/control/MerchantCompanyWorkspace";
@@ -118,6 +120,7 @@ type Tab = "overview" | "compliance" | "company" | "profile" | "contacts" | "mat
 const tabs: Array<{ id: Tab; label: string }> = [
   { id: "company", label: "Компания" },
   { id: "profile", label: "Платёжный запрос" },
+  { id: "compliance", label: "Проверка" },
   { id: "contacts", label: "Контакты" },
   { id: "matching", label: "Офферы" },
   { id: "preview", label: "Кабинет клиента" },
@@ -326,11 +329,12 @@ export default function MerchantWorkspace() {
     const query = search.trim().toLowerCase();
     return routes.filter((route) => {
       if (route.status !== "published") return false;
+      if (isQaFixtureRoute(route) !== Boolean(lead && isQaFixtureLead(lead))) return false;
       if (!query) return true;
       return [route.provider_name, route.provider_code, route.route_code, route.client_title, route.flow, ...(route.geos || []), ...(route.currencies || []), ...(route.methods || [])]
         .join(" ").toLowerCase().includes(query);
     });
-  }, [routes, search]);
+  }, [routes, search, lead]);
 
   async function runAction(name: string, action: () => Promise<{ error: { message: string } | null }>, success: string) {
     setBusy(name);
@@ -576,7 +580,7 @@ export default function MerchantWorkspace() {
     {loading ? <SkeletonPage/> : tab === "compliance"
         ? <CompliancePanel workspace={complianceWorkspace} busy={busy} runDisabled={screeningActionDisabled} runLabel={screeningButtonLabel} onRun={() => void requestComplianceScreening()} onSave={(input) => void saveComplianceDecision(input)}/>
       : tab === "company" || tab === "overview"
-        ? <div className="space-y-6"><Overview lead={lead} matches={matches} shortlist={latest}/><MerchantCompanyWorkspace leadId={lead.lead_id} onChanged={async () => { await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]); }}/></div>
+        ? <div className="space-y-6"><Overview lead={lead} matches={matches} shortlist={latest} complianceStatus={complianceWorkspace?.case.case_status} onOpenCompliance={() => setTab("compliance")}/><MerchantCompanyWorkspace leadId={lead.lead_id} onChanged={async () => { await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]); }}/></div>
       : tab === "profile"
         ? <MerchantProfileEditor lead={lead} onChanged={async () => { await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]); }}/>
       : tab === "contacts"
@@ -733,11 +737,12 @@ function SelectionCard({ selected, onChange, title, meta, detail, aside }: { sel
   </label>;
 }
 
-function Overview({ lead, matches, shortlist }: { lead: ReturnType<typeof useControlBridge>["leads"][number]; matches: Match[]; shortlist?: Shortlist }) {
+function Overview({ lead, matches, shortlist, complianceStatus, onOpenCompliance }: { lead: ReturnType<typeof useControlBridge>["leads"][number]; matches: Match[]; shortlist?: Shortlist; complianceStatus?: string; onOpenCompliance: () => void }) {
+  const nextAction = merchantNextAction({ leadStatus: lead.status, recordState: lead.record_state, complianceStatus, shortlistStatus: shortlist?.status, hasMatches: matches.length > 0 });
   const fields = [["Сайт", lead.company_url || "—"], ["Вертикаль", lead.vertical || "—"], ["Категория бизнеса", lead.risk_segment === "low" ? "Low-risk" : lead.risk_segment === "high" ? "High-risk" : "Не определена"], ["GEO", textList(lead.geos)], ["Валюты", textList(lead.currencies)], ["Методы", textList(lead.methods)], ["Оборот", lead.monthly_volume || (lead.expected_monthly_volume ? String(lead.expected_monthly_volume) : "—")]];
   return <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
     <Panel className="xl:col-span-2"><div className="flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Merchant profile</p><h2 className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">Данные запроса</h2></div><span className="font-mono text-xs text-gray-400">{lead.lead_id.slice(0, 8)}</span></div><div className="mt-6 grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2">{fields.map(([label, value]) => <div key={label} className="border-b border-gray-100 pb-4 dark:border-gray-800"><span className="text-xs uppercase tracking-wide text-gray-400">{label}</span><strong className="mt-1 block text-sm text-gray-800 dark:text-white/90">{value}</strong></div>)}</div></Panel>
-    <div className="space-y-6"><Panel><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Следующее действие</h2><p className="mt-2 text-sm text-gray-500">{shortlist?.status === "shared" ? "Shortlist уже отправлен. Ждём реакцию клиента." : shortlist ? "Проверьте созданный shortlist и отправьте его клиенту." : matches.length ? "Выберите подходящие маршруты и создайте shortlist." : "Запустите подбор или выберите офферы вручную."}</p></Panel><Panel><div className="grid grid-cols-3 gap-3 text-center"><div><strong className="block text-2xl text-gray-900 dark:text-white">{matches.length}</strong><span className="text-xs text-gray-400">matches</span></div><div><strong className="block text-2xl text-gray-900 dark:text-white">{shortlist?.offerpsp_shortlist_items?.length || 0}</strong><span className="text-xs text-gray-400">офферов</span></div><div><strong className="block text-2xl text-gray-900 dark:text-white">v{shortlist?.version || 0}</strong><span className="text-xs text-gray-400">shortlist</span></div></div></Panel></div>
+    <div className="space-y-6"><Panel><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Следующее действие</h2><p className="mt-2 text-sm text-gray-500">{nextAction.detail}</p>{nextAction.tab === "compliance" && <button onClick={onOpenCompliance} className="mt-4 text-sm font-semibold text-brand-500">Открыть проверку →</button>}</Panel><Panel><div className="grid grid-cols-3 gap-3 text-center"><div><strong className="block text-2xl text-gray-900 dark:text-white">{matches.length}</strong><span className="text-xs text-gray-400">matches</span></div><div><strong className="block text-2xl text-gray-900 dark:text-white">{shortlist?.offerpsp_shortlist_items?.length || 0}</strong><span className="text-xs text-gray-400">офферов</span></div><div><strong className="block text-2xl text-gray-900 dark:text-white">v{shortlist?.version || 0}</strong><span className="text-xs text-gray-400">shortlist</span></div></div></Panel></div>
   </div>;
 }
 

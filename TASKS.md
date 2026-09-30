@@ -1,9 +1,73 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-09-28
+Updated: 2026-09-30
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
+
+## Operational consistency repair — local 2026-09-30
+
+- `VERIFIED locally`: implemented on `codex/offerpsp-operational-consistency`, based on
+  `b61584d6d017de35b7376adc1c19eb57efd10a81`, in the isolated checkout
+  `/private/tmp/offerpsp-radio-room-compact`. The older dirty checkout and its user changes
+  remain untouched. No production migration, business-data write or deployment was performed.
+- Today treats reading separately from resolving a mail thread. Archived/trashed threads do not
+  become follow-up work; overdue explicit follow-ups override Waiting. A deadline tomorrow does
+  not defer a task: only an explicit future `scheduled_for` does. A completed Sent message can
+  resolve the need to answer without inventing an `awaiting_reply` promise.
+- Human dossier review has its own deduplicated `intake_review_v1` task. An acknowledgement receipt
+  completes only the existing first-response task, not review or compliance. Clearance resolves
+  review, terminal states cancel it, QA fixtures are excluded, and explicit human task decisions
+  are preserved. Existing active intake-stage manual cases are restored by a bounded backfill.
+- The merchant card exposes the existing Compliance tab and follows the same next-action policy
+  as MCP: compliance precedes matching. The request editor saves only changed fields and shows
+  unnormalized legacy brief values without inventing countries from a region such as Latam.
+- Merchant/deal MCP reads retain their earlier keys and include saved company/legal profile,
+  related contacts/tasks/documents, canonical contact timeline, matching and compliance context.
+  Reading a company does not call the UI's ensure/create RPC.
+- Ordinary merchants cannot select QA routes. The existing SQL compatibility predicate had a
+  reproducible NULL bypass for QA merchant / ordinary PSP; the replacement enforces both boundary
+  directions and preserves same-scenario golden fixtures.
+- Spark remains the human sending client. Optional IMAP Sent evidence import preserves Message-ID,
+  References, direction, chronology and Seen state; duplicate imports do not inflate counters.
+  Source-account fences reject unrelated outbound evidence. A missing/broken Sent folder produces
+  a visible partial failure while Inbox processing continues. Sent sync is OFF by default.
+- Exact unique PSP-domain matches are suggestions requiring staff confirmation, not automatic
+  company links. Confirmed thread linking reconciles existing messages into canonical contact
+  history using the existing real event writer, without rewriting the original mail.
+- Settlement/refund/chargeback ranges no longer become invalid PayIn/PayOut limit rows. Unmodeled
+  ranges remain source-backed review anomalies. No failed real import was retried or published.
+- Casino research defaults to its operational pipeline, preserving remembered preferences.
+  Analytics labels now describe a current-status snapshot, not historical event conversion.
+- `VERIFIED locally`: ESLint, TypeScript/Vite build, eight operational-consistency scripts,
+  three actual PostgreSQL migration regression suites, MCP/OAuth, mailbox poller, offer parser,
+  provider source, Sent archive, document router, control-integrity/delivery/QA/mail rendering,
+  and intake acknowledgement tests pass. Visual checks use synthetic local fixtures with
+  production APIs and outbound mutations disabled; they are not production E2E evidence.
+- `PARTIAL`: the complete migration validator applies all migrations, including these three,
+  and passes schema/access, intake, matching, company/merge, mail and lifecycle checks. It then
+  stops at the pre-existing absent ignored fixture `.private/imports/brpay-2026-07-23-v3.json`.
+  The validator is not reported as fully passing, and no synthetic replacement is substituted.
+- SEO/GEO, subagent modules, Telegram chat creation and Zoom were not changed.
+
+### Release work still pending
+
+1. Confirm the current production SHA/migration state; review and apply the three new migrations
+   in timestamp order. Record pre-change function definitions and controlled-backfill counts.
+2. Commit the exact release, run the prescribed Vercel function-storage/release checks, and use a
+   source-built deployment. Verify the stable alias and exact build manifest after deployment.
+3. Confirm the PressPay thread/company association before historical Sent reconciliation. Then
+   enable `OFFERPSP_MAILBOX_SYNC_SENT=true` with a bounded 30-day lookback, inspect initial batches,
+   and verify chronology, thread association, duplicate suppression and poller failures.
+4. Run live UI/MCP and intake receipt/review/QA-isolation checks. Review the failed Merchant Bridge
+   source import separately; no automatic replay or offer publication is authorized by this repair.
+
+### Product follow-ups, not completed by this repair
+
+- MerchantPayd capability → merchant brief → individual quote journey (no public fixed rate or
+  internal buy rate); distinguish it from Merchant Bridge.
+- Historical event-based conversion, realized processing volume and margin analytics.
+- Further target/contact enrichment and explicitly approved operational data corrections.
 
 ## Post-audit debt closure — production 2026-09-28
 

@@ -29,6 +29,9 @@ async function pollMailboxHandler(request, response) {
       ingestToken: process.env.OFFERPSP_MAIL_INGEST_TOKEN,
       supabaseUrl: process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
       batchLimit: process.env.OFFERPSP_MAILBOX_BATCH_LIMIT || "10",
+      // Enable only after the matching SQL migration has been applied.
+      syncSent: process.env.OFFERPSP_MAILBOX_SYNC_SENT === "true",
+      sentBackfillDays: process.env.OFFERPSP_MAILBOX_SENT_BACKFILL_DAYS || "30",
       runtimeBudgetMs: "45000",
     });
     return json(response, summary.failed ? 207 : 200, { success: summary.failed === 0, ...summary });

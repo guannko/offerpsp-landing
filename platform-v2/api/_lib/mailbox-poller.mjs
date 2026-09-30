@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 import { prepareOfferEmailAttachments } from "./offer-email-attachments.mjs";
+import { findSentMailbox } from "./sent-mail-archive.mjs";
 
 const DEFAULT_BATCH_LIMIT = 25;
 const MAX_BATCH_LIMIT = 50;
@@ -29,7 +30,7 @@ export const buildFallbackMessageId = ({ uidValidity, uid, source }) => {
   return `<offerpsp-imap-${uidValidity}-${uid}-${digest}@offerpsp.com>`;
 };
 
-export async function parseMailboxMessage({ source, uid, uidValidity }) {
+export async function parseMailboxMessage({ source, uid, uidValidity, mailbox = "INBOX", direction = "inbound", account, seen = false }) {
   const parsed = await simpleParser(source, {
     skipHtmlToText: true,
     skipTextToHtml: true,
@@ -38,6 +39,9 @@ export async function parseMailboxMessage({ source, uid, uidValidity }) {
   });
   const fromEmail = firstAddress(parsed.from);
   if (!fromEmail) throw new Error("Inbound email has no valid sender");
+  if (direction === "outbound" && fromEmail !== String(account || "").trim().toLowerCase()) {
+    throw new Error("Sent mailbox sender does not match the configured account");
+  }
   const attachments = await prepareOfferEmailAttachments(parsed.attachments || []);
 
   return {
@@ -62,6 +66,10 @@ export async function parseMailboxMessage({ source, uid, uidValidity }) {
     },
     imap_uid: uid,
     imap_uid_validity: uidValidity,
+    imap_mailbox: mailbox,
+    direction,
+    is_read: direction === "outbound" || seen,
+    mailbox_account: account || null,
     attachment_count: attachments.length,
     attachments,
   };
@@ -139,33 +147,58 @@ export async function pollOfferPspMailbox(config, dependencies = {}) {
 
   try {
     await client.connect();
-    const lock = await client.getMailboxLock("INBOX");
-    try {
-      const uidValidity = String(client.mailbox?.uidValidity || "0");
-      const pendingUids = (await client.search({ not: { keyword: PROCESSED_FLAG } }, { uid: true }))
-        .slice(-limit);
-      summary.scanned = pendingUids.length;
-
-      for (const uid of pendingUids) {
-        if (Date.now() >= deadline) {
-          summary.deferred = pendingUids.length - summary.ingested - summary.duplicates - summary.failed;
-          break;
-        }
-        try {
-          const message = await client.fetchOne(uid, { source: true }, { uid: true });
-          if (!message?.source) throw new Error("IMAP message source is empty");
-          const payload = await parseMessage({ source: message.source, uid, uidValidity });
-          const result = await ingestPayload(payload, resolvedConfig);
-          await client.messageFlagsAdd(uid, [PROCESSED_FLAG], { uid: true });
-          if (result?.duplicate) summary.duplicates += 1;
-          else summary.ingested += 1;
-        } catch (error) {
-          summary.failed += 1;
-          console.error("OfferPSP mailbox message failed", { uid, error: error?.message || "Unknown error" });
-        }
+    const folders = [{ path: "INBOX", direction: "inbound" }];
+    if (config.syncSent === true) {
+      try {
+        const sent = findSentMailbox(await client.list());
+        if (!sent?.path || sent.path === "INBOX") throw new Error("IMAP Sent mailbox was not found; sync is enabled");
+        folders.push({ path: sent.path, direction: "outbound" });
+      } catch (error) {
+        summary.failed += 1;
+        console.error("OfferPSP Sent mailbox discovery failed", { error: error?.message || "Unknown error" });
       }
-    } finally {
-      lock.release();
+    }
+    for (const folder of folders) {
+      let lock;
+      try {
+        lock = await client.getMailboxLock(folder.path);
+        const uidValidity = String(client.mailbox?.uidValidity || "0");
+        const query = { not: { keyword: PROCESSED_FLAG } };
+        if (folder.direction === "outbound") {
+          const days = Math.max(1, Math.min(Number(config.sentBackfillDays) || 30, 90));
+          query.since = new Date(Date.now() - days * 86_400_000);
+        }
+        const found = await client.search(query, { uid: true });
+        // Sent backfill is bounded and oldest-first, so new messages cannot starve it.
+        const pendingUids = folder.direction === "outbound" ? found.slice(0, limit) : found.slice(-limit);
+        summary.scanned += pendingUids.length;
+
+        for (const [index, uid] of pendingUids.entries()) {
+          if (Date.now() >= deadline) {
+            summary.deferred += pendingUids.length - index;
+            break;
+          }
+          try {
+            const message = await client.fetchOne(uid, { source: true, flags: true }, { uid: true });
+            if (!message?.source) throw new Error("IMAP message source is empty");
+            const payload = await parseMessage({ source: message.source, uid, uidValidity,
+              mailbox: folder.path, direction: folder.direction,
+              account: config.imapUser || "bizdev@offerpsp.com", seen: message.flags?.has("\\Seen") || false });
+            const result = await ingestPayload(payload, resolvedConfig);
+            await client.messageFlagsAdd(uid, [PROCESSED_FLAG], { uid: true });
+            if (result?.duplicate) summary.duplicates += 1;
+            else summary.ingested += 1;
+          } catch (error) {
+            summary.failed += 1;
+            console.error("OfferPSP mailbox message failed", { uid, mailbox: folder.path, error: error?.message || "Unknown error" });
+          }
+        }
+      } catch (error) {
+        summary.failed += 1;
+        console.error("OfferPSP mailbox folder failed", { mailbox: folder.path, error: error?.message || "Unknown error" });
+      } finally {
+        lock?.release();
+      }
     }
   } finally {
     await client.logout().catch(() => undefined);

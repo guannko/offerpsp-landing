@@ -569,6 +569,14 @@ function extractLimits(block, fallbackFlow, currencies) {
 
   for (const rawLine of block.split("\n")) {
     const line = rawLine.replace(/[*_`]/g, "").trim();
+    const explicitFlow = inferFeeFlow(line, null);
+    if (explicitFlow && !["payin", "payout"].includes(explicitFlow)) {
+      // Settlement/refund/chargeback conditions are not transaction limit rows.
+      // Keep them in the immutable source and the dedicated terms parser.
+      pendingMinimum = null;
+      limitContext = false;
+      continue;
+    }
     if (/^(?:pay[-\s]*in|при[её]м(?:\s+платежей)?)(?:\s|:|$)/i.test(line)) contextFlow = "payin";
     if (/^(?:pay[-\s]*out|payouts?|выплаты?)(?:\s|:|$)/i.test(line)) contextFlow = "payout";
     if (/^(?:limits?|лимиты)[\s:]*$/i.test(line)) {
@@ -712,6 +720,8 @@ function parseRoute(block, index) {
   if (/red glass|green glass|красн.*стакан|зел[её]н.*стакан|top\s*\d/i.test(block)) anomalies.push({ code: "exchange_rule_review", severity: "warning", field: "settlement", message: "Order-book settlement rule requires manual review.", source_excerpt: block.split("\n").filter((line) => /стакан|top\s*\d/i.test(line)).join(" | ").slice(0, 400) });
 
   const limits = extractLimits(block, flow, currencies);
+  const nonTransactionRange = block.split("\n").find((line) => /^(?:settlement|refund|chargeback)[^\n]*(?:limit|minimum|maximum|min\s*\/\s*max)/i.test(line.trim()) && /\d[\d\s.,]*\s*-\s*\d/.test(line));
+  if (nonTransactionRange) anomalies.push({ code: "non_transaction_limit_requires_review", severity: "error", field: "settlement", message: "A settlement/refund/chargeback range requires staff normalization; it is not a PayIn/PayOut transaction limit.", source_excerpt: nonTransactionRange.slice(0, 240) });
   if (limits.some((limit) => limit.minimum_amount != null && limit.maximum_amount != null && limit.maximum_amount < limit.minimum_amount)) {
     anomalies.push({ code: "invalid_limit_range", severity: "error", field: "limits", message: "A parsed maximum is lower than its minimum.", source_excerpt: block.slice(0, 240) });
   }

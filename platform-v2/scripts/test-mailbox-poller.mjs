@@ -102,3 +102,54 @@ assert.deepEqual(summary, { scanned: 1, ingested: 1, duplicates: 0, failed: 0, d
 assert.deepEqual(searches, [{ not: { keyword: "$OfferPSPIngested" } }]);
 assert.deepEqual(marked, [[7, ["$OfferPSPIngested"]]]);
 console.log("OfferPSP mailbox poller tests passed");
+
+const sentSource = Buffer.from([
+  "From: Boris <bizdev@offerpsp.com>", "To: Assaf <assaf@presspay.example>",
+  "Subject: Re: OfferPSP partnership", "Message-ID: <spark-sent@offerpsp.com>",
+  "In-Reply-To: <partner-reply@presspay.example>", "References: <initial@offerpsp.com> <partner-reply@presspay.example>",
+  "Date: Wed, 30 Sep 2026 11:18:00 +0000", "Content-Type: text/plain; charset=utf-8", "", "Please continue by email.",
+].join("\r\n"));
+const sentPayload = await parseMailboxMessage({ source: sentSource, uid: 10, uidValidity: "99", mailbox: "Sent Items", direction: "outbound", account: "bizdev@offerpsp.com" });
+assert.equal(sentPayload.direction, "outbound");
+assert.equal(sentPayload.is_read, true);
+assert.equal(sentPayload.in_reply_to, "<partner-reply@presspay.example>");
+assert.deepEqual(sentPayload.references, ["<initial@offerpsp.com>", "<partner-reply@presspay.example>"]);
+await assert.rejects(() => parseMailboxMessage({ source, uid: 7, uidValidity: "42", direction: "outbound", account: "bizdev@offerpsp.com" }), /sender does not match/);
+
+const folderMarks = [];
+const folderSearches = [];
+const imported = [];
+class SentImapClient extends FakeImapClient {
+  async list() { return [{ path: "Sent Items", specialUse: "\\Sent" }]; }
+  async getMailboxLock(path) { this.folder = path; return { release() {} }; }
+  async search(query) { folderSearches.push({ folder: this.folder, query }); return this.folder === "INBOX" ? [7] : [10, 11]; }
+  async fetchOne(uid) { return { source: this.folder === "INBOX" ? source : sentSource, flags: new Set(["\\Seen"]) }; }
+  async messageFlagsAdd(uid, flags) { folderMarks.push([this.folder, uid, flags]); }
+}
+const syncConfig = { imapPassword: "test-only", ingestUrl: "https://example.supabase.co/functions/v1/offerpsp-ingest-email", ingestToken: "test-only", syncSent: true, batchLimit: 1 };
+const syncSummary = await pollOfferPspMailbox(syncConfig, { ImapClient: SentImapClient, ingestPayload: async (payload) => { imported.push(payload); return { success: true, duplicate: payload.direction === "outbound" }; } });
+assert.deepEqual(syncSummary, { scanned: 2, ingested: 1, duplicates: 1, failed: 0, deferred: 0 });
+assert.deepEqual(imported.map((item) => item.direction), ["inbound", "outbound"]);
+assert.equal(imported[0].is_read, true, "Spark Seen state must not create new unread work");
+assert.equal(folderMarks[1][1], 10, "Sent backfill must process its oldest pending UID first");
+assert.ok(folderSearches[1].query.since instanceof Date, "Sent history must have a bounded lookback");
+assert.deepEqual(folderMarks.map(([folder]) => folder), ["INBOX", "Sent Items"]);
+class MissingSent extends SentImapClient { async list() { return []; } }
+const inboxOnlyDependencies = (ImapClient) => ({ ImapClient, ingestPayload: async (payload) => {
+  assert.equal(payload.direction, "inbound", "Sent discovery failure must not stop Inbox ingestion");
+  return { success: true };
+} });
+assert.deepEqual(await pollOfferPspMailbox(syncConfig, inboxOnlyDependencies(MissingSent)),
+  { scanned: 1, ingested: 1, duplicates: 0, failed: 1, deferred: 0 });
+class UnavailableSentListing extends SentImapClient { async list() { throw new Error("Sent listing unavailable"); } }
+assert.deepEqual(await pollOfferPspMailbox(syncConfig, inboxOnlyDependencies(UnavailableSentListing)),
+  { scanned: 1, ingested: 1, duplicates: 0, failed: 1, deferred: 0 });
+class UnavailableSentFolder extends SentImapClient {
+  async getMailboxLock(path) {
+    if (path === "Sent Items") throw new Error("Sent folder unavailable");
+    return super.getMailboxLock(path);
+  }
+}
+assert.deepEqual(await pollOfferPspMailbox(syncConfig, inboxOnlyDependencies(UnavailableSentFolder)),
+  { scanned: 1, ingested: 1, duplicates: 0, failed: 1, deferred: 0 });
+console.log("PASS Inbox/Sent sync, reply headers, source-account fence, Seen state and bounded backfill");

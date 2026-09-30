@@ -9,6 +9,7 @@ import { emailMessageTimestamp, presentEmailBody, sortEmailMessagesChronological
 import { EnvelopeIcon, EyeIcon, MoreDotIcon, TrashBinIcon } from "../icons";
 import { isQaFixtureLead, isQaFixtureLeadId, isQaFixtureProvider, isQaFixtureProviderId } from "../lib/qaFixtures";
 import { supabase } from "../lib/supabase";
+import { mailCompanySuggestion } from "../lib/mailCompanySuggestion";
 import { useStoredState } from "../lib/uiPreferences";
 import type { CasinoLead, EmailAttachment, EmailMessage, EmailTemplate, EmailThread } from "../types/offerpsp";
 
@@ -113,7 +114,7 @@ export function CasinosWorkspace() {
   const { captainsBridge, refresh } = useControlBridge();
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState("");
-  const [scope, setScope] = useState<"active" | "pipeline" | "inactive" | "hidden" | "all">("active");
+  const [scope, setScope] = useStoredState<"active" | "pipeline" | "inactive" | "hidden" | "all">("offerpsp.casinos.scope", "pipeline");
   const [contactFilter, setContactFilter] = useState("all");
   const [editor, setEditor] = useState<{ record?: CasinoLead } | null>(null);
   const needle = query.trim().toLowerCase();
@@ -246,6 +247,8 @@ export function CommunicationsWorkspace() {
     });
   }, [attachmentThreadIds, lastMessageByThread, mailCenter.threads, mailScope, query]);
   const selectedThread = mailCenter.threads.find((thread) => thread.id === threadId) || visibleThreads[0];
+  const companySuggestion = selectedThread?.counterparty_type === "general"
+    ? mailCompanySuggestion(selectedThread.participant_email, captainsBridge.psp_providers) : null;
   const selectedMessages = useMemo(() => selectedThread
     ? mailCenter.messages.filter((entry) => entry.thread_id === selectedThread.id)
     : [], [mailCenter.messages, selectedThread]);
@@ -942,6 +945,7 @@ export function CommunicationsWorkspace() {
           </details>
         </div>
 
+        {companySuggestion && <div className="mt-3 rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm dark:border-brand-800 dark:bg-brand-500/10"><p>Домен письма совпадает с сайтом <strong>{companySuggestion.name}</strong>. Это подсказка, не подтверждение личности. Проверьте отправителя перед привязкой.</p><button disabled={busy} onClick={() => { setLinkType("research_psp"); setLinkId(String(companySuggestion.id)); }} className="mt-2 font-semibold text-brand-600">Выбрать компанию для привязки</button><p className="mt-1 text-xs text-gray-500">После выбора откройте «Рабочая привязка» и нажмите «Сохранить». Без этого история не меняется.</p></div>}
         <div className="mt-3 grid gap-3 xl:grid-cols-2">
           <details className="group rounded-xl border border-gray-200 bg-gray-50/70 dark:border-gray-800 dark:bg-white/[0.03]">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200"><span>Связи компании{threadEntityContext?.status === "linked" ? ` · ${threadEntityContext.workspace?.relationships?.length || 0}` : ""}</span><span className="text-xs font-medium text-gray-400 group-open:hidden">Открыть</span><span className="hidden text-xs font-medium text-gray-400 group-open:inline">Свернуть</span></summary>
