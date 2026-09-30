@@ -6,6 +6,8 @@ const db = new PGlite();
 const migration = await readFile(new URL("../../supabase/migrations/20260930135804_offerpsp_mailbox_consistency.sql", import.meta.url), "utf8");
 const mailFoundation = await readFile(new URL("../../supabase/migrations/20260805161000_offerpsp_mail_center.sql", import.meta.url), "utf8");
 const timelineFoundation = await readFile(new URL("../../supabase/migrations/20260812192420_offerpsp_contact_timeline.sql", import.meta.url), "utf8");
+const internalMailMigration = await readFile(new URL("../../supabase/migrations/20260930172000_offerpsp_sent_internal_recipient.sql", import.meta.url), "utf8");
+const hygiene = await readFile(new URL("../../supabase/migrations/20260927090000_offerpsp_operational_qa_and_mail_hygiene.sql", import.meta.url), "utf8");
 const ingest = async (payload) => (await db.query("select public.aibot_n8n_ingest_email($1::jsonb) result", [JSON.stringify(payload)])).rows[0].result;
 const rows = async (sql) => (await db.query(sql)).rows;
 try {
@@ -27,7 +29,7 @@ try {
     create table public.offerpsp_email_threads(
       id uuid primary key default gen_random_uuid(),thread_key text unique,subject text,participant_email text,
       counterparty_type text,counterparty_id text,lead_id uuid,status text,unread_count int,last_message_at timestamptz,
-      follow_up_at timestamptz,metadata jsonb default '{}',updated_at timestamptz default now()
+      follow_up_at timestamptz,is_flagged boolean default false,metadata jsonb default '{}',updated_at timestamptz default now()
     );
     create table public.offerpsp_email_messages(
       id uuid primary key default gen_random_uuid(),thread_id uuid references public.offerpsp_email_threads,
@@ -42,6 +44,8 @@ try {
   await db.exec(timelineFoundation.slice(0, timelineFoundation.indexOf("create or replace function private.offerpsp_contact_event_from_email_draft")));
   await db.exec("create trigger tg_offerpsp_contact_email_message after insert or update on public.offerpsp_email_messages for each row execute function private.offerpsp_contact_event_from_email_message()");
   await db.exec(migration);
+  await db.exec(internalMailMigration);
+  await db.exec(hygiene.slice(hygiene.indexOf("create or replace function private.offerpsp_mail_non_operational_reason")));
   const initial = { from_email: "assaf@presspay.example", to: ["bizdev@offerpsp.com"], subject: "Partnership", message_id: "<first@presspay.example>", in_reply_to: "<old-outreach@offerpsp.com>", received_at: "2026-09-30T10:00:00Z", text: "Can we discuss?" };
   const first = await ingest(initial);
   assert.equal(first.counterparty_type, "general", "a domain suggestion must not automatically bind a person to a company");
@@ -84,6 +88,15 @@ try {
   }
   const cross = await ingest({ ...initial, from_email: "stranger@elsewhere.example", message_id: "<unrelated@elsewhere.example>", in_reply_to: initial.message_id });
   assert.notEqual(cross.thread_id, first.thread_id, "a foreign sender cannot hijack a known thread by Message-ID");
+  const self = await ingest({ ...sent, to: ["bizdev@offerpsp.com"], subject: "Internal copy", message_id: "<self@offerpsp.com>", in_reply_to: null });
+  const selfThread = (await db.query("select * from public.offerpsp_email_threads where id=$1", [self.thread_id])).rows[0];
+  assert.equal(selfThread.status, "archived", "self Sent evidence belongs outside the work queue");
+  assert.equal(selfThread.unread_count, 0);
+  assert.equal(selfThread.metadata.operational_exclusion_reason, "internal");
+  assert.equal((await ingest({ ...sent, to: ["bizdev@offerpsp.com"], subject: "Internal copy", message_id: "<self@offerpsp.com>", in_reply_to: null })).duplicate, true);
+  const ccOnly = await ingest({ ...sent, to: ["bizdev@offerpsp.com"], cc: ["assaf@presspay.example"], message_id: "<cc-only@offerpsp.com>" });
+  assert.equal(ccOnly.thread_id, first.thread_id, "external CC must not be mistaken for self mail");
+  await assert.rejects(() => ingest({ ...sent, to: [], cc: [], message_id: "<missing-recipient@offerpsp.com>" }), /external recipient/);
   await db.exec("select set_config('request.jwt.claim.role','authenticated',false)");
   await assert.rejects(() => ingest({ ...initial, message_id: "<forbidden@presspay.example>" }), /service access required/);
   assert.equal((await db.query("select has_function_privilege('authenticated','public.aibot_n8n_ingest_email(jsonb)','EXECUTE') allowed")).rows[0].allowed, false);

@@ -5,6 +5,55 @@ Updated: 2026-09-30
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## Operational consistency release — production 2026-09-30
+
+- `VERIFIED`: PR #29 merged as `8516aa0eb08b11018f2f0543e307efd828f00802`.
+  Captain's Bridge deployment `dpl_32sdgxo5QhpFAW9V6TVcnXsJUUed` is READY; the canonical
+  `https://ops-7q4m2x9k8v3n.vercel.app/` build manifest reports that exact commit.
+  CLI monitoring timed out, but the actual deployment succeeded. The canonical alias initially
+  remained on the previous release and was explicitly reassigned after checking platform state.
+- `VERIFIED`: migrations `offerpsp_mailbox_consistency` (`20260930161854`),
+  `offerpsp_intake_review_task_separation` (`20260930161855`) and
+  `offerpsp_merchant_operational_context` (`20260930161857`) are applied.
+  Only Railon and Protocol/W1 received bounded-backfill review tasks, assigned to Boris.
+- `VERIFIED`: live MCP Railon workspace includes lead, compliance, saved company profile,
+  contact timeline, entity workspace, matches and next action. First response is done, dossier
+  review remains pending, compliance is manual_review, matching is empty and blocked.
+- `VERIFIED`: staff UI confirmed PressPay thread `466137d3-0fa1-49a2-b203-5e892c69b473`
+  belongs to research PSP 83. A 30-day Sent import is enabled; the thread now contains four
+  incoming and five outgoing messages, with corresponding canonical contact events. No emails
+  were sent, no offers published and no matching rebuilt during this release.
+- `VERIFIED`: an actual historical Sent self-copy exposed a retry loop. PostgreSQL logs identified
+  the exact recipient guard. Regression tests cover self mail, external CC, missing recipient,
+  sender-account fencing and deduplication; `offerpsp_sent_internal_recipient`
+  (`20260930190435`) is applied. Self copies remain excluded by the existing internal-mail
+  archive trigger. A subsequent poll returned success with zero failures and no pending messages.
+- `VERIFIED`: public deployment `dpl_CyYtwtSfSXsRiaBVmKPYa44gua3L` is READY and owns
+  `https://offerpsp.com`. The live public form shows required markers and the email-only warning;
+  an empty Continue action remains on step one and focuses the first missing field.
+  Public and portal regression checks reject email-only/incomplete briefs.
+  The portal previously collected legacy fields incompatible with the current n8n validator.
+  It now submits the same canonical brief as the public form, with required markers and explicit
+  unknown choices. Browser fixture tests do not submit to production or send notifications.
+- `VERIFIED`: all 61 live public assets match the frozen release manifest: five intended form
+  assets changed, and 56 unchanged live assets are preserved byte-for-byte.
+  Only index.html and the portal index/app/styles/intake helper differ. Two SEO pages, sitemap
+  and two PSP portal assets differ between repository output and production, so their LIVE bytes
+  are retained, not overwritten. This source/production drift must be reconciled with the SEO/GEO
+  owner before a future full-source public deployment; it is not silently overwritten by this release.
+- `VERIFIED`: the active inbound workflow uses the tested canonical brief normalizer and replay
+  gate. Existing real execution evidence confirms saved-lead propagation and controlled first
+  acknowledgement delivery. Local tests cover complete/incomplete/unknown briefs, repeat-company
+  submissions, review-task separation, QA isolation and Telegram card updates. Nineteen screening
+  worker tests pass. A fresh Today reload no longer shows the observed transient statement timeout.
+- `PARTIAL`: no fresh full production intake was submitted during this release, because it would
+  create a real lead and send email/Telegram notifications. Browser full-brief tests use an isolated
+  fixture; passing them is not evidence of a fresh production end-to-end delivery.
+- `PARTIAL`: Docker concurrency tests could not run because the Docker daemon socket is absent.
+  The PGlite intake/Telegram, acknowledgement, review, mail and QA regression suites pass.
+  The earlier full migration validator still requires the real ignored BR-Pay import fixture.
+- SEO/GEO source, subagent modules, Telegram chat creation and Zoom remain untouched.
+
 ## Operational consistency repair — local 2026-09-30
 
 - `VERIFIED locally`: implemented on `codex/offerpsp-operational-consistency`, based on
@@ -50,7 +99,7 @@ Code or a passing local test is not evidence that production has been updated.
   The validator is not reported as fully passing, and no synthetic replacement is substituted.
 - SEO/GEO, subagent modules, Telegram chat creation and Zoom were not changed.
 
-### Release work still pending
+### Original release checklist — completed by the production record above
 
 1. Confirm the current production SHA/migration state; review and apply the three new migrations
    in timestamp order. Record pre-change function definitions and controlled-backfill counts.
@@ -59,11 +108,13 @@ Code or a passing local test is not evidence that production has been updated.
 3. Confirm the PressPay thread/company association before historical Sent reconciliation. Then
    enable `OFFERPSP_MAILBOX_SYNC_SENT=true` with a bounded 30-day lookback, inspect initial batches,
    and verify chronology, thread association, duplicate suppression and poller failures.
-4. Run live UI/MCP and intake receipt/review/QA-isolation checks. Review the failed Merchant Bridge
-   source import separately; no automatic replay or offer publication is authorized by this repair.
+4. Run live UI/MCP and intake receipt/review/QA-isolation checks. A fresh full production submission
+   remains deliberately unperformed as described above.
 
 ### Product follow-ups, not completed by this repair
 
+- Review the failed Merchant Bridge source import separately; no automatic replay or offer
+  publication is authorized by this repair.
 - MerchantPayd capability → merchant brief → individual quote journey (no public fixed rate or
   internal buy rate); distinguish it from Merchant Bridge.
 - Historical event-based conversion, realized processing volume and margin analytics.
