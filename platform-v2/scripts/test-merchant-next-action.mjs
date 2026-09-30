@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { merchantNextAction } from "../shared/merchant-next-action.mjs";
+assert.equal(merchantNextAction({ leadStatus: "needs_clarification", complianceStatus: "manual_review" }).action, "review_dossier");
+assert.equal(merchantNextAction({ complianceStatus: "screening" }).action, "wait_screening");
+assert.equal(merchantNextAction({ complianceStatus: "rejected", hasMatches: true }).action, "review_decision");
+assert.equal(merchantNextAction({ complianceStatus: "cleared", hasMatches: true }).action, "matching");
+assert.equal(merchantNextAction({ complianceStatus: "cleared", shortlistStatus: "draft" }).action, "review_shortlist");
+assert.equal(merchantNextAction({ complianceStatus: "cleared", shortlistStatus: "shared" }).action, "wait_client");
+assert.equal(merchantNextAction({ recordState: "archived", complianceStatus: "cleared" }).action, "none");
+for (const status of ["won", "lost", "spam", "closed"]) assert.equal(merchantNextAction({ leadStatus: status }).action, "none");
+console.log("PASS shared UI/MCP next action: compliance precedes matching and send evidence is not clearance");

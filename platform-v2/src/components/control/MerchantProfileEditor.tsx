@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { supabase } from "../../lib/supabase";
+import { merchantRequestPatch } from "../../lib/merchantRequestPatch";
 import type { Lead, StaffMember } from "../../types/offerpsp";
 import { Panel, statusLabels } from "./Ui";
 
@@ -8,8 +9,6 @@ const field = "mt-2 h-11 w-full rounded-lg border border-gray-300 bg-transparent
 const area = "mt-2 min-h-28 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-3 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:text-white";
 const statuses = ["new", "qualifying", "needs_clarification", "matching", "matched", "shortlist_ready", "shared", "option_selected", "dossier_ready", "provider_reviewing", "provider_needs_info", "provider_accepted", "provider_declined", "telegram_created", "zoom_scheduled", "negotiating", "won", "lost", "closed", "spam"];
 const csv = (value?: string[] | null) => (value || []).join(", ");
-const split = (value: string) => value.split(/[,;\n]/).map((item) => item.trim()).filter(Boolean);
-const numberOrNull = (value: string) => value.trim() === "" ? null : Number(value);
 
 type Draft = Record<string, string>;
 
@@ -57,29 +56,17 @@ export default function MerchantProfileEditor({ lead, onChanged }: { lead: Lead;
 
   async function save() {
     setBusy("save"); setMessage(null);
-    const draftWithoutRisk = Object.fromEntries(
-      Object.entries(draft).filter(([key]) => key !== "risk_segment"),
-    );
-    const payload = {
-      ...draftWithoutRisk,
-      assigned_to: draft.assigned_to || null,
-      quality_score: numberOrNull(draft.quality_score),
-      target_geos: split(draft.target_geos), requested_currencies: split(draft.requested_currencies),
-      requested_flows: split(draft.requested_flows), requested_methods: split(draft.requested_methods),
-      traffic_types: split(draft.traffic_types), expected_monthly_volume: numberOrNull(draft.expected_monthly_volume),
-      min_transaction_amount: numberOrNull(draft.min_transaction_amount), max_transaction_amount: numberOrNull(draft.max_transaction_amount),
-      average_ticket_amount: numberOrNull(draft.average_ticket_amount),
-    };
+    const payload = merchantRequestPatch(initial(lead), draft);
     const result = await supabase.rpc("save_offerpsp_managed_merchant", { p_lead_id: lead.lead_id, p_payload: payload });
     if (result.error) setMessage({ error: true, text: result.error.message });
     else {
-      const riskResult = await supabase.rpc("set_offerpsp_merchant_risk_segment", {
+      const riskResult = draft.risk_segment === initial(lead).risk_segment ? { error: null } : await supabase.rpc("set_offerpsp_merchant_risk_segment", {
         p_lead_id: lead.lead_id,
         p_risk_segment: draft.risk_segment === "auto" ? "unknown" : draft.risk_segment,
         p_source: draft.risk_segment === "auto" ? "auto" : "staff",
       });
       if (riskResult.error) setMessage({ error: true, text: `Профиль сохранён, но категория бизнеса не обновлена: ${riskResult.error.message}` });
-      else { await onChanged(); setMessage({ text: "Профиль мерча сохранён, подбор пересчитан по категории бизнеса." }); }
+      else { await onChanged(); setMessage({ text: "Изменения платёжного запроса сохранены." }); }
     }
     setBusy(null);
   }
@@ -104,6 +91,7 @@ export default function MerchantProfileEditor({ lead, onChanged }: { lead: Lead;
   }
 
   return <div className="space-y-6">
+    {((!lead.target_geos?.length && lead.geos) || (!lead.requested_methods?.length && lead.methods) || (!lead.expected_monthly_volume && lead.monthly_volume)) && <Panel><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Исходный brief</h2><p className="mt-2 text-sm text-gray-500">Эти данные получены в свободной форме. Они сохранены, но ещё не подтверждены как структурированные параметры подбора. Уточните их ниже; регионы вроде Latam не превращаются автоматически в список стран.</p><dl className="mt-4 space-y-2 text-sm">{[["GEO", !lead.target_geos?.length ? lead.geos : null], ["Методы", !lead.requested_methods?.length ? lead.methods : null], ["Объём", !lead.expected_monthly_volume ? lead.monthly_volume : null]].filter(([, value]) => Boolean(value)).map(([label, value]) => <div key={String(label)}><dt className="inline font-semibold">{label}: </dt><dd className="inline">{Array.isArray(value) ? value.join(", ") : value}</dd></div>)}</dl></Panel>}
     {message && <div className={`rounded-xl border px-4 py-3 text-sm ${message.error ? "border-error-200 bg-error-50 text-error-700 dark:border-error-500/20 dark:bg-error-500/10 dark:text-error-300" : "border-success-200 bg-success-50 text-success-700 dark:border-success-500/20 dark:bg-success-500/10 dark:text-success-300"}`}>{message.text}</div>}
     <Panel><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Платёжный запрос</h2><p className="mt-1 text-sm text-gray-500">Только параметры, по которым система подбирает платёжные решения. Реквизиты компании и людей редактируются в отдельных вкладках.</p><div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       <Field label="Вертикаль"><input className={field} value={draft.vertical} onChange={(e)=>set("vertical",e.target.value)}/></Field>

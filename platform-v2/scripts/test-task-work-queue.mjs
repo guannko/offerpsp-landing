@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import { taskWorkScope } from "../src/lib/taskWorkQueue.ts";
+const now = Date.parse("2026-09-30T12:00:00Z");
+const today = Date.parse("2026-09-30T00:00:00Z");
+const scope = (task, source = "operator") => taskWorkScope(task, source, now, today);
+assert.equal(scope({ status: "pending", due_at: "2026-10-01" }), "now", "a future deadline does not defer manual review");
+assert.equal(scope({ status: "pending", scheduled_for: "2026-10-01" }), "later");
+assert.equal(scope({ status: "waiting" }), "waiting");
+assert.equal(scope({ status: "done", completed_at: "2026-09-30T10:00:00Z" }), "done");
+assert.equal(scope({ status: "done", completed_at: "2026-09-29" }), null);
+assert.equal(scope({ status: "cancelled" }), null);
+assert.equal(scope({ status: "failed", scheduled_for: "2026-10-01" }, "aibot"), "now");
+console.log("PASS work deadline versus deferred start, waiting and terminal task state");

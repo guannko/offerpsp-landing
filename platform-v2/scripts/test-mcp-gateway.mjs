@@ -43,6 +43,10 @@ global.fetch = async (url, init = {}) => {
   }]);
   if (String(url).endsWith("/auth/v1/user")) return Response.json({ id: staffUserId, email: "staff@example.test" });
   if (String(url).endsWith("/rpc/is_offerpsp_staff")) return Response.json(true);
+  if (String(url).endsWith("/rpc/get_offerpsp_staff_request_workspace")) return Response.json({ request: { company: "Example Merchant" }, applications: [] });
+  if (String(url).endsWith("/rpc/get_offerpsp_entity_workspace")) return Response.json({ contacts: [{ full_name: "Contact" }], tasks: [{ title: "Review dossier" }], documents: [], activities: [], emails: [], conversations: [] });
+  if (String(url).endsWith("/rpc/get_offerpsp_contact_timeline")) return Response.json({ events: [{ event_type: "email_received" }] });
+  if (String(url).endsWith("/rpc/get_offerpsp_merchant_operational_context")) return Response.json({ lead: { company: "Example Merchant", status: "needs_clarification", assigned_to: staffUserId }, company_workspace: { organization: { legal_name: "Saved legal name" }, documents: [] }, compliance: { loaded: true, case: { case_status: "manual_review" } } });
   if (String(url).endsWith("/rpc/get_offerpsp_staff_search_index_snapshot")) return Response.json({
     leads: [{ lead_id: "22222222-2222-4222-8222-222222222222", company: "Example Merchant", work_email: "ops@example.test", record_state: "active" }],
     management: { providers: [], organizations: [] }, coverage: { routes: [] },
@@ -110,6 +114,17 @@ function request(body, authorization = "Bearer staff-token") {
 }
 
 const metadata = resourceMetadata({ SUPABASE_URL: "https://supabase.test", OFFERPSP_MCP_ORIGIN: "https://ops.test" });
+const merchantWorkspace = responseMock();
+await mcpHandler(request({ jsonrpc: "2.0", id: "workspace", method: "tools/call", params: { name: "get_entity_workspace", arguments: { entity_type: "merchant", entity_id: "22222222-2222-4222-8222-222222222222" } } }), merchantWorkspace);
+assert.equal(merchantWorkspace.payload.result.isError, undefined);
+assert.equal(merchantWorkspace.payload.result.structuredContent.request.company, "Example Merchant");
+assert.equal(merchantWorkspace.payload.result.structuredContent.entity_workspace.contacts[0].full_name, "Contact");
+assert.equal(merchantWorkspace.payload.result.structuredContent.entity_workspace.tasks[0].title, "Review dossier");
+assert.equal(merchantWorkspace.payload.result.structuredContent.contact_timeline.events[0].event_type, "email_received");
+assert.equal(merchantWorkspace.payload.result.structuredContent.company_workspace.organization.legal_name, "Saved legal name");
+assert.equal(merchantWorkspace.payload.result.structuredContent.compliance.case.case_status, "manual_review");
+assert.equal(merchantWorkspace.payload.result.structuredContent.lead.assigned_to, staffUserId);
+assert.equal(merchantWorkspace.payload.result.structuredContent.next_action.action, "review_dossier");
 assert.equal(metadata.resource, "https://ops.test/mcp");
 assert.deepEqual(metadata.authorization_servers, ["https://ops.test"]);
 assert.deepEqual(metadata.scopes_supported, ["offerpsp:read", "offerpsp:write", "offline_access"]);

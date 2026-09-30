@@ -4,6 +4,9 @@ import PageMeta from "../components/common/PageMeta";
 import { EmptyState, ErrorBanner, PageHeading, Panel, SkeletonPage } from "../components/control/Ui";
 import { useControlBridge } from "../context/ControlBridgeContext";
 import { isQaFixtureLead, isQaFixtureLeadId } from "../lib/qaFixtures";
+import { mailWorkItem } from "../lib/mailWorkQueue";
+import { emailMessageTimestamp } from "../lib/emailThread";
+import { taskWorkScope } from "../lib/taskWorkQueue";
 import { supabase } from "../lib/supabase";
 import { useStoredState } from "../lib/uiPreferences";
 import type { EmailThread, OfferIngestionJob, WorkTask } from "../types/offerpsp";
@@ -20,8 +23,6 @@ type QueueItem = {
   priority: number;
 };
 
-const activeTask = (task: WorkTask) => !["done", "completed", "closed", "cancelled", "canceled"].includes(String(task.status || "").toLowerCase());
-const doneTask = (task: WorkTask) => ["done", "completed", "closed"].includes(String(task.status || "").toLowerCase());
 const botTaskNeedsIntervention = (task: WorkTask) => ["failed", "blocked"].includes(String(task.status || "").toLowerCase());
 const dueTime = (task: WorkTask) => task.due_at || task.scheduled_for || task.updated_at || task.created_at || null;
 const readableDate = (value?: string | null) => value ? new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(value)) : "без срока";
@@ -103,13 +104,10 @@ export default function TodayWorkspace() {
     const queue: QueueItem[] = [];
     const visibleThreads = bridge.mailCenter.threads.filter((thread) => thread.status !== "trashed" && !isQaFixtureLeadId(thread.lead_id));
     visibleThreads.forEach((thread) => {
-      const followUp = thread.follow_up_at ? new Date(thread.follow_up_at).getTime() : null;
-      if (thread.status === "closed" && new Date(thread.updated_at || thread.last_message_at).getTime() >= todayStartedAt) queue.push(mailItem(thread, "done", 0, "закрыта сегодня"));
-      else if (thread.status === "awaiting_reply") queue.push(mailItem(thread, "waiting", thread.priority === "urgent" ? 5 : 2, "ждём ответ партнёра"));
-      else if (followUp && followUp > now) queue.push(mailItem(thread, "later", 1, `follow-up ${readableDate(thread.follow_up_at)}`));
-      else if (thread.unread_count > 0) queue.push(mailItem(thread, "now", 6, `${thread.unread_count} непрочитанных`));
-      else if (thread.status === "follow_up" || (followUp && followUp <= now)) queue.push(mailItem(thread, "now", 5, "нужен follow-up"));
-      else if (thread.is_flagged) queue.push(mailItem(thread, "now", 4, "установлен флаг"));
+      const latest = bridge.mailCenter.messages.filter((message) => message.thread_id === thread.id)
+        .sort((a, b) => emailMessageTimestamp(b) - emailMessageTimestamp(a))[0];
+      const work = mailWorkItem(thread, now, todayStartedAt, latest);
+      if (work) queue.push(mailItem(thread, work.scope, work.priority, work.detail));
     });
 
     const tasks = [
@@ -118,18 +116,15 @@ export default function TodayWorkspace() {
     ];
     tasks.forEach(({ task, source }) => {
       const timestamp = dueTime(task);
-      const future = timestamp && new Date(timestamp).getTime() > now;
-      const waiting = source === "operator" && ["waiting", "blocked", "pending_external"].includes(String(task.status || "").toLowerCase());
-      if (doneTask(task) && new Date(task.completed_at || task.updated_at || task.created_at || 0).getTime() < todayStartedAt) return;
-      const taskScope: QueueScope = doneTask(task) ? "done" : source === "aibot" ? "now" : waiting ? "waiting" : future ? "later" : "now";
-      if (!activeTask(task) && taskScope !== "done") return;
+      const taskScope = taskWorkScope(task, source, now, todayStartedAt);
+      if (!taskScope) return;
       queue.push({
         id: `task:${source}:${task.id}`,
         scope: taskScope,
         kind: "task",
         title: task.title || task.task_type || "Рабочая задача",
         detail: [source === "aibot" ? "AIBot требует вмешательства" : null, task.merchant_name, task.assignee_name, task.details].filter(Boolean).join(" · ") || "Открыть карточку задачи",
-        path: task.lead_id ? `/merchants/${task.lead_id}` : "/operations",
+        path: task.lead_id ? `/merchants/${task.lead_id}${task.automation_ref === "intake_review_v1" ? "?tab=compliance" : ""}` : "/operations",
         timestamp,
         priority: source === "aibot" ? 7 : typeof task.priority === "number" ? task.priority : /urgent|high/i.test(String(task.priority || "")) ? 5 : 2,
       });
@@ -148,6 +143,7 @@ export default function TodayWorkspace() {
     }));
 
     bridge.complianceCases.filter((item) => !isQaFixtureLeadId(item.lead_id) && ["pending", "screening", "manual_review", "needs_info", "hold"].includes(item.case_status)).forEach((item) => {
+      if (queue.some((entry) => entry.kind === "task" && entry.scope !== "done" && entry.path === `/merchants/${item.lead_id}?tab=compliance`)) return;
       const lead = visibleLeads.find((entry) => entry.lead_id === item.lead_id);
       queue.push({ id: `compliance:${item.lead_id}`, scope: "now", kind: "compliance", title: lead?.company || "Проверка лида", detail: `Статус: ${item.case_status}`, path: `/merchants/${item.lead_id}?tab=compliance`, priority: 5 });
     });
@@ -186,7 +182,7 @@ export default function TodayWorkspace() {
     }));
 
     return queue.sort((left, right) => right.priority - left.priority || new Date(left.timestamp || 0).getTime() - new Date(right.timestamp || 0).getTime());
-  }, [bridge.captainsBridge.bot_tasks, bridge.captainsBridge.offerpsp_tasks, bridge.complianceCases, bridge.ingestionJobs, bridge.leads, bridge.mailCenter.threads, integrationIssues, now, todayStartedAt]);
+  }, [bridge.captainsBridge.bot_tasks, bridge.captainsBridge.offerpsp_tasks, bridge.complianceCases, bridge.ingestionJobs, bridge.leads, bridge.mailCenter.threads, bridge.mailCenter.messages, integrationIssues, now, todayStartedAt]);
 
   if (bridge.loading) return <SkeletonPage />;
   const counts = { now: items.filter((item) => item.scope === "now").length, waiting: items.filter((item) => item.scope === "waiting").length, later: items.filter((item) => item.scope === "later").length, done: items.filter((item) => item.scope === "done").length };

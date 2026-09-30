@@ -5,6 +5,12 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { parseOfferSource } from "../api/_lib/offer-parser.mjs";
 
+const settlementRange = parseOfferSource({ providerName: "Merchant Bridge", sourceType: "email", sourceText: "Country: Vietnam\nCurrency: VND\nMethod: Bank Transfer\nPayIn: 4%\nPayOut: 2%\nTransaction limits PayIn: 100 - 50000 VND\nSettlement minimum/maximum: 500 - 5000 USD\nSettlement: T+1" });
+assert.ok(settlementRange.batch.routes.length > 0);
+assert.ok(settlementRange.batch.routes.every((route) => route.limits.every((limit) => ["payin", "payout", "both"].includes(limit.flow))), "settlement ranges must not violate the transaction-limit flow constraint");
+assert.ok(settlementRange.batch.routes.some((route) => route.limits.some((limit) => limit.minimum_amount === 100 && limit.maximum_amount === 50000)));
+assert.ok(settlementRange.batch.routes.some((route) => route.anomalies.some((anomaly) => anomaly.code === "non_transaction_limit_requires_review")), "an unmodeled material condition must remain in review, not silently disappear");
+
 const sourceText = [
   "Country: Bangladesh P2C Type APMs Pricing / Fee Per transaction limits Settlement Settlement terms Pay-in E-Wallet bKash, Nagad 5,50% BDT 200 - 25,000 T+0 Binance + 2,50% Pay-out Disbursement to e-wallet Nagad & bKash 3,50% BDT 100 - 25,000",
   "Country: India Forex Type APMs Pricing / Fee Per transaction limits Settlement Settlement terms Pay-in UPI Bank/Ewallet transfer 5,50% INR 100-50,000 T+0 Floating Daily Rate Pay-out IMPS Disbursement to all bank account 3,50% / + 6 INR INR 100-50,000",
