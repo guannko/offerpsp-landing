@@ -10,6 +10,7 @@ import { EnvelopeIcon, EyeIcon, MoreDotIcon, TrashBinIcon } from "../icons";
 import { isQaFixtureLead, isQaFixtureLeadId, isQaFixtureProvider, isQaFixtureProviderId } from "../lib/qaFixtures";
 import { supabase } from "../lib/supabase";
 import { mailCompanySuggestion } from "../lib/mailCompanySuggestion";
+import { shareRead } from "../lib/readSnapshot";
 import { useStoredState } from "../lib/uiPreferences";
 import type { CasinoLead, EmailAttachment, EmailMessage, EmailTemplate, EmailThread } from "../types/offerpsp";
 
@@ -163,7 +164,8 @@ export function CasinosWorkspace() {
 export const IntelligenceWorkspace = CasinosWorkspace;
 
 export function CommunicationsWorkspace() {
-  const { captainsBridge, mailCenter: fullMailCenter, leads: allLeads, providers: allProviders, refresh, ready } = useControlBridge();
+  const { captainsBridge, mailCenter: fullMailCenter, mailCenterError, mailCenterLoaded,
+    refreshing, user, leads: allLeads, providers: allProviders, refresh, ready } = useControlBridge();
   const leads = useMemo(() => allLeads.filter((lead) => !isQaFixtureLead(lead)), [allLeads]);
   const providers = useMemo(() => allProviders.filter((provider) => !isQaFixtureProvider(provider)), [allProviders]);
   const mailCenter = useMemo(() => ({
@@ -199,6 +201,9 @@ export function CommunicationsWorkspace() {
   const [trashNoticeVisible, setTrashNoticeVisible] = useState(false);
   const threadEntityRequestRef = useRef(0);
   const selectedThreadIdRef = useRef("");
+  const [threadBody, setThreadBody] = useState<{ key: string; messages: EmailMessage[] } | null>(null);
+  const [threadBodyError, setThreadBodyError] = useState<string | null>(null);
+  const [threadBodyRetry, setThreadBodyRetry] = useState(0);
 
   const lastMessageByThread = useMemo(() => {
     const result = new Map<string, EmailMessage>();
@@ -249,9 +254,19 @@ export function CommunicationsWorkspace() {
   const selectedThread = mailCenter.threads.find((thread) => thread.id === threadId) || visibleThreads[0];
   const companySuggestion = selectedThread?.counterparty_type === "general"
     ? mailCompanySuggestion(selectedThread.participant_email, captainsBridge.psp_providers) : null;
-  const selectedMessages = useMemo(() => selectedThread
+  const indexedMessages = useMemo(() => selectedThread
     ? mailCenter.messages.filter((entry) => entry.thread_id === selectedThread.id)
     : [], [mailCenter.messages, selectedThread]);
+  const threadBodyKey = selectedThread
+    ? `${user?.id}:${selectedThread.id}:${selectedThread.last_message_at}:${indexedMessages.map((entry) => entry.id).join(',')}` : "";
+  const needsThreadBody = indexedMessages.some((entry) => entry.body_loaded === false);
+  const threadBodyReady = !needsThreadBody || threadBody?.key === threadBodyKey;
+  const selectedMessages = useMemo(() => {
+    if (!needsThreadBody || threadBody?.key !== threadBodyKey) return indexedMessages;
+    const full = new Map(threadBody.messages.map((entry) => [entry.id, entry]));
+    return indexedMessages.map((entry) => ({ ...entry, text_body: full.get(entry.id)?.text_body,
+      html_body: full.get(entry.id)?.html_body, body_loaded: true }));
+  }, [indexedMessages, needsThreadBody, threadBody, threadBodyKey]);
   const orderedSelectedMessages = useMemo(() => sortEmailMessagesChronologically(selectedMessages), [selectedMessages]);
   const selectedMessageIds = new Set(selectedMessages.map((entry) => entry.id));
   const selectedAttachments = mailCenter.attachments.filter((entry) => selectedMessageIds.has(entry.message_id));
@@ -263,6 +278,24 @@ export function CommunicationsWorkspace() {
   const selectedThreadState = selectedThread ? (isSpamMailThread(selectedThread) ? mailThreadLabels.spam : mailThreadLabels[selectedThread.status] || mailThreadLabels.open) : null;
   const selectedTrashExpiresAt = selectedThread?.status === "trashed" ? trashExpiresAt(selectedThread.trashed_at) : null;
   const selectedThreadId = selectedThread?.id || "";
+  useEffect(() => {
+    let cancelled = false;
+    setThreadBodyError(null);
+    if (!selectedThreadId || !needsThreadBody) return;
+    void shareRead(`${threadBodyKey}:body`, () => supabase.rpc("get_offerpsp_mail_thread", { p_thread_id: selectedThreadId }))
+      .then((result) => {
+        if (cancelled) return;
+        if (result.error) { setThreadBodyError(result.error.message); return; }
+        const data = result.data as { thread_id?: string; messages?: EmailMessage[] } | null;
+        if (data?.thread_id !== selectedThreadId || !Array.isArray(data.messages)) {
+          setThreadBodyError("Ответ сервера не содержит полную переписку."); return;
+        }
+        setThreadBody({ key: threadBodyKey, messages: data.messages });
+      }).catch((error: unknown) => {
+        if (!cancelled) setThreadBodyError(error instanceof Error ? error.message : "Не удалось загрузить письмо.");
+      });
+    return () => { cancelled = true; };
+  }, [selectedThreadId, needsThreadBody, threadBodyKey, threadBodyRetry]);
   const pendingDrafts = captainsBridge.email_drafts.filter((entry) => ["draft", "failed"].includes(entry.status || "draft"));
   const mailFolderOptions = useMemo(() => {
     const activeThreads = mailCenter.threads.filter((thread) => !isSpamMailThread(thread) && !["archived", "trashed"].includes(thread.status));
@@ -619,7 +652,7 @@ export function CommunicationsWorkspace() {
   }
 
   async function generateAiSummary() {
-    if (!selectedThread || !selectedMessages.length || summaryBusy) return;
+    if (!selectedThread || !selectedMessages.length || !threadBodyReady || summaryBusy) return;
     setSummaryBusy(true); setMessage(null);
     try {
       const conversation = orderedSelectedMessages.map((entry) => {
@@ -846,20 +879,25 @@ export function CommunicationsWorkspace() {
       <h1 className="text-xl font-semibold leading-tight text-gray-900 dark:text-white sm:text-2xl">Радиорубка — Почта</h1>
       <button onClick={startNewEmail} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white">+ Новое письмо</button>
     </div>
+    {mailCenterError && <div role="alert" className="mb-3 rounded-xl border border-error-200 bg-error-50 p-4 text-sm text-error-700">
+      <strong>{mailCenterLoaded ? "Не удалось обновить почту. Показан последний загруженный список." : "Не удалось загрузить почту. Это ошибка загрузки, а не пустой ящик."}</strong>
+      <p className="mt-1">{mailCenterError}</p>
+      <button disabled={refreshing} onClick={() => void refresh()} className="mt-2 font-semibold">{refreshing ? "Загружаю…" : "Повторить загрузку почты"}</button>
+    </div>}
     {message&&<div className={`mb-4 rounded-xl border px-4 py-3 text-sm ${message.error?"border-error-200 bg-error-50 text-error-700":"border-success-200 bg-success-50 text-success-700"}`}>{message.text}</div>}
     {trashNoticeVisible&&<aside role="status" aria-live="polite" className="fixed bottom-5 right-5 z-50 w-[calc(100%-2.5rem)] max-w-sm rounded-xl border border-gray-200 bg-white p-4 shadow-theme-lg dark:border-gray-700 dark:bg-gray-900">
       <div className="flex items-start justify-between gap-3"><div><strong className="text-sm text-gray-900 dark:text-white">Переписка перемещена в корзину</strong><p className="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">Она будет окончательно удалена через 15 дней. До этого её можно восстановить.</p></div><button type="button" onClick={()=>setTrashNoticeVisible(false)} aria-label="Закрыть уведомление" className="shrink-0 text-lg leading-none text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">×</button></div>
       <button type="button" onClick={()=>{setHideTrashNotice(true);setTrashNoticeVisible(false);}} className="mt-3 text-xs font-semibold text-brand-600 hover:text-brand-700">Больше не показывать</button>
     </aside>}
     <Panel className="mb-3 !p-3"><div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between"><div className="flex flex-wrap gap-1.5">{[
-      ["mail", "Радиорубка", `${mailCenter.metrics.threads} цепочек`],
+      ["mail", "Радиорубка", mailCenterLoaded ? `${mailCenter.metrics.threads} цепочек` : "Почта не загружена"],
       ["compose", "Написать", "bizdev@offerpsp.com"],
       ["telegram", "Telegram / AIBot", `${captainsBridge.telegram_log.length} сообщений`],
     ].map(([id,label,hint])=><button key={id} onClick={()=>setSection(id as typeof section)} className={`rounded-lg border px-3 py-2 text-left transition ${section===id?"border-brand-300 bg-brand-50 text-brand-700 dark:border-brand-500/40 dark:bg-brand-500/10 dark:text-brand-300":"border-gray-200 bg-white text-gray-600 hover:border-gray-300 dark:border-gray-700 dark:bg-transparent dark:text-gray-300"}`}><strong className="block text-xs">{label}</strong><span className="mt-0.5 block max-w-40 truncate text-[10px] text-gray-400">{hint}</span></button>)}
       {pendingDrafts.length>0?<details className="group relative"><summary aria-label="Открыть черновики" className="cursor-pointer list-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-gray-600 transition hover:border-gray-300 dark:border-gray-700 dark:bg-transparent dark:text-gray-300"><strong className="block text-xs">Черновики</strong><span className="mt-0.5 block text-[10px] text-gray-400">{pendingDrafts.length}</span></summary><div className="absolute left-0 z-30 mt-2 w-72 space-y-1 rounded-xl border border-gray-200 bg-white p-2 shadow-theme-lg dark:border-gray-700 dark:bg-gray-900">{pendingDrafts.map((draft)=><button key={draft.id} type="button" onClick={()=>setSearchParams({draft:String(draft.id)})} className="block w-full rounded-lg px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5"><strong className="block truncate text-xs text-gray-800 dark:text-gray-200">{draft.subject || `Черновик #${draft.id}`}</strong><span className="block truncate text-[11px] text-gray-400">{draft.to_email || "нет получателя"}</span></button>)}</div></details>:<button type="button" aria-label="Создать первое письмо" onClick={()=>setSection("compose")} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-gray-600 transition hover:border-gray-300 dark:border-gray-700 dark:bg-transparent dark:text-gray-300"><strong className="block text-xs">Черновики</strong><span className="mt-0.5 block text-[10px] text-gray-400">0</span></button>}
-    </div><div aria-label="Быстрые фильтры почты" className="flex flex-wrap gap-1 text-[11px] text-gray-500 dark:text-gray-400">{mailQuickFilters.map((item)=>{const active=section==="mail"&&mailScope===item.scope;return <button key={item.scope} type="button" aria-pressed={active} title={`Открыть: ${item.label}`} onClick={()=>openMailScope(item.scope)} className={`group rounded-lg border px-2.5 py-1.5 text-left transition ${active?"border-brand-300 bg-brand-50 shadow-theme-xs dark:border-brand-500/40 dark:bg-brand-500/10":"border-transparent hover:border-gray-200 hover:bg-gray-50 dark:hover:border-gray-700 dark:hover:bg-white/5"}`}><strong className={`text-sm ${item.numberClass}`}>{item.count}</strong> {item.label}</button>})}</div></div>
+    </div><div aria-label="Быстрые фильтры почты" className="flex flex-wrap gap-1 text-[11px] text-gray-500 dark:text-gray-400">{mailCenterLoaded && mailQuickFilters.map((item)=>{const active=section==="mail"&&mailScope===item.scope;return <button key={item.scope} type="button" aria-pressed={active} title={`Открыть: ${item.label}`} onClick={()=>openMailScope(item.scope)} className={`group rounded-lg border px-2.5 py-1.5 text-left transition ${active?"border-brand-300 bg-brand-50 shadow-theme-xs dark:border-brand-500/40 dark:bg-brand-500/10":"border-transparent hover:border-gray-200 hover:bg-gray-50 dark:hover:border-gray-700 dark:hover:bg-white/5"}`}><strong className={`text-sm ${item.numberClass}`}>{item.count}</strong> {item.label}</button>})}</div></div>
     </Panel>
-    {section === "mail" ? <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[390px_minmax(0,1fr)] 2xl:grid-cols-[190px_350px_minmax(0,1fr)]">
+    {section === "mail" && !mailCenterLoaded && mailCenterError ? <Panel><p role="status">Список писем недоступен. Повторите загрузку — письма не удалены.</p></Panel> : section === "mail" ? <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[390px_minmax(0,1fr)] 2xl:grid-cols-[190px_350px_minmax(0,1fr)]">
       <Panel className="hidden min-w-0 2xl:block"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Папки</p><nav className="mt-3 space-y-1">{mailFolderOptions.map((folder)=><button key={folder.id} onClick={()=>setMailScope(folder.id)} className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition ${mailScope===folder.id?"bg-brand-50 font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-300":"text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"}`}><span>{folder.label}</span><span className="text-xs text-gray-400">{folder.count}</span></button>)}<button onClick={()=>pendingDrafts[0]?setSearchParams({draft:String(pendingDrafts[0].id)}):setSection("compose")} className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"><span>Черновики</span><span className="text-xs text-gray-400">{pendingDrafts.length}</span></button></nav></Panel>
       <Panel className="min-w-0 !p-3"><div className="flex items-center justify-between gap-3"><div className="flex items-baseline gap-2"><h2 className="text-base font-semibold text-gray-900 dark:text-white">Переписки</h2><span className="text-xs text-gray-400">{visibleThreads.length}</span></div><select aria-label="Папка почты" className="h-9 max-w-44 rounded-lg border border-gray-300 bg-transparent px-2.5 text-xs text-gray-700 outline-none dark:border-gray-700 dark:text-gray-200 2xl:hidden" value={mailScope} onChange={(event)=>setMailScope(event.target.value as typeof mailScope)}>{mailFolderOptions.map((folder)=><option key={folder.id} value={folder.id}>{folder.label} · {folder.count}</option>)}</select></div><input className={`${field} mt-3 !h-10`} value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Поиск по перепискам…"/><div className="mt-2 max-h-[820px] space-y-1 overflow-y-auto pr-1">{visibleThreads.map((thread)=>{const last=lastMessageByThread.get(thread.id);const outbound=last?.direction==="outbound";const overdue=isOverdueThread(thread);const preview=presentEmailBody(splitEmailBody(last?.text_body || (last?.html_body ? stripHtml(last.html_body) : "")).currentText).contentText;const threadIsSpam=isSpamMailThread(thread);const exceptionalStatus=thread.status!=="open"||threadIsSpam;const threadState=threadIsSpam?mailThreadLabels.spam:mailThreadLabels[thread.status];return <button key={thread.id} onClick={()=>void openThread(thread.id)} className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${selectedThread?.id===thread.id?"border-brand-200 bg-brand-50 dark:border-brand-500/30 dark:bg-brand-500/10":"border-transparent hover:border-gray-200 hover:bg-gray-50 dark:hover:border-gray-700 dark:hover:bg-white/[0.03]"}`}><div className="flex items-center justify-between gap-3"><span className={`text-[10px] font-semibold uppercase tracking-wide ${outbound?"text-brand-600":"text-success-600"}`}>{outbound?"Исходящее →":"← Входящее"}</span><span className="shrink-0 text-[10px] text-gray-400">{formatDate(last ? messageDate(last) : thread.last_message_at)}</span></div><strong className="mt-1 block line-clamp-1 text-sm text-gray-900 dark:text-white">{thread.subject || "Без темы"}</strong><div className="mt-1 flex items-center justify-between gap-2"><span className="min-w-0 truncate text-[11px] text-gray-500">{thread.participant_email}</span><div className="flex shrink-0 items-center gap-1">{thread.is_flagged&&<span title="Закреплено" className="text-[11px] text-warning-600">★</span>}{exceptionalStatus&&<span className="max-w-28 truncate text-[10px] font-medium text-gray-500">{threadState?.label || humanizeCode(thread.status)}</span>}{thread.unread_count>0&&<span className="rounded-full bg-brand-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">{thread.unread_count}</span>}</div></div><p className="mt-1.5 line-clamp-1 text-[11px] leading-4 text-gray-400">{preview || (last?.html_body ? "HTML-письмо" : "Сообщений в цепочке пока нет")}</p>{(thread.priority&&!['normal','low'].includes(thread.priority)||thread.follow_up_at)&&<div className="mt-1.5 flex flex-wrap gap-1.5">{thread.priority&&!["normal","low"].includes(thread.priority)&&<span className="rounded-full bg-error-50 px-2 py-0.5 text-[10px] font-semibold text-error-700">{priorityLabels[thread.priority]}</span>}{thread.follow_up_at&&<span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${overdue?"bg-error-50 text-error-700":"bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300"}`}>{overdue?"Просрочено":"До"} {formatDate(thread.follow_up_at)}</span>}</div>}</button>})}{!visibleThreads.length&&<EmptyState title="Писем не найдено" description="Измените папку, поиск или создайте новое письмо."/>}</div></Panel>
       <Panel className="min-w-0">{selectedThread && selectedThreadState ? <>
@@ -896,11 +934,13 @@ export function CommunicationsWorkspace() {
               </details>
             </div>}
         </div>
-        {lastSelectedMessage ? <section className="mt-4" aria-label="Последнее письмо">
+        {!threadBodyReady ? <div role="status" className="mt-4 rounded-xl border border-gray-200 p-4 text-sm text-gray-500">
+          {threadBodyError ? <><p>Не удалось загрузить полное письмо: {threadBodyError}</p><button className="mt-2 font-semibold text-brand-600" onClick={() => setThreadBodyRetry((value) => value + 1)}>Повторить загрузку письма</button></> : "Загружаю полную переписку…"}
+        </div> : lastSelectedMessage ? <section className="mt-4" aria-label="Последнее письмо">
           {renderThreadMessage(lastSelectedMessage, true)}
         </section> : <div className="mt-4"><EmptyState title="В цепочке пока нет писем" description="Можно подготовить новое письмо этому контакту."/></div>}
 
-        {olderSelectedMessages.length > 0 && <details className="group mt-3 rounded-xl border border-gray-200 bg-gray-50/70 dark:border-gray-800 dark:bg-white/[0.03]">
+        {threadBodyReady && olderSelectedMessages.length > 0 && <details className="group mt-3 rounded-xl border border-gray-200 bg-gray-50/70 dark:border-gray-800 dark:bg-white/[0.03]">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">
             <span>История переписки · {olderSelectedMessages.length}</span>
             <span className="text-xs font-medium text-gray-400 group-open:hidden">Показать</span>
@@ -939,7 +979,7 @@ export function CommunicationsWorkspace() {
             <div className="border-t border-gray-200 p-4 dark:border-gray-800">
               <div className="grid gap-3 lg:grid-cols-[140px_160px_minmax(0,1fr)]"><button type="button" onClick={()=>setOrganizerFlagged((value)=>!value)} className={`h-11 rounded-lg border px-3 text-sm font-semibold ${organizerFlagged?"border-warning-300 bg-warning-50 text-warning-700":"border-gray-300 bg-white text-gray-600 dark:border-gray-700 dark:bg-transparent dark:text-gray-300"}`}>{organizerFlagged?"⚑ С флагом":"⚐ Поставить флаг"}</button><select aria-label="Приоритет письма" className={field} value={organizerPriority} onChange={(event)=>setOrganizerPriority(event.target.value as typeof organizerPriority)}><option value="low">Низкий приоритет</option><option value="normal">Обычный приоритет</option><option value="high">Высокий приоритет</option><option value="urgent">Срочно</option></select><input aria-label="Срок follow-up" className={field} type="datetime-local" value={organizerFollowUp} onChange={(event)=>setOrganizerFollowUp(event.target.value)}/></div>
               <div className="mt-2 flex flex-wrap items-center gap-2"><span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Follow-up</span>{[[1,"Завтра"],[3,"+3 дня"],[7,"+7 дней"]].map(([days,label])=><button key={String(days)} type="button" onClick={()=>setFollowUpPreset(Number(days))} className="rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-600 dark:border-gray-700 dark:bg-transparent dark:text-gray-300">{label}</button>)}<button type="button" onClick={()=>setFollowUpPreset(null)} className="rounded-md border border-gray-200 px-2.5 py-1.5 text-xs text-gray-400 dark:border-gray-700">Очистить</button></div>
-              <div className="mt-3 grid gap-3 lg:grid-cols-2"><textarea className="min-h-24 w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:bg-transparent dark:text-white" value={organizerNotes} onChange={(event)=>setOrganizerNotes(event.target.value)} placeholder="Рабочая заметка: о чём договорились, что проверить…"/><div className="space-y-3"><input className={field} value={organizerTags} onChange={(event)=>setOrganizerTags(event.target.value)} placeholder="Теги через запятую: Cyprus, Open Banking…"/><div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900"><div className="flex items-center justify-between gap-3"><strong className="text-xs text-gray-800 dark:text-gray-200">AI-резюме</strong><div className="flex items-center gap-3">{selectedThread.ai_summary&&<button disabled={summaryBusy || busy} onClick={()=>void saveOrganizer({ai_summary:null}, "AI-резюме удалено.")} className="text-xs font-semibold text-gray-400 disabled:opacity-40">Удалить</button>}<button disabled={summaryBusy || busy || !selectedMessages.length} onClick={()=>void generateAiSummary()} className="text-xs font-semibold text-brand-600 disabled:opacity-40">{summaryBusy?"Анализирую…":selectedThread.ai_summary?"Обновить":"Создать"}</button></div></div><p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-gray-500 dark:text-gray-300">{selectedThread.ai_summary || "Кратко соберёт договорённости, следующий шаг, срок и риски — только из этой цепочки."}</p>{selectedThread.ai_summary_generated_at&&<span className="mt-2 block text-[10px] text-gray-400">Обновлено {formatDate(selectedThread.ai_summary_generated_at)}</span>}</div></div></div>
+              <div className="mt-3 grid gap-3 lg:grid-cols-2"><textarea className="min-h-24 w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:bg-transparent dark:text-white" value={organizerNotes} onChange={(event)=>setOrganizerNotes(event.target.value)} placeholder="Рабочая заметка: о чём договорились, что проверить…"/><div className="space-y-3"><input className={field} value={organizerTags} onChange={(event)=>setOrganizerTags(event.target.value)} placeholder="Теги через запятую: Cyprus, Open Banking…"/><div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900"><div className="flex items-center justify-between gap-3"><strong className="text-xs text-gray-800 dark:text-gray-200">AI-резюме</strong><div className="flex items-center gap-3">{selectedThread.ai_summary&&<button disabled={summaryBusy || busy} onClick={()=>void saveOrganizer({ai_summary:null}, "AI-резюме удалено.")} className="text-xs font-semibold text-gray-400 disabled:opacity-40">Удалить</button>}<button disabled={summaryBusy || busy || !selectedMessages.length || !threadBodyReady} onClick={()=>void generateAiSummary()} className="text-xs font-semibold text-brand-600 disabled:opacity-40">{summaryBusy?"Анализирую…":selectedThread.ai_summary?"Обновить":"Создать"}</button></div></div><p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-gray-500 dark:text-gray-300">{selectedThread.ai_summary || "Кратко соберёт договорённости, следующий шаг, срок и риски — только из этой цепочки."}</p>{selectedThread.ai_summary_generated_at&&<span className="mt-2 block text-[10px] text-gray-400">Обновлено {formatDate(selectedThread.ai_summary_generated_at)}</span>}</div></div></div>
               <button disabled={busy} onClick={()=>void saveOrganizer()} className="mt-3 w-full rounded-lg bg-gray-900 px-4 py-2.5 text-xs font-semibold text-white disabled:opacity-40 dark:bg-white dark:text-gray-900">Сохранить органайзер</button>
             </div>
           </details>

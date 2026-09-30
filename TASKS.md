@@ -5,6 +5,27 @@ Updated: 2026-09-30
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## Radio room load regression — 2026-09-30
+
+- `VERIFIED`: Boris reported an empty Radio room after the consistency release. The live UI
+  showed a statement timeout and zero threads; PostgreSQL logs identified repeated failures of
+  `get_offerpsp_mail_center`. The database still contained 143 messages (68 inbound / 75 outbound),
+  64 threads (23 active / 40 archived / 1 trashed), and zero duplicate external Message-IDs.
+- The preceding report incorrectly treated one successful reload as sufficient evidence that
+  the timeout was transient. It was not a reliable production load check.
+- `VERIFIED locally`: added a staff-only text/search index and full-HTML read for one selected
+  thread. The legacy full-snapshot RPC is unchanged. Search text is not truncated; archived mail
+  remains available. Attachment limits now apply to selected threads, not the first N messages.
+- `VERIFIED locally`: concurrent reads share one pending request, failures are not cached,
+  failed refreshes preserve the last successful same-user snapshot, and initial-load failure
+  is shown as an error with retry rather than an empty inbox. Full-thread failures have a
+  separate retry; old-thread responses cannot overwrite a newly selected thread.
+- PGlite access/body/attachment/limit tests, read-recovery tests, lint/build, the eight operational
+  consistency suites, 30 intake/Telegram tests, MCP/OAuth, mailbox, delivery, QA, mail rendering,
+  public and portal brief regressions pass. No test sends external email or Telegram messages.
+- `PENDING`: production application and live UI verification of this recovery release.
+- SEO/GEO source, public deployment, subagents, Telegram chat creation and Zoom are unchanged.
+
 ## Operational consistency release — production 2026-09-30
 
 - `VERIFIED`: PR #29 merged as `8516aa0eb08b11018f2f0543e307efd828f00802`.

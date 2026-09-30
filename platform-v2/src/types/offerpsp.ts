@@ -146,6 +146,7 @@ export type EmailMessage = {
   subject: string;
   text_body?: string | null;
   html_body?: string | null;
+  body_loaded?: boolean;
   provider: string;
   delivery_status: string;
   is_read: boolean;
@@ -398,6 +399,8 @@ export type ControlBridgeData = {
   commissionSummary: Record<string, number>;
   captainsBridge: CaptainsBridgeSnapshot;
   mailCenter: MailCenterSnapshot;
+  mailCenterLoaded: boolean;
+  mailCenterError: string | null;
   loading: boolean;
   refreshing: boolean;
   ready: boolean;
