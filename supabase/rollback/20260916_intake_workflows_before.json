@@ -1,0 +1,1230 @@
+{
+  "aibotActive": {
+    "id": "IRB53X5NAS4wTuyU",
+    "version": "144132ee-ccff-4b68-839c-9fc74a66c914",
+    "connections": {
+      "Chat Trigger": {
+        "main": [
+          [
+            {
+              "node": "Prepare Query",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Telegram Trigger": {
+        "main": [
+          [
+            {
+              "node": "IF Callback?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "IF Voice?": {
+        "main": [
+          [
+            {
+              "node": "Get TG File",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Query",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Groq Whisper": {
+        "main": [
+          [
+            {
+              "node": "Set Voice Text",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Set Voice Text": {
+        "main": [
+          [
+            {
+              "node": "Prepare Query",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Query": {
+        "main": [
+          [
+            {
+              "node": "Load History",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Search Web": {
+        "ai_tool": [
+          [
+            {
+              "node": "iGaming Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch URL": {
+        "ai_tool": [
+          [
+            {
+              "node": "iGaming Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Casino DB": {
+        "ai_tool": [
+          [
+            {
+              "node": "iGaming Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Simple Memory": {
+        "ai_memory": [
+          [
+            {
+              "node": "iGaming Agent",
+              "type": "ai_memory",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Message": {
+        "main": [
+          [
+            {
+              "node": "Send to Telegram",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Save to chat_logs",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Send Thinking": {
+        "main": [
+          [
+            {
+              "node": "Resolve Input",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Scheduled": {
+        "main": [
+          [
+            {
+              "node": "Send Thinking",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Resolve Input": {
+        "main": [
+          [
+            {
+              "node": "iGaming Agent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "IF Callback?": {
+        "main": [
+          [
+            {
+              "node": "Answer Callback",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Try Portal Reply",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Answer Callback": {
+        "main": [
+          [
+            {
+              "node": "IF Done?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "IF Done?": {
+        "main": [
+          [
+            {
+              "node": "Remove Keyboard",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "IF Send Email?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Callback": {
+        "main": [
+          [
+            {
+              "node": "Send Thinking",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Send Email Tool": {
+        "ai_tool": [
+          [
+            {
+              "node": "iGaming Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Notion Draft Tool": {
+        "ai_tool": [
+          [
+            {
+              "node": "iGaming Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Pipeline Tool": {
+        "ai_tool": [
+          [
+            {
+              "node": "iGaming Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PSP Email Tool": {
+        "ai_tool": [
+          [
+            {
+              "node": "iGaming Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PSP DB Tool": {
+        "ai_tool": [
+          [
+            {
+              "node": "iGaming Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "DeepSeek V4 Pro": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "iGaming Agent",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Manage Tasks": {
+        "ai_tool": [
+          [
+            {
+              "node": "iGaming Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Agent Error Msg": {
+        "main": [
+          [
+            {
+              "node": "Send to Telegram",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Run Contact Hunter": {
+        "ai_tool": [
+          [
+            {
+              "node": "iGaming Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Search Casino Leads": {
+        "ai_tool": [
+          [
+            {
+              "node": "iGaming Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Save Email Draft": {
+        "ai_tool": [
+          [
+            {
+              "node": "iGaming Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "IF Send Email?": {
+        "main": [
+          [
+            {
+              "node": "Parse Draft ID",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Callback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse Draft ID": {
+        "main": [
+          [
+            {
+              "node": "Get Draft",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Draft": {
+        "main": [
+          [
+            {
+              "node": "Send SMTP Email",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Send SMTP Email": {
+        "main": [
+          [
+            {
+              "node": "Mark Sent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Mark Sent": {
+        "main": [
+          [
+            {
+              "node": "Confirm Sent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Load History": {
+        "main": [
+          [
+            {
+              "node": "Build History",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Save PSP Offer": {
+        "ai_tool": [
+          [
+            {
+              "node": "iGaming Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Operating Desk": {
+        "ai_tool": [
+          [
+            {
+              "node": "iGaming Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "IF Attachment?": {
+        "main": [
+          [
+            {
+              "node": "Prepare Offer Attachment",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "IF Voice?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Switch Offer File Type": {
+        "main": [
+          [
+            {
+              "node": "Prepare Offer PDF v2",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Extract Offer XLSX",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Extract Offer XLS",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Extract Offer Text",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Decompress Offer DOCX",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Offer Image",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Send Offer Attachment Reply",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extract Offer XLSX": {
+        "main": [
+          [
+            {
+              "node": "Normalize Offer Attachment",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extract Offer XLS": {
+        "main": [
+          [
+            {
+              "node": "Normalize Offer Attachment",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extract Offer Text": {
+        "main": [
+          [
+            {
+              "node": "Normalize Offer Attachment",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Normalize Offer Attachment": {
+        "main": [
+          [
+            {
+              "node": "IF Offer Text Extracted?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "IF Offer Text Extracted?": {
+        "main": [
+          [
+            {
+              "node": "Submit Offer Attachment",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Send Offer Attachment Reply",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Submit Offer Attachment": {
+        "main": [
+          [
+            {
+              "node": "Offer Attachment Success",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Offer Attachment Failed",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Offer Attachment Success": {
+        "main": [
+          [
+            {
+              "node": "Send Offer Attachment Reply",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Offer Attachment Failed": {
+        "main": [
+          [
+            {
+              "node": "Send Offer Attachment Reply",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Decompress Offer DOCX": {
+        "main": [
+          [
+            {
+              "node": "Select DOCX Content",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Select DOCX Content": {
+        "main": [
+          [
+            {
+              "node": "Extract Offer DOCX",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extract Offer DOCX": {
+        "main": [
+          [
+            {
+              "node": "Normalize Offer Attachment",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Offer Attachment": {
+        "main": [
+          [
+            {
+              "node": "Route Offer Attachment",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Route Offer Attachment": {
+        "main": [
+          [
+            {
+              "node": "Download Offer File",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Send Offer Attachment Reply",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Bulk Operations": {
+        "ai_tool": [
+          [
+            {
+              "node": "iGaming Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Offer Image": {
+        "main": [
+          [
+            {
+              "node": "Groq Offer OCR",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Groq Offer OCR": {
+        "main": [
+          [
+            {
+              "node": "Normalize Offer Attachment",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Download Offer File": {
+        "main": [
+          [
+            {
+              "node": "Restore Offer File Metadata",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Restore Offer File Metadata": {
+        "main": [
+          [
+            {
+              "node": "Switch Offer File Type",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Offer PDF v2": {
+        "main": [
+          [
+            {
+              "node": "Extract Offer PDF v2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Normalize Offer PDF Table": {
+        "main": [
+          [
+            {
+              "node": "Normalize Offer Attachment",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extract Offer PDF v2": {
+        "main": [
+          [
+            {
+              "node": "IF Offer PDF Text?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "IF Offer PDF Text?": {
+        "main": [
+          [
+            {
+              "node": "Normalize Offer PDF Table",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Normalize Offer Attachment",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Try Portal Reply": {
+        "main": [
+          [
+            {
+              "node": "IF Portal Reply Handled",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "IF Portal Reply Handled": {
+        "main": [
+          [
+            {
+              "node": "Confirm Portal Reply",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "IF Attachment?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Captain Bridge Webhook": {
+        "main": [
+          [
+            {
+              "node": "Prepare Web Query",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Web Query": {
+        "main": [
+          [
+            {
+              "node": "Load History",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Build History": {
+        "main": [
+          [
+            {
+              "node": "Is Web Request",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Is Web Request": {
+        "main": [
+          [
+            {
+              "node": "Resolve Input",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Send Thinking",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "iGaming Agent": {
+        "main": [
+          [
+            {
+              "node": "Is Web Response",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Is Web Error",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Is Web Response": {
+        "main": [
+          [
+            {
+              "node": "Prepare Web Response",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Is Web Error": {
+        "main": [
+          [
+            {
+              "node": "Prepare Web Error",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Agent Error Msg",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Web Error": {
+        "main": [
+          [
+            {
+              "node": "Respond Captain Bridge",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Project Memory": {
+        "ai_tool": [
+          [
+            {
+              "node": "iGaming Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Conversation Archive": {
+        "ai_tool": [
+          [
+            {
+              "node": "iGaming Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Web Response": {
+        "main": [
+          [
+            {
+              "node": "Save Web History",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Save Web History": {
+        "main": [
+          [
+            {
+              "node": "Restore Web Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Restore Web Response": {
+        "main": [
+          [
+            {
+              "node": "Respond Captain Bridge",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Contact Timeline": {
+        "ai_tool": [
+          [
+            {
+              "node": "iGaming Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Execution Journal": {
+        "ai_tool": [
+          [
+            {
+              "node": "iGaming Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get TG File": {
+        "main": [
+          [
+            {
+              "node": "Normalize Voice File",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Normalize Voice File": {
+        "main": [
+          [
+            {
+              "node": "Groq Whisper",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Scheduler Trigger": {
+        "main": [
+          [
+            {
+              "node": "Prepare Scheduled",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1",
+      "saveDataSuccessExecution": "all",
+      "saveManualExecutions": true,
+      "callerPolicy": "workflowsFromSameOwner",
+      "availableInMCP": true,
+      "errorWorkflow": "mFbs3T3vi2Qo2ZUY"
+    },
+    "removedNodeIds": [
+      "offerpsp-authorize-tg",
+      "offerpsp-guard-tg",
+      "offerpsp-if-intake-action",
+      "offerpsp-answer-intake",
+      "offerpsp-execute-intake",
+      "offerpsp-render-receipt",
+      "offerpsp-send-receipt"
+    ],
+    "oldTelegramNode": null
+  },
+  "inboundActive": {
+    "id": "ealRZcZzCLKAv6S5",
+    "version": "9d44f021-1ded-47e0-8e1f-15b46e59b437",
+    "connections": {
+      "OfferPSP Lead Webhook": {
+        "main": [
+          [
+            {
+              "node": "Validate and Normalize Lead",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Validate and Normalize Lead": {
+        "main": [
+          [
+            {
+              "node": "Spam Check",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Spam Check": {
+        "main": [
+          [
+            {
+              "node": "Return Neutral Response",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Save OfferPSP Lead",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Save OfferPSP Lead": {
+        "main": [
+          [
+            {
+              "node": "Return Success",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare AIBot Notification": {
+        "main": [
+          [
+            {
+              "node": "Notify Boris by Email",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Return Success": {
+        "main": [
+          [
+            {
+              "node": "Prepare AIBot Notification",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Build Instant Client Workspace",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Notify Boris by Email": {
+        "main": [
+          [
+            {
+              "node": "Notify Boris in Telegram",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Build Instant Client Workspace": {
+        "main": [
+          [
+            {
+              "node": "Generate Client Login Link",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Generate Client Login Link": {
+        "main": [
+          [
+            {
+              "node": "Prepare Client Access Email",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Client Access Email": {
+        "main": [
+          [
+            {
+              "node": "Send Client Access Email",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1",
+      "timezone": "Europe/Nicosia",
+      "saveDataErrorExecution": "all",
+      "saveDataSuccessExecution": "all",
+      "saveManualExecutions": true,
+      "executionTimeout": 60,
+      "errorWorkflow": "mFbs3T3vi2Qo2ZUY"
+    },
+    "removedNodeIds": [
+      "offerpsp-dispatch-operator-card"
+    ],
+    "oldTelegramNode": {
+      "id": "offerpsp-telegram-notification",
+      "name": "Notify Boris in Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1190,
+        210
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "1124622535",
+        "text": "={{ $('Prepare AIBot Notification').item.json.telegram_text }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        },
+        "appendAttribution": false
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "rtqZ7FsLdB7aOmR5",
+          "name": "Telegram aibot_bix_bot rotated 2026-09-07"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "webhookId": "d5dda2c6-621d-4c08-b30d-84f9dbd43435"
+    }
+  }
+}

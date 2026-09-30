@@ -1,0 +1,269 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const read = (relativePath) => readFile(path.join(root, relativePath), "utf8");
+
+const [captain, merchant, integrations, platform, modules, ui, context, seoGeo, qaFixtures, header, compliance, operations, telegram, intakeObservability, researchEntityEditor, entityRelationships, sidebar, sidebarContext, qaDiagnostics, app, buildManifestScript, productionDeployScript] = await Promise.all([
+  read("platform-v2/src/pages/CaptainPages.tsx"),
+  read("platform-v2/src/pages/MerchantWorkspace.tsx"),
+  read("platform-v2/src/pages/IntegrationsWorkspace.tsx"),
+  read("platform-v2/src/pages/Platform.tsx"),
+  read("platform-v2/src/config/modules.tsx"),
+  read("platform-v2/src/components/control/Ui.tsx"),
+  read("platform-v2/src/context/ControlBridgeContext.tsx"),
+  read("platform-v2/src/pages/SeoGeoPage.tsx"),
+  read("platform-v2/src/lib/qaFixtures.ts"),
+  read("platform-v2/src/layout/AppHeader.tsx"),
+  read("platform-v2/src/pages/CompliancePage.tsx"),
+  read("platform-v2/src/pages/OperationsWorkspace.tsx"),
+  read("platform-v2/src/components/control/TelegramWorkspace.tsx"),
+  read("platform-v2/src/lib/intakeObservability.ts"),
+  read("platform-v2/src/components/control/ResearchEntityEditor.tsx"),
+  read("platform-v2/src/components/control/EntityRelationshipsPanel.tsx"),
+  read("platform-v2/src/layout/AppSidebar.tsx"),
+  read("platform-v2/src/context/SidebarContext.tsx"),
+  read("platform-v2/src/pages/QaDiagnosticsPage.tsx"),
+  read("platform-v2/src/App.tsx"),
+  read("platform-v2/scripts/write-build-manifest.mjs"),
+  read("platform-v2/scripts/deploy-production.mjs"),
+]);
+const dealDesk = await read("platform-v2/src/pages/DealDeskPanel.tsx");
+const [todayWorkspace, previewDrawer, uiPreferences] = await Promise.all([
+  read("platform-v2/src/pages/TodayWorkspace.tsx"),
+  read("platform-v2/src/components/control/RecordPreviewDrawer.tsx"),
+  read("platform-v2/src/lib/uiPreferences.ts"),
+]);
+
+assert.match(app, /TodayWorkspace/);
+assert.match(modules, /label: "Сегодня"/);
+assert.match(modules, /group: "today"/);
+assert.match(modules, /group: "registry"/);
+assert.match(modules, /group: "commercial"/);
+assert.match(sidebar, /Избранное/);
+assert.match(sidebar, /offerpsp\.favoriteModules/);
+assert.match(header, /Быстрые действия и недавнее/);
+assert.match(header, /ArrowDown/);
+assert.match(header, /rememberPath/);
+assert.match(todayWorkspace, /bridge\.mailCenter\.threads/);
+assert.match(todayWorkspace, /captainsBridge\.offerpsp_tasks/);
+assert.match(todayWorkspace, /botTaskNeedsIntervention/);
+assert.match(todayWorkspace, /bot_tasks\.filter\(botTaskNeedsIntervention\)/);
+assert.doesNotMatch(todayWorkspace, /\.\.\.bridge\.captainsBridge\.bot_tasks\]/);
+assert.match(todayWorkspace, /AIBot требует вмешательства/);
+assert.match(todayWorkspace, /ingestionJobs/);
+assert.match(todayWorkspace, /groupIngestionAttention/);
+assert.match(todayWorkspace, /связано источников/);
+assert.match(todayWorkspace, /Ошибка импорта:/);
+assert.match(todayWorkspace, /integration-health/);
+assert.match(todayWorkspace, /kind: "integration"/);
+assert.match(todayWorkspace, /Только реальные письма, задачи и блокировки/);
+assert.match(previewDrawer, /Быстрый просмотр/);
+assert.match(previewDrawer, /данные не изменяются/);
+assert.match(uiPreferences, /localStorage\.setItem/);
+assert.match(uiPreferences, /\["qa", "release", "check"\]/);
+assert.match(uiPreferences, /isQaFixturePath/);
+assert.match(platform, /offerpsp\.offers\.expandedProviders/);
+assert.match(platform, /expandedProviderSet/);
+assert.doesNotMatch(platform, /if \(!next\.size && groups\[0\]\) next\.add/);
+assert.match(platform, /merchant-table-density/);
+assert.match(platform, /Показывать колонку/);
+assert.match(context, /pathname === "\/" \|\| pathname\.startsWith\("\/communications"\)/);
+assert.match(captain, /requestedThread/);
+assert.match(captain, /handleThreadNavigation/);
+
+assert.match(header, /Свернуть боковую панель/);
+assert.match(header, /Развернуть боковую панель/);
+assert.match(header, /Свернуть панель/);
+assert.match(header, /Развернуть панель/);
+assert.match(sidebar, /w-\[248px\]/);
+assert.match(sidebar, /w-\[68px\]/);
+assert.doesNotMatch(sidebar, /onMouseEnter/);
+assert.match(sidebarContext, /offerpsp:sidebar-expanded/);
+assert.match(sidebarContext, /localStorage\.setItem/);
+assert.match(sidebarContext, /savedValue === null \? false/);
+assert.doesNotMatch(sidebar, /Production работает/);
+assert.match(sidebar, /Рабочие данные доступны/);
+assert.match(sidebar, /ready && !error/);
+assert.match(sidebar, /lastUpdatedAt/);
+assert.match(sidebar, /build-manifest\.json/);
+assert.match(buildManifestScript, /VERCEL_GIT_COMMIT_SHA/);
+assert.match(buildManifestScript, /OFFERPSP_BUILD_COMMIT_SHA/);
+assert.match(buildManifestScript, /git.*rev-parse/);
+assert.match(productionDeployScript, /OFFERPSP_BUILD_COMMIT_SHA/);
+assert.match(productionDeployScript, /--build-env/);
+assert.match(productionDeployScript, /status.*--porcelain.*--untracked-files=normal/);
+assert.match(productionDeployScript, /Refusing to deploy a dirty working tree/);
+
+assert.match(captain, /Вернуть в непрочитанные/);
+assert.match(captain, /p_mark_read: markRead/);
+assert.match(captain, /p_mark_read: null/);
+assert.match(captain, /Письмо отправлено[^\n]+требуется техническая проверка/);
+assert.match(merchant, /email доставлен[^\n]+требуется техническая проверка/);
+assert.match(captain, /update_offerpsp_email_draft/);
+assert.match(captain, /Редактируется существующая запись — новый черновик создан не будет/);
+assert.match(captain, /activeDraft\?"Отправить этот черновик":"Отправить письмо"/);
+assert.match(captain, /Черновики/);
+assert.match(captain, /setSearchParams\(\{draft:String\(draft\.id\)\}\)/);
+assert.match(captain, /Последнее: исходящее/);
+assert.match(captain, /Последнее: входящее/);
+assert.match(captain, /Исходящее письмо →/);
+assert.match(captain, /← Входящее письмо/);
+assert.match(captain, /Написать follow-up/);
+assert.match(captain, /set_offerpsp_email_draft_response_expected/);
+assert.match(captain, /Ожидаем ответ партнёра/);
+assert.match(captain, /Только при включённом флаге/);
+assert.match(captain, /Рабочая привязка ·/);
+assert.match(captain, /get_offerpsp_email_thread_entity_context/);
+assert.match(captain, /Связи компании/);
+assert.match(captain, /Открыть карточку →/);
+assert.match(captain, /title="Радиорубка — Почта"/);
+assert.match(captain, /Папки/);
+assert.match(captain, /Входящие/);
+assert.match(captain, /Отправленные/);
+assert.match(captain, /С вложениями/);
+assert.match(captain, /Непрочитанные/);
+assert.match(captain, /mailScope === "unread"/);
+assert.match(captain, /Быстрые фильтры почты/);
+assert.match(captain, /aria-pressed=\{active\}/);
+assert.match(captain, /openMailScope\(item\.scope\)/);
+assert.match(captain, /setQuery\(""\)/);
+assert.match(captain, /setThreadId\(""\)/);
+assert.match(captain, /Поиск по перепискам/);
+assert.match(platform, /Представления реестра мерчей/);
+assert.match(platform, /Без владельца/);
+assert.match(platform, /offerpsp\.merchants\.density/);
+assert.match(platform, /offerpsp\.merchants\.columns/);
+assert.match(platform, /Вид таблицы/);
+assert.match(platform, /Представления реестра PSP/);
+assert.match(platform, /Представления каталога офферов/);
+assert.match(platform, /Дополнительные фильтры/);
+assert.match(platform, /Развернуть все/);
+assert.match(platform, /Свернуть все/);
+assert.match(captain, /aria-label="Открыть черновики"/);
+assert.match(captain, /offerpsp\.mail\.hideTrashNotice/);
+assert.match(captain, /Больше не показывать/);
+assert.match(captain, /Просрочено/);
+assert.match(captain, /С флагом/);
+assert.match(captain, /История переписки ·/);
+assert.match(captain, /Показать подпись/);
+assert.match(captain, /sticky top-14/);
+assert.match(captain, /Управление цепочкой/);
+assert.match(captain, />Органайзер</);
+assert.ok(captain.indexOf('aria-label="Последнее письмо"') < captain.indexOf("Управление цепочкой"), "latest email must render before workflow controls");
+assert.match(captain, /update_offerpsp_email_thread_organizer/);
+assert.match(captain, /AI-резюме/);
+assert.match(captain, /Рабочий шаблон/);
+assert.match(captain, /mailCenter\.templates/);
+assert.match(captain, /changeThreadState\("trashed"\)/);
+assert.match(captain, /changeThreadState\("restore"\)/);
+assert.match(captain, /Переписка в корзине/);
+assert.match(captain, /Удаление:/);
+assert.match(modules, /label: "Радиорубка", shortLabel: "Почта"/);
+
+assert.match(entityRelationships, /prepare_offerpsp_entity_merge/);
+assert.match(entityRelationships, /execute_offerpsp_entity_merge/);
+assert.match(entityRelationships, /rollback_offerpsp_entity_merge/);
+assert.match(entityRelationships, /ОБЪЕДИНИТЬ/);
+assert.match(entityRelationships, /История не переносится и не удаляется/);
+
+assert.match(integrations, /Проверка заняла больше 12 секунд/);
+assert.match(integrations, /finally\s*\{/);
+assert.match(integrations, /controller\.abort\(\)/);
+assert.match(integrations, /нет подтверждённой доставки/);
+assert.match(integrations, /last_delivery_at/);
+assert.match(platform, /Полный production‑цикл субагента ещё не проверен/);
+assert.match(platform, /Вручную создать общий Telegram‑чат/);
+assert.match(platform, /Вручную создать встречу/);
+assert.match(dealDesk, /Рубка сама сообщение не отправляет/);
+assert.match(dealDesk, /Рубка встречу не создаёт/);
+assert.doesNotMatch(dealDesk, />Отправить PSP</);
+assert.doesNotMatch(dealDesk, />Назначить Zoom</);
+
+assert.match(intakeObservability, /screen:'Запуск проверки'/);
+assert.doesNotMatch(intakeObservability, /Постановка проверки в очередь/);
+assert.match(researchEntityEditor, /active \? "Проверка выполняется…" : completed \? "Перепроверить" : "Запустить проверку"/);
+assert.doesNotMatch(researchEntityEditor, /Проверка уже в очереди/);
+
+assert.match(modules, /label: "Обзор воронки"/);
+assert.match(platform, /title="Обзор воронки"/);
+assert.match(platform, /Статус меняется только в карточке/);
+assert.doesNotMatch(platform, />Новая поисковая миссия<\/button>/);
+
+assert.match(ui, /role="status"/);
+assert.match(ui, /Загружаем рабочие данные/);
+
+assert.match(context, /CORE_CACHE_TTL_MS = 5 \* 60_000/);
+assert.match(context, /CORE_BACKGROUND_REFRESH_MS = 5 \* 60_000/);
+assert.match(context, /void refreshLeads\(user\)/);
+assert.doesNotMatch(context, /load\(user, true\)[\s\S]{0,600}setInterval/);
+assert.match(seoGeo, /SEO_ANALYTICS_REFRESH_MS = 5 \* 60_000/);
+assert.match(seoGeo, /ACTIVE_AUDIT_POLL_MS = 15_000/);
+assert.match(platform, /hasProcessingJobs \? 15_000 : 120_000/);
+
+assert.match(qaFixtures, /ad724d57-e894-4d16-b7b0-948165aef4bf/);
+assert.match(qaFixtures, /6e531900-901c-4d5d-8887-0679db9b335d/);
+assert.match(qaFixtures, /60e61542-7070-43ef-937b-7f919e9abdb0/);
+assert.match(qaFixtures, /1e584fde-67d7-42d1-be52-83c014218c09/);
+assert.match(qaFixtures, /autopilot e2e/);
+assert.match(qaFixtures, /screening canary/);
+assert.match(qaFixtures, /portal regression/);
+assert.match(qaFixtures, /isQaFixtureEntitySummary/);
+assert.match(entityRelationships, /isQaFixtureEntitySummary/);
+assert.match(entityRelationships, /selectable_targets \|\| \[\]\)\.filter/);
+assert.match(entityRelationships, /duplicate_candidates\.filter/);
+assert.match(platform, /merchantLeads = useMemo\(\(\) => leads\.filter\(\(lead\) => !isQaFixtureLead\(lead\)\)/);
+assert.match(platform, /registryProviders = useMemo\(\(\) => providers\.filter\(\(provider\) => !isQaFixtureProvider\(provider\)\)/);
+assert.match(platform, /operationalRoutes = useMemo\(\(\) => routes\.filter\(\(route\) => !isQaFixtureRoute\(route\)\)/);
+assert.match(header, /!isQaFixturePath\(item\.path\)/);
+assert.match(compliance, /operationalCases = useMemo/);
+assert.match(operations, /operationalTasks = useMemo/);
+assert.match(telegram, /!isQaFixtureLead\(lead\)/);
+assert.match(captain, /fullMailCenter\.threads\.filter/);
+assert.doesNotMatch(integrations, /list_offerpsp_qa_fixture_status/);
+assert.doesNotMatch(integrations, /Эталонные сценарии/);
+assert.match(qaDiagnostics, /list_offerpsp_qa_fixture_status/);
+assert.match(qaDiagnostics, /Синтетический стенд/);
+assert.match(app, /path="\/diagnostics\/qa"/);
+assert.doesNotMatch(modules, /diagnostics\/qa/);
+
+if (process.env.VERCEL !== "1") {
+  const migration = await read("supabase/migrations/20260815090000_offerpsp_email_mark_unread.sql");
+  assert.match(migration, /elsif p_mark_read is false then/);
+  assert.match(migration, /set is_read = false/);
+  assert.match(migration, /order by coalesce\(received_at, created_at\) desc/);
+  assert.match(migration, /and is_read is false/);
+  const draftMigration = await read("supabase/migrations/20260901154500_offerpsp_existing_email_draft_send.sql");
+  assert.match(draftMigration, /create or replace function public\.update_offerpsp_email_draft/);
+  assert.match(draftMigration, /coalesce\(v_draft\.status, 'draft'\) not in \('draft', 'failed'\)/);
+  assert.match(draftMigration, /thread_id = excluded\.thread_id/);
+  assert.match(draftMigration, /grant execute on function public\.update_offerpsp_email_draft/);
+  const organizerMigration = await read("supabase/migrations/20260901164843_offerpsp_mail_organizer.sql");
+  assert.match(organizerMigration, /add column if not exists priority text not null default 'normal'/);
+  assert.match(organizerMigration, /create table if not exists public\.offerpsp_email_templates/);
+  assert.match(organizerMigration, /create or replace function public\.update_offerpsp_email_thread_organizer/);
+  assert.match(organizerMigration, /'overdue_follow_up'/);
+  assert.match(organizerMigration, /'templates'/);
+  assert.match(organizerMigration, /now\(\) \+ interval '3 days'/);
+  const trashMigration = await read("supabase/migrations/20260901185355_offerpsp_email_trash_retention.sql");
+  assert.match(trashMigration, /'open', 'awaiting_reply', 'follow_up', 'closed', 'archived', 'trashed'/);
+  assert.match(trashMigration, /create or replace function private\.purge_offerpsp_email_trash/);
+  assert.match(trashMigration, /interval '15 days'/);
+  assert.match(trashMigration, /offerpsp-purge-email-trash/);
+  assert.match(trashMigration, /perform cron\.schedule/);
+  assert.match(trashMigration, /trashed_from_status/);
+  const truthfulStateMigration = await read("supabase/migrations/20260927183000_offerpsp_truthful_operational_state.sql");
+  const truthfulStateReviewFixes = await read("supabase/migrations/20260927190000_offerpsp_truthful_operational_state_review_fixes.sql");
+  assert.match(truthfulStateMigration, /add column if not exists response_expected boolean not null default false/);
+  assert.match(truthfulStateMigration, /new\.status = 'sent' and coalesce\(new\.response_expected, false\)/);
+  assert.match(truthfulStateMigration, /set_offerpsp_email_draft_response_expected/);
+  assert.match(truthfulStateMigration, /not private\.offerpsp_is_qa_lead/);
+  assert.match(truthfulStateMigration, /last_message\.direction = 'inbound'/);
+  assert.match(truthfulStateReviewFixes, /when new\.status = 'sent' and not v_waiting/);
+  assert.match(truthfulStateReviewFixes, /language sql\s+stable\s+security invoker/);
+  assert.match(truthfulStateReviewFixes, /like '%\.invalid%'/);
+}
+
+console.log("Control integrity regression tests passed");

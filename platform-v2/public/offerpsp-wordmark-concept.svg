@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">OfferPSP typographic logo concept</title>
+  <desc id="desc">A compact dark square badge with OFFER above PSP.</desc>
+  <rect width="1024" height="1024" fill="#070A12"/>
+
+  <g text-anchor="middle" font-family="Inter, SF Pro Display, Helvetica Neue, Arial, sans-serif">
+    <text
+      x="512"
+      y="405"
+      fill="#F6F1E8"
+      font-size="112"
+      font-weight="750"
+      letter-spacing="17"
+    >OFFER</text>
+    <text
+      x="500"
+      y="650"
+      fill="#FF4778"
+      font-size="270"
+      font-weight="900"
+      letter-spacing="-12"
+    >PSP</text>
+  </g>
+
+  <rect x="739" y="600" width="34" height="34" fill="#8B5CF6"/>
+  <rect x="306" y="716" width="203" height="10" fill="#FF4778"/>
+  <rect x="509" y="716" width="203" height="10" fill="#8B5CF6"/>
+</svg>

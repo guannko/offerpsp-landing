@@ -1,0 +1,101 @@
+{
+  "nodes": [
+    {
+      "id": "input",
+      "name": "Request",
+      "type": "inputNode",
+      "position": { "x": 0, "y": 0 }
+    },
+    {
+      "id": "risk-policy",
+      "name": "Merchant and route risk policy",
+      "type": "decisionTableNode",
+      "position": { "x": 300, "y": 0 },
+      "content": {
+        "hitPolicy": "first",
+        "passThrough": false,
+        "inputs": [
+          {
+            "id": "merchant-risk",
+            "name": "Merchant risk",
+            "field": "merchant.risk_category"
+          },
+          {
+            "id": "route-risk",
+            "name": "Route risk",
+            "field": "route.risk_category"
+          }
+        ],
+        "outputs": [
+          {
+            "id": "eligible",
+            "name": "Eligible",
+            "field": "eligible"
+          },
+          {
+            "id": "reason",
+            "name": "Reason",
+            "field": "reason"
+          },
+          {
+            "id": "review",
+            "name": "Requires review",
+            "field": "requires_review"
+          }
+        ],
+        "rules": [
+          {
+            "_id": "high-to-low",
+            "merchant-risk": "\"high\"",
+            "route-risk": "\"low\"",
+            "eligible": "false",
+            "reason": "\"risk_mismatch\"",
+            "review": "false"
+          },
+          {
+            "_id": "low-to-high",
+            "merchant-risk": "\"low\"",
+            "route-risk": "\"high\"",
+            "eligible": "false",
+            "reason": "\"risk_mismatch\"",
+            "review": "false"
+          },
+          {
+            "_id": "high-match",
+            "merchant-risk": "\"high\"",
+            "route-risk": "\"high\"",
+            "eligible": "true",
+            "reason": "\"risk_match\"",
+            "review": "false"
+          },
+          {
+            "_id": "low-match",
+            "merchant-risk": "\"low\"",
+            "route-risk": "\"low\"",
+            "eligible": "true",
+            "reason": "\"risk_match\"",
+            "review": "false"
+          },
+          {
+            "_id": "unknown",
+            "merchant-risk": "",
+            "route-risk": "",
+            "eligible": "true",
+            "reason": "\"risk_unknown\"",
+            "review": "true"
+          }
+        ]
+      }
+    },
+    {
+      "id": "output",
+      "name": "Decision",
+      "type": "outputNode",
+      "position": { "x": 600, "y": 0 }
+    }
+  ],
+  "edges": [
+    { "id": "input-risk", "sourceId": "input", "targetId": "risk-policy" },
+    { "id": "risk-output", "sourceId": "risk-policy", "targetId": "output" }
+  ]
+}

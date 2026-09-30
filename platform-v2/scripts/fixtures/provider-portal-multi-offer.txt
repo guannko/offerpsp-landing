@@ -1,0 +1,94 @@
+🇺🇿 **Uzbekistan&#xA0;**
+**&#xA0;UZS E-com Humo**
+
+**Pay-in:** FTD — 17% | TD — 15%
+**Limits**: 5,000 – 660,000,000 UZS
+
+**Pay-out:** 0.5%
+**Limits:** 5,000 – 660,000,000 UZS
+
+**Settlement:** T+1 | USDT 0%
+
+RR — N/A
+CB — 100$
+Refund Fee — N/A
+
+*⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻*
+
+🇺🇿**UZS P2P** gambling\adult\forex
+
+ГЕО - Uzbekistan | **Method:** P2P
+
+**Type:** FTD and trusted
+**CARDS:** Uzcard / Humo
+
+**Комиссия за прием**: 3.4% | Мин - макс транзакция прием: 30 000 - 35 000 000 UZS
+
+**Выплаты на карты:**&#x31;,75%| Мин - макс транзакция выплаты: 30 000 - 35 000 000 UZS
+
+Settlement in USDT - 0%, комиссия 5 USDT
+**HTX UZS-USDT**: зелёный стакан – 2–6 место (среднее значение) – направление банк (HUMO + UZCARD) – без ограничения ликвидности
+*⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻*
+
+**🇦🇿AZN Quasi ECOM** gambling\adult
+**Type:** FTD/Trusted
+
+**PayIn:** 7.8%
+Мин-макс транзакция прием: 30 AZN - 5000 AZN
+
+**PayOut:** 2.5%
+Мин-макс транзакция выплаты: 50 AZN - 5000 AZN
+
+**Settlement in USDT** - 0% |Rate: 1,75
+**Integration** — API/h2h
+
+*⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻*
+
+**🇦🇿AZN P2P** gambling\adult
+**Валюта**: AZN
+**Type:** FTD/Trusted
+**CARDS:** Kapitalbank
+
+PayIn: 5.9%
+Limits: 10 AZN - 3000 AZN
+
+Payout: 2.5%
+Limits: 50 AZN - 5000 AZN
+
+**Settlement in USDT:** 0% rate XE +3%
+Integration — API/h2h
+*⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻⸻*
+
+**🇰🇬 KGS P2P**
+
+**Currency: KGS Method: P2P**
+**Traffic Type: FTD / Trusted**
+
+**OPTIMABANK/MBANK**
+
+**Приём: 6.4%**
+**LImits: 1 000 — 150 000 KGS**
+
+**Выплаты: 3%**
+**Limits:&#x20;**&#x33; 000 — 150 000 KGS
+
+**Settlement:&#x20;**&#x55;SDT — 0% | Bybit / 10 000
+**MBANK зелёный стакан | T+0**
+
+🇰🇿 **Казахстан | KZT P2P Трансгран| Kaspi&#xA0;**
+Gambling / Betting / Forex
+
+**Terms:**
+Fee: 8.2%
+Traffic type: FTD / Trusted
+Limits: 10 000 – 1 500 000 KZT
+
+Методы: Kaspi
+Интеграция: H2H / Redirect
+
+**Settlement:**
+USDT TRC-20
+Fee: 0% от 3 000 USDT | если сумма менее 3 000 USDT — фикс. комиссия 8 USDT
+T+0 | Rate: Bybit Green Glass
+5–10 ордеров
+Kaspi Bank — от 100 000 KZT, approved

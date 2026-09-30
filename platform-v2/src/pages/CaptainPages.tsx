@@ -1,0 +1,1009 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router";
+import PageMeta from "../components/common/PageMeta";
+import { EmptyState, ErrorBanner, Metric, PageHeading, Panel, SkeletonPage, StatusPill, humanizeCode, statusLabels } from "../components/control/Ui";
+import ResearchEntityEditor from "../components/control/ResearchEntityEditor";
+import TelegramWorkspace from "../components/control/TelegramWorkspace";
+import { useControlBridge } from "../context/ControlBridgeContext";
+import { emailMessageTimestamp, presentEmailBody, sortEmailMessagesChronologically, splitEmailBody } from "../lib/emailThread";
+import { EnvelopeIcon, EyeIcon, MoreDotIcon, TrashBinIcon } from "../icons";
+import { isQaFixtureLead, isQaFixtureLeadId, isQaFixtureProvider, isQaFixtureProviderId } from "../lib/qaFixtures";
+import { supabase } from "../lib/supabase";
+import { mailCompanySuggestion } from "../lib/mailCompanySuggestion";
+import { shareRead } from "../lib/readSnapshot";
+import { useStoredState } from "../lib/uiPreferences";
+import type { CasinoLead, EmailAttachment, EmailMessage, EmailTemplate, EmailThread } from "../types/offerpsp";
+
+const field = "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:text-white";
+const area = "min-h-40 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-3 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:text-white";
+const formatDate = (value?: string | null) => value ? new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(value)) : "—";
+const activeCasinoStatuses = ["partner", "active", "replied"];
+const inactiveCasinoStatuses = ["rejected", "paused"];
+const counterpartyLabels: Record<string, string> = {
+  casino: "Казино",
+  general: "Без привязки",
+  merchant: "Мерч",
+  provider: "PSP",
+  research_psp: "PSP из базы AIBot",
+};
+
+type ThreadEntityContext = {
+  status: "linked" | "unlinked" | "unsupported";
+  reason?: string;
+  entity_type?: "organization" | "provider";
+  card_path?: string | null;
+  workspace?: {
+    canonical_entity?: { id: string; name: string; legal_name?: string | null; internal_code?: string | null };
+    relationships?: Array<{ id: string; relationship_type: string; status: string; other_entity: { name: string } }>;
+    merged_sources?: Array<{ id: string; name: string }>;
+  };
+};
+
+const mailThreadLabels: Record<string, { label: string; hint: string; className: string }> = {
+  open: { label: "Открытая переписка", hint: "Нужно определить следующий шаг", className: "border-gray-200 bg-gray-50 text-gray-700 dark:border-gray-700 dark:bg-white/5 dark:text-gray-200" },
+  awaiting_reply: { label: "Ждём ответ партнёра", hint: "При отправке явно указано, что ответ ожидается", className: "border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300" },
+  follow_up: { label: "Нужен follow-up", hint: "Пора напомнить о переписке", className: "border-warning-200 bg-warning-50 text-warning-700 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-300" },
+  closed: { label: "Переписка закрыта", hint: "Активных действий не требуется", className: "border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-700 dark:bg-white/5 dark:text-gray-400" },
+  archived: { label: "В архиве", hint: "Переписка убрана из рабочего списка", className: "border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-700 dark:bg-white/5 dark:text-gray-400" },
+  spam: { label: "Спам", hint: "Переписка исключена из рабочих папок", className: "border-error-200 bg-error-50 text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-300" },
+  trashed: { label: "В корзине", hint: "Автоматическое удаление через 15 дней", className: "border-error-200 bg-error-50 text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-300" },
+};
+
+const messageDate = (entry: { sent_at?: string | null; received_at?: string | null; created_at: string }) =>
+  entry.sent_at || entry.received_at || entry.created_at;
+const priorityWeight: Record<string, number> = { low: 1, normal: 2, high: 3, urgent: 4 };
+const priorityLabels: Record<string, string> = { low: "Низкий", normal: "Обычный", high: "Высокий", urgent: "Срочно" };
+const spamTag = "system:spam";
+const isSpamMailThread = (thread: EmailThread) => (thread.tags || []).includes(spamTag);
+const isActiveMailThread = (thread: EmailThread) => !isSpamMailThread(thread) && !["closed", "archived", "trashed"].includes(thread.status);
+const isOverdueThread = (thread: EmailThread) => Boolean(thread.follow_up_at && isActiveMailThread(thread) && new Date(thread.follow_up_at).getTime() <= Date.now());
+const toDateTimeLocal = (value?: string | null) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+};
+
+const trashExpiresAt = (value?: string | null) => {
+  if (!value) return null;
+  const deletedAt = new Date(value);
+  if (Number.isNaN(deletedAt.getTime())) return null;
+  return new Date(deletedAt.getTime() + 15 * 24 * 60 * 60 * 1000).toISOString();
+};
+const stripHtml = (value: string) => {
+  if (typeof document === "undefined") return value.replace(/<[^>]*>/g, " ");
+  const element = document.createElement("div");
+  element.innerHTML = value;
+  return element.textContent || "";
+};
+
+function EmailMessageBody({ textBody, htmlBody }: { textBody?: string | null; htmlBody?: string | null }) {
+  const [showQuoted, setShowQuoted] = useState(false);
+  const [showSignature, setShowSignature] = useState(false);
+  const source = textBody || (htmlBody ? stripHtml(htmlBody) : "");
+  const { currentText, quotedText, signatureText } = useMemo(() => splitEmailBody(source), [source]);
+  const presentation = useMemo(() => presentEmailBody(currentText), [currentText]);
+
+  return <div className="mt-4">
+    <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-sm leading-6 text-gray-700 dark:text-gray-200">{presentation.contentText || "Пустое письмо"}</p>
+    {presentation.actionLinks.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{presentation.actionLinks.map((link, index)=><a key={`${link.href}-${index}`} href={link.href} target="_blank" rel="noreferrer" title={link.href} className="inline-flex items-center rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-xs font-semibold text-brand-700 no-underline transition hover:border-brand-300 hover:bg-brand-100 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300 dark:hover:bg-brand-500/20">{link.label} ↗</a>)}</div>}
+    {presentation.technicalText && <details className="group mt-3 rounded-lg border border-gray-200 bg-gray-50/70 dark:border-gray-800 dark:bg-white/[0.03]">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-xs font-semibold text-gray-500 hover:text-brand-600">
+        <span>Служебные ссылки · {presentation.technicalLineCount}</span>
+        <span className="text-[10px] font-medium text-gray-400 group-open:hidden">Показать</span><span className="hidden text-[10px] font-medium text-gray-400 group-open:inline">Скрыть</span>
+      </summary>
+      <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words border-t border-gray-200 p-3 font-sans text-[11px] leading-5 text-gray-400 [overflow-wrap:anywhere] dark:border-gray-800">{presentation.technicalText}</pre>
+    </details>}
+    {signatureText && <div className="mt-3"><button type="button" onClick={()=>setShowSignature((value)=>!value)} className="text-xs font-semibold text-gray-400 hover:text-brand-600">{showSignature?"Скрыть подпись":"Показать подпись"}</button>{showSignature&&<pre className="mt-2 whitespace-pre-wrap rounded-xl bg-gray-50 p-3 font-sans text-xs leading-5 text-gray-500 dark:bg-white/[0.03] dark:text-gray-400">{signatureText}</pre>}</div>}
+    {quotedText && <div className="mt-4 border-t border-black/5 pt-3 dark:border-white/10">
+      <button type="button" onClick={()=>setShowQuoted((value)=>!value)} className="text-xs font-semibold text-gray-500 hover:text-brand-600">
+        {showQuoted ? "Скрыть предыдущую переписку" : "Показать предыдущую переписку"}
+      </button>
+      {showQuoted && <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap rounded-xl bg-white/70 p-3 font-sans text-xs leading-5 text-gray-500 dark:bg-black/10 dark:text-gray-400">{quotedText}</pre>}
+    </div>}
+  </div>;
+}
+
+function Frame({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
+  const bridge = useControlBridge();
+  if (bridge.loading) return <SkeletonPage label={`Загружаем раздел «${title}»…`}/>;
+  return <><PageMeta title={`${title} | OfferPSP`} description={description}/>{bridge.error && <ErrorBanner message={bridge.error}/>} {children}</>;
+}
+
+export function CasinosWorkspace() {
+  const { captainsBridge, refresh } = useControlBridge();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [query, setQuery] = useState("");
+  const [scope, setScope] = useStoredState<"active" | "pipeline" | "inactive" | "hidden" | "all">("offerpsp.casinos.scope", "pipeline");
+  const [contactFilter, setContactFilter] = useState("all");
+  const [editor, setEditor] = useState<{ record?: CasinoLead } | null>(null);
+  const needle = query.trim().toLowerCase();
+  const leads = useMemo(() => captainsBridge.casino_leads.filter((lead) => {
+    const hidden = lead.record_state === "archived";
+    const inactive = !hidden && inactiveCasinoStatuses.includes(lead.contact_status || "");
+    const active = !inactive && activeCasinoStatuses.includes(lead.contact_status || "");
+    const scopeMatch = scope === "all" || (scope === "hidden" ? hidden : !hidden && (scope === "inactive" ? inactive : scope === "active" ? active : !active && !inactive));
+    const contactMatch = contactFilter === "all" || lead.contact_status === contactFilter;
+    return scopeMatch && contactMatch && [lead.name, lead.website, lead.geo, lead.email, lead.telegram, lead.sphere, lead.contact_name, lead.license, ...(lead.tags || [])].filter(Boolean).join(" ").toLowerCase().includes(needle);
+  }), [captainsBridge.casino_leads, needle, scope, contactFilter]);
+  const count = (kind: "active" | "pipeline" | "inactive" | "hidden") => captainsBridge.casino_leads.filter((lead) => {
+    const hidden = lead.record_state === "archived";
+    const inactive = !hidden && inactiveCasinoStatuses.includes(lead.contact_status || "");
+    const active = !inactive && activeCasinoStatuses.includes(lead.contact_status || "");
+    return kind === "hidden" ? hidden : !hidden && (kind === "inactive" ? inactive : kind === "active" ? active : !active && !inactive);
+  }).length;
+
+  const requestedEntity = searchParams.get("entity");
+  useEffect(() => {
+    if (!requestedEntity) return;
+    const record = captainsBridge.casino_leads.find((lead) => String(lead.id) === requestedEntity);
+    if (record) setEditor({ record });
+  }, [captainsBridge.casino_leads, requestedEntity]);
+
+  const closeEditor = () => {
+    setEditor(null);
+    if (!requestedEntity) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("entity");
+    setSearchParams(next, { replace: true });
+  };
+  return <Frame title="Казино" description="Рабочий реестр онлайн-казино."><PageHeading eyebrow="Counterparty organizer" title="Казино" description="Единый реестр найденных и активных компаний. AIBot наполняет его из Telegram, а команда ведёт контакт, почту, заметки и задачи в рабочей карточке." action={<button onClick={()=>setEditor({})} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white">+ Добавить казино</button>}/>
+    <div className="grid grid-cols-2 gap-3 xl:grid-cols-5"><Metric label="Всего" value={captainsBridge.casino_leads.length} hint="в едином реестре"/><Metric label="Активные" value={count("active")} hint="контакт и работа начаты" tone="success"/><Metric label="В обработке" value={count("pipeline")} hint="исследование и переговоры"/><Metric label="Неактивные" value={count("inactive")} hint="пауза или отказ"/><Metric label="Скрытые" value={count("hidden")} hint="сохранены вне работы"/></div>
+    <Panel className="mt-6">
+      <div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Рабочий список</h2><p className="mt-1 text-sm text-gray-500">Нажмите на компанию, чтобы открыть её органайзер.</p></div>
+      <div className="mt-4 flex flex-wrap gap-2">{[["active","Активные"],["pipeline","В обработке"],["inactive","Неактивные"],["hidden","Скрытые"],["all","Все"]].map(([value,label])=><button key={value} onClick={()=>setScope(value as typeof scope)} className={`rounded-lg px-3 py-2 text-sm ${scope===value?"bg-brand-500 text-white":"bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300"}`}>{label}</button>)}</div>
+      <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_220px]"><input className={field} value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Компания, GEO, контакт, лицензия…"/><select className={field} value={contactFilter} onChange={(e)=>setContactFilter(e.target.value)}><option value="all">Все статусы контакта</option>{["not_contacted","researching","ready","contacted","replied","negotiating","partner","rejected","paused"].map((value)=><option key={value} value={value}>{statusLabels[value] || value}</option>)}</select></div>
+      <p className="mt-3 text-xs text-gray-400">Показано {leads.length} из {captainsBridge.casino_leads.length}.</p>
+      <div className="mt-3 divide-y divide-gray-100 dark:divide-gray-800">{leads.map((lead)=><div key={lead.id} role="button" tabIndex={0} onClick={()=>setEditor({record:lead})} onKeyDown={(event)=>{if(event.key==="Enter")setEditor({record:lead});}} className="grid cursor-pointer gap-3 py-4 hover:bg-gray-50/70 lg:grid-cols-[1.3fr_1fr_1fr_140px] dark:hover:bg-white/[0.02]"><div><strong className="text-sm text-gray-900 dark:text-white">{lead.name || lead.website || "Без названия"}</strong>{lead.website ? <a onClick={(event)=>event.stopPropagation()} className="mt-1 block truncate text-xs text-brand-500 hover:underline" href={lead.website.startsWith("http")?lead.website:`https://${lead.website}`} target="_blank" rel="noreferrer">{lead.website}</a>:<span className="mt-1 block text-xs text-gray-400">сайт не найден</span>}</div><div className="text-sm text-gray-600 dark:text-gray-300">{lead.contact_name || "Контакт не указан"}<span className="block text-xs text-gray-400">{lead.email || lead.telegram || "нет канала"}</span></div><div className="text-sm text-gray-600 dark:text-gray-300">{lead.geo || "GEO —"}<span className="block text-xs text-gray-400">{lead.license || "лицензия не указана"}</span></div><div className="lg:text-right"><strong className="text-sm text-gray-900 dark:text-white">Score {lead.score ?? "—"}</strong><span className="block text-xs text-gray-400">{humanizeCode(lead.record_state === "archived" ? "archived" : lead.contact_status || "new")}</span><span className="mt-1 block text-xs font-semibold text-brand-500">Открыть карточку →</span></div></div>)}{!leads.length&&<EmptyState title="Казино не найдены" description="Измените фильтры или добавьте запись вручную."/>}</div>
+    </Panel>
+    {editor && <ResearchEntityEditor entityType="casino" record={editor.record} onClose={closeEditor} onSaved={refresh}/>}
+  </Frame>;
+}
+
+export const IntelligenceWorkspace = CasinosWorkspace;
+
+export function CommunicationsWorkspace() {
+  const { captainsBridge, mailCenter: fullMailCenter, mailCenterError, mailCenterLoaded,
+    refreshing, user, leads: allLeads, providers: allProviders, refresh, ready } = useControlBridge();
+  const leads = useMemo(() => allLeads.filter((lead) => !isQaFixtureLead(lead)), [allLeads]);
+  const providers = useMemo(() => allProviders.filter((provider) => !isQaFixtureProvider(provider)), [allProviders]);
+  const mailCenter = useMemo(() => ({
+    ...fullMailCenter,
+    threads: fullMailCenter.threads.filter((thread) => !isQaFixtureLeadId(thread.lead_id)
+      && !(thread.counterparty_type === "merchant" && isQaFixtureLeadId(thread.counterparty_id))
+      && !(thread.counterparty_type === "provider" && isQaFixtureProviderId(thread.counterparty_id))),
+  }), [fullMailCenter]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [to, setTo] = useState(""); const [subject, setSubject] = useState(""); const [body, setBody] = useState("");
+  const [leadId, setLeadId] = useState(""); const [busy, setBusy] = useState(false); const [message, setMessage] = useState<{error?:boolean;text:string}|null>(null);
+  const [activeDraftId, setActiveDraftId] = useState<number | null>(null);
+  const [section, setSection] = useState<"mail" | "compose" | "telegram">("mail");
+  const [threadId, setThreadId] = useState("");
+  const [query, setQuery] = useState("");
+  const [mailScope, setMailScope] = useState<"active" | "unread" | "inbox" | "sent" | "awaiting_reply" | "overdue" | "flagged" | "follow_up" | "attachments" | "closed" | "archived" | "spam" | "trash" | "all">("active");
+  const [linkType, setLinkType] = useState<"merchant" | "provider" | "casino" | "research_psp" | "general">("general");
+  const [linkId, setLinkId] = useState("");
+  const [attachmentTypes, setAttachmentTypes] = useState<Record<string, "offer" | "contract" | "">>({});
+  const [attachmentTargetTypes, setAttachmentTargetTypes] = useState<Record<string, "provider" | "merchant">>({});
+  const [attachmentTargets, setAttachmentTargets] = useState<Record<string, string>>({});
+  const [organizerPriority, setOrganizerPriority] = useState<"low" | "normal" | "high" | "urgent">("normal");
+  const [organizerFlagged, setOrganizerFlagged] = useState(false);
+  const [organizerFollowUp, setOrganizerFollowUp] = useState("");
+  const [organizerNotes, setOrganizerNotes] = useState("");
+  const [organizerTags, setOrganizerTags] = useState("");
+  const [summaryBusy, setSummaryBusy] = useState(false);
+  const [templateId, setTemplateId] = useState("");
+  const [responseExpected, setResponseExpected] = useState(false);
+  const [threadEntityContext, setThreadEntityContext] = useState<ThreadEntityContext | null>(null);
+  const [threadEntityContextLoading, setThreadEntityContextLoading] = useState(false);
+  const [hideTrashNotice, setHideTrashNotice] = useStoredState("offerpsp.mail.hideTrashNotice", false);
+  const [trashNoticeVisible, setTrashNoticeVisible] = useState(false);
+  const threadEntityRequestRef = useRef(0);
+  const selectedThreadIdRef = useRef("");
+  const [threadBody, setThreadBody] = useState<{ key: string; messages: EmailMessage[] } | null>(null);
+  const [threadBodyError, setThreadBodyError] = useState<string | null>(null);
+  const [threadBodyRetry, setThreadBodyRetry] = useState(0);
+
+  const lastMessageByThread = useMemo(() => {
+    const result = new Map<string, EmailMessage>();
+    mailCenter.messages.forEach((entry) => {
+      const current = result.get(entry.thread_id);
+      if (!current || emailMessageTimestamp(entry) >= emailMessageTimestamp(current)) result.set(entry.thread_id, entry);
+    });
+    return result;
+  }, [mailCenter.messages]);
+  const messageThreadById = useMemo(() => {
+    const result = new Map<string, string>();
+    mailCenter.messages.forEach((entry) => result.set(entry.id, entry.thread_id));
+    return result;
+  }, [mailCenter.messages]);
+  const attachmentThreadIds = useMemo(() => new Set(mailCenter.attachments
+    .map((entry) => messageThreadById.get(entry.message_id))
+    .filter((entry): entry is string => Boolean(entry))), [mailCenter.attachments, messageThreadById]);
+  const visibleThreads = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return mailCenter.threads.filter((thread) => {
+      const lastDirection = lastMessageByThread.get(thread.id)?.direction;
+      const normalThread = !isSpamMailThread(thread);
+      const scopeMatch = (mailScope === "all" && normalThread && thread.status !== "trashed")
+        || (mailScope === "active" ? normalThread && !["archived", "trashed"].includes(thread.status)
+          : mailScope === "unread" ? normalThread && !["archived", "trashed"].includes(thread.status) && thread.unread_count > 0
+          : mailScope === "inbox" ? normalThread && !["archived", "trashed"].includes(thread.status) && lastDirection === "inbound"
+          : mailScope === "sent" ? normalThread && !["archived", "trashed"].includes(thread.status) && lastDirection === "outbound"
+          : mailScope === "awaiting_reply" ? thread.status === "awaiting_reply"
+          : mailScope === "overdue" ? isOverdueThread(thread)
+          : mailScope === "flagged" ? Boolean(thread.is_flagged) && isActiveMailThread(thread)
+          : mailScope === "follow_up" ? thread.status === "follow_up"
+          : mailScope === "attachments" ? normalThread && !["archived", "trashed"].includes(thread.status) && attachmentThreadIds.has(thread.id)
+          : mailScope === "closed" ? normalThread && thread.status === "closed"
+          : mailScope === "archived" ? normalThread && thread.status === "archived"
+          : mailScope === "spam" ? isSpamMailThread(thread) && thread.status !== "trashed"
+          : thread.status === "trashed");
+      const last = lastMessageByThread.get(thread.id);
+      return scopeMatch && [thread.subject, thread.participant_email, thread.counterparty_type, thread.status, thread.organizer_notes, thread.ai_summary, ...(thread.tags || []), last?.text_body]
+        .filter(Boolean).join(" ").toLowerCase().includes(needle);
+    }).sort((left, right) => {
+      if (Boolean(left.is_flagged) !== Boolean(right.is_flagged)) return left.is_flagged ? -1 : 1;
+      const priorityDifference = (priorityWeight[right.priority || "normal"] || 2) - (priorityWeight[left.priority || "normal"] || 2);
+      if (priorityDifference) return priorityDifference;
+      if (isOverdueThread(left) !== isOverdueThread(right)) return isOverdueThread(left) ? -1 : 1;
+      return new Date(right.last_message_at).getTime() - new Date(left.last_message_at).getTime();
+    });
+  }, [attachmentThreadIds, lastMessageByThread, mailCenter.threads, mailScope, query]);
+  const selectedThread = mailCenter.threads.find((thread) => thread.id === threadId) || visibleThreads[0];
+  const companySuggestion = selectedThread?.counterparty_type === "general"
+    ? mailCompanySuggestion(selectedThread.participant_email, captainsBridge.psp_providers) : null;
+  const indexedMessages = useMemo(() => selectedThread
+    ? mailCenter.messages.filter((entry) => entry.thread_id === selectedThread.id)
+    : [], [mailCenter.messages, selectedThread]);
+  const threadBodyKey = selectedThread
+    ? `${user?.id}:${selectedThread.id}:${selectedThread.last_message_at}:${indexedMessages.map((entry) => entry.id).join(',')}` : "";
+  const needsThreadBody = indexedMessages.some((entry) => entry.body_loaded === false);
+  const threadBodyReady = !needsThreadBody || threadBody?.key === threadBodyKey;
+  const selectedMessages = useMemo(() => {
+    if (!needsThreadBody || threadBody?.key !== threadBodyKey) return indexedMessages;
+    const full = new Map(threadBody.messages.map((entry) => [entry.id, entry]));
+    return indexedMessages.map((entry) => ({ ...entry, text_body: full.get(entry.id)?.text_body,
+      html_body: full.get(entry.id)?.html_body, body_loaded: true }));
+  }, [indexedMessages, needsThreadBody, threadBody, threadBodyKey]);
+  const orderedSelectedMessages = useMemo(() => sortEmailMessagesChronologically(selectedMessages), [selectedMessages]);
+  const selectedMessageIds = new Set(selectedMessages.map((entry) => entry.id));
+  const selectedAttachments = mailCenter.attachments.filter((entry) => selectedMessageIds.has(entry.message_id));
+  const lastSelectedMessage = orderedSelectedMessages[orderedSelectedMessages.length - 1];
+  const olderSelectedMessages = useMemo(
+    () => orderedSelectedMessages.slice(0, -1).reverse(),
+    [orderedSelectedMessages],
+  );
+  const selectedThreadState = selectedThread ? (isSpamMailThread(selectedThread) ? mailThreadLabels.spam : mailThreadLabels[selectedThread.status] || mailThreadLabels.open) : null;
+  const selectedTrashExpiresAt = selectedThread?.status === "trashed" ? trashExpiresAt(selectedThread.trashed_at) : null;
+  const selectedThreadId = selectedThread?.id || "";
+  useEffect(() => {
+    let cancelled = false;
+    setThreadBodyError(null);
+    if (!selectedThreadId || !needsThreadBody) return;
+    void shareRead(`${threadBodyKey}:body`, () => supabase.rpc("get_offerpsp_mail_thread", { p_thread_id: selectedThreadId }))
+      .then((result) => {
+        if (cancelled) return;
+        if (result.error) { setThreadBodyError(result.error.message); return; }
+        const data = result.data as { thread_id?: string; messages?: EmailMessage[] } | null;
+        if (data?.thread_id !== selectedThreadId || !Array.isArray(data.messages)) {
+          setThreadBodyError("Ответ сервера не содержит полную переписку."); return;
+        }
+        setThreadBody({ key: threadBodyKey, messages: data.messages });
+      }).catch((error: unknown) => {
+        if (!cancelled) setThreadBodyError(error instanceof Error ? error.message : "Не удалось загрузить письмо.");
+      });
+    return () => { cancelled = true; };
+  }, [selectedThreadId, needsThreadBody, threadBodyKey, threadBodyRetry]);
+  const pendingDrafts = captainsBridge.email_drafts.filter((entry) => ["draft", "failed"].includes(entry.status || "draft"));
+  const mailFolderOptions = useMemo(() => {
+    const activeThreads = mailCenter.threads.filter((thread) => !isSpamMailThread(thread) && !["archived", "trashed"].includes(thread.status));
+    const countByDirection = (direction: EmailMessage["direction"]) => activeThreads.filter((thread) => lastMessageByThread.get(thread.id)?.direction === direction).length;
+    return [
+      { id: "active", label: "Все активные", count: activeThreads.length },
+      { id: "unread", label: "Непрочитанные", count: activeThreads.filter((thread) => thread.unread_count > 0).length },
+      { id: "inbox", label: "Входящие", count: countByDirection("inbound") },
+      { id: "sent", label: "Отправленные", count: countByDirection("outbound") },
+      { id: "awaiting_reply", label: "Ждём ответ", count: mailCenter.metrics.awaiting_reply },
+      { id: "overdue", label: "Просрочено", count: mailCenter.metrics.overdue_follow_up || 0 },
+      { id: "flagged", label: "С флагом", count: mailCenter.metrics.flagged || 0 },
+      { id: "follow_up", label: "Нужен follow-up", count: mailCenter.metrics.follow_up },
+      { id: "attachments", label: "С вложениями", count: activeThreads.filter((thread) => attachmentThreadIds.has(thread.id)).length },
+      { id: "closed", label: "Закрытые", count: mailCenter.threads.filter((thread) => thread.status === "closed").length },
+      { id: "archived", label: "Архив", count: mailCenter.threads.filter((thread) => !isSpamMailThread(thread) && thread.status === "archived").length },
+      { id: "spam", label: "Спам", count: mailCenter.threads.filter((thread) => isSpamMailThread(thread) && thread.status !== "trashed").length },
+      { id: "trash", label: "Корзина", count: mailCenter.metrics.trash || 0 },
+      { id: "all", label: "Вся почта", count: mailCenter.threads.filter((thread) => !isSpamMailThread(thread) && thread.status !== "trashed").length },
+    ] as const;
+  }, [attachmentThreadIds, lastMessageByThread, mailCenter.metrics.awaiting_reply, mailCenter.metrics.flagged, mailCenter.metrics.follow_up, mailCenter.metrics.overdue_follow_up, mailCenter.metrics.trash, mailCenter.threads]);
+  const activeDraft = activeDraftId === null
+    ? null
+    : captainsBridge.email_drafts.find((entry) => entry.id === activeDraftId) || null;
+  const mailQuickFilters = [
+    { scope: "unread", label: "новых", count: mailCenter.metrics.unread, numberClass: "text-gray-900 dark:text-white" },
+    { scope: "awaiting_reply", label: "ждём ответ", count: mailCenter.metrics.awaiting_reply, numberClass: "text-gray-900 dark:text-white" },
+    { scope: "overdue", label: "просрочено", count: mailCenter.metrics.overdue_follow_up || 0, numberClass: "text-error-600" },
+    { scope: "flagged", label: "с флагом", count: mailCenter.metrics.flagged || 0, numberClass: "text-warning-600" },
+    { scope: "attachments", label: "файлов", count: mailCenter.metrics.attachments_to_review || 0, numberClass: "text-gray-900 dark:text-white" },
+  ] as const;
+
+  function openMailScope(scope: typeof mailScope) {
+    setSection("mail");
+    setMailScope(scope);
+    setQuery("");
+    setThreadId("");
+  }
+
+  useEffect(() => {
+    if (!selectedThread) return;
+    setLinkType(selectedThread.counterparty_type === "casino" || selectedThread.counterparty_type === "research_psp" || selectedThread.counterparty_type === "provider" || selectedThread.counterparty_type === "merchant" ? selectedThread.counterparty_type : "general");
+    setLinkId(selectedThread.lead_id || selectedThread.counterparty_id || "");
+    setOrganizerPriority(selectedThread.priority || "normal");
+    setOrganizerFlagged(Boolean(selectedThread.is_flagged));
+    setOrganizerFollowUp(toDateTimeLocal(selectedThread.follow_up_at));
+    setOrganizerNotes(selectedThread.organizer_notes || "");
+    setOrganizerTags((selectedThread.tags || []).filter((tag) => !tag.startsWith("system:")).join(", "));
+  }, [selectedThread]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const requestId = ++threadEntityRequestRef.current;
+    selectedThreadIdRef.current = selectedThreadId;
+    if (!selectedThreadId) {
+      setThreadEntityContext(null);
+      setThreadEntityContextLoading(false);
+      return () => { cancelled = true; };
+    }
+    setThreadEntityContextLoading(true);
+    void supabase.rpc("get_offerpsp_email_thread_entity_context", { p_thread_id: selectedThreadId })
+      .then((result) => {
+        if (cancelled || requestId !== threadEntityRequestRef.current
+          || selectedThreadIdRef.current !== selectedThreadId) return;
+        setThreadEntityContext(result.error
+          ? { status: "unlinked", reason: result.error.message }
+          : result.data as ThreadEntityContext);
+        setThreadEntityContextLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [selectedThreadId]);
+
+  useEffect(() => {
+    const requestedLead = searchParams.get("lead");
+    if (!requestedLead || requestedLead === leadId) return;
+    const selected = leads.find((lead) => lead.lead_id === requestedLead);
+    if (!selected) return;
+    setLeadId(requestedLead);
+    if (selected.work_email) setTo(selected.work_email);
+    setSection("compose");
+  }, [leadId, leads, searchParams]);
+
+  useEffect(() => {
+    const rawDraftId = searchParams.get("draft");
+    if (!rawDraftId) {
+      if (section !== "compose" && activeDraftId !== null) setActiveDraftId(null);
+      return;
+    }
+    const requestedDraftId = Number(rawDraftId);
+    if (!Number.isInteger(requestedDraftId) || requestedDraftId <= 0) {
+      setMessage({ error: true, text: "Некорректный ID черновика." });
+      return;
+    }
+    if (activeDraftId === requestedDraftId) return;
+    const requestedDraft = captainsBridge.email_drafts.find((entry) => entry.id === requestedDraftId);
+    if (!requestedDraft) {
+      if (ready) setMessage({ error: true, text: `Черновик #${requestedDraftId} не найден или недоступен.` });
+      return;
+    }
+    if (!["draft", "failed"].includes(requestedDraft.status || "draft")) {
+      setMessage({ error: true, text: `Черновик #${requestedDraftId} уже имеет статус «${statusLabels[String(requestedDraft.status || "unknown")] || requestedDraft.status}» и не может быть отправлен повторно.` });
+      setSection("mail");
+      return;
+    }
+    setActiveDraftId(requestedDraft.id);
+    setTo(requestedDraft.to_email || "");
+    setSubject(requestedDraft.subject || "");
+    setBody(requestedDraft.body || "");
+    setResponseExpected(Boolean(requestedDraft.response_expected));
+    setLeadId(/^[0-9a-f-]{36}$/i.test(requestedDraft.lead_internal_id || "") ? requestedDraft.lead_internal_id || "" : "");
+    setMessage({ text: `Черновик #${requestedDraft.id} открыт для проверки.` });
+    setSection("compose");
+  }, [activeDraftId, captainsBridge.email_drafts, ready, searchParams, section]);
+
+  function closeDraft() {
+    const next = new URLSearchParams(searchParams);
+    next.delete("draft");
+    setSearchParams(next, { replace: true });
+    setTo(""); setSubject(""); setBody(""); setLeadId(""); setResponseExpected(false);
+    setSection("mail");
+  }
+
+  async function sendEmail(returnToThread = false) {
+    if (!to.trim() || !subject.trim() || !body.trim()) { setMessage({ error: true, text: "Заполните получателя, тему и текст." }); return; }
+    setBusy(true); setMessage(null);
+    let draftId = activeDraftId;
+    if (draftId !== null) {
+      const updated = await supabase.rpc("update_offerpsp_email_draft", {
+        p_draft_id: draftId,
+        p_to_email: to,
+        p_subject: subject,
+        p_body: body,
+      });
+      if (updated.error) { setMessage({ error: true, text: updated.error.message }); setBusy(false); return; }
+    } else {
+      const created = await supabase.rpc("create_offerpsp_email_draft", { p_lead_id: leadId || null, p_to_email: to, p_subject: subject, p_body: body });
+      if (created.error) { setMessage({ error: true, text: created.error.message }); setBusy(false); return; }
+      draftId = Number((created.data as {id?:number})?.id);
+      if (!Number.isFinite(draftId)) { setMessage({ error: true, text: "Черновик создан без корректного ID. Отправка остановлена, чтобы не потерять историю." }); setBusy(false); return; }
+    }
+    const expectationState = await supabase.rpc("set_offerpsp_email_draft_response_expected", {
+      p_draft_id: draftId,
+      p_response_expected: responseExpected,
+    });
+    if (expectationState.error) { setMessage({ error: true, text: `Черновик сохранён, но признак ожидания ответа не записан (${expectationState.error.message}). Отправка остановлена.` }); setBusy(false); return; }
+    const sendingState = await supabase.rpc("set_offerpsp_email_draft_status", { p_draft_id: draftId, p_status: "sending" });
+    if (sendingState.error) { setMessage({ error: true, text: `Черновик создан, но отправка остановлена: статус не записан (${sendingState.error.message}).` }); setBusy(false); return; }
+    const session = await supabase.auth.getSession();
+    try {
+      const response = await fetch("/api/send-email", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.data.session?.access_token || ""}` }, body: JSON.stringify({ to, subject, body, lead_id: leadId || null, draft_id: draftId }) });
+      const result = await response.json().catch(() => ({}));
+      if (result.delivery_uncertain === true) {
+        setMessage({ error: true, text: `Статус доставки требует сверки: ${result.error || "письмо не будет отправлено повторно автоматически"}` });
+        await refresh();
+        if (returnToThread) setSection("mail");
+        setBusy(false);
+        return;
+      }
+      if (!response.ok || !result.success) throw new Error(result.error || result.message || "Email sender returned an error");
+      const deliveryWarning = typeof result.warning === "string" && result.warning ? result.warning : null;
+      setMessage(deliveryWarning
+        ? { error: true, text: `Письмо отправлено на ${to}, но требуется техническая проверка: ${deliveryWarning}` }
+        : { text: `Письмо отправлено на ${to}, записано в почтовом центре и сохранено в IMAP Sent.` });
+      if (activeDraftId !== null) closeDraft();
+      else { setSubject(""); setBody(""); setResponseExpected(false); }
+    } catch (error) {
+      const deliveryError = error instanceof Error ? error.message : "Не удалось отправить письмо";
+      setMessage({ error: true, text: `${deliveryError}. Повторная отправка не выполнялась; проверьте статус черновика перед новой попыткой.` });
+    }
+    await refresh();
+    if (returnToThread) setSection("mail");
+    setBusy(false);
+  }
+
+  const openThread = useCallback(async (id: string) => {
+    setThreadId(id); setSection("mail");
+    const thread = mailCenter.threads.find((item) => item.id === id);
+    if (thread?.unread_count) {
+      setBusy(true);
+      const result = await supabase.rpc("set_offerpsp_email_thread_state", { p_thread_id: id, p_status: thread.status, p_mark_read: true });
+      if (result.error) setMessage({ error: true, text: `Переписка открыта, но отметка о прочтении не записана: ${result.error.message}` });
+      await refresh();
+      setBusy(false);
+    }
+  }, [mailCenter.threads, refresh]);
+
+  useEffect(() => {
+    const requestedThread = searchParams.get("thread");
+    if (!requestedThread || requestedThread === selectedThreadId) return;
+    if (!mailCenter.threads.some((thread) => thread.id === requestedThread)) return;
+    void openThread(requestedThread);
+  }, [mailCenter.threads, openThread, searchParams, selectedThreadId]);
+
+  useEffect(() => {
+    if (searchParams.get("compose") !== "1") return;
+    setSection("compose");
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (section !== "mail") return;
+    const handleThreadNavigation = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.matches("input, textarea, select, [contenteditable='true']")) return;
+      if (!["j", "k", "ArrowDown", "ArrowUp"].includes(event.key)) return;
+      const currentIndex = visibleThreads.findIndex((thread) => thread.id === selectedThreadId);
+      const direction = event.key === "j" || event.key === "ArrowDown" ? 1 : -1;
+      const nextIndex = Math.min(Math.max((currentIndex < 0 ? 0 : currentIndex) + direction, 0), visibleThreads.length - 1);
+      const nextThread = visibleThreads[nextIndex];
+      if (!nextThread || nextThread.id === selectedThreadId) return;
+      event.preventDefault();
+      void openThread(nextThread.id);
+    };
+    document.addEventListener("keydown", handleThreadNavigation);
+    return () => document.removeEventListener("keydown", handleThreadNavigation);
+  }, [openThread, section, selectedThreadId, visibleThreads]);
+
+  useEffect(() => {
+    if (!trashNoticeVisible) return;
+    const timeout = window.setTimeout(() => setTrashNoticeVisible(false), 8_000);
+    return () => window.clearTimeout(timeout);
+  }, [trashNoticeVisible]);
+
+  async function changeThreadState(status: "open" | "awaiting_reply" | "follow_up" | "closed" | "archived" | "trashed" | "restore") {
+    if (!selectedThread) return;
+    setBusy(true); setMessage(null);
+    const result = await supabase.rpc("set_offerpsp_email_thread_state", { p_thread_id: selectedThread.id, p_status: status, p_mark_read: null });
+    if (result.error) setMessage({ error: true, text: result.error.message });
+    else if (status === "trashed") {
+      setMessage(null);
+      if (!hideTrashNotice) setTrashNoticeVisible(true);
+    } else setMessage({ text: status === "restore" ? "Переписка восстановлена из корзины." : "Статус переписки обновлён." });
+    if (!result.error && ["trashed", "restore"].includes(status)) setThreadId("");
+    await refresh(); setBusy(false);
+  }
+
+  async function setThreadSpam(nextSpam: boolean) {
+    if (!selectedThread) return;
+    const targetId = selectedThread.id;
+    const previousTags = selectedThread.tags || [];
+    const nextTags = nextSpam
+      ? Array.from(new Set([...previousTags, spamTag]))
+      : previousTags.filter((tag) => tag !== spamTag);
+    const writeTags = (tags: string[]) => supabase.rpc("update_offerpsp_email_thread_organizer", {
+      p_thread_id: targetId,
+      p_patch: { tags },
+    });
+
+    setBusy(true); setMessage(null);
+    if (nextSpam) {
+      const tagResult = await writeTags(nextTags);
+      if (tagResult.error) {
+        setMessage({ error: true, text: tagResult.error.message });
+      } else {
+        const stateResult = await supabase.rpc("set_offerpsp_email_thread_state", {
+          p_thread_id: targetId,
+          p_status: "archived",
+          p_mark_read: true,
+        });
+        if (stateResult.error) {
+          await writeTags(previousTags);
+          setMessage({ error: true, text: `Не удалось переместить письмо в спам: ${stateResult.error.message}` });
+        } else {
+          setThreadId("");
+          setMessage({ text: "Переписка перемещена в спам и исключена из рабочих папок." });
+        }
+      }
+    } else {
+      const stateResult = await supabase.rpc("set_offerpsp_email_thread_state", {
+        p_thread_id: targetId,
+        p_status: "open",
+        p_mark_read: null,
+      });
+      if (stateResult.error) {
+        setMessage({ error: true, text: stateResult.error.message });
+      } else {
+        const tagResult = await writeTags(nextTags);
+        if (tagResult.error) {
+          await supabase.rpc("set_offerpsp_email_thread_state", { p_thread_id: targetId, p_status: "archived", p_mark_read: null });
+          setMessage({ error: true, text: `Не удалось убрать признак спама: ${tagResult.error.message}` });
+        } else {
+          setThreadId("");
+          setMessage({ text: "Переписка возвращена из спама в работу." });
+        }
+      }
+    }
+    await refresh(); setBusy(false);
+  }
+
+  async function setThreadReadState(markRead: boolean) {
+    if (!selectedThread) return;
+    setBusy(true); setMessage(null);
+    const result = await supabase.rpc("set_offerpsp_email_thread_state", {
+      p_thread_id: selectedThread.id,
+      p_status: selectedThread.status,
+      p_mark_read: markRead,
+    });
+    setMessage(result.error
+      ? { error: true, text: result.error.message }
+      : { text: markRead ? "Переписка помечена прочитанной." : "Переписка возвращена в непрочитанные." });
+    await refresh(); setBusy(false);
+  }
+
+  async function saveThreadLink() {
+    if (!selectedThread) return;
+    const linkedThreadId = selectedThread.id;
+    setBusy(true);
+    const result = await supabase.rpc("link_offerpsp_email_thread", {
+      p_thread_id: selectedThread.id,
+      p_counterparty_type: linkType,
+      p_counterparty_id: linkType === "general" ? null : linkId || null,
+      p_lead_id: linkType === "merchant" ? linkId || null : null,
+    });
+    setMessage(result.error ? { error: true, text: result.error.message } : { text: "Переписка привязана к рабочей карточке." });
+    await refresh();
+    if (!result.error) {
+      const requestId = ++threadEntityRequestRef.current;
+      const contextResult = await supabase.rpc("get_offerpsp_email_thread_entity_context", { p_thread_id: linkedThreadId });
+      if (requestId === threadEntityRequestRef.current && selectedThreadIdRef.current === linkedThreadId) {
+        setThreadEntityContext(contextResult.error
+          ? { status: "unlinked", reason: contextResult.error.message }
+          : contextResult.data as ThreadEntityContext);
+      }
+    }
+    setBusy(false);
+  }
+
+  async function saveOrganizer(patch?: Record<string, unknown>, successText = "Органайзер переписки сохранён.") {
+    if (!selectedThread) return;
+    const tags = [
+      ...(selectedThread.tags || []).filter((tag) => tag.startsWith("system:")),
+      ...organizerTags.split(",").map((tag) => tag.trim()).filter(Boolean),
+    ];
+    setBusy(true); setMessage(null);
+    const result = await supabase.rpc("update_offerpsp_email_thread_organizer", {
+      p_thread_id: selectedThread.id,
+      p_patch: patch || {
+        priority: organizerPriority,
+        is_flagged: organizerFlagged,
+        follow_up_at: organizerFollowUp ? new Date(organizerFollowUp).toISOString() : null,
+        organizer_notes: organizerNotes || null,
+        tags,
+      },
+    });
+    setMessage(result.error ? { error: true, text: result.error.message } : { text: successText });
+    await refresh(); setBusy(false);
+  }
+
+  function setFollowUpPreset(days: number | null) {
+    if (days === null) { setOrganizerFollowUp(""); return; }
+    const target = new Date();
+    target.setDate(target.getDate() + days);
+    target.setHours(10, 0, 0, 0);
+    setOrganizerFollowUp(toDateTimeLocal(target.toISOString()));
+  }
+
+  async function generateAiSummary() {
+    if (!selectedThread || !selectedMessages.length || !threadBodyReady || summaryBusy) return;
+    setSummaryBusy(true); setMessage(null);
+    try {
+      const conversation = orderedSelectedMessages.map((entry) => {
+        const source = entry.text_body || stripHtml(entry.html_body || "") || "(empty message)";
+        const content = presentEmailBody(splitEmailBody(source).currentText).contentText.trim().slice(0, 1400);
+        return `[${entry.direction === "outbound" ? "OfferPSP → partner" : "Partner → OfferPSP"}; ${messageDate(entry)}]\n${content}`;
+      }).join("\n\n").slice(-5000);
+      const prompt = `Составь краткое рабочее резюме этой email-цепочки для почтового органайзера OfferPSP. Только факты из писем, ничего не придумывай. Язык ответа — русский. Формат: 4–6 коротких пунктов: текущая ситуация; что хочет контрагент; что обещал OfferPSP; следующий шаг; срок; риски или неизвестные. Если данных нет, прямо напиши «не указано».\n\nТема: ${selectedThread.subject}\nКонтрагент: ${selectedThread.participant_email}\n\n${conversation}`;
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) throw new Error("Сессия истекла. Войди в Радиорубку заново.");
+      const response = await fetch("/api/aibot-command", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: prompt,
+          session_id: `mail-summary-${selectedThread.id}`,
+          context: { path: "/communications", page: "Радиорубка — Почта", entity_type: "email_thread", entity_id: selectedThread.id, entity_name: selectedThread.subject },
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload.success === false) throw new Error(payload.error || "AIBot не подготовил резюме.");
+      const summary = stripHtml(String(payload.answer || payload.message || payload.output || "")).replace(/\*\*/g, "").trim();
+      if (!summary) throw new Error("AIBot вернул пустое резюме.");
+      const saved = await supabase.rpc("update_offerpsp_email_thread_organizer", {
+        p_thread_id: selectedThread.id,
+        p_patch: { ai_summary: summary },
+      });
+      if (saved.error) throw new Error(`Резюме получено, но не сохранено: ${saved.error.message}`);
+      setMessage({ text: "AI-резюме цепочки создано и сохранено." });
+      await refresh();
+    } catch (error) {
+      setMessage({ error: true, text: error instanceof Error ? error.message : "Не удалось создать AI-резюме." });
+    } finally {
+      setSummaryBusy(false);
+    }
+  }
+
+  async function downloadAttachment(attachmentId: string) {
+    const attachment = mailCenter.attachments.find((entry) => entry.id === attachmentId);
+    if (!attachment) return;
+    setBusy(true); setMessage(null);
+    const signed = await supabase.storage.from(attachment.storage_bucket).createSignedUrl(attachment.storage_path, 60);
+    if (signed.error || !signed.data?.signedUrl) setMessage({ error: true, text: signed.error?.message || "Не удалось открыть приватный файл." });
+    else window.open(signed.data.signedUrl, "_blank", "noopener,noreferrer");
+    setBusy(false);
+  }
+
+  async function classifyAttachment(attachmentId: string) {
+    const attachment = mailCenter.attachments.find((entry) => entry.id === attachmentId);
+    if (!attachment) return;
+    const documentType = attachmentTypes[attachmentId] || "";
+    if (!documentType) { setMessage({ error: true, text: "Сначала укажите: это оффер или договор." }); return; }
+    const inheritedMerchantId = selectedThread?.lead_id || (selectedThread?.counterparty_type === "merchant" ? selectedThread.counterparty_id : null);
+    const inheritedProviderId = attachment.provider_id || (selectedThread?.counterparty_type === "provider" ? selectedThread.counterparty_id : null);
+    const targetType = documentType === "offer"
+      ? "provider"
+      : (attachmentTargetTypes[attachmentId] || (inheritedMerchantId ? "merchant" : "provider"));
+    const targetId = attachmentTargets[attachmentId]
+      || (targetType === "merchant" ? inheritedMerchantId : inheritedProviderId)
+      || "";
+    if (!targetId) { setMessage({ error: true, text: `Выберите компанию, к которой сохранить ${documentType === "offer" ? "оффер" : "договор"}.` }); return; }
+    setBusy(true); setMessage(null);
+    const result = await supabase.rpc("classify_offerpsp_email_attachment", {
+      p_attachment_id: attachmentId,
+      p_document_type: documentType,
+      p_provider_id: targetType === "provider" ? targetId : null,
+      p_lead_id: targetType === "merchant" ? targetId : null,
+    });
+    setMessage(result.error
+      ? { error: true, text: result.error.message }
+      : { text: documentType === "offer"
+        ? "Оффер сохранён и отправлен в очередь разбора. Публикация отключена до ручной проверки."
+        : "Договор сохранён в документах выбранной компании." });
+    await refresh(); setBusy(false);
+  }
+
+  function startNewEmail() {
+    const next = new URLSearchParams(searchParams);
+    next.delete("draft");
+    setSearchParams(next, { replace: true });
+    setActiveDraftId(null);
+    setTo(""); setSubject(""); setBody(""); setLeadId(""); setResponseExpected(false);
+    setSection("compose");
+  }
+
+  function startReply() {
+    if (!selectedThread) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("draft");
+    setSearchParams(next, { replace: true });
+    setActiveDraftId(null);
+    setTo(selectedThread.participant_email);
+    setSubject(/^re:/i.test(selectedThread.subject) ? selectedThread.subject : `Re: ${selectedThread.subject}`);
+    setBody("");
+    setLeadId(selectedThread.lead_id || "");
+    setResponseExpected(lastSelectedMessage?.direction === "outbound");
+    setSection("compose");
+  }
+
+  function templateCompany() {
+    if (selectedThread?.counterparty_type === "provider" && selectedThread.counterparty_id) {
+      const provider = providers.find((entry) => entry.id === selectedThread.counterparty_id);
+      if (provider?.brand_name) return provider.brand_name;
+    }
+    const domain = (selectedThread?.participant_email || to).split("@")[1];
+    return domain ? domain.split(".")[0].replace(/[-_]+/g, " ") : "your team";
+  }
+
+  function applyTemplate(template: EmailTemplate) {
+    const replacements: Record<string, string> = {
+      "{{company}}": templateCompany(),
+      "{{contact_name}}": "Team",
+      "{{subject}}": selectedThread?.subject || subject || "our partnership enquiry",
+    };
+    const render = (value: string) => Object.entries(replacements).reduce((result, [key, replacement]) => result.split(key).join(replacement), value);
+    setTemplateId(template.id);
+    setSubject(render(template.subject_template));
+    setBody(render(template.body_template));
+    if (selectedThread) {
+      setTo(selectedThread.participant_email);
+      setLeadId(selectedThread.lead_id || "");
+    }
+    setMessage({ text: `Шаблон «${template.name}» применён. Проверьте и персонализируйте письмо перед отправкой.` });
+  }
+
+  const linkOptions = linkType === "merchant"
+    ? leads.filter((lead) => lead.record_state !== "archived").map((lead) => ({ id: lead.lead_id, label: `${lead.company || lead.name || "Мерч"} · ${lead.work_email || "нет email"}` }))
+    : linkType === "casino"
+      ? captainsBridge.casino_leads.filter((item) => item.record_state !== "archived").map((item) => ({ id: String(item.id), label: item.name || item.website || `Casino ${item.id}` }))
+      : linkType === "research_psp"
+        ? captainsBridge.psp_providers.filter((item) => item.record_state !== "archived").map((item) => ({ id: String(item.id), label: item.name || item.website || `PSP ${item.id}` }))
+        : linkType === "provider"
+          ? providers.filter((provider) => provider.relationship_status !== "archived").map((provider) => ({ id: provider.id, label: provider.brand_name }))
+          : [];
+
+  function renderAttachment(attachment: EmailAttachment) {
+    const documentType = attachmentTypes[attachment.id] || attachment.document_type || "";
+    const inheritedMerchantId = selectedThread?.lead_id || (selectedThread?.counterparty_type === "merchant" ? selectedThread.counterparty_id : null);
+    const inheritedProviderId = attachment.provider_id || (selectedThread?.counterparty_type === "provider" ? selectedThread.counterparty_id : null);
+    const targetType = documentType === "offer"
+      ? "provider"
+      : (attachmentTargetTypes[attachment.id] || (inheritedMerchantId ? "merchant" : "provider"));
+    const targetId = attachmentTargets[attachment.id]
+      || (targetType === "merchant" ? inheritedMerchantId : inheritedProviderId)
+      || "";
+    const inherited = Boolean(targetId && !attachmentTargets[attachment.id]);
+    const targetOptions = targetType === "provider"
+      ? providers.filter((provider) => provider.relationship_status !== "archived").map((provider) => ({ id: provider.id, label: provider.brand_name }))
+      : leads.filter((lead) => lead.record_state !== "archived").map((lead) => ({ id: lead.lead_id, label: `${lead.company || lead.name || "Мерч"} · ${lead.work_email || "нет email"}` }));
+    const classified = Boolean(attachment.document_type);
+
+    return <div key={attachment.id} className="rounded-xl bg-gray-50 p-3 dark:bg-white/[0.04]">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <strong className="text-sm text-gray-900 dark:text-white">{attachment.filename}</strong>
+          <span className="mt-1 block text-xs text-gray-400">{Math.ceil(attachment.size_bytes / 1024)} KB · {humanizeCode(attachment.status)}{attachment.provider_name ? ` · ${attachment.provider_name}` : ""}</span>
+          {attachment.extraction_error && <span className="mt-1 block text-xs text-error-500">{attachment.extraction_error}</span>}
+        </div>
+        <button disabled={busy} onClick={() => void downloadAttachment(attachment.id)} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold dark:border-gray-700">Скачать оригинал</button>
+      </div>
+      {classified ? <div className="mt-3 rounded-lg border border-success-200 bg-success-50 px-3 py-2 text-xs text-success-700 dark:bg-success-500/10">
+        {attachment.document_type === "offer" ? "Оффер" : "Договор"} сохранён: {attachment.target_entity_name || attachment.provider_name || "компания привязана"}
+      </div> : <div className="mt-3 space-y-2">
+        <div className="grid gap-2 md:grid-cols-2">
+          <select className={field} value={documentType} onChange={(event) => setAttachmentTypes((current) => ({ ...current, [attachment.id]: event.target.value as "offer" | "contract" | "" }))}>
+            <option value="">Что это за файл?</option>
+            <option value="offer">Оффер</option>
+            <option value="contract">Договор</option>
+          </select>
+          {documentType === "contract" && <select className={field} value={targetType} onChange={(event) => { const value = event.target.value as "provider" | "merchant"; setAttachmentTargetTypes((current) => ({ ...current, [attachment.id]: value })); setAttachmentTargets((current) => ({ ...current, [attachment.id]: "" })); }}>
+            <option value="provider">Договор с PSP</option>
+            <option value="merchant">Договор с мерчем</option>
+          </select>}
+        </div>
+        {documentType && <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+          <div>
+            <select className={field} value={targetId} onChange={(event) => setAttachmentTargets((current) => ({ ...current, [attachment.id]: event.target.value }))}>
+              <option value="">Выберите компанию</option>
+              {targetOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+            </select>
+            {inherited && <span className="mt-1 block text-xs text-success-600">Компания определена по переписке. При необходимости можно изменить.</span>}
+          </div>
+          <button disabled={busy || !targetId || (documentType === "offer" && !attachment.has_extracted_text)} onClick={() => void classifyAttachment(attachment.id)} className="rounded-lg bg-brand-500 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40">
+            {documentType === "offer" ? "Сохранить оффер" : "Сохранить договор"}
+          </button>
+        </div>}
+        {documentType === "offer" && !attachment.has_extracted_text && <p className="text-xs text-warning-600">Текст не извлечён: нужен OCR или ручной разбор оригинала.</p>}
+        {!documentType && <p className="text-xs text-gray-500">Сначала выберите тип файла. Ничего не публикуется автоматически.</p>}
+      </div>}
+    </div>;
+  }
+
+  function renderThreadMessage(entry: EmailMessage, latest = false) {
+    const attachments = selectedAttachments.filter((attachment) => attachment.message_id === entry.id);
+    const outbound = entry.direction === "outbound";
+
+    return <article key={entry.id} className={`rounded-2xl border p-4 sm:p-5 ${latest
+      ? "border-gray-200 bg-white shadow-theme-sm dark:border-gray-700 dark:bg-gray-900"
+      : outbound
+        ? "border-brand-100 bg-brand-50/60 dark:border-brand-500/20 dark:bg-brand-500/10"
+        : "border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"}`}>
+      <header className="flex flex-col gap-3 border-b border-gray-100 pb-3 dark:border-gray-800 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <strong className={`text-xs uppercase tracking-[0.12em] ${outbound ? "text-brand-600" : "text-success-600"}`}>{outbound ? "Исходящее письмо →" : "← Входящее письмо"}</strong>
+            {latest && <span className="rounded-full bg-gray-900 px-2 py-0.5 text-[10px] font-semibold text-white dark:bg-white dark:text-gray-900">Последнее</span>}
+          </div>
+          <p className="mt-1.5 truncate text-sm font-medium text-gray-800 dark:text-gray-100">{entry.sender_email}</p>
+          <p className="mt-0.5 truncate text-xs text-gray-400">Кому: {entry.recipient_emails.join(", ") || "не указано"}</p>
+        </div>
+        <div className="shrink-0 text-left sm:text-right">
+          <span className="block text-xs font-medium text-gray-500">{formatDate(messageDate(entry))}</span>
+          <span className="mt-1 block text-[11px] text-gray-400">{outbound ? `${humanizeCode(entry.delivery_status)} · ${entry.provider}` : entry.is_read ? "Прочитано" : "Не прочитано"}</span>
+        </div>
+      </header>
+      <EmailMessageBody textBody={entry.text_body} htmlBody={entry.html_body}/>
+      {attachments.length > 0 && <div className="mt-4 space-y-3 border-t border-gray-100 pt-4 dark:border-gray-800">{attachments.map((attachment) => renderAttachment(attachment))}</div>}
+    </article>;
+  }
+
+  return <Frame title="Радиорубка — Почта" description="Почта и партнёрские коммуникации OfferPSP.">
+    <div className="mb-3 flex min-h-10 flex-wrap items-center justify-between gap-3">
+      <h1 className="text-xl font-semibold leading-tight text-gray-900 dark:text-white sm:text-2xl">Радиорубка — Почта</h1>
+      <button onClick={startNewEmail} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white">+ Новое письмо</button>
+    </div>
+    {mailCenterError && <div role="alert" className="mb-3 rounded-xl border border-error-200 bg-error-50 p-4 text-sm text-error-700">
+      <strong>{mailCenterLoaded ? "Не удалось обновить почту. Показан последний загруженный список." : "Не удалось загрузить почту. Это ошибка загрузки, а не пустой ящик."}</strong>
+      <p className="mt-1">{mailCenterError}</p>
+      <button disabled={refreshing} onClick={() => void refresh()} className="mt-2 font-semibold">{refreshing ? "Загружаю…" : "Повторить загрузку почты"}</button>
+    </div>}
+    {message&&<div className={`mb-4 rounded-xl border px-4 py-3 text-sm ${message.error?"border-error-200 bg-error-50 text-error-700":"border-success-200 bg-success-50 text-success-700"}`}>{message.text}</div>}
+    {trashNoticeVisible&&<aside role="status" aria-live="polite" className="fixed bottom-5 right-5 z-50 w-[calc(100%-2.5rem)] max-w-sm rounded-xl border border-gray-200 bg-white p-4 shadow-theme-lg dark:border-gray-700 dark:bg-gray-900">
+      <div className="flex items-start justify-between gap-3"><div><strong className="text-sm text-gray-900 dark:text-white">Переписка перемещена в корзину</strong><p className="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">Она будет окончательно удалена через 15 дней. До этого её можно восстановить.</p></div><button type="button" onClick={()=>setTrashNoticeVisible(false)} aria-label="Закрыть уведомление" className="shrink-0 text-lg leading-none text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">×</button></div>
+      <button type="button" onClick={()=>{setHideTrashNotice(true);setTrashNoticeVisible(false);}} className="mt-3 text-xs font-semibold text-brand-600 hover:text-brand-700">Больше не показывать</button>
+    </aside>}
+    <Panel className="mb-3 !p-3"><div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between"><div className="flex flex-wrap gap-1.5">{[
+      ["mail", "Радиорубка", mailCenterLoaded ? `${mailCenter.metrics.threads} цепочек` : "Почта не загружена"],
+      ["compose", "Написать", "bizdev@offerpsp.com"],
+      ["telegram", "Telegram / AIBot", `${captainsBridge.telegram_log.length} сообщений`],
+    ].map(([id,label,hint])=><button key={id} onClick={()=>setSection(id as typeof section)} className={`rounded-lg border px-3 py-2 text-left transition ${section===id?"border-brand-300 bg-brand-50 text-brand-700 dark:border-brand-500/40 dark:bg-brand-500/10 dark:text-brand-300":"border-gray-200 bg-white text-gray-600 hover:border-gray-300 dark:border-gray-700 dark:bg-transparent dark:text-gray-300"}`}><strong className="block text-xs">{label}</strong><span className="mt-0.5 block max-w-40 truncate text-[10px] text-gray-400">{hint}</span></button>)}
+      {pendingDrafts.length>0?<details className="group relative"><summary aria-label="Открыть черновики" className="cursor-pointer list-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-gray-600 transition hover:border-gray-300 dark:border-gray-700 dark:bg-transparent dark:text-gray-300"><strong className="block text-xs">Черновики</strong><span className="mt-0.5 block text-[10px] text-gray-400">{pendingDrafts.length}</span></summary><div className="absolute left-0 z-30 mt-2 w-72 space-y-1 rounded-xl border border-gray-200 bg-white p-2 shadow-theme-lg dark:border-gray-700 dark:bg-gray-900">{pendingDrafts.map((draft)=><button key={draft.id} type="button" onClick={()=>setSearchParams({draft:String(draft.id)})} className="block w-full rounded-lg px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5"><strong className="block truncate text-xs text-gray-800 dark:text-gray-200">{draft.subject || `Черновик #${draft.id}`}</strong><span className="block truncate text-[11px] text-gray-400">{draft.to_email || "нет получателя"}</span></button>)}</div></details>:<button type="button" aria-label="Создать первое письмо" onClick={()=>setSection("compose")} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-gray-600 transition hover:border-gray-300 dark:border-gray-700 dark:bg-transparent dark:text-gray-300"><strong className="block text-xs">Черновики</strong><span className="mt-0.5 block text-[10px] text-gray-400">0</span></button>}
+    </div><div aria-label="Быстрые фильтры почты" className="flex flex-wrap gap-1 text-[11px] text-gray-500 dark:text-gray-400">{mailCenterLoaded && mailQuickFilters.map((item)=>{const active=section==="mail"&&mailScope===item.scope;return <button key={item.scope} type="button" aria-pressed={active} title={`Открыть: ${item.label}`} onClick={()=>openMailScope(item.scope)} className={`group rounded-lg border px-2.5 py-1.5 text-left transition ${active?"border-brand-300 bg-brand-50 shadow-theme-xs dark:border-brand-500/40 dark:bg-brand-500/10":"border-transparent hover:border-gray-200 hover:bg-gray-50 dark:hover:border-gray-700 dark:hover:bg-white/5"}`}><strong className={`text-sm ${item.numberClass}`}>{item.count}</strong> {item.label}</button>})}</div></div>
+    </Panel>
+    {section === "mail" && !mailCenterLoaded && mailCenterError ? <Panel><p role="status">Список писем недоступен. Повторите загрузку — письма не удалены.</p></Panel> : section === "mail" ? <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[390px_minmax(0,1fr)] 2xl:grid-cols-[190px_350px_minmax(0,1fr)]">
+      <Panel className="hidden min-w-0 2xl:block"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Папки</p><nav className="mt-3 space-y-1">{mailFolderOptions.map((folder)=><button key={folder.id} onClick={()=>setMailScope(folder.id)} className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition ${mailScope===folder.id?"bg-brand-50 font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-300":"text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"}`}><span>{folder.label}</span><span className="text-xs text-gray-400">{folder.count}</span></button>)}<button onClick={()=>pendingDrafts[0]?setSearchParams({draft:String(pendingDrafts[0].id)}):setSection("compose")} className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"><span>Черновики</span><span className="text-xs text-gray-400">{pendingDrafts.length}</span></button></nav></Panel>
+      <Panel className="min-w-0 !p-3"><div className="flex items-center justify-between gap-3"><div className="flex items-baseline gap-2"><h2 className="text-base font-semibold text-gray-900 dark:text-white">Переписки</h2><span className="text-xs text-gray-400">{visibleThreads.length}</span></div><select aria-label="Папка почты" className="h-9 max-w-44 rounded-lg border border-gray-300 bg-transparent px-2.5 text-xs text-gray-700 outline-none dark:border-gray-700 dark:text-gray-200 2xl:hidden" value={mailScope} onChange={(event)=>setMailScope(event.target.value as typeof mailScope)}>{mailFolderOptions.map((folder)=><option key={folder.id} value={folder.id}>{folder.label} · {folder.count}</option>)}</select></div><input className={`${field} mt-3 !h-10`} value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Поиск по перепискам…"/><div className="mt-2 max-h-[820px] space-y-1 overflow-y-auto pr-1">{visibleThreads.map((thread)=>{const last=lastMessageByThread.get(thread.id);const outbound=last?.direction==="outbound";const overdue=isOverdueThread(thread);const preview=presentEmailBody(splitEmailBody(last?.text_body || (last?.html_body ? stripHtml(last.html_body) : "")).currentText).contentText;const threadIsSpam=isSpamMailThread(thread);const exceptionalStatus=thread.status!=="open"||threadIsSpam;const threadState=threadIsSpam?mailThreadLabels.spam:mailThreadLabels[thread.status];return <button key={thread.id} onClick={()=>void openThread(thread.id)} className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${selectedThread?.id===thread.id?"border-brand-200 bg-brand-50 dark:border-brand-500/30 dark:bg-brand-500/10":"border-transparent hover:border-gray-200 hover:bg-gray-50 dark:hover:border-gray-700 dark:hover:bg-white/[0.03]"}`}><div className="flex items-center justify-between gap-3"><span className={`text-[10px] font-semibold uppercase tracking-wide ${outbound?"text-brand-600":"text-success-600"}`}>{outbound?"Исходящее →":"← Входящее"}</span><span className="shrink-0 text-[10px] text-gray-400">{formatDate(last ? messageDate(last) : thread.last_message_at)}</span></div><strong className="mt-1 block line-clamp-1 text-sm text-gray-900 dark:text-white">{thread.subject || "Без темы"}</strong><div className="mt-1 flex items-center justify-between gap-2"><span className="min-w-0 truncate text-[11px] text-gray-500">{thread.participant_email}</span><div className="flex shrink-0 items-center gap-1">{thread.is_flagged&&<span title="Закреплено" className="text-[11px] text-warning-600">★</span>}{exceptionalStatus&&<span className="max-w-28 truncate text-[10px] font-medium text-gray-500">{threadState?.label || humanizeCode(thread.status)}</span>}{thread.unread_count>0&&<span className="rounded-full bg-brand-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">{thread.unread_count}</span>}</div></div><p className="mt-1.5 line-clamp-1 text-[11px] leading-4 text-gray-400">{preview || (last?.html_body ? "HTML-письмо" : "Сообщений в цепочке пока нет")}</p>{(thread.priority&&!['normal','low'].includes(thread.priority)||thread.follow_up_at)&&<div className="mt-1.5 flex flex-wrap gap-1.5">{thread.priority&&!["normal","low"].includes(thread.priority)&&<span className="rounded-full bg-error-50 px-2 py-0.5 text-[10px] font-semibold text-error-700">{priorityLabels[thread.priority]}</span>}{thread.follow_up_at&&<span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${overdue?"bg-error-50 text-error-700":"bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300"}`}>{overdue?"Просрочено":"До"} {formatDate(thread.follow_up_at)}</span>}</div>}</button>})}{!visibleThreads.length&&<EmptyState title="Писем не найдено" description="Измените папку, поиск или создайте новое письмо."/>}</div></Panel>
+      <Panel className="min-w-0">{selectedThread && selectedThreadState ? <>
+        <div className="sticky top-14 z-10 -mx-4 -mt-4 flex flex-col gap-4 border-b border-gray-100 bg-white/95 px-4 pb-4 pt-4 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95 sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${lastSelectedMessage?.direction==="outbound"?"border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300":"border-success-200 bg-success-50 text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-300"}`}>{lastSelectedMessage?.direction==="outbound"?"Последнее: исходящее":"Последнее: входящее"}</span>
+              <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${selectedThreadState.className}`}>{selectedThreadState.label}</span>
+            </div>
+            <h2 className="mt-3 text-xl font-semibold leading-tight text-gray-900 dark:text-white">{selectedThread.subject || "Без темы"}</h2>
+            <p className="mt-2 text-sm text-gray-500"><strong className="text-gray-700 dark:text-gray-200">OfferPSP</strong> ↔ {selectedThread.participant_email}</p>
+            <p className="mt-1 text-xs text-gray-400">Цепочка · {selectedMessages.length} {selectedMessages.length===1?"письмо":"писем"} · {selectedThreadState.hint}</p>
+          </div>
+          {selectedThread.status === "trashed"
+            ? <button disabled={busy} onClick={()=>void changeThreadState("restore")} className="shrink-0 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40">Восстановить</button>
+            : <div className="flex shrink-0 items-center gap-1.5" aria-label="Действия с перепиской">
+              <button type="button" onClick={startReply} title={lastSelectedMessage?.direction==="inbound"?"Ответить":"Написать follow-up"} aria-label={lastSelectedMessage?.direction==="inbound"?"Ответить":"Написать follow-up"} className="grid h-10 w-10 place-items-center rounded-lg bg-brand-500 text-white shadow-theme-xs hover:bg-brand-600"><EnvelopeIcon className="h-5 w-5"/></button>
+              <button type="button" disabled={busy} onClick={()=>void saveOrganizer({is_flagged:!organizerFlagged}, organizerFlagged?"Переписка откреплена.":"Переписка закреплена.")} title={organizerFlagged?"Открепить":"Закрепить"} aria-label={organizerFlagged?"Открепить переписку":"Закрепить переписку"} className={`grid h-10 w-10 place-items-center rounded-lg border text-lg disabled:opacity-40 ${organizerFlagged?"border-warning-300 bg-warning-50 text-warning-600":"border-gray-200 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-white/5"}`}>{organizerFlagged?"★":"☆"}</button>
+              <button type="button" disabled={busy || !selectedMessages.some((entry)=>entry.direction==="inbound")} onClick={()=>void setThreadReadState(selectedThread.unread_count > 0)} title={selectedThread.unread_count > 0?"Пометить прочитанным":"Вернуть в непрочитанные"} aria-label={selectedThread.unread_count > 0?"Пометить прочитанным":"Вернуть в непрочитанные"} className="grid h-10 w-10 place-items-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 dark:border-gray-700 dark:hover:bg-white/5"><EyeIcon className="h-5 w-5"/></button>
+              <details className="group relative">
+                <summary title="Другие действия" aria-label="Другие действия" className="grid h-10 w-10 cursor-pointer list-none place-items-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-white/5"><MoreDotIcon className="h-5 w-5"/></summary>
+                <div className="absolute right-0 z-30 mt-2 w-56 rounded-xl border border-gray-200 bg-white p-1.5 shadow-theme-lg dark:border-gray-700 dark:bg-gray-900">
+                  {isSpamMailThread(selectedThread) ? <button disabled={busy} onClick={()=>void setThreadSpam(false)} className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 dark:text-gray-200 dark:hover:bg-white/5">Не спам · вернуть в работу</button> : <>
+                    <button disabled={busy} onClick={()=>void changeThreadState("open")} className="w-full rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 dark:text-gray-200 dark:hover:bg-white/5">В работу</button>
+                    <button disabled={busy} onClick={()=>void changeThreadState("awaiting_reply")} className="w-full rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 dark:text-gray-200 dark:hover:bg-white/5">Ждём ответ</button>
+                    <button disabled={busy} onClick={()=>void changeThreadState("follow_up")} className="w-full rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 dark:text-gray-200 dark:hover:bg-white/5">Нужен follow-up</button>
+                    <button disabled={busy} onClick={()=>void changeThreadState("closed")} className="w-full rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 dark:text-gray-200 dark:hover:bg-white/5">Закрыть</button>
+                    <button disabled={busy} onClick={()=>void changeThreadState("archived")} className="w-full rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 dark:text-gray-200 dark:hover:bg-white/5">В архив</button>
+                    <button disabled={busy} onClick={()=>void setThreadSpam(true)} className="w-full rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 dark:text-gray-200 dark:hover:bg-white/5">В спам</button>
+                  </>}
+                  <div className="my-1 border-t border-gray-100 dark:border-gray-800"/>
+                  <button disabled={busy} onClick={()=>void changeThreadState("trashed")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-error-600 hover:bg-error-50 disabled:opacity-40 dark:text-error-300 dark:hover:bg-error-500/10"><TrashBinIcon className="h-4 w-4"/>Удалить в корзину</button>
+                </div>
+              </details>
+            </div>}
+        </div>
+        {!threadBodyReady ? <div role="status" className="mt-4 rounded-xl border border-gray-200 p-4 text-sm text-gray-500">
+          {threadBodyError ? <><p>Не удалось загрузить полное письмо: {threadBodyError}</p><button className="mt-2 font-semibold text-brand-600" onClick={() => setThreadBodyRetry((value) => value + 1)}>Повторить загрузку письма</button></> : "Загружаю полную переписку…"}
+        </div> : lastSelectedMessage ? <section className="mt-4" aria-label="Последнее письмо">
+          {renderThreadMessage(lastSelectedMessage, true)}
+        </section> : <div className="mt-4"><EmptyState title="В цепочке пока нет писем" description="Можно подготовить новое письмо этому контакту."/></div>}
+
+        {threadBodyReady && olderSelectedMessages.length > 0 && <details className="group mt-3 rounded-xl border border-gray-200 bg-gray-50/70 dark:border-gray-800 dark:bg-white/[0.03]">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">
+            <span>История переписки · {olderSelectedMessages.length}</span>
+            <span className="text-xs font-medium text-gray-400 group-open:hidden">Показать</span>
+            <span className="hidden text-xs font-medium text-gray-400 group-open:inline">Свернуть</span>
+          </summary>
+          <div className="max-h-[620px] space-y-3 overflow-y-auto border-t border-gray-200 p-3 dark:border-gray-800 sm:p-4">
+            {olderSelectedMessages.map((entry) => renderThreadMessage(entry))}
+          </div>
+        </details>}
+
+        <div className="mt-4 grid gap-3 xl:grid-cols-2">
+          <details className="group rounded-xl border border-gray-200 bg-gray-50/70 dark:border-gray-800 dark:bg-white/[0.03]">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+              <div className="min-w-0"><strong className="block text-sm text-gray-800 dark:text-gray-100">Управление цепочкой</strong><span className="mt-0.5 block truncate text-xs text-gray-400">{selectedThreadState.label} · действия и прочтение</span></div>
+              <span className="text-xs font-medium text-gray-400 group-open:hidden">Открыть</span><span className="hidden text-xs font-medium text-gray-400 group-open:inline">Свернуть</span>
+            </summary>
+            <div className="border-t border-gray-200 p-4 dark:border-gray-800">
+              {selectedThread.status === "trashed" ? <div className="flex flex-col gap-3 rounded-lg border border-error-200 bg-error-50 p-3 text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-300 sm:flex-row sm:items-center sm:justify-between"><div><strong className="text-sm">Переписка в корзине</strong><p className="mt-1 text-xs">{selectedTrashExpiresAt ? `Удаление: ${formatDate(selectedTrashExpiresAt)}.` : "Удаление через 15 дней."}</p></div><button disabled={busy} onClick={()=>void changeThreadState("restore")} className="rounded-lg border border-error-300 bg-white px-3 py-2 text-xs font-semibold disabled:opacity-40 dark:bg-transparent">Восстановить</button></div> : <div className="flex flex-wrap gap-2">
+                <button disabled={busy} onClick={()=>void changeThreadState("open")} className={`rounded-lg border px-3 py-2 text-xs font-semibold ${selectedThread.status==="open"?"border-gray-400 bg-gray-100":"border-gray-200"} dark:border-gray-700`}>В работе</button>
+                <button disabled={busy} onClick={()=>void changeThreadState("awaiting_reply")} className={`rounded-lg border px-3 py-2 text-xs font-semibold ${selectedThread.status==="awaiting_reply"?"border-brand-300 bg-brand-50 text-brand-700":"border-gray-200"} dark:border-gray-700`}>Ждём ответ</button>
+                <button disabled={busy} onClick={()=>void changeThreadState("follow_up")} className={`rounded-lg border px-3 py-2 text-xs font-semibold ${selectedThread.status==="follow_up"?"border-warning-300 bg-warning-50 text-warning-700":"border-gray-200"} dark:border-gray-700`}>Нужен follow-up</button>
+                <button disabled={busy} onClick={()=>void changeThreadState("closed")} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold dark:border-gray-700">Закрыть</button>
+                <button disabled={busy} onClick={()=>void changeThreadState("archived")} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-500 dark:border-gray-700">В архив</button>
+                <button disabled={busy} onClick={()=>void setThreadSpam(!isSpamMailThread(selectedThread))} className={`rounded-lg border px-3 py-2 text-xs font-semibold ${isSpamMailThread(selectedThread)?"border-success-200 text-success-700":"border-gray-200 text-gray-500"} dark:border-gray-700`}>{isSpamMailThread(selectedThread)?"Не спам":"В спам"}</button>
+                <button disabled={busy || !selectedMessages.some((entry)=>entry.direction==="inbound")} title={selectedMessages.some((entry)=>entry.direction==="inbound") ? undefined : "В цепочке нет входящего письма"} onClick={()=>void setThreadReadState(selectedThread.unread_count > 0)} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-500 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700">{selectedThread.unread_count > 0 ? "Прочитано" : "Вернуть в непрочитанные"}</button>
+                <button disabled={busy} title="Переместить в корзину на 15 дней" onClick={()=>void changeThreadState("trashed")} className="rounded-lg border border-error-200 px-3 py-2 text-xs font-semibold text-error-600 hover:bg-error-50 disabled:opacity-40 dark:border-error-500/30 dark:text-error-300 dark:hover:bg-error-500/10">Удалить</button>
+              </div>}
+            </div>
+          </details>
+
+          <details className="group rounded-xl border border-gray-200 bg-gray-50/70 dark:border-gray-800 dark:bg-white/[0.03]">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+              <div className="min-w-0"><strong className="block text-sm text-gray-800 dark:text-gray-100">Органайзер</strong><span className="mt-0.5 block truncate text-xs text-gray-400">{organizerFlagged ? "⚑ С флагом · " : ""}{priorityLabels[organizerPriority]}{organizerFollowUp ? ` · ${formatDate(new Date(organizerFollowUp).toISOString())}` : " · без срока"}</span></div>
+              <span className="text-xs font-medium text-gray-400 group-open:hidden">Открыть</span><span className="hidden text-xs font-medium text-gray-400 group-open:inline">Свернуть</span>
+            </summary>
+            <div className="border-t border-gray-200 p-4 dark:border-gray-800">
+              <div className="grid gap-3 lg:grid-cols-[140px_160px_minmax(0,1fr)]"><button type="button" onClick={()=>setOrganizerFlagged((value)=>!value)} className={`h-11 rounded-lg border px-3 text-sm font-semibold ${organizerFlagged?"border-warning-300 bg-warning-50 text-warning-700":"border-gray-300 bg-white text-gray-600 dark:border-gray-700 dark:bg-transparent dark:text-gray-300"}`}>{organizerFlagged?"⚑ С флагом":"⚐ Поставить флаг"}</button><select aria-label="Приоритет письма" className={field} value={organizerPriority} onChange={(event)=>setOrganizerPriority(event.target.value as typeof organizerPriority)}><option value="low">Низкий приоритет</option><option value="normal">Обычный приоритет</option><option value="high">Высокий приоритет</option><option value="urgent">Срочно</option></select><input aria-label="Срок follow-up" className={field} type="datetime-local" value={organizerFollowUp} onChange={(event)=>setOrganizerFollowUp(event.target.value)}/></div>
+              <div className="mt-2 flex flex-wrap items-center gap-2"><span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Follow-up</span>{[[1,"Завтра"],[3,"+3 дня"],[7,"+7 дней"]].map(([days,label])=><button key={String(days)} type="button" onClick={()=>setFollowUpPreset(Number(days))} className="rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-600 dark:border-gray-700 dark:bg-transparent dark:text-gray-300">{label}</button>)}<button type="button" onClick={()=>setFollowUpPreset(null)} className="rounded-md border border-gray-200 px-2.5 py-1.5 text-xs text-gray-400 dark:border-gray-700">Очистить</button></div>
+              <div className="mt-3 grid gap-3 lg:grid-cols-2"><textarea className="min-h-24 w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:bg-transparent dark:text-white" value={organizerNotes} onChange={(event)=>setOrganizerNotes(event.target.value)} placeholder="Рабочая заметка: о чём договорились, что проверить…"/><div className="space-y-3"><input className={field} value={organizerTags} onChange={(event)=>setOrganizerTags(event.target.value)} placeholder="Теги через запятую: Cyprus, Open Banking…"/><div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900"><div className="flex items-center justify-between gap-3"><strong className="text-xs text-gray-800 dark:text-gray-200">AI-резюме</strong><div className="flex items-center gap-3">{selectedThread.ai_summary&&<button disabled={summaryBusy || busy} onClick={()=>void saveOrganizer({ai_summary:null}, "AI-резюме удалено.")} className="text-xs font-semibold text-gray-400 disabled:opacity-40">Удалить</button>}<button disabled={summaryBusy || busy || !selectedMessages.length || !threadBodyReady} onClick={()=>void generateAiSummary()} className="text-xs font-semibold text-brand-600 disabled:opacity-40">{summaryBusy?"Анализирую…":selectedThread.ai_summary?"Обновить":"Создать"}</button></div></div><p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-gray-500 dark:text-gray-300">{selectedThread.ai_summary || "Кратко соберёт договорённости, следующий шаг, срок и риски — только из этой цепочки."}</p>{selectedThread.ai_summary_generated_at&&<span className="mt-2 block text-[10px] text-gray-400">Обновлено {formatDate(selectedThread.ai_summary_generated_at)}</span>}</div></div></div>
+              <button disabled={busy} onClick={()=>void saveOrganizer()} className="mt-3 w-full rounded-lg bg-gray-900 px-4 py-2.5 text-xs font-semibold text-white disabled:opacity-40 dark:bg-white dark:text-gray-900">Сохранить органайзер</button>
+            </div>
+          </details>
+        </div>
+
+        {companySuggestion && <div className="mt-3 rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm dark:border-brand-800 dark:bg-brand-500/10"><p>Домен письма совпадает с сайтом <strong>{companySuggestion.name}</strong>. Это подсказка, не подтверждение личности. Проверьте отправителя перед привязкой.</p><button disabled={busy} onClick={() => { setLinkType("research_psp"); setLinkId(String(companySuggestion.id)); }} className="mt-2 font-semibold text-brand-600">Выбрать компанию для привязки</button><p className="mt-1 text-xs text-gray-500">После выбора откройте «Рабочая привязка» и нажмите «Сохранить». Без этого история не меняется.</p></div>}
+        <div className="mt-3 grid gap-3 xl:grid-cols-2">
+          <details className="group rounded-xl border border-gray-200 bg-gray-50/70 dark:border-gray-800 dark:bg-white/[0.03]">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200"><span>Связи компании{threadEntityContext?.status === "linked" ? ` · ${threadEntityContext.workspace?.relationships?.length || 0}` : ""}</span><span className="text-xs font-medium text-gray-400 group-open:hidden">Открыть</span><span className="hidden text-xs font-medium text-gray-400 group-open:inline">Свернуть</span></summary>
+            <div className="border-t border-gray-200 p-4 dark:border-gray-800">
+              {threadEntityContextLoading ? <p className="text-sm text-gray-400">Проверяю карточку и связи…</p> : threadEntityContext?.status === "linked" ? <>
+                <div className="flex flex-wrap items-start justify-between gap-3"><div><strong className="text-sm text-gray-900 dark:text-white">{threadEntityContext.workspace?.canonical_entity?.name || "Связанная карточка"}</strong><p className="mt-1 text-xs text-gray-400">{threadEntityContext.entity_type === "provider" ? "PSP" : "Мерч"} · {threadEntityContext.workspace?.canonical_entity?.internal_code || "без кода"}{(threadEntityContext.workspace?.merged_sources?.length || 0) > 0 ? ` · aliases: ${threadEntityContext.workspace?.merged_sources?.length}` : ""}</p></div>{threadEntityContext.card_path && <Link to={threadEntityContext.card_path} className="rounded-lg border border-brand-200 px-3 py-2 text-xs font-semibold text-brand-600">Открыть карточку →</Link>}</div>
+                {(threadEntityContext.workspace?.relationships?.length || 0) > 0 ? <div className="mt-3 space-y-2">{threadEntityContext.workspace?.relationships?.slice(0, 4).map((relationship) => <div key={relationship.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white px-3 py-2 text-xs dark:bg-gray-900"><span>{humanizeCode(relationship.relationship_type)} · <strong>{relationship.other_entity.name}</strong></span><StatusPill status={relationship.status}/></div>)}</div> : <p className="mt-3 text-xs text-gray-500">У карточки пока нет подтверждённых корпоративных или операционных связей.</p>}
+              </> : <p className="text-sm text-gray-500">{threadEntityContext?.reason || "Цепочка пока не связана с карточкой мерча или PSP."}</p>}
+            </div>
+          </details>
+          <details className="group rounded-xl border border-gray-200 bg-gray-50/70 dark:border-gray-800 dark:bg-white/[0.03]"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200"><span>Рабочая привязка · {counterpartyLabels[selectedThread.counterparty_type] || humanizeCode(selectedThread.counterparty_type)}</span><span className="text-xs font-medium text-gray-400 group-open:hidden">Открыть</span><span className="hidden text-xs font-medium text-gray-400 group-open:inline">Свернуть</span></summary><div className="grid gap-3 border-t border-gray-200 p-4 dark:border-gray-800 md:grid-cols-[160px_minmax(0,1fr)_auto]"><select className={field} value={linkType} onChange={(event)=>{setLinkType(event.target.value as typeof linkType);setLinkId("");}}><option value="general">Без привязки</option><option value="merchant">Мерч</option><option value="casino">Казино</option><option value="provider">PSP</option><option value="research_psp">PSP из базы AIBot</option></select><select className={field} value={linkId} disabled={linkType==="general"} onChange={(event)=>setLinkId(event.target.value)}><option value="">Выберите карточку</option>{linkOptions.map((option)=><option key={option.id} value={option.id}>{option.label}</option>)}</select><button disabled={busy} onClick={()=>void saveThreadLink()} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold dark:border-gray-700">Сохранить</button></div></details>
+        </div>
+      </> : <EmptyState title="Выберите переписку" description="Откройте цепочку слева или создайте новое письмо."/>}</Panel>
+    </div> : section === "compose"
+        ? <Panel><div className="flex items-start justify-between gap-4"><div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">{activeDraft ? `Черновик #${activeDraft.id}` : selectedThread && to===selectedThread.participant_email ? "Ответ на письмо" : "Новое письмо"}</h2><p className="mt-1 text-sm text-gray-500">Отправитель: <strong className="text-gray-700 dark:text-gray-200">bizdev@offerpsp.com</strong> · доставка через n8n.</p>{activeDraft&&<p className="mt-1 text-xs font-semibold text-brand-500">Редактируется существующая запись — новый черновик создан не будет.</p>}</div><button onClick={activeDraft?closeDraft:()=>setSection("mail")} className="text-sm text-gray-500">{activeDraft?"Закрыть черновик":"К перепискам"}</button></div><div className="mt-5 space-y-4">{mailCenter.templates.length>0&&<div className="rounded-xl border border-brand-100 bg-brand-50/60 p-4 dark:border-brand-500/20 dark:bg-brand-500/5"><label className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-600" htmlFor="mail-template">Рабочий шаблон</label><select id="mail-template" className={`${field} mt-2 bg-white dark:bg-gray-900`} value={templateId} onChange={(event)=>{const template=mailCenter.templates.find((entry)=>entry.id===event.target.value);if(template)applyTemplate(template);else setTemplateId("");}}><option value="">Начать без шаблона</option>{mailCenter.templates.map((template)=><option key={template.id} value={template.id}>{template.name} · {template.language.toUpperCase()}</option>)}</select><p className="mt-2 text-xs text-gray-500">Шаблон подставляет основу, но письмо остаётся редактируемым и не отправляется автоматически.</p></div>}<select className={field} value={leadId} disabled={Boolean(activeDraft)} onChange={(e)=>{setLeadId(e.target.value);const selected=leads.find((lead)=>lead.lead_id===e.target.value);if(selected?.work_email)setTo(selected.work_email);}}><option value="">Без привязки к мерчу</option>{leads.filter((lead)=>lead.record_state!=="archived").map((lead)=><option key={lead.lead_id} value={lead.lead_id}>{lead.company || "Без названия"} · {lead.work_email || "нет email"}</option>)}</select><input className={field} type="email" value={to} onChange={(e)=>setTo(e.target.value)} placeholder="Получатель"/><input className={field} value={subject} onChange={(e)=>setSubject(e.target.value)} placeholder="Тема"/><textarea className={area} value={body} onChange={(e)=>setBody(e.target.value)} placeholder="Текст письма"/><label className="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-white/[0.03]"><input type="checkbox" checked={responseExpected} onChange={(event)=>setResponseExpected(event.target.checked)} className="mt-0.5 h-5 w-5"/><span><strong className="block text-sm text-gray-900 dark:text-white">Ожидаем ответ партнёра</strong><span className="mt-1 block text-xs leading-5 text-gray-500">Только при включённом флаге цепочка перейдёт в «Ждём ответ» и получит автоматический срок +3 дня.</span></span></label><button onClick={()=>void sendEmail(Boolean(selectedThread && to===selectedThread.participant_email))} disabled={busy || activeDraft?.status === "sending"} className="w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy?"Отправляю…":activeDraft?"Отправить этот черновик":"Отправить письмо"}</button></div></Panel>
+        : <TelegramWorkspace/>}
+  </Frame>;
+}
+
+export { default as TasksWorkspace } from "./OperationsWorkspace";
+export { default as IntegrationsWorkspace } from "./IntegrationsWorkspace";

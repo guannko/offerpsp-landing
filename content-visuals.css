@@ -1,0 +1,50 @@
+.content-visual {
+  margin: clamp(38px, 6vw, 72px) 0 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 24px;
+  background: #0b0e18;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, .28);
+}
+
+.content-visual-image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.content-visual figcaption {
+  margin: 0;
+  padding: 14px 20px 16px;
+  border-top: 1px solid rgba(255, 255, 255, .1);
+  color: #8f95a2;
+  background: #111522;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.content-visual-service {
+  max-width: 1120px;
+  margin-inline: auto;
+}
+
+@media (max-width: 680px) {
+  .content-visual {
+    border-radius: 16px;
+  }
+
+  .content-visual-image {
+    min-height: 300px;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .content-visual-home .content-visual-image {
+    object-position: 18% center;
+  }
+
+  .content-visual figcaption {
+    padding: 12px 15px 14px;
+    font-size: 12px;
+  }
+}
