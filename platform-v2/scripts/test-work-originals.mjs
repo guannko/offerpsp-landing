@@ -6,6 +6,7 @@ import {appendOriginalText,checkDocxArchive,validateDocxInflation,workFileFormat
 import JSZip from 'jszip';
 import {newWorkDocument,validateWorkDocument} from '../src/lib/workDocuments.ts';
 import {usesPaperBridgeTheme} from '../src/lib/bridgeTheme.ts';
+import {applyLightBridgeAppearance} from '../src/lib/bridgeAppearance.ts';
 const staff='00000000-0000-4000-8000-000000000001';
 const migrations=await Promise.all(['20261001165903_offerpsp_course_organizer.sql','20261001174709_offerpsp_workspace_documents.sql','20261001195538_offerpsp_work_document_files.sql'].map(file=>readFile(new URL('../../supabase/migrations/'+file,import.meta.url),'utf8')));
 async function withDb(fn){
@@ -35,10 +36,22 @@ test('theme covers workspaces but preserves SEO/GEO and agents including detail 
   for(const path of ['/','/communications','/inbox','/operations','/psps/abc','/deals','/analytics'])assert.equal(usesPaperBridgeTheme(path),true);
   for(const path of ['/seo-geo','/seo-geo/history','/agents','/agents/abc'])assert.equal(usesPaperBridgeTheme(path),false);
 });
-test('dark foregrounds are separate from the shared border/surface tokens',async()=>{
+test('paper palette uses the supplied reference and shares organizer colours',async()=>{
   const css=await readFile(new URL('../src/layout/BridgePaper.css',import.meta.url),'utf8');
-  assert.match(css,/dark\\:text-gray-200[^\n]+color: var\(--bridge-ink\)/);
-  assert.match(css,/dark\\:bg-white[^\n]+background-color: var\(--bridge-ink\)/);
+  for(const colour of ['#f8f4ee','#e9e3d9','#ecece3','#fffcf6','#2f2a25','#746c60','#7b5d3e'])assert.ok(css.includes(colour));
+  assert.doesNotMatch(css,/\.dark/);
+  const organizer=await readFile(new URL('../src/components/control/CourseOrganizer.css',import.meta.url),'utf8');
+  assert.match(organizer,/--course-paper:var\(--bridge-paper/);assert.match(organizer,/--course-olive:var\(--bridge-accent/);
+  const header=await readFile(new URL('../src/layout/AppHeader.tsx',import.meta.url),'utf8');assert.doesNotMatch(header,/ThemeToggleButton/);
+});
+test('light-only appearance removes old dark preference even when browser storage is blocked',()=>{
+  for(const blocked of [false,true]){
+    const classes=new Set(['dark','other-class']),written=[];
+    const root={classList:{remove:value=>classes.delete(value)},style:{}};
+    applyLightBridgeAppearance(root,()=>{if(blocked)throw Error('Storage denied');return {setItem:(key,value)=>written.push([key,value])};});
+    assert.equal(classes.has('dark'),false);assert.equal(classes.has('other-class'),true);assert.equal(root.style.colorScheme,'light');
+    assert.deepEqual(written,blocked?[]:[['theme','light']]);
+  }
 });
 test('supported bounded filenames and hashes; no .doc masquerading as DOCX',async()=>{
   assert.equal(workFileFormat('Contract.PDF',120),'pdf');assert.equal(workFileFormat('Договор.docx',120),'docx');
