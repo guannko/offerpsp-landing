@@ -34,7 +34,20 @@ Updated: 2026-10-02
   visually checked with a no-network synthetic reader. `vercel build --prod`
   succeeds; local function-storage budget 105.6 MiB/11 functions passes. macOS
   output is diagnostic only and must not be published as Linux prebuilt functions.
-- `PARTIAL`: frontend release and live calendar/mail/inbox smoke pending.
+- `VERIFIED production`: frontend commit `09907634166cfbb399b22ee08ab4732d9b20ed9e`,
+  READY Linux deployment `dpl_EHsp99rGocEShhUrtezeL9UtF866`. Authenticated unique
+  and public primary build manifests match; primary staff alias explicitly assigned.
+- `VERIFIED live UI`: Oct 2 current layer loads an honest empty day and retains
+  three overdue tasks; future layer loads an empty scheduled period without error.
+  Oct 1 past list has nine records, six after mail filtering. David's sent-event
+  context opens the correct 12-message mail thread and its 11-message history
+  disclosure expands. Mail loads 23 active threads; Inbox retains two real leads.
+  Operations remains 3 open / 3 overdue / 13 read-only AIBot missions. No calendar
+  errors in captured filtered browser logs. Screenshot saved as
+  `bridge-calendar-three-layers-20261002.png` in the Codex visualization directory.
+- `VERIFIED locally`: final lint and calendar/control/document/original/organizer
+  test chain exits 0 (17 document, 10 original, 11 organizer tests). Day rollover
+  and DST verified by tests; literal overnight browser observation not performed.
   No emails, Telegram messages, offers or client statuses changed by this work.
 
 ## Calendar QA isolation and original-file smoke — 2026-10-02
