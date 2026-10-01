@@ -4,10 +4,19 @@ Updated: 2026-10-01
 
 ## Shared paper theme and private DOCX/PDF originals — 2026-10-01
 
-- `VERIFIED locally`: shared paper/olive visual tokens cover staff workspaces;
+- `VERIFIED production`: commit `6643b6cc0d6675f9b97a33356741b02af72d01fb`,
+  READY deployment `dpl_2bXS8McsJDJNahnEdwb3SoPQdkX1`, authenticated unique
+  manifest and primary staff alias manifest match. The primary alias was explicitly
+  assigned after verification. Palette sampled from Boris's supplied reference:
+  warm paper `#f8f4ee`, ivory `#fffcf6`, beige `#e9e3d9`, olive `#ecece3`,
+  brown `#7b5d3e`. Dark mode and its toggle are removed; old dark preferences reset.
+- `VERIFIED`: shared paper/olive visual tokens cover staff workspaces;
   routes, navigation widths and operational handlers are unchanged. SEO/GEO and
-  subagents deliberately keep their previous theme. Light/dark registry and actual
-  document-editor fixtures reviewed in Brave before release.
+  subagents keep their previous module styles; the root is now light-only globally.
+  Final light-only local fixture and production organizer were visually reviewed.
+  Live mail (23 active chains, expanded 11-message history), four PSPs, two inbox
+  entries, task list/calendar and saved document/context all load. Original-file
+  list loads successfully and is empty; no binary upload was performed.
 - `VERIFIED`: additive `offerpsp_work_document_files` migration applied remotely
   as `20261001202145`; local CLI-created source is `20261001195538`.
   Private bucket `offerpsp-work-originals`: 15 MiB, PDF/DOCX only. Original uploads
@@ -16,7 +25,7 @@ Updated: 2026-10-01
   No binary was uploaded during SQL tests. The first DELETE assertion encountered
   Supabase's extra `storage.protect_delete` guard; the revised test verifies denial
   without bypassing it. Failed and successful test writes were rolled back.
-- `VERIFIED locally`: 8 original-file tests, 17 document tests, 11 organizer tests,
+- `VERIFIED locally`: 10 original-file tests, 17 document tests, 11 organizer tests,
   four control-integrity suites, lint, TypeScript/Vite build and diff check pass.
   Actual synthetic DOCX English/Russian extraction and one-page PDF text pass;
   both fixtures were rendered and visually inspected. DOCX actual inflation is
@@ -24,19 +33,24 @@ Updated: 2026-10-01
 - New deliberate advisor notices: one private deny-by-default RLS table plus four
   authenticated staff-gated SECURITY DEFINER RPCs (empty search paths, no anon or
   service grants). Existing historical advisor debt is unchanged.
-- `PARTIAL`: frontend production rollout and authorized browser binary upload/
-  download/reopen smoke pending. Exact Word layout, tracked changes, signatures,
+- `PARTIAL`: authorized browser binary upload/download/reopen smoke pending
+  user confirmation. Frontend rollout is verified. Exact Word layout, tracked changes, signatures,
   DOCX/PDF working-copy export, OCR and original cloning into TXT/JSON are not
   implemented. Interrupted uploads resume by selecting the same original; pending
   reservations remain visible, and no automatic purge is added.
 - Release evidence: `docs/OFFERPSP-BRIDGE-PAPER-DOCUMENT-FILES-2026-10-01.md`.
+- Follow-up observed, not changed in this styling release: the calendar displays
+  two labelled `OfferPSP Intake E2E 20261001 — NO ACTION REQUIRED` events; the
+  default open task list displays only three working tasks. Review QA recognition
+  and closed-event visibility before claiming calendar isolation is complete.
 
 ## Course organizer and universal documents — production 2026-10-01
 
-- `VERIFIED`: commit `fcb356669ae2a1c9944815dcb025f55b47988608` on
+- Historical release, superseded by the paper/DOCX/PDF release above.
+- `VERIFIED at rollout`: commit `fcb356669ae2a1c9944815dcb025f55b47988608` on
   `codex/course-documents-20261001`; READY production deployment
-  `dpl_4a8npyUy4hWHtctLTm3iPQ4j1NvV` now serves the primary staff alias
-  `https://ops-7q4m2x9k8v3n.vercel.app/`. Live browser reads build `fcb35666`.
+  `dpl_4a8npyUy4hWHtctLTm3iPQ4j1NvV` served the primary staff alias
+  `https://ops-7q4m2x9k8v3n.vercel.app/`. Live browser read build `fcb35666`.
 - Built from actual production `7a7eb895db9292a737368bab701bb682bef73b54` in an
   isolated checkout. API/vendor, SEO/GEO and Vercel configuration remain unchanged.
   The older dirty workspace was not deployed or overwritten.
