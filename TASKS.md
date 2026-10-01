@@ -14,7 +14,16 @@ Updated: 2026-10-02
   Actual synthetic calendar computed sizes: XS 14 px, SM 16 px, heading 24 px
   unchanged. Document gallery screenshot and 1440 px viewport show no horizontal
   overflow; navigation computes 15 px. No live writes in either fixture.
-- `PARTIAL`: production rollout and live readability check pending.
+- `VERIFIED production`: commit `ccf2478b9fd06d3323fbe3a048f7675ae250c87f`,
+  READY Linux deployment `dpl_5MsjmdiVJArP2CJf2JBNMdsoi6j7`. Unique and primary
+  manifests match after alias propagation. Live AIBot descriptions measure 14 px
+  / 22 px line height (previously 12/16), names 16/24 (previously 14/20).
+  Operations retains 3 open / 3 overdue / 13 missions. Screenshot saved as
+  `bridge-readable-small-text-20261002.png` in the Codex visualization directory.
+- During alias propagation one reload received the old HTML asset name; its stale
+  JS URL resolved to SPA HTML, leaving an empty root. After the primary manifest
+  matched, a normal reload loaded the new release and authenticated UI correctly.
+  No second deployment or application/auth changes were used for recovery.
 
 ## Three-layer business calendar — 2026-10-02
 
