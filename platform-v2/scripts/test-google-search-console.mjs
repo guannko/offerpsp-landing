@@ -78,12 +78,15 @@ const fetchImpl = async (input, init = {}) => {
 };
 
 resetGoogleSearchConsoleCache();
-const overview = await getGoogleSearchConsoleOverview({
+const concurrentOptions = {
   env: { GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON: credentials },
   fetchImpl,
   now,
   force: true,
-});
+};
+const [overview, concurrentOverview] = await Promise.all([getGoogleSearchConsoleOverview(concurrentOptions), getGoogleSearchConsoleOverview(concurrentOptions)]);
+assert.equal(overview, concurrentOverview);
+assert.equal(calls.filter(call => call.url === 'https://oauth2.googleapis.com/token').length, 1);
 
 assert.equal(overview.source, "google_search_console");
 assert.equal(overview.data_through, "2026-08-23");

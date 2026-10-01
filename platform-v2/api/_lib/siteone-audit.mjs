@@ -91,7 +91,9 @@ export function normalizeSiteOneAudit(report, targetUrl = "https://offerpsp.com/
     .filter((item) => item?.code && Number.isFinite(Number(item.score)))
     .map((item) => [String(item.code).replaceAll("-", "_"), Number(item.score)]));
 
-  const issues = (report.summary?.items || [])
+  const skippedUrls = normalizeSkippedUrls(report, targetUrl);
+  const allSkippedExternal = skippedUrls.length > 0 && skippedUrls.every(row => row.external && /not allowed host/i.test(row.reason));
+  const findings = (report.summary?.items || [])
     .map((item) => ({ item, severity: severity(item?.status) }))
     .filter(({ severity: level }) => level)
     .slice(0, 30)
@@ -103,13 +105,14 @@ export function normalizeSiteOneAudit(report, targetUrl = "https://offerpsp.com/
       action: ISSUE_ACTIONS[item.aplCode] || "Проверить URL и рекомендацию в полном отчёте SiteOne.",
     }));
 
+  const informational = findings.filter(item => /^robots-txt/.test(item.code) || item.code === "external" || (item.code === "skipped" && allSkippedExternal && item.count === skippedUrls.length));
+  const issues = findings.filter(item => !informational.includes(item));
   const stats = report.stats || {};
   const successfulUrls = Number(stats.countByStatus?.["200"] || 0);
   const brokenUrls = Object.entries(stats.countByStatus || {})
     .filter(([code]) => Number(code) >= 400)
     .reduce((sum, [, count]) => sum + Number(count || 0), 0);
   const targetOrigin = new URL(targetUrl).origin;
-  const skippedUrls = normalizeSkippedUrls(report, targetUrl);
   const crawledPageUrls = [...new Set((Array.isArray(report.results) ? report.results : [])
     .filter((result) => Number(result?.type) === 1 && Number(result?.status) >= 200 && Number(result?.status) < 400)
     .map((result) => String(result?.url || "").trim())
@@ -119,7 +122,7 @@ export function normalizeSiteOneAudit(report, targetUrl = "https://offerpsp.com/
       } catch {
         return false;
       }
-    }))].slice(0, 30);
+    }))].slice(0, 100);
 
   return {
     tool: "SiteOne Crawler",
@@ -146,6 +149,7 @@ export function normalizeSiteOneAudit(report, targetUrl = "https://offerpsp.com/
       summary_item_count: Number(report.summary?.items?.length || 0),
       crawled_page_urls: crawledPageUrls,
       skipped_urls: skippedUrls,
+      informational_findings: informational.map(item => ({ ...item, severity: "notice" })),
     },
   };
 }
@@ -185,7 +189,7 @@ export function publicPageChecksFromEvidence(evidence) {
 
 async function probeText(url, fetchImpl) {
   try {
-    const response = await fetchImpl(url, { headers: { "user-agent": "OfferPSP-SEO-GEO-Monitor/1.0" } });
+    const response = await fetchImpl(url, { headers: { "user-agent": "OfferPSP-SEO-GEO-Monitor/1.0" }, signal: AbortSignal.timeout(10_000) });
     const text = await response.text();
     return { ok: response.ok, status: response.status, bytes: new TextEncoder().encode(text).length, text };
   } catch (error) {

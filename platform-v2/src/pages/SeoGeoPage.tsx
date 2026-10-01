@@ -4,6 +4,7 @@ import PageMeta from "../components/common/PageMeta";
 import { EmptyState, ErrorBanner, Metric, PageHeading, Panel, SkeletonPage } from "../components/control/Ui";
 import { isQaAttributionMarker, isQaFixtureLeadId } from "../lib/qaFixtures";
 import { supabase } from "../lib/supabase";
+import GeoVisibilityPanel from "../components/control/GeoVisibilityPanel";
 
 type CountRow = { key?: string; source?: string; category?: string; geo?: string; visitors?: number; pageviews?: number; leads?: number };
 type RecentLead = {
@@ -46,6 +47,7 @@ type AgentAnalysis = {
   geo_recommendations?: string[];
   limitations?: string[];
   error_message?: string;
+  evidence_coverage?: { discovered_pages?: number; collected_pages?: number; omitted_urls?: string[] } | null;
 };
 type TrafficSnapshot = {
   source?: string;
@@ -99,7 +101,7 @@ type AuditSource = {
   id: string;
   label: string;
   mode: "executed" | "independent" | "local_only";
-  status: "completed" | "failed" | "not_triggered";
+  status: "completed" | "partial" | "failed" | "not_triggered";
   checked_at?: string | null;
   message: string;
   metrics?: Record<string, string | number | null>;
@@ -111,6 +113,7 @@ type AuditSourceMatrix = {
     executed?: number;
     completed?: number;
     failed?: number;
+    partial?: number;
     independent?: number;
     local_only?: number;
   };
@@ -135,6 +138,7 @@ type GoogleSearchConsole = {
   warnings?: Array<{ code: string; message: string }>;
 };
 type TechnicalAudit = {
+  id?: string;
   tool?: string;
   tool_version?: string;
   target_url?: string;
@@ -145,6 +149,7 @@ type TechnicalAudit = {
   issues?: AuditIssue[];
   agent_analysis?: AgentAnalysis;
   metadata?: {
+    informational_findings?: AuditIssue[];
     crawled_page_urls?: string[];
     public_page_checks?: {
       checked_at?: string;
@@ -399,7 +404,8 @@ export default function SeoGeoPage() {
   }, [load, loadLiveTraffic, loadGoogle]);
 
   const auditRun = payload?.audit_run || {};
-  const auditActive = auditRun.status === "queued" || auditRun.status === "running";
+  const auditInterrupted = ["queued", "running"].includes(auditRun.status || "") && Boolean(auditRun.requested_at) && Date.now() - new Date(auditRun.requested_at || "").getTime() > 10 * 60_000;
+  const auditActive = !auditInterrupted && (auditRun.status === "queued" || auditRun.status === "running");
 
   useEffect(() => {
     if (!auditActive) return undefined;
@@ -411,7 +417,7 @@ export default function SeoGeoPage() {
     const previous = previousAuditStatus.current;
     previousAuditStatus.current = auditRun.status;
     if ((previous === "queued" || previous === "running") && auditRun.status === "completed") {
-      setRefreshNotice("Полный аудит завершён. SiteOne, SEO/GEO‑агент, Google Search Console и Vercel обновлены; независимые инструменты отмечены отдельно.");
+      setRefreshNotice("Запуск аудита завершён. Проверьте отдельные статусы источников и ограничения: завершение запуска не означает успех всех интеграций.");
       void Promise.allSettled([loadLiveTraffic(), loadGoogle()]);
     }
   }, [auditRun.status, loadGoogle, loadLiveTraffic]);
@@ -519,6 +525,8 @@ export default function SeoGeoPage() {
       action={<div className="flex flex-col items-end gap-2"><button onClick={() => void startAudit()} disabled={startingAudit || auditActive} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50">{startingAudit ? "Запускаю…" : auditActive ? "Аудит выполняется…" : "Запустить полный аудит"}</button><span className={`text-xs font-medium ${liveTraffic ? "text-success-600 dark:text-success-400" : liveTrafficError ? "text-error-600 dark:text-error-400" : "text-gray-400"}`}>{liveTraffic ? `● Live Vercel · ${dateTime(liveTraffic.fetched_at)}` : liveTrafficLoading ? "Подключаю Vercel…" : "Live Vercel недоступен"}</span><span className={`text-xs font-medium ${googleData ? "text-success-600 dark:text-success-400" : googleError ? "text-error-600 dark:text-error-400" : "text-gray-400"}`}>{googleData ? `● Google · финальные данные по ${shortDate(googleData.data_through)} · проверено ${dateTime(googleData.fetched_at)}` : googleLoading ? "Подключаю Google…" : "Google недоступен"}</span></div>}
     />
     {refreshNotice && <div className="mb-5 rounded-xl border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-700 dark:border-success-500/20 dark:bg-success-500/10 dark:text-success-300">{refreshNotice}</div>}
+    {auditInterrupted && <ErrorBanner message="Предыдущий аудит прерван: истёк срок выполнения. Новый запуск доступен; история сохранена."/>}
+    {!!googleData?.warnings?.length && <div className="mb-5 rounded-xl border border-warning-200 p-4 text-sm text-warning-700">{googleData.warnings.map(warning => <p key={warning.code}>{warning.message}</p>)}</div>}
     {liveTrafficError && <div className="mb-5 rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-500/20 dark:bg-error-500/10 dark:text-error-300"><strong>Текущий трафик не показан.</strong> {liveTrafficError} Архивные данные не используются.</div>}
     {googleError && <div className="mb-5 rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-500/20 dark:bg-error-500/10 dark:text-error-300"><strong>Данные Google не показаны.</strong> {googleError} Архивные данные не используются.</div>}
     {googleData && inspectionFailed > 0 && <div className="mb-5 rounded-xl border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-700 dark:border-warning-500/20 dark:bg-warning-500/10 dark:text-warning-300"><strong>Google ответил частично.</strong> Поисковые показатели показаны напрямую, но проверка индексации получена для {googleData.inspection.summary.total} из {inspectionRequested} URL. Неполученные значения оставлены пустыми, архив не подставляется.</div>}
@@ -551,8 +559,8 @@ export default function SeoGeoPage() {
         <Metric label="Публичные страницы" value={publicPageRows.length || "—"} hint="текущий crawl + sitemap"/>
         <Metric label="HTTP OK" value={publicPageRows.length ? `${publicHttpOk}/${publicPageRows.length}` : "—"} hint="живой ответ страницы" tone={publicHttpOk === publicPageRows.length ? "success" : "warning"}/>
         <Metric label="Self-canonical" value={publicPageRows.length ? `${publicCanonicalOk}/${publicPageRows.length}` : "—"} hint="наш или подтверждённый Google" tone={publicCanonicalOk === publicPageRows.length ? "success" : "warning"}/>
-        <Metric label="В индексе Google" value={publicPageRows.length ? `${publicIndexed}/${publicPageRows.length}` : "—"} hint="URL Inspection" tone={publicIndexed === publicPageRows.length ? "success" : "warning"}/>
-        <Metric label="Есть показы" value={publicPageRows.length ? `${publicWithImpressions}/${publicPageRows.length}` : "—"} hint="Search Console · 90 дней" tone={publicWithImpressions ? "success" : "warning"}/>
+        <Metric label="В индексе Google" value={googleData?.inspection.urls.length ? `${publicIndexed}/${publicPageRows.length}` : "—"} hint={googleData?.inspection.urls.length ? "URL Inspection" : "Проверка недоступна; это не ноль"} tone={googleData && publicIndexed === publicPageRows.length ? "success" : "warning"}/>
+        <Metric label="Есть показы" value={googleData ? `${publicWithImpressions}/${publicPageRows.length}` : "—"} hint={googleData ? "Search Console · 90 дней" : "Данные поиска недоступны"} tone={publicWithImpressions ? "success" : "warning"}/>
       </div>
       <div className="mt-6 overflow-x-auto">
         <table className="min-w-[1080px] w-full text-left text-sm">
@@ -569,8 +577,8 @@ export default function SeoGeoPage() {
               <td className="px-3 py-4"><strong className={sameUrl(canonical, page.url) ? "text-success-600 dark:text-success-400" : canonical ? "text-warning-600" : "text-gray-400"}>{sameUrl(canonical, page.url) ? "Self" : canonical ? "Другой" : "—"}</strong>{canonical && !sameUrl(canonical, page.url) && <code className="mt-1 block max-w-[220px] truncate text-xs text-gray-400">{shortPage(canonical)}</code>}{inspection?.google_canonical && !sameUrl(inspection.google_canonical, canonical) && <code className="mt-1 block max-w-[220px] truncate text-xs text-gray-400">Google: {shortPage(inspection.google_canonical)}</code>}</td>
               <td className="px-3 py-4"><strong className={inspection?.verdict === "PASS" ? "text-success-600 dark:text-success-400" : inspection ? "text-warning-600" : "text-gray-400"}>{inspection?.verdict === "PASS" ? "В индексе" : inspection ? "Ожидает индекс" : "Нет данных"}</strong><span className="mt-1 block max-w-[220px] truncate text-xs text-gray-400">{inspection?.coverage_state || "—"}</span></td>
               <td className="px-3 py-4 text-xs text-gray-500">{dateTime(inspection?.last_crawl_time)}</td>
-              <td className="px-3 py-4 text-right font-semibold text-gray-900 dark:text-white">{number(search?.impressions)}</td>
-              <td className="px-3 py-4 text-right text-gray-700 dark:text-gray-300">{number(search?.clicks)}</td>
+              <td className="px-3 py-4 text-right font-semibold text-gray-900 dark:text-white">{googleData ? number(search?.impressions) : "—"}</td>
+              <td className="px-3 py-4 text-right text-gray-700 dark:text-gray-300">{googleData ? number(search?.clicks) : "—"}</td>
               <td className="px-3 py-4 text-right text-gray-500">{position(search?.position)}</td>
             </tr>;
           })}{!publicPageRows.length && <tr><td colSpan={8} className="py-8"><EmptyState title="Страницы ещё не проверены" description="Запустите полный аудит после публикации production-сайта."/></td></tr>}</tbody>
@@ -614,7 +622,7 @@ export default function SeoGeoPage() {
         <span className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500 dark:bg-white/[0.03]">Без расхода и ROAS, пока Google Ads не отдаёт живую стоимость</span>
       </div>
       <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-7">
-        <Metric label="Paid‑лиды" value={number(acquisitionTotals.paid_leads)} hint="любые платные кампании"/>
+        <Metric label="Paid‑лиды" value={acquisition ? number(acquisitionTotals.paid_leads) : "—"} hint="рекламный click ID или явный paid medium; UTM source недостаточно"/>
         <Metric label="Google Ads" value={number(acquisitionTotals.google_ads_leads)} hint="gclid / gbraid / wbraid"/>
         <Metric label="Affiliate" value={number(acquisitionTotals.affiliate_leads)} hint="партнёрский ID или click ID"/>
         <Metric label="Квалифицированы" value={number(acquisitionTotals.qualified)} hint={`из ${number(acquisitionTotals.leads)} заявок`} tone="success"/>
@@ -639,7 +647,7 @@ export default function SeoGeoPage() {
         {auditSources.map((source) => {
           const completed = source.status === "completed";
           const failed = source.status === "failed";
-          const statusLabel = completed ? "Проверено этим запуском" : failed ? "Ошибка этого запуска" : source.mode === "local_only" ? "Только локально" : "Работает отдельно";
+          const statusLabel = completed ? "Проверено этим запуском" : source.status === "partial" ? "Частичный результат" : failed ? "Ошибка этого запуска" : source.mode === "local_only" ? "Только локально" : "Внешний сервис · не проверен";
           return <div key={source.id} className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
             <div className="flex items-start justify-between gap-3"><strong className="text-sm text-gray-900 dark:text-white">{source.label}</strong><span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${completed ? "bg-success-500" : failed ? "bg-error-500" : "bg-gray-300 dark:bg-gray-600"}`}/></div>
             <span className={`mt-2 block text-xs font-semibold ${completed ? "text-success-600 dark:text-success-400" : failed ? "text-error-600 dark:text-error-400" : "text-gray-500"}`}>{statusLabel}</span>
@@ -728,12 +736,28 @@ export default function SeoGeoPage() {
       </> : agent.status === "failed" ? <div className="mt-5 rounded-xl bg-error-50 p-4 text-sm text-error-800 dark:bg-error-500/10 dark:text-error-300"><strong>SiteOne завершил crawl, но AI-анализ не получен</strong><p className="mt-1 text-xs">{agent.error_message || "Повторите полный аудит или проверьте SEO/GEO workflow."}</p></div> : <EmptyState title="AI-анализ ещё не запускался" description="Нажмите «Запустить полный аудит»: сначала SiteOne соберёт факты, затем отдельный агент подготовит рекомендации."/>}
     </Panel>
 
+    <GeoVisibilityPanel/>
+    <AuditEvidence audit={audit}/>
+    {!!audit.metadata?.informational_findings?.length && <Panel className="mt-4"><details><summary className="cursor-pointer text-sm text-gray-500">Служебные события crawler · не ошибки</summary><ul className="mt-2 space-y-2 text-xs text-gray-500">{audit.metadata.informational_findings.map(item => <li key={item.code}>{item.title}</li>)}</ul></details></Panel>}
     <details className="mt-6 rounded-2xl border border-gray-200 bg-white shadow-theme-xs dark:border-[#34435a] dark:bg-[#202d42]">
       <summary className="cursor-pointer px-5 py-4 text-sm font-semibold text-gray-900 dark:text-white">История SEO/GEO · {trafficHistory.length} архивных записей трафика, {auditHistory.length} аудитов</summary>
       <div className="border-t border-gray-100 px-5 py-4 dark:border-gray-800">
+        <div className="mb-5 space-y-3">{auditHistory.map(item => <details key={item.id || item.audited_at} className="rounded-xl border border-gray-200 p-4 dark:border-gray-800"><summary className="cursor-pointer text-sm font-medium">{dateTime(item.audited_at)} · технический балл {item.overall_score ?? "—"}/10 · AI: {item.agent_analysis?.status || "не запускался"}</summary><div className="mt-3 text-sm text-gray-600 dark:text-gray-300"><p>{item.agent_analysis?.executive_summary || item.agent_analysis?.error_message || "AI-вывод отсутствует"}</p><ul className="mt-3 space-y-2">{item.issues?.map(issue => <li key={issue.code}>{issue.severity} · {issue.title}</li>)}</ul><AuditEvidence audit={item}/></div></details>)}</div>
         <p className="mb-4 text-sm text-gray-500">Архив только для аналитики. Эти значения никогда не подставляются в текущие показатели.</p>
         <div className="space-y-2">{trafficHistory.map((snapshot, index) => <div key={`${snapshot.captured_at}-${index}`} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 px-4 py-3 text-sm dark:border-gray-800"><span className="text-gray-500">{dateTime(snapshot.captured_at)} · {shortDate(snapshot.period_start)} — {shortDate(snapshot.period_end)}</span><strong className="text-gray-900 dark:text-white">{number(snapshot.visitors)} посетителей · {number(snapshot.pageviews)} просмотров</strong></div>)}{!trafficHistory.length && <EmptyState title="История пуста" description="Архивных записей SEO/GEO нет."/>}</div>
       </div>
     </details>
   </>;
+}
+
+function AuditEvidence({ audit }: { audit: TechnicalAudit }) {
+  const agent = audit.agent_analysis;
+  const coverage = agent?.evidence_coverage;
+  return <div className="mt-4 space-y-3 rounded-xl border border-gray-200 p-4 text-sm text-gray-600 dark:border-gray-800 dark:text-gray-300">
+    {coverage && <p>Собрано страниц: {coverage.collected_pages ?? "—"} из {coverage.discovered_pages ?? "—"}. Текстовые выдержки ограничены; технический балл не оценивает продвижение.</p>}
+    {!!agent?.limitations?.length && <div><h3 className="font-semibold">Границы и ограничения анализа</h3><ul className="mt-2 list-disc space-y-1 pl-5">{agent.limitations.map((item, index) => <li key={index}>{item}</li>)}</ul></div>}
+    {!!agent?.content_recommendations?.length && <div><h3 className="font-semibold">Рекомендации по страницам</h3>{agent.content_recommendations.map((item, index) => <div key={index} className="mt-2"><strong>{shortPage(item.url)}</strong><p>{item.suggested_title}</p><p>{item.suggested_meta_description}</p><p>{item.rationale}</p></div>)}</div>}
+    {!!agent?.geo_recommendations?.length && <div><h3 className="font-semibold">GEO-гипотезы · не доказательство цитирования</h3><ul className="mt-2 list-disc pl-5">{agent.geo_recommendations.map((item,index) => <li key={index}>{item}</li>)}</ul></div>}
+    {!!audit.metadata?.source_matrix?.sources?.length && <div><h3 className="font-semibold">Источники этого запуска</h3><ul className="mt-2 space-y-1">{audit.metadata.source_matrix.sources.map(source => <li key={source.id}>{source.label}: {source.status} · {source.checked_at ? dateTime(source.checked_at) : "не проверено"}</li>)}</ul></div>}
+  </div>;
 }

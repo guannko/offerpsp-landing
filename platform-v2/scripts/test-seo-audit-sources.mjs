@@ -41,7 +41,7 @@ const matrix = buildSeoAuditSourceMatrix({
 });
 
 assert.equal(matrix.version, "offerpsp-seo-audit-sources-v1");
-assert.deepEqual(matrix.summary, { executed: 4, completed: 4, failed: 0, independent: 2, local_only: 1 });
+assert.deepEqual(matrix.summary, { executed: 4, completed: 4, failed: 0, partial: 0, independent: 2, local_only: 1 });
 assert.equal(matrix.sources.find((source) => source.id === "google_search_console").metrics.indexed_urls, 18);
 assert.equal(matrix.sources.find((source) => source.id === "vercel_web_analytics").metrics.pageviews, 121);
 assert.equal(matrix.sources.find((source) => source.id === "ahrefs").status, "not_triggered");

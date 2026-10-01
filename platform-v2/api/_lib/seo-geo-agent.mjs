@@ -1,7 +1,7 @@
 const AGENT_NAME = "OfferPSP SEO/GEO Agent";
 const AGENT_VERSION = "offerpsp-seo-geo-agent-v1";
 const DEFAULT_WEBHOOK_PATH = "offerpsp-seo-geo-agent";
-const MAX_PAGES = 40;
+const MAX_PAGES = 100;
 const MAX_TEXT_SAMPLE = 3_500;
 const SECURITY_HEADERS = [
   "content-security-policy",
@@ -68,7 +68,7 @@ function visibleText(html) {
     .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
     .replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, " ")
     .replace(/<!--([\s\S]*?)-->/g, " ")
-    .replace(/<[^>]+>/g, " ")), MAX_TEXT_SAMPLE);
+    .replace(/<[^>]+>/g, " ")), Number.MAX_SAFE_INTEGER);
 }
 
 function formControlInventory(html) {
@@ -217,7 +217,13 @@ function pageBrief(url, result) {
     form_controls: formControlInventory(html),
     word_count: text ? text.split(/\s+/).length : 0,
     response_headers: result.headers || {},
-    text_sample: text,
+    text_sample: text.slice(0, MAX_TEXT_SAMPLE),
+    text_sample_truncated: text.length > MAX_TEXT_SAMPLE,
+    content_inventory: {
+      tables: (html.match(/<table\b/gi) || []).length,
+      time_elements: (html.match(/<time\b/gi) || []).length,
+      question_headings: tagValues(html, "h2", 100).filter((heading) => /\?/.test(heading)),
+    },
   };
 }
 
@@ -234,11 +240,12 @@ export async function collectSeoAgentEvidence(audit, fetchImpl = fetch) {
       }
     })
     : [];
-  const urls = [...new Set([
+  const discoveredUrls = [...new Set([
     targetUrl.toString(),
     ...crawledPageUrls,
     ...sitemapUrls(sitemap.text, targetUrl.origin),
-  ])].slice(0, MAX_PAGES);
+  ])];
+  const urls = discoveredUrls.slice(0, MAX_PAGES);
 
   const pages = await Promise.all(urls.slice(0, MAX_PAGES).map(async (url) => {
     try {
@@ -251,6 +258,10 @@ export async function collectSeoAgentEvidence(audit, fetchImpl = fetch) {
   return {
     target_url: targetUrl.toString(),
     collected_at: new Date().toISOString(),
+    coverage: { discovered_pages: discoveredUrls.length, collected_pages: pages.length,
+      omitted_urls: discoveredUrls.slice(MAX_PAGES), full_page_word_counts: true,
+      text_samples_only: true, failed_pages: pages.filter(page => !page.status || page.status >= 400).length,
+      analyzed_pages: pages.filter(page => !/noindex/i.test(page.meta_robots || "") && !/\/portal\/?$/.test(new URL(page.url).pathname)).length },
     siteone: {
       tool: audit?.tool,
       tool_version: audit?.tool_version,
@@ -899,7 +910,12 @@ export function normalizeSeoAgentAnalysis(value, evidence) {
         && !(evidence?.geo_signals?.robots_txt?.ai_crawlers_allowed && /(robots\.txt|GPTBot|ClaudeBot|AI[- ]crawler)/i.test(item))
         && !(/hreflang/i.test(item) && !hreflangAdviceHasDiscoveredTarget(item, evidence)))
       : [],
-    limitations: limitations.slice(0, 6),
+    evidence_coverage: evidence?.coverage || null,
+    limitations: [
+      "Content excerpts are bounded samples, not full pages. Word counts and content inventories are computed before truncation; absence from an excerpt is not absence from the page.",
+      ...(evidence?.coverage?.omitted_urls?.length ? [`Collection omitted ${evidence.coverage.omitted_urls.length} pages; this is a partial audit.`] : []),
+      ...limitations,
+    ].slice(0, 12),
   };
 }
 

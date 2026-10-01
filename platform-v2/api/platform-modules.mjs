@@ -179,8 +179,9 @@ async function seoAudit(request, response, staffContext) {
 }
 
 async function failAuditRun(runId, message) {
-  await serviceSupabaseRequest(`offerpsp_seo_audit_runs?id=eq.${encodeURIComponent(runId)}`, {
+  await serviceSupabaseRequest(`offerpsp_seo_audit_runs?id=eq.${encodeURIComponent(runId)}&status=in.(queued,running)`, {
     method: "PATCH",
+    signal: AbortSignal.timeout(5_000),
     headers: { Prefer: "return=minimal" },
     body: JSON.stringify({
       status: "failed",
@@ -191,18 +192,27 @@ async function failAuditRun(runId, message) {
 }
 
 async function executeAuditRun(runId) {
-  await serviceSupabaseRequest(`offerpsp_seo_audit_runs?id=eq.${encodeURIComponent(runId)}`, {
+  const deadline = AbortSignal.timeout(105_000);
+  const claimed = await serviceSupabaseRequest(`offerpsp_seo_audit_runs?id=eq.${encodeURIComponent(runId)}&status=eq.queued`, {
     method: "PATCH",
-    headers: { Prefer: "return=minimal" },
+    signal: AbortSignal.any([deadline, AbortSignal.timeout(10_000)]),
+    headers: { Prefer: "return=representation" },
     body: JSON.stringify({ status: "running", started_at: new Date().toISOString(), error_message: null }),
   });
+  if (!Array.isArray(claimed) || !claimed.length) return null;
+  const boundedFetch = (url, options = {}) => fetch(url, { ...options,
+    signal: options.signal ? AbortSignal.any([deadline, options.signal]) : deadline });
 
   try {
-    const liveSourcesPromise = collectLiveSeoAuditSources();
+    const liveSourcesPromise = collectLiveSeoAuditSources({
+      googleLoader: () => getGoogleSearchConsoleOverview({ force: true, fetchImpl: boundedFetch }),
+      vercelLoader: () => getLiveVercelTraffic({ fetchImpl: boundedFetch }),
+    });
     const report = await runSiteOneAudit();
     const audit = normalizeSiteOneAudit(report, "https://offerpsp.com/");
-    audit.metadata = { ...audit.metadata, geo_signals: await collectGeoSignals() };
-    const evidence = await collectSeoAgentEvidence(audit);
+    deadline.throwIfAborted();
+    audit.metadata = { ...audit.metadata, geo_signals: await collectGeoSignals(boundedFetch) };
+    const evidence = await collectSeoAgentEvidence(audit, boundedFetch);
     const liveSources = await liveSourcesPromise;
     evidence.external_sources = seoAgentExternalEvidence(liveSources);
     audit.metadata.public_page_checks = publicPageChecksFromEvidence(evidence);
@@ -218,7 +228,7 @@ async function executeAuditRun(runId) {
       affected_pages: affectedFormPages,
     };
     try {
-      audit.agent_analysis = await runSeoGeoAgent(audit, { evidence });
+      audit.agent_analysis = await runSeoGeoAgent(audit, { evidence, fetchImpl: boundedFetch });
     } catch (agentError) {
       audit.agent_analysis = {
         status: "failed",
@@ -228,15 +238,18 @@ async function executeAuditRun(runId) {
       };
     }
     audit.metadata.source_matrix = buildSeoAuditSourceMatrix({ audit, liveSources });
+    deadline.throwIfAborted();
     const inserted = await serviceSupabaseRequest("offerpsp_technical_audits", {
       method: "POST",
+      signal: deadline,
       headers: { Prefer: "return=representation" },
       body: JSON.stringify(audit),
     });
     const auditRow = Array.isArray(inserted) ? inserted[0] : inserted;
     if (!auditRow?.id) throw new Error("Technical audit was not stored");
-    await serviceSupabaseRequest(`offerpsp_seo_audit_runs?id=eq.${encodeURIComponent(runId)}`, {
+    await serviceSupabaseRequest(`offerpsp_seo_audit_runs?id=eq.${encodeURIComponent(runId)}&status=eq.running`, {
       method: "PATCH",
+      signal: deadline,
       headers: { Prefer: "return=minimal" },
       body: JSON.stringify({
         status: "completed",
@@ -265,15 +278,14 @@ async function seoAuditScheduled(request, response) {
   if (!cronSecret || request.headers.authorization !== `Bearer ${cronSecret}`) {
     throw new HttpError(401, "Invalid cron authorization");
   }
-  const rows = await serviceSupabaseRequest("offerpsp_seo_audit_runs", {
+  const run = await serviceSupabaseRequest("rpc/reserve_offerpsp_scheduled_seo_audit", {
     method: "POST",
-    headers: { Prefer: "return=representation" },
-    body: JSON.stringify({ status: "running", trigger_source: "schedule", started_at: new Date().toISOString() }),
+    body: "{}",
   });
-  const run = Array.isArray(rows) ? rows[0] : rows;
   if (!run?.id) throw new HttpError(502, "Scheduled SEO audit run was not created");
+  if (run.reused) return sendJson(response, 202, { run_id: run.id, status: run.status, reused: true });
   const audit = await executeAuditRun(run.id);
-  return sendJson(response, 201, { run_id: run.id, status: "completed", audit_id: audit.id });
+  return sendJson(response, audit ? 201 : 202, { run_id: run.id, status: audit ? "completed" : "running", audit_id: audit?.id });
 }
 
 async function seoLiveTraffic(request, response) {

@@ -228,7 +228,20 @@ export function summarizeInspection(rows) {
   }, { total: 0, indexed: 0, not_indexed: 0, neutral: 0 });
 }
 
-export async function getGoogleSearchConsoleOverview({
+const pendingOverviews = new Map();
+
+export async function getGoogleSearchConsoleOverview(options = {}) {
+  const env = options.env || process.env;
+  const key = `${parseCredentials(env).client_email}:${env.OFFERPSP_SEARCH_CONSOLE_SITE_URL || DEFAULT_SITE_URL}:${Boolean(options.force)}`;
+  if (pendingOverviews.has(key)) return pendingOverviews.get(key);
+  const pending = loadGoogleSearchConsoleOverview(options);
+  pendingOverviews.set(key, pending);
+  const clear = () => { if (pendingOverviews.get(key) === pending) pendingOverviews.delete(key); };
+  pending.then(clear, clear);
+  return pending;
+}
+
+async function loadGoogleSearchConsoleOverview({
   env = process.env,
   fetchImpl = fetch,
   now = new Date(),
@@ -319,4 +332,5 @@ export async function getGoogleSearchConsoleOverview({
 export function resetGoogleSearchConsoleCache() {
   cachedToken = null;
   cachedOverview = null;
+  pendingOverviews.clear();
 }

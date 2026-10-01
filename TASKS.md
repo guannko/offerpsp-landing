@@ -5,6 +5,33 @@ Updated: 2026-10-01
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## SEO/GEO integrity and evidence — 2026-10-01
+
+- `VERIFIED locally`: full-page word counts are calculated before excerpt truncation; table/time/
+  question inventories are supplied. Published-workflow replacement source preserves every
+  collected indexable page plus Google/Vercel/llms evidence, excludes noindex portal content,
+  records coverage and fails explicitly if the context exceeds its budget.
+- `VERIFIED locally`: expected external-only crawler skips and successful robots loads are
+  informational, not critical; genuine internal skips remain issues. Missing Google results use
+  dashes, partial Google warnings are visible, concurrent same-source reads share one request.
+- `VERIFIED locally`: history exposes audit results, source timestamps, recommendations and
+  limitations. Completion no longer promises every integration succeeded. External Bing/Ahrefs
+  status is explicitly unverified, not a claimed active capability.
+- `VERIFIED locally`: acquisition counts paid evidence, not generic campaign tags; source_referrer
+  and unknown-source fallback are preserved. Staff/scheduled audit reservation is serialized,
+  a partial unique index prevents parallel active runs, workers claim queued runs once, requests
+  have an overall deadline, and a five-minute database recovery job closes expired leases.
+- `VERIFIED locally`: append-only staff-only GEO observations store exact prompt/answer, engine,
+  model, language/country, time and HTTPS citations. Brand mentions and exact-domain citations
+  are separate, repeats are idempotent, and fake lookalike domains do not count as citations.
+- `VERIFIED locally`: focused SQL/AI/crawler regressions, full migration suite, lint and build
+  pass. Production build and local function storage budget pass (105.6 MiB / 11 functions).
+  Mac-built native output is not a Linux runtime verification and must not be published prebuilt.
+- `PARTIAL`: production migration, n8n publication, rollout and live audit verification pending.
+  Automated AI-search sampling requires an approved expense cap and a configured provider API;
+  manual observations are not labelled automated. Public site/content, subagents, Telegram chat
+  creation, Zoom and existing dirty source work remain untouched.
+
 ## Company join approval and intake repair — 2026-10-01
 
 - `VERIFIED`: committed release `af34752a8961ee84aae151c27128eb3e5a87d6de`; production

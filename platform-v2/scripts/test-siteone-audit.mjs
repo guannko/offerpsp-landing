@@ -56,9 +56,9 @@ assert.equal(audit.category_scores.best_practices, 9.1);
 assert.equal(audit.crawl_stats.successful_urls, 10);
 assert.equal(audit.issues[0].count, 1);
 assert.equal(audit.issues[1].count, 4);
-assert.equal(audit.issues[2].count, 1);
-assert.equal(audit.issues[3].count, 1);
-assert.equal(audit.issues[4].count, 5);
+assert.equal(audit.issues.find(item => item.code === "dns-ipv6").count, 1);
+assert.equal(audit.issues.find(item => item.code === "static-assets-short-cache").count, 5);
+assert.equal(audit.metadata.informational_findings.find(item => item.code === "robots-txt-example").count, 1);
 assert.equal(audit.audited_at, "2026-08-14T11:47:50.000Z");
 assert.deepEqual(audit.metadata.crawled_page_urls, ["https://offerpsp.com/", "https://offerpsp.com/portal/"]);
 assert.deepEqual(audit.metadata.skipped_urls, [

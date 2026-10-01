@@ -18,10 +18,15 @@ export function seoAgentExternalEvidence(liveSources) {
   const vercelTraffic = vercel?.status === "fulfilled" ? vercel.value : null;
   return {
     google_search_console: googleOverview ? {
-      status: "completed",
+      status: googleOverview.warnings?.length ? "partial" : "completed",
       fetched_at: googleOverview.fetched_at || null,
       data_through: googleOverview.data_through || null,
       days_90: googleOverview.periods?.days_90 || null,
+      days_28: googleOverview.periods?.days_28 || null,
+      days_7: googleOverview.periods?.days_7 || null,
+      queries: (googleOverview.queries || []).slice(0, 50),
+      pages: (googleOverview.pages || []).slice(0, 50),
+      countries: (googleOverview.countries || []).slice(0, 20),
       inspection: googleOverview.inspection || null,
       sitemaps: googleOverview.sitemaps || [],
       warnings: googleOverview.warnings || [],
@@ -86,9 +91,9 @@ export function buildSeoAuditSourceMatrix({ audit, liveSources, checkedAt = new 
       id: "google_search_console",
       label: "Google Search Console",
       mode: "executed",
-      status: "completed",
+      status: googleOverview.warnings?.length ? "partial" : "completed",
       checked_at: googleOverview.fetched_at || checkedAt,
-      message: "Поисковые показатели и URL Inspection запрошены заново. Данные Google публикуются с задержкой.",
+      message: googleOverview.warnings?.length ? "Google ответил частично. Поисковые показатели и результаты доступных проверок сохранены; ограничения показаны отдельно." : "Поисковые показатели и URL Inspection запрошены заново. Данные Google публикуются с задержкой.",
       metrics: {
         data_through: googleOverview.data_through || null,
         clicks_90d: Number(googleOverview.periods?.days_90?.clicks || 0),
@@ -134,7 +139,7 @@ export function buildSeoAuditSourceMatrix({ audit, liveSources, checkedAt = new 
       mode: "independent",
       status: "not_triggered",
       checked_at: null,
-      message: "Работает в отдельном кабинете Bing; API запуска из OfferPSP пока не подключён.",
+      message: "Внешний кабинет Bing. Его состояние этим запуском не проверено; API не подключён.",
       metrics: {},
     },
     {
@@ -143,7 +148,7 @@ export function buildSeoAuditSourceMatrix({ audit, liveSources, checkedAt = new 
       mode: "independent",
       status: "not_triggered",
       checked_at: null,
-      message: "Независимый аудит идёт по расписанию Ahrefs; эта кнопка его не запускает.",
+      message: "Внешний Ahrefs Site Audit. Расписание и результаты этим запуском не проверены.",
       metrics: {},
     },
     {
@@ -164,6 +169,7 @@ export function buildSeoAuditSourceMatrix({ audit, liveSources, checkedAt = new 
       executed: sources.filter((source) => source.mode === "executed").length,
       completed: sources.filter((source) => source.status === "completed").length,
       failed: sources.filter((source) => source.status === "failed").length,
+      partial: sources.filter((source) => source.status === "partial").length,
       independent: sources.filter((source) => source.mode === "independent").length,
       local_only: sources.filter((source) => source.mode === "local_only").length,
     },

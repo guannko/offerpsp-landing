@@ -370,6 +370,8 @@ async function applyMigrations() {
   "20261001063144_company_join_approval.sql",
   "20261001073000_mail_next_step.sql",
   "20261001074000_mcp_bulk_preview_evidence.sql",
+  "20261001085616_offerpsp_seo_geo_integrity.sql",
+  "20261001090334_offerpsp_geo_observation_evidence.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
