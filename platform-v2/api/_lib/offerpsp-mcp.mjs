@@ -478,7 +478,17 @@ export async function executeOfferPspTool(name, args, { request, context, callId
       }, () => rpc(context, "prepare_offerpsp_route_replacements", { p_pairs: replacements }));
     }
     return audited(context, callId, { action_type: "mcp_prepare_bulk", description: "Prepare immutable bulk-operation preview", entity_type: "system", entity_id: "bulk" },
-      () => askAgent(request, context, `MCP BULK PREPARE ONLY. Use Bulk Operations to prepare, never execute. Return the exact preview, confirmation token and expiry.\n\n${instruction}`));
+      async () => {
+        const response = await askAgent(request, context, `MCP BULK PREPARE ONLY. Use Bulk Operations to prepare, never execute. Return the exact preview, confirmation token and expiry.\n\n${instruction}`);
+        let token = null;
+        try { token = requireUuid(response?.confirmation_token, "confirmation_token"); } catch { /* An answer may have no preview. */ }
+        const evidence = token ? await rpc(context, "get_offerpsp_bulk_confirmation_preview", { p_token: token }) : null;
+        if (!evidence?.confirmation_required || evidence.confirmation_token !== token) {
+          return { ...response, success: false, confirmation_required: false, confirmation_token: null,
+            error: "No live server-bound bulk preview was created. No operation was executed." };
+        }
+        return { ...response, ...evidence, success: true };
+      });
   }
   if (name === "confirm_bulk_operation") {
     const token = requireUuid(input.confirmation_token, "confirmation_token");

@@ -41,6 +41,7 @@ type ThreadEntityContext = {
 
 const mailThreadLabels: Record<string, { label: string; hint: string; className: string }> = {
   open: { label: "Открытая переписка", hint: "Нужно определить следующий шаг", className: "border-gray-200 bg-gray-50 text-gray-700 dark:border-gray-700 dark:bg-white/5 dark:text-gray-200" },
+  reply_not_needed: { label: "Ответ не нужен", hint: "Ответ на последнее письмо не ожидается; новый обмен требует нового решения", className: "border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-700 dark:bg-white/5 dark:text-gray-400" },
   awaiting_reply: { label: "Ждём ответ партнёра", hint: "При отправке явно указано, что ответ ожидается", className: "border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300" },
   follow_up: { label: "Нужен follow-up", hint: "Пора напомнить о переписке", className: "border-warning-200 bg-warning-50 text-warning-700 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-300" },
   closed: { label: "Переписка закрыта", hint: "Активных действий не требуется", className: "border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-700 dark:bg-white/5 dark:text-gray-400" },
@@ -275,7 +276,7 @@ export function CommunicationsWorkspace() {
     () => orderedSelectedMessages.slice(0, -1).reverse(),
     [orderedSelectedMessages],
   );
-  const selectedThreadState = selectedThread ? (isSpamMailThread(selectedThread) ? mailThreadLabels.spam : mailThreadLabels[selectedThread.status] || mailThreadLabels.open) : null;
+  const selectedThreadState = selectedThread ? (isSpamMailThread(selectedThread) ? mailThreadLabels.spam : (selectedThread.tags || []).includes("system:reply_not_needed") ? mailThreadLabels.reply_not_needed : mailThreadLabels[selectedThread.status] || mailThreadLabels.open) : null;
   const selectedTrashExpiresAt = selectedThread?.status === "trashed" ? trashExpiresAt(selectedThread.trashed_at) : null;
   const selectedThreadId = selectedThread?.id || "";
   useEffect(() => {
@@ -518,10 +519,18 @@ export function CommunicationsWorkspace() {
     return () => window.clearTimeout(timeout);
   }, [trashNoticeVisible]);
 
-  async function changeThreadState(status: "open" | "awaiting_reply" | "follow_up" | "closed" | "archived" | "trashed" | "restore") {
+  async function changeThreadState(status: "open" | "awaiting_reply" | "reply_not_needed" | "follow_up" | "closed" | "archived" | "trashed" | "restore") {
     if (!selectedThread) return;
+    const isNextStep = ["open", "awaiting_reply", "reply_not_needed", "follow_up", "closed"].includes(status);
+    if (status === "follow_up" && (!organizerFollowUp || new Date(organizerFollowUp).getTime() <= Date.now())) {
+      setMessage({ error: true, text: "Выберите будущую дату follow-up в блоке следующего шага." });
+      return;
+    }
     setBusy(true); setMessage(null);
-    const result = await supabase.rpc("set_offerpsp_email_thread_state", { p_thread_id: selectedThread.id, p_status: status, p_mark_read: null });
+    const result = isNextStep
+      ? await supabase.rpc("set_offerpsp_email_next_step", { p_thread_id: selectedThread.id, p_action: status,
+        p_follow_up_at: status === "follow_up" ? new Date(organizerFollowUp).toISOString() : null })
+      : await supabase.rpc("set_offerpsp_email_thread_state", { p_thread_id: selectedThread.id, p_status: status, p_mark_read: null });
     if (result.error) setMessage({ error: true, text: result.error.message });
     else if (status === "trashed") {
       setMessage(null);
@@ -951,6 +960,17 @@ export function CommunicationsWorkspace() {
           </div>
         </details>}
 
+        {!["archived", "trashed"].includes(selectedThread.status) && !isSpamMailThread(selectedThread) && <Panel className="mt-4 !p-4">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Следующий шаг по переписке</h3>
+          <p className="mt-1 text-xs text-gray-500">{(selectedThread.tags || []).includes("system:reply_not_needed") ? "Ответ не нужен. Новое письмо снова откроет вопрос следующего шага." : selectedThreadState.hint}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button disabled={busy} onClick={()=>void changeThreadState("awaiting_reply")} className="rounded-lg border border-gray-300 px-3 py-2 text-xs dark:border-gray-700">Ждём ответ</button>
+            <button disabled={busy} onClick={()=>void changeThreadState("reply_not_needed")} className="rounded-lg border border-gray-300 px-3 py-2 text-xs dark:border-gray-700">Ответ не нужен</button>
+            <input aria-label="Дата следующего шага" type="datetime-local" className={`${field} !w-auto !text-xs`} value={organizerFollowUp} onChange={(event)=>setOrganizerFollowUp(event.target.value)} />
+            <button disabled={busy} onClick={()=>void changeThreadState("follow_up")} className="rounded-lg border border-gray-300 px-3 py-2 text-xs dark:border-gray-700">Follow-up к дате</button>
+            <button disabled={busy} onClick={()=>void changeThreadState("closed")} className="rounded-lg border border-gray-300 px-3 py-2 text-xs dark:border-gray-700">Закрыто</button>
+          </div>
+        </Panel>}
         <div className="mt-4 grid gap-3 xl:grid-cols-2">
           <details className="group rounded-xl border border-gray-200 bg-gray-50/70 dark:border-gray-800 dark:bg-white/[0.03]">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">

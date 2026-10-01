@@ -28,6 +28,8 @@ const oauthSession = encrypt({
 });
 
 const calls = [];
+let bulkAgentReply = { success: true, answer: "Prepared only", confirmation_required: false };
+let bulkPreviewEvidence = null;
 global.fetch = async (url, init = {}) => {
   calls.push({ url: String(url), init });
   if (String(url).includes("/rest/v1/offerpsp_mcp_oauth_access_tokens?")) return Response.json([{
@@ -95,7 +97,8 @@ global.fetch = async (url, init = {}) => {
     pageviews: 69,
     fetched_at: "2026-08-27T10:27:15.954Z",
   });
-  if (String(url).includes("/api/aibot-command")) return Response.json({ success: true, answer: "Prepared only", confirmation_required: false });
+  if (String(url).endsWith("/rpc/get_offerpsp_bulk_confirmation_preview")) return Response.json(bulkPreviewEvidence);
+  if (String(url).includes("/api/aibot-command")) return Response.json(bulkAgentReply);
   throw new Error(`Unexpected fetch: ${url}`);
 };
 
@@ -226,6 +229,23 @@ assert.equal(seoChecked.payload.result.structuredContent.live_traffic.source, "v
 assert.equal(seoChecked.payload.result.structuredContent.live_traffic.visitors, 43);
 assert.equal(seoChecked.payload.result.structuredContent.traffic_history.length, 1);
 
+bulkAgentReply = { success: true, answer: "No preview created for merchant 22222222-2222-4222-8222-222222222222",
+  confirmation_required: true, confirmation_token: "22222222-2222-4222-8222-222222222222" };
+const unsupportedBulk = responseMock();
+await mcpHandler(request({jsonrpc:'2.0',id:60,method:'tools/call',params:{name:'prepare_bulk_operation',arguments:{instruction:'Archive this merchant only'}}}), unsupportedBulk);
+assert.equal(unsupportedBulk.payload.result.structuredContent.success,false);
+assert.equal(unsupportedBulk.payload.result.structuredContent.confirmation_required,false);
+assert.equal(unsupportedBulk.payload.result.structuredContent.confirmation_token,null);
+assert.equal(calls.some(entry=>entry.url.endsWith('/rpc/confirm_offerpsp_route_replacements')),false);
+bulkPreviewEvidence = { confirmation_required:true, confirmation_token:'22222222-2222-4222-8222-222222222222',
+  items:[{id:41,name:'Server record'}], count:2, status:'pending', expires_at:'2099-01-01T00:00:00Z' };
+const supportedBulk = responseMock();
+await mcpHandler(request({jsonrpc:'2.0',id:61,method:'tools/call',params:{name:'prepare_bulk_operation',arguments:{instruction:'Prepare supported research status update'}}}), supportedBulk);
+assert.equal(supportedBulk.payload.result.structuredContent.success,true);
+assert.deepEqual(supportedBulk.payload.result.structuredContent.items,bulkPreviewEvidence.items);
+bulkAgentReply = { success:true, answer:'Prepared only', confirmation_required:false };
+bulkPreviewEvidence = null;
+
 const preparedRoutes = responseMock();
 await mcpHandler(request({
   jsonrpc: "2.0", id: 7, method: "tools/call",
@@ -257,7 +277,7 @@ await mcpHandler(request({
 assert.equal(confirmedRoutes.statusCode, 200);
 assert.equal(confirmedRoutes.payload.result.structuredContent.status, "executed");
 assert.equal(confirmedRoutes.payload.result.structuredContent.processed, 2);
-assert.equal(calls.filter((entry) => entry.url.includes("/api/aibot-command")).length, agentCommandCount);
+assert.equal(calls.filter((entry) => entry.url.includes("/api/aibot-command")).length, agentCommandCount + 2);
 
 const source = await readFile(new URL("../api/_lib/offerpsp-mcp.mjs", import.meta.url), "utf8");
 assert.equal(source.includes("SUPABASE_SERVICE_ROLE_KEY"), false);

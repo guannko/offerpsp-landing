@@ -5,6 +5,7 @@ type MailWorkItem = { scope: "now" | "waiting" | "later" | "done"; priority: num
 /** Reading is not resolving. Lifecycle state takes precedence over unread badges. */
 export function mailWorkItem(thread: EmailThread, now: number, todayStartedAt: number, latestMessage?: Pick<EmailMessage, "direction" | "delivery_status" | "sent_at" | "received_at" | "created_at">): MailWorkItem | null {
   if (["archived", "trashed"].includes(thread.status)) return null;
+  if ((thread.tags || []).includes("system:reply_not_needed") && thread.status === "open") return null;
   if (thread.status === "closed") {
     return Date.parse(thread.updated_at || thread.last_message_at) >= todayStartedAt
       ? { scope: "done", priority: 0, detail: "закрыта сегодня" } : null;

@@ -368,6 +368,8 @@ async function applyMigrations() {
   "20261001053748_task_entity_binding.sql",
   "20261001054847_intake_qa_identity_boundary.sql",
   "20261001063144_company_join_approval.sql",
+  "20261001073000_mail_next_step.sql",
+  "20261001074000_mcp_bulk_preview_evidence.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -4110,6 +4112,28 @@ async function verifyMailCenter() {
   );
 
   const threadId = outbound.rows[0].thread_id;
+  const nextStep = (action, date = null) => query("select public.set_offerpsp_email_next_step($1,$2,$3) as value", [threadId, action, date]);
+  const noAnswer = (await nextStep('reply_not_needed')).rows[0].value;
+  if (noAnswer.status !== 'open' || noAnswer.follow_up_at !== null || !noAnswer.tags.includes('system:reply_not_needed')) {
+    throw new Error('Explicit no-reply next step did not clear waiting and deadline atomically');
+  }
+  await expectQueryFailure("select public.set_offerpsp_email_next_step($1,'follow_up',null)", [threadId], 'A future follow-up date is required');
+  await expectQueryFailure("select public.set_offerpsp_email_next_step($1,'follow_up',now()-interval '1 day')", [threadId], 'A future follow-up date is required');
+  const deadline = new Date(Date.now()+86400000).toISOString();
+  const scheduled = (await nextStep('follow_up', deadline)).rows[0].value;
+  if (scheduled.status !== 'follow_up' || !scheduled.follow_up_at || scheduled.tags.includes('system:reply_not_needed')) {
+    throw new Error('Scheduled next step did not persist its date');
+  }
+  const waiting = (await nextStep('awaiting_reply')).rows[0].value;
+  if (waiting.status !== 'awaiting_reply' || waiting.follow_up_at !== null) throw new Error('Waiting next step fabricated a deadline');
+  const closedStep = (await nextStep('closed')).rows[0].value;
+  if (closedStep.status !== 'closed' || closedStep.follow_up_at !== null) throw new Error('Closed next step retained a deadline');
+  await nextStep('reply_not_needed');
+  const nextStepGrants = (await query("select has_function_privilege('anon','public.set_offerpsp_email_next_step(uuid,text,timestamptz)','execute') as anon, has_function_privilege('authenticated','public.set_offerpsp_email_next_step(uuid,text,timestamptz)','execute') as client")).rows[0];
+  if (nextStepGrants.anon || !nextStepGrants.client) throw new Error('Next-step RPC grants are incorrect');
+  await setUser(CLIENT_ID);
+  await expectQueryFailure("select public.set_offerpsp_email_next_step($1,'closed',null)", [threadId], 'OfferPSP staff access required');
+  await setUser(STAFF_ID);
   await setRole("service_role");
   const inbound = await query("select public.aibot_n8n_ingest_email($1::jsonb) as value", [JSON.stringify({
     from_email: `Partner <${updatedRecipient}>`,
@@ -4131,6 +4155,8 @@ async function verifyMailCenter() {
       || messages[0].direction !== "outbound" || messages[1].direction !== "inbound") {
     throw new Error("Threaded inbox does not expose the expected outbound/inbound conversation");
   }
+  if (thread.tags.includes('system:reply_not_needed')) throw new Error('New inbound mail retained a stale no-reply decision');
+  process.stdout.write('PASS explicit mail next steps, required future date, reset on inbound and RPC grants\n');
 
   await query("select public.set_offerpsp_email_thread_state($1, 'follow_up', true)", [threadId]);
   const updated = await query("select status, unread_count from public.offerpsp_email_threads where id = $1", [threadId]);
@@ -4577,6 +4603,19 @@ async function verifyCounterpartyOrganizer() {
   if (!confirmation.rows[0].value.confirmation_required || confirmation.rows[0].value.count !== 2) {
     throw new Error('AIBot bulk mutation did not require explicit confirmation');
   }
+  const realBulkToken = confirmation.rows[0].value.confirmation_token;
+  await setUser(STAFF_ID);
+  await setRole('authenticated');
+  const savedPreview = (await query('select public.get_offerpsp_bulk_confirmation_preview($1) as value',[realBulkToken])).rows[0].value;
+  if (!savedPreview || savedPreview.count !== 2 || savedPreview.confirmation_token !== realBulkToken) throw new Error('MCP bulk preview evidence did not return the immutable server snapshot');
+  if ((await query('select public.get_offerpsp_bulk_confirmation_preview($1) as value',[STAFF_ID])).rows[0].value !== null) throw new Error('An unrelated UUID was accepted as a bulk token');
+  await setUser(CLIENT_ID);
+  await expectQueryFailure('select public.get_offerpsp_bulk_confirmation_preview($1)',[realBulkToken],'OfferPSP staff access required');
+  await setUser(STAFF_ID);
+  await query("update private.aibot_bulk_confirmations set expires_at=now()-interval '1 minute' where id=$1",[realBulkToken]);
+  if ((await query('select public.get_offerpsp_bulk_confirmation_preview($1) as value',[realBulkToken])).rows[0].value !== null) throw new Error('An expired bulk token remained confirmable');
+  await setRole('service_role');
+  process.stdout.write('PASS server-evidenced bulk preview, unrelated UUID rejection, expiry and staff boundary\n');
   await query("select public.aibot_n8n_operating_desk_v3($1::jsonb)", [JSON.stringify({
     action: 'create_task', entity_type: 'casino', id: casinoId, title: 'Call casino', priority: 'normal',
   })]);

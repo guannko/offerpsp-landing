@@ -7,6 +7,8 @@ const base = { status: "open", unread_count: 1, last_message_at: "2026-09-30T10:
 const work = (fields) => mailWorkItem({ ...base, ...fields }, now, today);
 assert.equal(work({}).scope, "now");
 assert.equal(work({ unread_count: 0 }).scope, "now", "reading must not resolve an open thread");
+assert.equal(work({ tags: ['system:reply_not_needed'] }), null, 'an explicit no-answer decision resolves work without archiving mail');
+assert.equal(work({ status: 'awaiting_reply', tags: ['system:reply_not_needed'] }).scope, 'waiting', 'a stale no-answer marker cannot hide an explicit wait');
 for (const status of ["archived", "trashed"]) {
   assert.equal(work({ status, follow_up_at: "2026-08-20", is_flagged: true }), null);
 }

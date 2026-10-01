@@ -5,6 +5,66 @@ Updated: 2026-10-01
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 
+## Company join approval and intake repair — 2026-10-01
+
+- `VERIFIED`: committed release `af34752a8961ee84aae151c27128eb3e5a87d6de`; production
+  migrations `offerpsp_task_entity_binding` (20261001060305),
+  `offerpsp_intake_qa_identity_boundary` (20261001060306), and
+  `offerpsp_company_join_approval` (20261001065336) are applied.
+- `VERIFIED`: staff deployment `dpl_FHwhEPrjAKoVoCvKTLbm6yxzWGFW` is READY and the actual
+  stable staff URL reports af34752a. The deploy command updates an additional alias; the real
+  working alias required explicit reassignment after authenticated deployment verification.
+- `VERIFIED`: public deployment `dpl_xv2bKh7U2sTahmPmkCzAgARx1Zj3` is READY at offerpsp.com.
+  Only four portal membership assets changed: index/app/styles/company-members. All 62 assets
+  match the frozen release manifest; 58 live assets, including SEO/GEO, retain identical bytes.
+- Verified email is necessary but not sufficient for another employee to enter an existing
+  company. An exact name or confirmed alias stages a join request; a verified owner/admin
+  approves viewer/manager access. No owner means staff review. No self approval, unverified
+  requester grant, owner-role escalation, archived-company revival or contact-email auto grant.
+- `VERIFIED locally`: full migration suite, public/portal/member tests, intake response and
+  screening tests, build and lint pass. The owner notification is currently in-app, not email.
+  Approval/rejection/expiry and two-user isolation were exercised locally; a production
+  two-employee approval flow has not been exercised.
+- `VERIFIED`: authorized production QA lead `b4b715fd-9f2f-4d88-93dd-3015b823d376`,
+  company `OfferPSP Intake E2E 20261001 — NO ACTION REQUIRED`, email hello@brain-index.com,
+  .invalid website: form -> save -> manual_review screening -> review task -> Telegram
+  message 1662 -> acknowledgement draft 30 sent -> actual Spark acknowledgement and
+  confirmation -> verified email -> actual portal login and sole owner membership.
+  Email-only Continue is blocked. Repeat submission produced disposition `merged`, while
+  one company, one owner membership and one updated Telegram message remain.
+- `VERIFIED`: existing Merchant Bridge job `d4e8e342-b93f-49ce-bd77-e8be33e7b5e6` was retried
+  through staff UI and automatically processed by the existing ingestion worker. Batch
+  `79fd2b1c-93e5-4022-92f1-eece60379a64` is draft, one route OFF-000261 (KR / BANK_VA / PayIn).
+  Source hash ce7b5532b0652b9d44e02ecb39b4cb27 is unchanged. Indicative 8% buy rate is internal;
+  currency is empty with a blocking currency_missing anomaly, no fabricated limits or settlement,
+  publication_allowed=false and published_at/by null. Source conditions still require confirmation.
+- `VERIFIED`: freshness reminder live rows/writers are zero. Three recovery snapshot rows
+  remain deliberately quarantined; client/service direct SELECT is denied. No snapshot purge.
+- `VERIFIED`: earlier Docker screening/Telegram concurrency checks and the restored complete
+  migration validator pass. New join-request concurrency has not had a Docker-specific run.
+- `IN PROGRESS`: reversible QA lead/task cleanup after the E2E, explicit correspondence
+  next steps, and client-specific quote workflow. A bulk cleanup preview is unsupported for
+  merchants/tasks; its response incorrectly echoed a lead UUID as confirmation_token despite
+  reporting that no preview exists. No confirmation/execution was attempted.
+  Cleanup UI is currently blocked by a locked Mac; attempted prompt acceptance is not evidence
+  of an archived lead. The exact QA card remains identifiable and all history is preserved.
+
+## Explicit mail next steps — local 2026-10-01
+
+- `VERIFIED locally`: staff chooses waiting, no answer needed, scheduled follow-up with a future
+  date, or closed. Status and deadline persist atomically; no guessed deadline for waiting.
+  No-answer decisions stay visible in Radio Room but leave Today's work queue; new activity
+  clears that marker. Full migration regression verifies dates, state reset and staff-only RPC.
+- `VERIFIED locally`: staff merchant overview now uses canonical requested_currencies before
+  legacy currencies; production QA exposed saved USD displayed as a dash before this repair.
+- Not deployed yet. MerchantPayd individualized quotes remain a next implementation stage;
+  no canonical provider/research/organization record was returned by the exact live search.
+  Do not substitute Merchant Bridge or publish a universal CashApp percentage.
+- `VERIFIED locally`: MCP bulk preparation requires a pending, unexpired server preview;
+  model prose and unrelated UUIDs cannot produce a confirmation token. Regressions cover
+  missing evidence, authoritative preview, expiry and staff-only reads. This does not extend
+  unsupported merchant/task bulk operations or execute cleanup through SQL.
+
 ## Radio room load regression — production 2026-09-30
 
 - `VERIFIED`: Boris reported an empty Radio room after the consistency release. The live UI
