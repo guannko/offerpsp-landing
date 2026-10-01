@@ -27,8 +27,25 @@ Code or a passing local test is not evidence that production has been updated.
 - `VERIFIED locally`: focused SQL/AI/crawler regressions, full migration suite, lint and build
   pass. Production build and local function storage budget pass (105.6 MiB / 11 functions).
   Mac-built native output is not a Linux runtime verification and must not be published prebuilt.
-- `PARTIAL`: production migration, n8n publication, rollout and live audit verification pending.
-  Automated AI-search sampling requires an approved expense cap and a configured provider API;
+- `VERIFIED production`: migrations `offerpsp_seo_geo_integrity` and
+  `offerpsp_geo_observation_evidence` applied; recovery cron job 3 has successful five-minute runs.
+  Source-built Linux deployment `dpl_2NQ7PFZMqJMayYXbxGCx1t2Yx5hq`, commit
+  `7a7eb895db9292a737368bab701bb682bef73b54`, is READY and assigned to the real staff alias.
+  Published n8n version `a9b33254-c4be-45e1-a81d-76042adf8aa3` matches canonical source.
+- `VERIFIED production`: audit `8bed25c8-768e-4f20-aa39-3e2f33ec8ab8` completed at
+  2026-10-01 09:35:18 UTC with all four sources completed, no failed/partial sources, no critical
+  issues, 26/26 pages collected and all 25 public indexable pages analyzed. Google/Vercel and
+  llms.txt reach the model; full word counts span 233–1649. Paid leads are 0, not two ChatGPT leads.
+  New evidence UI, manual GEO form and expandable 12-audit history were inspected live.
+- `VERIFIED`: first live test exposed n8n task-runner absence of URL globals, repaired in
+  `d7ea735` with sandbox regression tests. One subsequent HTTP response timed out despite a
+  successful n8n execution; it is retained as a failed AI source in history. A repeat completed
+  end-to-end in 28 seconds (n8n execution 649536). The transient network cause is not established;
+  do not describe it as a permanently fixed transport defect.
+- `VERIFIED security delta`: only expected deny-all private-table RLS INFO and the two
+  authenticated staff-guarded GEO RPC warnings were added. Anon execution and direct table
+  access remain denied; scheduler is service-only. This is not a review of all historical RPCs.
+- `PARTIAL`: automated AI-search sampling requires an approved expense cap and a configured provider API;
   manual observations are not labelled automated. Public site/content, subagents, Telegram chat
   creation, Zoom and existing dirty source work remain untouched.
 
