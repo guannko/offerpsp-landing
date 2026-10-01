@@ -42,14 +42,16 @@ Code or a passing local test is not evidence that production has been updated.
   remain deliberately quarantined; client/service direct SELECT is denied. No snapshot purge.
 - `VERIFIED`: earlier Docker screening/Telegram concurrency checks and the restored complete
   migration validator pass. New join-request concurrency has not had a Docker-specific run.
-- `IN PROGRESS`: reversible QA lead/task cleanup after the E2E, explicit correspondence
-  next steps, and client-specific quote workflow. A bulk cleanup preview is unsupported for
+- `VERIFIED`: reversible QA cleanup after the E2E through the actual staff UI. The lead is
+  archived/closed; both pending review tasks are cancelled, the completed response task remains
+  done. The exact acknowledgement thread `1fa4682a-1dbe-4511-a175-3684b1788122` is archived;
+  receipts, submissions, owner membership and history are preserved. No real customer was changed.
+  A bulk cleanup preview is unsupported for
   merchants/tasks; its response incorrectly echoed a lead UUID as confirmation_token despite
   reporting that no preview exists. No confirmation/execution was attempted.
-  Cleanup UI is currently blocked by a locked Mac; attempted prompt acceptance is not evidence
-  of an archived lead. The exact QA card remains identifiable and all history is preserved.
+  The earlier macOS lock-screen blocker is resolved; live SQL and staff UI now verify cleanup.
 
-## Explicit mail next steps — local 2026-10-01
+## Explicit mail next steps — production 2026-10-01
 
 - `VERIFIED locally`: staff chooses waiting, no answer needed, scheduled follow-up with a future
   date, or closed. Status and deadline persist atomically; no guessed deadline for waiting.
@@ -57,7 +59,25 @@ Code or a passing local test is not evidence that production has been updated.
   clears that marker. Full migration regression verifies dates, state reset and staff-only RPC.
 - `VERIFIED locally`: staff merchant overview now uses canonical requested_currencies before
   legacy currencies; production QA exposed saved USD displayed as a dash before this repair.
-- Not deployed yet. MerchantPayd individualized quotes remain a next implementation stage;
+- `VERIFIED`: source-built production deployment `dpl_77JcRJvqdvSUZ2GBFBz1JgfvbVCm` is READY.
+  Authenticated deployment manifest and the real stable staff alias report release
+  `9a28f3d6325cb54d440d5faa7c371ecd59ba0ff7`. Database migrations
+  `offerpsp_mail_next_step` (20261001080107) and `offerpsp_mcp_bulk_preview_evidence`
+  (20261001080109) are applied. Anonymous/service-role execution is denied; authenticated
+  execution still requires the staff guard. Public site/portal and SEO/GEO were not deployed.
+- `VERIFIED`: live UI QA acknowledged thread exercised waiting (no invented deadline),
+  no-answer, invalid/missing follow-up date rejection, future follow-up (2026-10-02 17:00 UTC),
+  and closed (deadline/tag cleared). SQL readback verified each write; reload retained no-answer
+  and future date. Thread then archived. Radio Room retains 23 working threads; PressPay opens
+  11 messages including 10 historical messages. The archived QA merchant now displays USD.
+- `VERIFIED`: fresh lint/build, full migration validator, MCP/OAuth and operational consistency
+  suites pass; local production function budget is 105.6 MiB across 11 functions. Live MCP health
+  confirms authenticated Supabase/n8n/email/Telegram gateway responses without new messages.
+  Unsupported merchant bulk preview now returns success=false and no confirmation token.
+- `PARTIAL` UX: the future follow-up date persists and Today classifies it as later, but Radio
+  Room's generic follow_up hint still says it is time to remind now. Make the label date-aware
+  in the next package; do not infer overdue status from this text.
+- MerchantPayd individualized quotes remain a next implementation stage;
   no canonical provider/research/organization record was returned by the exact live search.
   Do not substitute Merchant Bridge or publish a universal CashApp percentage.
 - `VERIFIED locally`: MCP bulk preparation requires a pending, unexpired server preview;
