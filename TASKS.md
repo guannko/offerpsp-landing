@@ -2,6 +2,20 @@
 
 Updated: 2026-10-02
 
+## Small-text readability — 2026-10-02
+
+- Boris requested one size larger for small Bridge text. Paper-scoped Tailwind
+  XS/SM and 10–14 px literal text sizes increase by 2 px, with matching line height.
+  Organizer and document UI small sizes also increase by 2 px. Large headings,
+  document miniatures, routes, business records and automation behaviours unchanged.
+  Separately-owned SEO/GEO and subagent routes do not use the paper scope.
+- `VERIFIED locally`: lint, four control suites, 11 organizer tests, 17 document
+  tests, build and diff check pass. Added typography regression assertions.
+  Actual synthetic calendar computed sizes: XS 14 px, SM 16 px, heading 24 px
+  unchanged. Document gallery screenshot and 1440 px viewport show no horizontal
+  overflow; navigation computes 15 px. No live writes in either fixture.
+- `PARTIAL`: production rollout and live readability check pending.
+
 ## Three-layer business calendar — 2026-10-02
 
 - Boris requested `Было / Сейчас / Будет`: real history before local today,

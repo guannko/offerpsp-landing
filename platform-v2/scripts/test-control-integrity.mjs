@@ -31,6 +31,14 @@ const [captain, merchant, integrations, platform, modules, ui, context, seoGeo, 
   read("platform-v2/scripts/deploy-production.mjs"),
 ]);
 const dealDesk = await read("platform-v2/src/pages/DealDeskPanel.tsx");
+const paperTheme = await read("platform-v2/src/layout/BridgePaper.css");
+assert.match(paperTheme, /--text-xs:\s*0\.875rem/);
+assert.match(paperTheme, /--text-sm:\s*1rem/);
+assert.match(paperTheme, /--text-xs--line-height:\s*1\.375rem/);
+assert.match(paperTheme, /--text-sm--line-height:\s*1\.5rem/);
+assert.match(paperTheme, /text-\[10px\].*font-size:\s*12px/);
+assert.match(paperTheme, /text-\[11px\].*font-size:\s*13px/);
+assert.doesNotMatch(paperTheme, /--text-(?:base|lg|xl|2xl|3xl):/);
 const [todayWorkspace, previewDrawer, uiPreferences] = await Promise.all([
   read("platform-v2/src/pages/TodayWorkspace.tsx"),
   read("platform-v2/src/components/control/RecordPreviewDrawer.tsx"),

@@ -11,6 +11,15 @@
   --bridge-accent: #7b5d3e;
   --bridge-warm: #e9e3d9;
   --bridge-note: #e2d2a8;
+  /* One readable step up for small UI text; headings keep their existing scale. */
+  --text-xs: 0.875rem;
+  --text-xs--line-height: 1.375rem;
+  --text-sm: 1rem;
+  --text-sm--line-height: 1.5rem;
+  --text-theme-xs: 14px;
+  --text-theme-xs--line-height: 22px;
+  --text-theme-sm: 16px;
+  --text-theme-sm--line-height: 24px;
   --color-white: var(--bridge-surface);
   --color-gray-25: #fffcf6;
   --color-gray-50: var(--bridge-paper);
@@ -52,6 +61,12 @@
 .bridge-paper .bridge-content h1,
 .bridge-paper .bridge-content h2 {font-family: Georgia, "Times New Roman", serif;font-weight: 400;letter-spacing: -.015em}
 .bridge-paper .bridge-content h1 {line-height: 1.25}
+.bridge-paper [class~="text-[10px]"] {font-size: 12px;line-height: 1.5}
+.bridge-paper [class~="text-[11px]"] {font-size: 13px;line-height: 1.5}
+.bridge-paper [class~="text-[12px]"] {font-size: 14px;line-height: 1.5}
+.bridge-paper [class~="text-[13px]"],
+.bridge-paper .menu-item {font-size: 15px;line-height: 1.5}
+.bridge-paper [class~="text-[14px]"] {font-size: 16px;line-height: 1.5}
 .bridge-paper :is(.rounded-2xl,.rounded-xl,.rounded-lg) {border-radius: 5px}
 .bridge-paper :focus-visible {outline: 2px solid var(--bridge-accent);outline-offset: 3px}
 .bridge-paper input[type=checkbox] {accent-color: var(--bridge-accent)}
