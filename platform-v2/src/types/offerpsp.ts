@@ -197,6 +197,7 @@ export type WorkTask = {
   completed_at?: string | null; assigned_to?: string | null; created_by?: string | null; source?: string | null;
   automation_ref?: string | null; metadata?: Record<string, unknown> | null; payload?: unknown;
   merchant_name?: string | null; assignee_name?: string | null;
+  entity_type?: string | null; entity_id?: string | null;
 };
 
 export type OperationsStaff = {

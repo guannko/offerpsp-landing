@@ -8,6 +8,7 @@ import { EmptyState, ErrorBanner, Metric, PageHeading, Panel, SkeletonPage, Stat
 import { useControlBridge } from "../context/ControlBridgeContext";
 import { isQaFixtureLead, isQaFixtureTask } from "../lib/qaFixtures";
 import { supabase } from "../lib/supabase";
+import { taskEntityPatch } from "../lib/taskEntityPatch";
 import type { OperationsWorkspaceSnapshot, WorkTask } from "../types/offerpsp";
 
 const field = "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-none focus:border-brand-400 dark:border-gray-700 dark:text-white";
@@ -25,6 +26,8 @@ type TaskDraft = {
   due_at: string;
   assigned_to: string;
   lead_id: string;
+  entity_type?: string | null;
+  entity_id?: string | null;
   source?: string | null;
   automation_ref?: string | null;
 };
@@ -79,6 +82,7 @@ export default function OperationsWorkspace() {
       status: task.status || "pending", priority: String(task.priority || "normal"),
       due_at: toLocalInput(task.due_at), assigned_to: task.assigned_to || "",
       lead_id: task.lead_id || "", source: task.source, automation_ref: task.automation_ref,
+      entity_type: task.entity_type, entity_id: task.entity_id,
     });
   }
 
@@ -92,6 +96,7 @@ export default function OperationsWorkspace() {
         status: draft.status, priority: draft.priority,
         due_at: draft.due_at ? new Date(draft.due_at).toISOString() : null,
         assigned_to: draft.assigned_to || null, lead_id: draft.lead_id || null,
+        ...taskEntityPatch(draft, draft.lead_id || null),
       },
     });
     if (result.error) setError(result.error.message);

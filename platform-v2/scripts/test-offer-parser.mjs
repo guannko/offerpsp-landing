@@ -5,6 +5,21 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { parseOfferSource } from "../api/_lib/offer-parser.mjs";
 
+const indicativeSource = "South Korea — Virtual Accounts\nPayIn: 8%\nCurrency, limits, settlement, FX, reserves and legal entity were not supplied. Current rate must be reconfirmed.";
+const indicativeRoute = parseOfferSource({providerName: "Fixture PSP",sourceType: "email",sourceText: indicativeSource}).batch.routes[0];
+assert.deepEqual(indicativeRoute.currencies, [], "an explicitly absent currency must not be inferred from the GEO");
+assert.deepEqual(indicativeRoute.limits, []);
+assert.deepEqual(indicativeRoute.settlement, [], "an absence disclaimer is not a settlement condition");
+assert.equal(indicativeRoute.fees[0].base_percent, 8);
+assert.ok(indicativeRoute.anomalies.some(a => a.code === "currency_missing"));
+assert.match(indicativeRoute.raw_block, /were not supplied/);
+const confirmedCurrency = parseOfferSource({providerName: "Fixture PSP",sourceText: "South Korea — Virtual Accounts\nCurrency: KRW\nPayIn: 8%\nSettlement not specified."}).batch.routes[0];
+assert.deepEqual(confirmedCurrency.currencies, ["KRW"]);
+assert.deepEqual(confirmedCurrency.settlement, []);
+const mixedSettlement = parseOfferSource({providerName: "Fixture PSP",sourceText: "Country: Vietnam\nCurrency: VND\nPayIn: 2%\nSettlement: USDT T+1\nHistorical settlement not provided."}).batch.routes[0];
+assert.equal(mixedSettlement.settlement[0].currency, "USDT");
+assert.equal(mixedSettlement.settlement[0].period, "T+1");
+
 const settlementRange = parseOfferSource({ providerName: "Merchant Bridge", sourceType: "email", sourceText: "Country: Vietnam\nCurrency: VND\nMethod: Bank Transfer\nPayIn: 4%\nPayOut: 2%\nTransaction limits PayIn: 100 - 50000 VND\nSettlement minimum/maximum: 500 - 5000 USD\nSettlement: T+1" });
 assert.ok(settlementRange.batch.routes.length > 0);
 assert.ok(settlementRange.batch.routes.every((route) => route.limits.every((limit) => ["payin", "payout", "both"].includes(limit.flow))), "settlement ranges must not violate the transaction-limit flow constraint");

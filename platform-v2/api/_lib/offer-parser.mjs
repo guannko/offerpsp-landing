@@ -379,9 +379,16 @@ function extractGeoCoverage(block) {
   return { scope, coverageMode: scope === "regional" ? "regional" : "specific", geos: unique(geos), blockedGeos: [] };
 }
 
+function termExplicitlyMissing(text, term) {
+  // A list of absent terms is evidence of absence, not a rate-card row.
+  const missing = /\b(?:not\s+(?:supplied|provided|specified|known|disclosed)|unknown|to\s+be\s+confirmed)\b|не\s+(?:указан[аыо]?|предоставлен[аыо]?|известн[аыо]?)/i;
+  return text.split(/[\n.;]/).some((clause) => term.test(clause) && missing.test(clause));
+}
+
 function extractCurrencies(block, geos) {
   const explicit = block.match(/(?:currency|валюта)\s*[-:]\s*([A-Z]{3})/i)?.[1]?.toUpperCase();
   if (explicit && CURRENCY_CODES.includes(explicit)) return [explicit];
+  if (termExplicitlyMissing(block, /\bcurrenc(?:y|ies)\b|валют/i)) return [];
 
   const firstLines = block.split("\n").slice(0, 12).join(" ");
   const found = CURRENCY_CODES.filter((code) => new RegExp(`(^|[^A-Z])${code}([^A-Z]|$)`, "i").test(firstLines));
@@ -638,7 +645,8 @@ function extractLimits(block, fallbackFlow, currencies) {
 }
 
 function extractSettlement(block) {
-  const settlementLines = block.split("\n").filter((line) => /settlement|сеттл|курс|usdt|usdc|netting|неттинг|\bT\s*\+\s*\d+\b|binance|bybit|kraken|\bxe\b/i.test(line));
+  const settlementLines = block.split("\n").filter((line) => /settlement|сеттл|курс|usdt|usdc|netting|неттинг|\bT\s*\+\s*\d+\b|binance|bybit|kraken|\bxe\b/i.test(line)
+    && !termExplicitlyMissing(line, /settlement|сеттл|расч[её]т/i));
   if (!settlementLines.length) return [];
   const joined = settlementLines.join(" | ");
   const feeMatch = joined.match(/\bT\s*\+\s*\d+\b[^%]{0,100}?\+\s*(\d+(?:[.,]\d+)?)\s*%/i)

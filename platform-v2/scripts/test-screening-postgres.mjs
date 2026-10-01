@@ -53,13 +53,17 @@ try {
   const starts = await Promise.all([psql(begin), psql(begin)]);
   assert.deepEqual(starts.map((s) => JSON.parse(s).outcome).sort(), ["acquired", "in_progress"]);
   console.log("PASS concurrent dispatch: one collector owns the run");
-  const payload = JSON.stringify(buildCompanyScreening({ company: "Synthetic A" }, {}, {}, new Date("2026-09-16T12:00:00Z"))).replaceAll("'", "''");
+  const screening = buildCompanyScreening({ company: "Synthetic A" }, {}, {}, new Date("2026-09-16T12:00:00Z"));
+  const payload = JSON.stringify(screening).replaceAll("'", "''");
   const complete = `${service} select public.complete_offerpsp_pre_compliance_run('${jobA.lead_id}','${jobA.run_id}','${payload}'::jsonb);`;
   const receipts = await Promise.all([psql(complete), psql(complete)]);
   assert.deepEqual(receipts.map((s) => JSON.parse(s).outcome).sort(), ["already_completed", "completed"]);
   assert.equal(await psql("select count(*) from public.offerpsp_lead_activities where activity_type='pre_compliance_screened'"), "1");
-  assert.equal(await psql("select count(*) from private.offerpsp_compliance_checks"), "10");
-  console.log("PASS concurrent completion: one receipt/activity and eight checks");
+  const savedChecks = JSON.parse(await psql(`select coalesce(json_agg(check_key order by check_key),'[]'::json)
+    from private.offerpsp_compliance_checks where case_id=(select id from private.offerpsp_compliance_cases where lead_id='${jobA.lead_id}')`));
+  assert.deepEqual(savedChecks, screening.checks.map(check => check.check_key).sort(), "every evidence check is recorded exactly once");
+  assert.equal(await psql("select count(*) from private.offerpsp_compliance_checks"), String(screening.checks.length));
+  console.log(`PASS concurrent completion: one receipt/activity and ${screening.checks.length} distinct evidence checks`);
   console.log("VERIFIED isolated PostgreSQL 15 concurrency; production untouched");
 } finally {
   if (container && /^[0-9a-f]{64}$/.test(container)) {

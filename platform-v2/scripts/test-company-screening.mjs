@@ -74,6 +74,26 @@ test("invalid/future RDAP events remain unknown", () => {
     assert.equal(check(result, "domain_registration").status, "unknown");
   }
 });
+test("a domain registered seconds ago is a warning, not automatic rejection or clearance", () => {
+  const result = buildCompanyScreening(lead, site, {
+    statusCode: 200, body: { events: [{ eventAction: "registration",
+      eventDate: new Date(now.valueOf() - 5000).toISOString() }] },
+  }, now);
+  assert.equal(check(result, "domain_registration").status, "warning");
+  assert.equal(check(result, "domain_registration").evidence.age_days, 0);
+  assert.ok(result.yellow_flags.some((item) => item.key === "young_domain"));
+  assert.equal(result.decision_status, "manual_review_required");
+  assert.equal(result.risk_level, "unknown");
+  assert.equal(check(result, "company_identity").evidence.identity_verified, false);
+});
+test("missing RDAP registration or DNS failure never invents a domain age", () => {
+  const result = buildCompanyScreening(lead, { statusCode: 0, error: "dns_lookup_failed" },
+    { statusCode: 404, body: {} }, now);
+  assert.equal(check(result, "domain_registration").status, "unknown");
+  assert.equal(check(result, "domain_registration").evidence.age_days, null);
+  assert.equal(check(result, "website").status, "unknown");
+  assert.equal(check(result, "company_identity").evidence.identity_verified, false);
+});
 test("failure status cannot lend credibility to a RDAP body", () => {
   const result = buildCompanyScreening(lead, site, { ...registry, statusCode: 500 }, now);
   assert.equal(check(result, "domain_registration").status, "unknown");

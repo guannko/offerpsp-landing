@@ -1,5 +1,6 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 import { isPortalTerminalStatus, portalEmptyStateKeys } from "/portal/request-state.js";
+import { createCompanyMembersPanel } from "/portal/company-members.js?v=20261001";
 import { collectPortalIntakeBrief, syncPortalIntakeUnknowns } from "/portal/intake-form.js?v=20260930";
 import { buildIntakeBriefPayload, validateIntakeBrief } from "/intake-brief.js";
 import {
@@ -858,6 +859,7 @@ async function sendPortalMessage(conversationId, body, button, statusElement) {
 
 async function enterPortal(session) {
   if (!session?.user) {
+    companyMembers.stop();
     stopSupportUpdates();
     stopConversationUpdates();
     state.user = null; state.requests = []; state.lead = null;
@@ -869,9 +871,18 @@ async function enterPortal(session) {
   elements.userEmail.textContent = session.user.email;
   elements.authView.classList.add("is-hidden");
   elements.portalView.classList.remove("is-hidden");
-  await supabase.rpc("claim_offerpsp_leads");
+  const claim = await supabase.rpc("claim_offerpsp_leads");
+  if (claim.error) {
+    setStatus(elements.authStatus, state.language === "ru" ? "Не удалось подтвердить доступ к компании. Обновите страницу." : "Could not confirm company access. Refresh the page.", "error");
+  }
   await loadWorkspace();
+  companyMembers.start();
 }
+
+const companyMembers = createCompanyMembersPanel({
+  client: supabase, container: document.getElementById("companyMembersPanel"),
+  language: () => state.language, onChanged: () => loadWorkspace(),
+});
 
 async function loadWorkspace(preferredLeadId = state.lead?.lead_id) {
   const [requestsResult, optionsResult, dealsResult, organizationsResult] = await Promise.all([

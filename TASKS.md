@@ -1,6 +1,6 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-09-30
+Updated: 2026-10-01
 
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
@@ -2957,3 +2957,50 @@ stay isolated behind feature modes until their own verification is complete.
 - A real client test must use a different authenticated account/session from staff.
 - The legacy `psp_providers` table remains the AIBot research source, but it is no longer public:
   n8n uses service-only access and the cockpit reads it through staff-checked RPCs.
+## Intake identity / parser repair — local 2026-10-01
+
+- `VERIFIED` locally: QA/live intake identity resolution is separated, including archived
+  fixtures and aliases. Shared operator email alone cannot merge different QA companies.
+- `VERIFIED` locally: a domain-only match with a different company name creates an independent
+  request/card and one staff review candidate; it cannot revive the old card, add its contact or
+  share its organization. Exact company plus verified corporate-domain matching remains intact.
+- `VERIFIED` locally: canonical PSP and merchant tasks are supported by the existing staff RPC;
+  PSP 360 reads include their linked tasks, and Operations edits preserve provider/research links.
+- `VERIFIED` locally: explicitly unspecified currencies/settlement are no longer inferred from
+  indicative rate-card text. Original source and review flags are retained; no publication occurs.
+- `VERIFIED`: Docker intake and screening concurrency checks pass. Screening assertions now
+  compare all actual check keys, not an obsolete hardcoded count. The full migration validator
+  passes with the ignored original import fixtures and explicit current migration order.
+- `VERIFIED` locally: registration-seconds-ago, unavailable RDAP/DNS and unknown-age checks do not
+  grant identity/compliance clearance. Website/RDAP collection already exists; no second collector.
+- `VERIFIED`: production migrations `offerpsp_task_entity_binding` (`20261001060305`) and
+  `offerpsp_intake_qa_identity_boundary` (`20261001060306`) are applied. Read-back confirms canonical
+  PSP/merchant resolution, invalid-target rejection and unchanged anon/client/service boundaries.
+  Existing security advisor categories are unchanged. Pre-repair function definitions are retained
+  in an ignored private rollback snapshot; no source offers or client communications were changed.
+- `PARTIAL`: Captain's Bridge code release, existing Merchant Bridge failed-source retry and
+  approved fresh intake/mail/Telegram/portal E2E still need execution and live verification.
+  Boris approved one clearly marked production test; recipient is hello@brain-index.com (Spark).
+- SEO/GEO source and public deployment, subagents, Telegram chat creation and Zoom are untouched.
+
+### Company member approval — implementation 2026-10-01
+
+- Internal exact normalized-company search finds an existing card independently of employee email
+  or Telegram differences. Similar names are not automatic identity proof; staff aliases are explicit.
+- Finding a card must be separate from permission to join it. The proposed next stage is a pending
+  join request from an email-verified user, approved by the authenticated company owner/admin.
+- "First applicant" alone is not an authorization role. Without a confirmed owner, staff review is
+  required. Repeated requests must deduplicate and owner rejection must confer no access.
+- `VERIFIED` locally: matching a company/alias stages a join request without creating a contact,
+  granting membership or reviving an archive. Only the primary verified applicant can bootstrap
+  the first owner; existing memberships are not changed by login. Verified new employees require
+  owner/admin approval, or staff when no confirmed owner exists. Viewer/manager roles only.
+- `VERIFIED` locally: owner/applicant notifications and approve/reject controls in the portal;
+  staff fallback controls in the merchant workspace. Notification is in-app, not a new outbound
+  email. Existing transactional intake mail remains unchanged.
+- `VERIFIED` locally: full migration validator and tests cover ownerless/owner request routing,
+  pending access denial, verified-email guard, approval/rejection/expiry, privileged-role denial,
+  exactly-once decisions and RPC grants. UI tests cover safe text, errors and logout fencing.
+- `PARTIAL`: migration and UI have not yet been deployed; live approval and full intake E2E pending.
+- `VERIFIED` production quarantine read-back: 0 live freshness rows, 3 recovery-only rows, no
+  trigger/cron writers and no authenticated/service snapshot SELECT. Recovery is retained; no purge.

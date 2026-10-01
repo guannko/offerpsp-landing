@@ -43,6 +43,16 @@ async function setUser(userId) {
   await query("select set_config('request.jwt.claim.sub', $1, false)", [userId]);
 }
 
+async function expectTransactionalQueryFailure(sql, params, expectedMessage) {
+  await query("savepoint expected_failure");
+  try {
+    await expectQueryFailure(sql, params, expectedMessage);
+  } finally {
+    await query("rollback to savepoint expected_failure");
+    await query("release savepoint expected_failure");
+  }
+}
+
 async function setRole(role = "authenticated") {
   await query("select set_config('request.jwt.claim.role', $1, false)", [role]);
 }
@@ -62,7 +72,8 @@ async function bootstrap() {
     set search_path = public, extensions;
     create table auth.users (
       id uuid primary key,
-      email text
+      email text,
+      email_confirmed_at timestamptz default now()
     );
     create or replace function auth.uid()
     returns uuid
@@ -353,6 +364,10 @@ async function applyMigrations() {
     "20260930140822_offerpsp_intake_review_task_separation.sql",
     "20260930142224_offerpsp_merchant_operational_context.sql",
     "20260930172000_offerpsp_sent_internal_recipient.sql",
+    "20260930194640_offerpsp_mail_index_and_thread_reads.sql",
+  "20261001053748_task_entity_binding.sql",
+  "20261001054847_intake_qa_identity_boundary.sql",
+  "20261001063144_company_join_approval.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -853,7 +868,7 @@ async function verifyCompanyIntakeDeduplication() {
       "select public.upsert_offerpsp_lead_intake($1::jsonb) as value",
       [JSON.stringify(secondPayload)],
     )).rows[0].value;
-    if (!second.merged || second.created || second.review_required
+    if (second.merged || second.created || !second.review_required
         || second.lead_id !== first.lead_id || second.match_strategy !== "verified_company_email_domain") {
       throw new Error(`Second company manager did not merge into the canonical card: ${JSON.stringify(second)}`);
     }
@@ -871,9 +886,9 @@ async function verifyCompanyIntakeDeduplication() {
         where lead_id = $1 and activity_type = 'company_contact_intake_merged') as activity_count
     `, [first.lead_id, `intake_submission:${second.submission_id}`])).rows[0];
     if (mergedState.lead_count !== 1 || mergedState.submission_count !== 2
-        || mergedState.contact_count !== 2 || mergedState.review_task_count !== 1
-        || mergedState.activity_count !== 1) {
-      throw new Error(`Merged intake did not preserve one card with two contacts: ${JSON.stringify(mergedState)}`);
+        || mergedState.contact_count !== 1 || mergedState.review_task_count !== 1
+        || mergedState.activity_count !== 0) {
+      throw new Error(`Pending employee acquired a contact or duplicate card: ${JSON.stringify(mergedState)}`);
     }
 
     const organization = (await query(
@@ -899,7 +914,7 @@ async function verifyCompanyIntakeDeduplication() {
       "select public.upsert_offerpsp_lead_intake($1::jsonb) as value",
       [JSON.stringify(aliasPayload)],
     )).rows[0].value;
-    if (!aliasSubmission.merged || aliasSubmission.lead_id !== first.lead_id
+    if (!aliasSubmission.review_required || aliasSubmission.merged || aliasSubmission.lead_id !== first.lead_id
         || aliasSubmission.match_strategy !== "verified_company_email_domain") {
       throw new Error(`Approved company alias did not resolve to the canonical card: ${JSON.stringify(aliasSubmission)}`);
     }
@@ -982,14 +997,64 @@ async function verifyCompanyIntakeDeduplication() {
     await setRole("authenticated");
     await setUser(OTHER_CLIENT_ID);
     const claimed = await query("select * from public.claim_offerpsp_leads()");
-    if (!claimed.rows.some((row) => row.lead_id === first.lead_id)) {
-      throw new Error("The verified second manager could not claim the existing company card");
+    if (claimed.rows.some((row) => row.lead_id === first.lead_id)) {
+      throw new Error("Email verification alone granted employee access");
     }
     const managerAccess = (await query(
       "select public.can_access_offerpsp_client_lead($1) as value",
       [first.lead_id],
     )).rows[0].value;
-    if (!managerAccess) throw new Error("The verified second manager did not receive organization access");
+    if (managerAccess) throw new Error("Unapproved employee received organization access");
+    const pendingRequests = (await query("select public.get_offerpsp_company_join_requests() as value")).rows[0].value;
+    const pendingJoin = pendingRequests.find((item) => item.email === 'second@dedup-verify.example');
+    if (!pendingJoin || pendingJoin.can_decide || pendingJoin.status !== 'pending_staff') {
+      throw new Error(`Missing safe ownerless fallback: ${JSON.stringify(pendingRequests)}`);
+    }
+    await expectTransactionalQueryFailure("select public.decide_offerpsp_company_join_request($1,true,'owner')", [pendingJoin.id], 'Company owner/admin approval required');
+    await expectTransactionalQueryFailure("select public.get_offerpsp_company_workspace($1)", [first.lead_id], 'Access denied');
+    await query("update auth.users set email='primary@dedup-verify.example' where id=$1", [CLIENT_ID]);
+    await setUser(CLIENT_ID);
+    await query("select * from public.claim_offerpsp_leads()");
+    const ownerRequests = (await query("select public.get_offerpsp_company_join_requests() as value")).rows[0].value;
+    if (!ownerRequests.some((item) => item.id === pendingJoin.id && item.can_decide)) throw new Error('Owner notification unavailable');
+    await expectTransactionalQueryFailure("select public.decide_offerpsp_company_join_request($1,true,'owner')", [pendingJoin.id], 'Unsupported join decision');
+    await query("update auth.users set email_confirmed_at=null where id=$1", [OTHER_CLIENT_ID]);
+    await expectTransactionalQueryFailure("select public.decide_offerpsp_company_join_request($1,true,'viewer')", [pendingJoin.id], 'Applicant email verification no longer matches');
+    await query("update auth.users set email_confirmed_at=now() where id=$1", [OTHER_CLIENT_ID]);
+    const decision = (await query("select public.decide_offerpsp_company_join_request($1,true,'viewer') as value", [pendingJoin.id])).rows[0].value;
+    const repeatDecision = (await query("select public.decide_offerpsp_company_join_request($1,true,'viewer') as value", [pendingJoin.id])).rows[0].value;
+    if (decision.status !== 'approved' || decision.replayed || !repeatDecision.replayed) throw new Error('Join decision replay guard failed');
+    await expectTransactionalQueryFailure("select public.decide_offerpsp_company_join_request($1,false,'viewer')", [pendingJoin.id], 'Join request already decided');
+    await setUser(OTHER_CLIENT_ID);
+    const approvedAccess = (await query("select public.can_access_offerpsp_client_lead($1) as value", [first.lead_id])).rows[0].value;
+    const approvedState = (await query(`select
+      (select count(*)::integer from public.offerpsp_organization_members where organization_id=$1 and user_id=$2 and active and role='viewer') as memberships,
+      (select count(*)::integer from private.offerpsp_entity_audit where action_type='company_join_decided' and after_state->>'request_id'=$3) as decisions`,
+      [organization.merchant_organization_id, OTHER_CLIENT_ID, pendingJoin.id])).rows[0];
+    if (!approvedAccess || approvedState.memberships !== 1 || approvedState.decisions !== 1) throw new Error('Approved viewer access or exactly-once decision failed');
+    await query("update auth.users set email='alias@dedup-verify.example' where id=$1", [AGENT_ID]);
+    await setUser(AGENT_ID);
+    await query("select * from public.claim_offerpsp_leads()");
+    const aliasJoin = (await query("select public.get_offerpsp_company_join_requests() as value")).rows[0].value.find((item) => item.email === 'alias@dedup-verify.example');
+    if (!aliasJoin || aliasJoin.status !== 'pending_owner' || aliasJoin.can_decide) throw new Error('Confirmed owner did not receive employee request');
+    await expectTransactionalQueryFailure("select public.decide_offerpsp_company_join_request($1,true,'viewer')", [aliasJoin.id], 'Company owner/admin approval required');
+    await setUser(CLIENT_ID);
+    await query("update private.offerpsp_company_join_requests set expires_at=now()-interval '1 minute' where id=$1", [aliasJoin.id]);
+    await expectTransactionalQueryFailure("select public.decide_offerpsp_company_join_request($1,true,'viewer')", [aliasJoin.id], 'Join request expired or unverified');
+    await query("update private.offerpsp_company_join_requests set expires_at=now()+interval '1 day' where id=$1", [aliasJoin.id]);
+    await query("select public.decide_offerpsp_company_join_request($1,false,'viewer')", [aliasJoin.id]);
+    await setUser(AGENT_ID);
+    const rejectedAccess = (await query("select public.can_access_offerpsp_client_lead($1) as value", [first.lead_id])).rows[0].value;
+    if (rejectedAccess) throw new Error('Rejected employee retained workspace access');
+    await query("update auth.users set email='agent@example.com' where id=$1", [AGENT_ID]);
+    const joinGrants = (await query(`select
+      has_table_privilege('authenticated','private.offerpsp_company_join_requests','select') as client_table,
+      has_function_privilege('anon','public.get_offerpsp_company_join_requests()','execute') as anon_read,
+      has_function_privilege('anon','public.decide_offerpsp_company_join_request(uuid,boolean,text)','execute') as anon_decide,
+      has_function_privilege('authenticated','public.decide_offerpsp_company_join_request(uuid,boolean,text)','execute') as client_decide`)).rows[0];
+    if (joinGrants.client_table || joinGrants.anon_read || joinGrants.anon_decide || !joinGrants.client_decide) throw new Error('Join request grants bypass RPC boundary');
+    await query("update auth.users set email='client@example.com' where id=$1", [CLIENT_ID]);
+    await query("update auth.users set email='other@example.com' where id=$1", [OTHER_CLIENT_ID]);
 
     await setRole("service_role");
     await setUser(STAFF_ID);
@@ -1060,7 +1125,145 @@ async function verifyCompanyIntakeDeduplication() {
     await setRole("authenticated");
     await setUser(STAFF_ID);
   }
-  process.stdout.write("PASS full/unknown/repeated intake, QA isolation, Telegram expiry and company deduplication\n");
+  process.stdout.write("PASS full/unknown/repeated intake, QA isolation, company join approval/rejection/expiry and access boundary\n");
+}
+
+async function verifyQaIntakeIdentityBoundary() {
+  await query("begin");
+  try {
+    await setRole("service_role");
+    await setUser(STAFF_ID);
+    const shared = {
+      name: "Identity Boundary Manager", work_email: "owner@identity-boundary.example",
+      vertical: "E-commerce", geos: "EU", methods: "cards", monthly_volume: "100000 EUR",
+      source: "offerpsp.com", consent: true,
+    };
+    const intake = async (payload) => (await query(
+      "select public.upsert_offerpsp_lead_intake($1::jsonb) as value",
+      [JSON.stringify(payload)],
+    )).rows[0].value;
+    const qaFirst = await intake({ ...shared, company: "WinPiski Boundary One",
+      company_url: "https://boundary-one.invalid" });
+    await query("update public.offerpsp_leads set record_state='archived' where lead_id=$1", [qaFirst.lead_id]);
+    const live = await intake({ ...shared, company: "Boundary Live Company",
+      company_url: "https://identity-boundary.example" });
+    const qaSecondPayload = { ...shared, company: "WinPiski Boundary Two",
+      company_url: "https://boundary-two.invalid" };
+    const qaSecond = await intake(qaSecondPayload);
+    if (!qaFirst.created || !live.created || !qaSecond.created
+        || new Set([qaFirst.lead_id, live.lead_id, qaSecond.lead_id]).size !== 3) {
+      throw new Error("Shared staff mailbox merged separate fixtures or a live company");
+    }
+    const archived = (await query("select record_state from public.offerpsp_leads where lead_id=$1",
+      [qaFirst.lead_id])).rows[0];
+    if (archived.record_state !== "archived") throw new Error("A new intake reactivated an unrelated old QA fixture");
+    const replay = await intake(qaSecondPayload);
+    const repeated = await intake({ ...qaSecondPayload, details: "Changed brief on the same fixture" });
+    if (!replay.replayed || replay.submission_id !== qaSecond.submission_id
+        || repeated.created || repeated.lead_id !== qaSecond.lead_id) {
+      throw new Error("QA boundary broke replay suppression or same-company deduplication");
+    }
+    await query("update public.offerpsp_leads set record_state='archived' where lead_id=$1", [live.lead_id]);
+    const weakLive = await intake({ ...shared, company: "Another Live Company",
+      company_url: "https://another-live.example" });
+    if (!weakLive.created || weakLive.merged || weakLive.lead_id === live.lead_id
+        || weakLive.identity_candidate_lead_id !== live.lead_id) {
+      throw new Error("A domain-only match hijacked an existing company instead of creating a separate review candidate");
+    }
+    const candidateTask = (await query(`select metadata,status from public.offerpsp_tasks
+      where lead_id=$1 and automation_ref=$2`, [weakLive.lead_id,
+      `intake_submission:${weakLive.submission_id}`])).rows[0];
+    if (!candidateTask || candidateTask.status !== "pending"
+        || candidateTask.metadata.identity_candidate_lead_id !== live.lead_id) {
+      throw new Error("Domain-only duplicate candidate did not receive an explicit staff review task");
+    }
+    const oldLive = (await query(`select record_state,merchant_organization_id,
+      (select count(*)::integer from private.offerpsp_merchant_contacts where lead_id=$1) as contact_count
+      from public.offerpsp_leads where lead_id=$1`, [live.lead_id])).rows[0];
+    const newLive = (await query("select merchant_organization_id from public.offerpsp_leads where lead_id=$1",
+      [weakLive.lead_id])).rows[0];
+    if (oldLive.record_state !== "archived" || oldLive.contact_count !== 1
+        || oldLive.merchant_organization_id === newLive.merchant_organization_id) {
+      throw new Error("Domain-only candidate altered the old company or shared its workspace");
+    }
+    const sameWebsite = await intake({ ...shared, work_email: "owner@website-boundary.example",
+      company: "Separate Website Company", company_url: "https://identity-boundary.example" });
+    if (!sameWebsite.created || sameWebsite.lead_id === live.lead_id
+        || sameWebsite.identity_candidate_lead_id !== live.lead_id) {
+      throw new Error("A copied website with a different company name merged into the old company");
+    }
+    const org = (await query("select merchant_organization_id from public.offerpsp_leads where lead_id=$1",
+      [qaFirst.lead_id])).rows[0].merchant_organization_id;
+    await setRole("authenticated");
+    await query("select public.save_offerpsp_entity_aliases('organization',$1,array['Boundary Approved Alias'])", [org]);
+    await setRole("service_role");
+    // A globally reserved alias cannot be assigned to a new organization. Fail
+    // closed instead of silently rewriting a live intake to the QA company.
+    await expectTransactionalQueryFailure("select public.upsert_offerpsp_lead_intake($1::jsonb)",
+      [JSON.stringify({ ...shared, work_email: "owner@alias-boundary.example",
+        company: "Boundary Approved Alias", company_url: "https://alias-boundary.example" })],
+      "OfferPSP alias is already assigned");
+  } finally {
+    await query("rollback");
+    await setRole("authenticated");
+    await setUser(STAFF_ID);
+  }
+  process.stdout.write("PASS QA/live intake identity boundaries, archived fixtures, aliases and replay\n");
+}
+
+async function verifyCanonicalTaskBinding() {
+  await query("begin");
+  try {
+    await setRole("authenticated");
+    await setUser(STAFF_ID);
+    const providerId = (await query(
+      "insert into private.offerpsp_providers(brand_name) values ('Task Binding Provider') returning id",
+    )).rows[0].id;
+    const leadId = (await query(
+      "insert into public.offerpsp_leads(name,work_email,company,vertical,geos,methods,monthly_volume,source,consent) values ('Task Manager','task@binding.example','Task Binding Merchant','E-commerce','EU','cards','100000 EUR','regression',true) returning lead_id",
+    )).rows[0].lead_id;
+    const save = async (payload) => (await query("select public.save_offerpsp_task(null,$1::jsonb) as value",
+      [JSON.stringify({ title: "Canonical task binding regression", ...payload })])).rows[0].value;
+    const providerTask = await save({ entity_type: "provider", entity_id: providerId });
+    const merchantTask = await save({ entity_type: "merchant", entity_id: leadId });
+    if (providerTask.entity_id !== providerId || providerTask.entity_type !== "provider"
+        || merchantTask.entity_id !== leadId || merchantTask.lead_id !== leadId) {
+      throw new Error("Canonical provider/merchant task linkage was not persisted");
+    }
+    const providerWorkspace = (await query("select public.get_offerpsp_entity_workspace('provider',$1) as value",
+      [providerId])).rows[0].value;
+    if (!providerWorkspace.tasks.some((task) => task.id === providerTask.id)) {
+      throw new Error("Canonical PSP workspace omitted its linked task");
+    }
+    for (const payload of [
+      { entity_type: "provider", entity_id: "bad-id" },
+      { entity_type: "provider", entity_id: leadId },
+      { entity_type: "unknown", entity_id: providerId },
+      { entity_type: "research_psp", entity_id: "999999999999999999999999" },
+    ]) await expectTransactionalQueryFailure("select public.save_offerpsp_task(null,$1::jsonb)",
+      [JSON.stringify({ title: "Reject invalid binding", ...payload })], "Task entity not found");
+    await expectTransactionalQueryFailure("select public.save_offerpsp_task(null,$1::jsonb)",
+      [JSON.stringify({ title: "Reject conflicting merchant", entity_type: "merchant", entity_id: leadId,
+        lead_id: providerId })], "Task merchant linkage conflicts");
+    await setUser(OTHER_CLIENT_ID);
+    await expectTransactionalQueryFailure("select public.save_offerpsp_task(null,$1::jsonb)",
+      [JSON.stringify({ title: "Not staff", entity_type: "provider", entity_id: providerId })],
+      "OfferPSP staff access required");
+    await setUser(STAFF_ID);
+    const grants = (await query(`select
+      has_function_privilege('anon','public.save_offerpsp_task(uuid,jsonb)','execute') as anon_rpc,
+      has_function_privilege('authenticated','public.save_offerpsp_task(uuid,jsonb)','execute') as staff_rpc,
+      has_function_privilege('service_role','public.save_offerpsp_task(uuid,jsonb)','execute') as service_rpc,
+      has_function_privilege('authenticated','private.offerpsp_task_entity_exists(text,text)','execute') as helper_rpc`)).rows[0];
+    if (grants.anon_rpc || !grants.staff_rpc || !grants.service_rpc || grants.helper_rpc) {
+      throw new Error("Task binding broadened private helper access or changed supported RPC grants");
+    }
+  } finally {
+    await query("rollback");
+    await setRole("authenticated");
+    await setUser(STAFF_ID);
+  }
+  process.stdout.write("PASS canonical PSP/merchant task binding, invalid targets and staff boundary\n");
 }
 
 async function verifyProviderPortalBoundary() {
@@ -3837,6 +4040,8 @@ async function verifyAibotDurableMemory() {
 }
 
 async function verifyMailCenter() {
+  await setRole("authenticated");
+  await setUser(STAFF_ID);
   const grants = await query(`select
     has_function_privilege('service_role', 'public.aibot_n8n_ingest_email(jsonb)', 'EXECUTE') as service_ingest,
     has_function_privilege('anon', 'public.aibot_n8n_ingest_email(jsonb)', 'EXECUTE') as anon_ingest,
@@ -3905,6 +4110,7 @@ async function verifyMailCenter() {
   );
 
   const threadId = outbound.rows[0].thread_id;
+  await setRole("service_role");
   const inbound = await query("select public.aibot_n8n_ingest_email($1::jsonb) as value", [JSON.stringify({
     from_email: `Partner <${updatedRecipient}>`,
     to: ["bizdev@offerpsp.com"],
@@ -3916,6 +4122,7 @@ async function verifyMailCenter() {
   if (inbound.rows[0].value.thread_id !== threadId) {
     throw new Error("Inbound reply did not join the existing email thread");
   }
+  await setRole("authenticated");
 
   const mailbox = await query("select public.get_offerpsp_mail_center(200) as value");
   const thread = mailbox.rows[0].value.threads.find((item) => item.id === threadId);
@@ -3953,6 +4160,7 @@ async function verifyMailCenter() {
   }
 
   await query("select public.set_offerpsp_email_thread_state($1, 'trashed', null)", [threadId]);
+  await setRole("service_role");
   await query("select public.aibot_n8n_ingest_email($1::jsonb)", [JSON.stringify({
     from_email: `Partner <${updatedRecipient}>`,
     to: ["bizdev@offerpsp.com"],
@@ -3961,10 +4169,11 @@ async function verifyMailCenter() {
     message_id: `<mail-center-trash-restore-${unique}@example.com>`,
     received_at: new Date().toISOString(),
   })]);
+  await setRole("authenticated");
   const autoRestored = await query("select status, trashed_at, trashed_from_status from public.offerpsp_email_threads where id = $1", [threadId]);
-  if (autoRestored.rows[0].status !== "open" || autoRestored.rows[0].trashed_at !== null
-      || autoRestored.rows[0].trashed_from_status !== null) {
-    throw new Error(`New inbound mail did not restore the trashed conversation: ${JSON.stringify(autoRestored.rows[0])}`);
+  if (autoRestored.rows[0].status !== "trashed" || !autoRestored.rows[0].trashed_at
+      || autoRestored.rows[0].trashed_from_status !== "follow_up") {
+    throw new Error(`Mailbox ingestion rewrote a terminal staff decision: ${JSON.stringify(autoRestored.rows[0])}`);
   }
 
   await query("select public.set_offerpsp_email_thread_state($1, 'trashed', null)", [threadId]);
@@ -3983,7 +4192,7 @@ async function verifyMailCenter() {
   await expectQueryFailure("select public.get_offerpsp_mail_center(20)", [], "OfferPSP staff access required");
   await setUser(STAFF_ID);
   await query("delete from public.email_drafts where id = $1", [draftId]);
-  process.stdout.write("PASS threaded inbox, retained trash, automatic restore, scheduled purge and staff isolation\n");
+  process.stdout.write("PASS threaded inbox, retained trash, explicit restore, scheduled purge and staff isolation\n");
 }
 
 async function verifyPrivateSourceStorage() {
@@ -5068,6 +5277,8 @@ try {
   await verifyNewSecurityDefinerDelta();
   await seedUsers();
   await verifyCompanyIntakeDeduplication();
+  await verifyQaIntakeIdentityBoundary();
+  await verifyCanonicalTaskBinding();
   await verifyEntityRelationships();
   await verifyProviderPortalBoundary();
   await verifyGeoRegionAliases();

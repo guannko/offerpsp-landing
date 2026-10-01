@@ -11,6 +11,7 @@ import { merchantNextAction } from "../../shared/merchant-next-action.mjs";
 import DealDeskPanel, { type DealWorkspace } from "./DealDeskPanel";
 import MerchantProfileEditor from "../components/control/MerchantProfileEditor";
 import MerchantCompanyWorkspace from "../components/control/MerchantCompanyWorkspace";
+import CompanyJoinRequests from "../components/control/CompanyJoinRequests";
 import {
   ActivityPanel,
   CommunicationsPanel,
@@ -580,7 +581,7 @@ export default function MerchantWorkspace() {
     {loading ? <SkeletonPage/> : tab === "compliance"
         ? <CompliancePanel workspace={complianceWorkspace} busy={busy} runDisabled={screeningActionDisabled} runLabel={screeningButtonLabel} onRun={() => void requestComplianceScreening()} onSave={(input) => void saveComplianceDecision(input)}/>
       : tab === "company" || tab === "overview"
-        ? <div className="space-y-6"><Overview lead={lead} matches={matches} shortlist={latest} complianceStatus={complianceWorkspace?.case.case_status} onOpenCompliance={() => setTab("compliance")}/><MerchantCompanyWorkspace leadId={lead.lead_id} onChanged={async () => { await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]); }}/></div>
+        ? <div className="space-y-6"><Overview lead={lead} matches={matches} shortlist={latest} complianceStatus={complianceWorkspace?.case.case_status} onOpenCompliance={() => setTab("compliance")}/><CompanyJoinRequests leadId={lead.lead_id} onChanged={async () => { await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]); }}/><MerchantCompanyWorkspace leadId={lead.lead_id} onChanged={async () => { await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]); }}/></div>
       : tab === "profile"
         ? <MerchantProfileEditor lead={lead} onChanged={async () => { await Promise.all([loadWorkspace(), refresh(), entityWorkspace.refresh()]); }}/>
       : tab === "contacts"
