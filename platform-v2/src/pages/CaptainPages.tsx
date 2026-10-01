@@ -180,7 +180,7 @@ export function CommunicationsWorkspace() {
   const [leadId, setLeadId] = useState(""); const [busy, setBusy] = useState(false); const [message, setMessage] = useState<{error?:boolean;text:string}|null>(null);
   const [activeDraftId, setActiveDraftId] = useState<number | null>(null);
   const [section, setSection] = useState<"mail" | "compose" | "telegram">("mail");
-  const [threadId, setThreadId] = useState("");
+  const [threadId, setThreadId] = useState(searchParams.get("thread") || "");
   const [query, setQuery] = useState("");
   const [mailScope, setMailScope] = useState<"active" | "unread" | "inbox" | "sent" | "awaiting_reply" | "overdue" | "flagged" | "follow_up" | "attachments" | "closed" | "archived" | "spam" | "trash" | "all">("active");
   const [linkType, setLinkType] = useState<"merchant" | "provider" | "casino" | "research_psp" | "general">("general");
@@ -252,7 +252,7 @@ export function CommunicationsWorkspace() {
       return new Date(right.last_message_at).getTime() - new Date(left.last_message_at).getTime();
     });
   }, [attachmentThreadIds, lastMessageByThread, mailCenter.threads, mailScope, query]);
-  const selectedThread = mailCenter.threads.find((thread) => thread.id === threadId) || visibleThreads[0];
+  const selectedThread = threadId ? mailCenter.threads.find((thread) => thread.id === threadId) : visibleThreads[0];
   const companySuggestion = selectedThread?.counterparty_type === "general"
     ? mailCompanySuggestion(selectedThread.participant_email, captainsBridge.psp_providers) : null;
   const indexedMessages = useMemo(() => selectedThread
@@ -485,10 +485,15 @@ export function CommunicationsWorkspace() {
 
   useEffect(() => {
     const requestedThread = searchParams.get("thread");
-    if (!requestedThread || requestedThread === selectedThreadId) return;
+    if (!requestedThread || !ready) return;
+    setSection("mail"); setMailScope("all"); setQuery(""); setThreadId(requestedThread);
+    // Keep the exact target while the mailbox loads; never display a different thread.
     if (!mailCenter.threads.some((thread) => thread.id === requestedThread)) return;
     void openThread(requestedThread);
-  }, [mailCenter.threads, openThread, searchParams, selectedThreadId]);
+    const next = new URLSearchParams(searchParams);
+    next.delete("thread");
+    setSearchParams(next, { replace: true });
+  }, [mailCenter.threads, openThread, ready, searchParams, setSearchParams]);
 
   useEffect(() => {
     if (searchParams.get("compose") !== "1") return;
@@ -893,6 +898,7 @@ export function CommunicationsWorkspace() {
       <p className="mt-1">{mailCenterError}</p>
       <button disabled={refreshing} onClick={() => void refresh()} className="mt-2 font-semibold">{refreshing ? "Загружаю…" : "Повторить загрузку почты"}</button>
     </div>}
+    {searchParams.get("thread") && !selectedThread && <ErrorBanner message="Указанная цепочка ещё не загружена или недоступна в рабочей выборке. Другое письмо вместо неё не открыто."/>}
     {message&&<div className={`mb-4 rounded-xl border px-4 py-3 text-sm ${message.error?"border-error-200 bg-error-50 text-error-700":"border-success-200 bg-success-50 text-success-700"}`}>{message.text}</div>}
     {trashNoticeVisible&&<aside role="status" aria-live="polite" className="fixed bottom-5 right-5 z-50 w-[calc(100%-2.5rem)] max-w-sm rounded-xl border border-gray-200 bg-white p-4 shadow-theme-lg dark:border-gray-700 dark:bg-gray-900">
       <div className="flex items-start justify-between gap-3"><div><strong className="text-sm text-gray-900 dark:text-white">Переписка перемещена в корзину</strong><p className="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">Она будет окончательно удалена через 15 дней. До этого её можно восстановить.</p></div><button type="button" onClick={()=>setTrashNoticeVisible(false)} aria-label="Закрыть уведомление" className="shrink-0 text-lg leading-none text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">×</button></div>

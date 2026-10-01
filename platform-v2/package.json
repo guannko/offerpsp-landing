@@ -19,6 +19,8 @@
     "test:document-processing": "node scripts/test-document-processing-router.mjs",
     "check:function-storage": "node scripts/check-function-storage.mjs",
     "test:modules": "node scripts/test-platform-modules.mjs",
+    "test:course-organizer": "node --experimental-strip-types --test scripts/test-course-organizer.mjs",
+    "test:work-documents": "node --experimental-strip-types --test scripts/test-work-documents.mjs",
     "test:control-integrity": "node scripts/test-control-integrity.mjs && node scripts/test-delivery-evidence.mjs && node --experimental-strip-types scripts/test-qa-fixture-isolation.mjs && node --experimental-strip-types scripts/test-email-thread-view.mjs",
     "test:company-screening": "node --test scripts/test-company-screening.mjs scripts/test-official-company-evidence.mjs scripts/test-screening-queue.mjs scripts/test-safe-evidence-fetch.mjs scripts/test-screening-worker.mjs scripts/test-screening-events.mjs",
     "test:research-screening": "node --test scripts/test-research-screening.mjs scripts/test-screening-worker.mjs && node scripts/test-research-screening-postgres.mjs",

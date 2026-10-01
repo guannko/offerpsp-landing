@@ -14,7 +14,7 @@ const CompliancePage = lazy(() => import("./pages/CompliancePage"));
 const SeoGeoPage = lazy(() => import("./pages/SeoGeoPage"));
 const SystemActions = lazy(() => import("./pages/SystemActions"));
 const QaDiagnosticsPage = lazy(() => import("./pages/QaDiagnosticsPage"));
-const TodayWorkspace = lazy(() => import("./pages/TodayWorkspace"));
+const CoursePage = lazy(() => import("./pages/CoursePage"));
 const platformPage = <T extends keyof typeof import("./pages/Platform")>(name: T) =>
   lazy(() => import("./pages/Platform").then((module) => ({ default: module[name] })));
 const captainPage = <T extends keyof typeof import("./pages/CaptainPages")>(name: T) =>
@@ -42,7 +42,7 @@ export default function App() {
     <Route path="/signin" element={<ControlSignIn/>}/>
     <Route path="/oauth/consent" element={<OAuthConsent/>}/>
     <Route element={<StaffGate><AppLayout/></StaffGate>}>
-      <Route index element={<TodayWorkspace/>}/>
+      <Route index element={<CoursePage/>}/>
       <Route path="/inbox" element={<InboxPage/>}/>
       <Route path="/pipeline" element={<PipelinePage/>}/>
       <Route path="/merchants" element={<MerchantsPage/>}/>

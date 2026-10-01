@@ -37,7 +37,8 @@ const [todayWorkspace, previewDrawer, uiPreferences] = await Promise.all([
   read("platform-v2/src/lib/uiPreferences.ts"),
 ]);
 
-assert.match(app, /TodayWorkspace/);
+assert.match(app, /CoursePage/);
+assert.match(app, /Route index element=\{<CoursePage\/>\}/);
 assert.match(modules, /label: "Сегодня"/);
 assert.match(modules, /group: "today"/);
 assert.match(modules, /group: "registry"/);

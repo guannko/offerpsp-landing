@@ -1,5 +1,5 @@
 import { SidebarProvider, useSidebar } from "../context/SidebarContext";
-import { Outlet } from "react-router";
+import { Outlet, useLocation } from "react-router";
 import AppHeader from "./AppHeader";
 import Backdrop from "./Backdrop";
 import AppSidebar from "./AppSidebar";
@@ -7,9 +7,10 @@ import AIBotAssistant from "../components/control/AIBotAssistant";
 
 const LayoutContent: React.FC = () => {
   const { isExpanded, isMobileOpen } = useSidebar();
+  const { pathname } = useLocation();
 
   return (
-    <div className="min-h-screen bg-gray-50 transition-colors dark:bg-[#172235] xl:flex">
+    <div className={`min-h-screen bg-gray-50 transition-colors dark:bg-[#172235] xl:flex ${pathname === "/" ? "course-shell" : ""}`}>
       <div>
         <AppSidebar />
         <Backdrop />

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
@@ -33,6 +34,13 @@ type TaskDraft = {
 };
 
 const blankTask = (): TaskDraft => ({ title: "", details: "", status: "pending", priority: "normal", due_at: "", assigned_to: "", lead_id: "" });
+const taskDraft = (task: WorkTask): TaskDraft => ({
+  id: String(task.id), title: task.title || "", details: task.details || "",
+  status: task.status || "pending", priority: String(task.priority || "normal"),
+  due_at: toLocalInput(task.due_at), assigned_to: task.assigned_to || "",
+  lead_id: task.lead_id || "", source: task.source, automation_ref: task.automation_ref,
+  entity_type: task.entity_type, entity_id: task.entity_id,
+});
 
 export default function OperationsWorkspace() {
   const bridgeData = useControlBridge();
@@ -47,6 +55,8 @@ export default function OperationsWorkspace() {
   const [priority, setPriority] = useState("all");
   const [draft, setDraft] = useState<TaskDraft | null>(null);
   const [busy, setBusy] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTaskId = searchParams.get("task");
   const operationalTasks = useMemo(() => workspace.tasks.filter((task) => !isQaFixtureTask(task)), [workspace.tasks]);
   const operationalAibotTasks = useMemo(() => workspace.aibot_tasks.filter((task) => !isQaFixtureTask(task)), [workspace.aibot_tasks]);
 
@@ -59,6 +69,16 @@ export default function OperationsWorkspace() {
   }
 
   useEffect(() => { void load(); }, []);
+
+  useEffect(() => {
+    if (loading || !requestedTaskId) return;
+    const task = operationalTasks.find((item) => String(item.id) === requestedTaskId);
+    if (task) setDraft(taskDraft(task));
+    else setError("Задача не найдена в рабочей выборке или недоступна.");
+    const next = new URLSearchParams(searchParams);
+    next.delete("task");
+    setSearchParams(next, { replace: true });
+  }, [loading, operationalTasks, requestedTaskId, searchParams, setSearchParams]);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -77,13 +97,7 @@ export default function OperationsWorkspace() {
   function editTask(task?: WorkTask, date?: string) {
     setNotice(null);
     if (!task) { setDraft({ ...blankTask(), due_at: date ? `${date}T10:00` : "" }); return; }
-    setDraft({
-      id: String(task.id), title: task.title || "", details: task.details || "",
-      status: task.status || "pending", priority: String(task.priority || "normal"),
-      due_at: toLocalInput(task.due_at), assigned_to: task.assigned_to || "",
-      lead_id: task.lead_id || "", source: task.source, automation_ref: task.automation_ref,
-      entity_type: task.entity_type, entity_id: task.entity_id,
-    });
+    setDraft(taskDraft(task));
   }
 
   async function saveTask() {
