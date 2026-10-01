@@ -4,8 +4,9 @@ export const QA_GOLDEN_MERCHANT_ID = "ad724d57-e894-4d16-b7b0-948165aef4bf";
 export const QA_GOLDEN_PROVIDER_ID = "6e531900-901c-4d5d-8887-0679db9b335d";
 export const QA_PAYSISKI_MERCHANT_ID = "60e61542-7070-43ef-937b-7f919e9abdb0";
 export const QA_PAYOK_E2E_PROVIDER_ID = "1e584fde-67d7-42d1-be52-83c014218c09";
+export const QA_INTAKE_E2E_MERCHANT_ID = "b4b715fd-9f2f-4d88-93dd-3015b823d376";
 
-const QA_FIXTURE_LEAD_IDS = new Set([QA_GOLDEN_MERCHANT_ID, QA_PAYSISKI_MERCHANT_ID]);
+const QA_FIXTURE_LEAD_IDS = new Set([QA_GOLDEN_MERCHANT_ID, QA_PAYSISKI_MERCHANT_ID, QA_INTAKE_E2E_MERCHANT_ID]);
 const QA_FIXTURE_PROVIDER_IDS = new Set([QA_GOLDEN_PROVIDER_ID, QA_PAYOK_E2E_PROVIDER_ID]);
 const QA_FIXTURE_MARKERS = [
   "paysiski",
@@ -17,6 +18,7 @@ const QA_FIXTURE_MARKERS = [
   "bix instant intake e2e",
   "workspace-role-e2e",
   "portal regression",
+  "offerpsp intake e2e",
 ];
 
 export const isQaAttributionMarker = (...values: Array<string | null | undefined>) => {

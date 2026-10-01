@@ -1,6 +1,23 @@
 import assert from "node:assert/strict";
 import { isQaAttributionMarker, isQaFixtureLead, isQaFixtureProvider, isQaFixtureRoute, isQaFixtureTask } from "../src/lib/qaFixtures.ts";
 
+for (const status of ["open", "done", "cancelled"]) {
+  assert.equal(isQaFixtureTask({
+    lead_id: "b4b715fd-9f2f-4d88-93dd-3015b823d376",
+    title: "Review new contact request",
+    details: `Status: ${status}`,
+  }), true, "registered production QA intake tasks must be isolated regardless of title/status");
+  assert.equal(isQaFixtureTask({
+    title: "Review dossier: OfferPSP Intake E2E 20261002 — NO ACTION REQUIRED",
+  }), true, "future explicitly named OfferPSP intake fixtures must also be isolated");
+}
+assert.equal(isQaFixtureTask({
+  title: "Review dossier: OfferPSP Intake Ltd",
+}), false, "similar real company names are not QA fixtures");
+assert.equal(isQaFixtureTask({
+  title: "Completed Railon follow-up",
+}), false, "completed real work remains available to the calendar/history");
+
 assert.equal(isQaFixtureLead({
   lead_id: "11111111-1111-4111-8111-111111111111",
   company: "Ordinary Ltd",

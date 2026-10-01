@@ -2,6 +2,28 @@
 
 Updated: 2026-10-01
 
+## Calendar QA isolation and original-file smoke — 2026-10-02
+
+- `VERIFIED cause`: registered live QA intake merchant
+  `b4b715fd-9f2f-4d88-93dd-3015b823d376` has two cancelled tasks and one done task.
+  Calendar includes closed tasks; shared frontend QA registry did not recognize
+  this merchant or its exact `OfferPSP Intake E2E` marker. No deletion is needed.
+- `VERIFIED locally`: explicit merchant ID and narrow intake-fixture marker added
+  to the shared registry. Generic-titled QA tasks are now isolated too, while real
+  completed tasks and similarly named real companies remain visible. Calendar
+  event selection/clicks and Operations counters use the same filtered collection.
+  Regression reproduced failure before the fix, then passes after it.
+- `VERIFIED locally`: control-integrity suites, 10 original-file tests, 17 document
+  tests, 11 organizer tests, lint, build and diff check pass. No schema, workflow,
+  SEO/GEO module, subagent or Telegram/Zoom logic changes.
+- `VERIFIED production UI`: a separate internal document
+  `QA DOCX/PDF — 2026-10-02 — NO ACTION REQUIRED` saved as v1 without client,
+  PSP or direction links. Only synthetic baseline text; no messages sent.
+- `BLOCKED browser upload`: Brave extension file chooser rejected local-file
+  access before uploading. A normal chooser retry did not open a native picker.
+  Permission to enable extension file-URL access requested; no permission changed.
+  Neither binary is uploaded. Calendar rollout/live checks still pending below.
+
 ## Shared paper theme and private DOCX/PDF originals — 2026-10-01
 
 - `VERIFIED production`: commit `6643b6cc0d6675f9b97a33356741b02af72d01fb`,
