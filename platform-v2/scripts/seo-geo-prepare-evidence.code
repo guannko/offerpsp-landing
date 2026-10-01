@@ -3,9 +3,14 @@ const body = $json.body || $json;
 if (body.agent_version !== 'offerpsp-seo-geo-agent-v1') throw new Error('Unsupported SEO agent contract');
 const evidence = body.evidence;
 if (!evidence || !Array.isArray(evidence.pages) || !evidence.siteone) throw new Error('SEO evidence is incomplete');
-const target = new URL(evidence.target_url);
-if (target.origin !== 'https://offerpsp.com') throw new Error('Unsupported audit target');
-const publicPages = evidence.pages.filter(page => !/(?:^|[,\s])noindex(?:$|[,\s])/i.test(page.meta_robots || '') && !/\/portal\/?$/.test(new URL(page.url).pathname));
+// n8n's isolated task runner does not expose the global URL constructor.
+const publicPath = value => {
+  const match = /^https:\/\/offerpsp\.com(?::443)?(?=\/|[?#]|$)([^?#]*)/i.exec(String(value || ''));
+  if (!match) throw new Error('Unsupported audit target');
+  return match[1] || '/';
+};
+publicPath(evidence.target_url);
+const publicPages = evidence.pages.filter(page => !/(?:^|[,\s])noindex(?:$|[,\s])/i.test(page.meta_robots || '') && !/\/portal\/?$/.test(publicPath(page.url)));
 const sampleBudget = Math.min(2400, Math.max(0, Math.floor(45000 / Math.max(1, publicPages.length))));
 const compact = {
   target_url: evidence.target_url,
