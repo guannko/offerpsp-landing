@@ -2,6 +2,31 @@
 
 Updated: 2026-10-01
 
+## Course organizer and universal documents — production 2026-10-01
+
+- `VERIFIED`: commit `fcb356669ae2a1c9944815dcb025f55b47988608` on
+  `codex/course-documents-20261001`; READY production deployment
+  `dpl_4a8npyUy4hWHtctLTm3iPQ4j1NvV` now serves the primary staff alias
+  `https://ops-7q4m2x9k8v3n.vercel.app/`. Live browser reads build `fcb35666`.
+- Built from actual production `7a7eb895db9292a737368bab701bb682bef73b54` in an
+  isolated checkout. API/vendor, SEO/GEO and Vercel configuration remain unchanged.
+  The older dirty workspace was not deployed or overwritten.
+- Additive migrations applied: `20261001191142 offerpsp_course_organizer` and
+  `20261001191143 offerpsp_workspace_documents`. Local source timestamps differ;
+  see the mapping and full evidence in `docs/OFFERPSP-COURSE-ORGANIZER-2026-10-01.md`.
+- Live transactional read/save/history/conflict/source/staff-access checks passed;
+  smoke writes rolled back. Live UI verified template gallery, blank sheet plus PSP
+  structure, save v1, library and reopen with original text retained. One labelled
+  internal example remains, without entity links or agreed rates. Initial course is
+  an explicitly unsaved suggestion, not an inferred business state.
+- Production mail, expanded message history, inbox and existing task editor load.
+  Task editor was cancelled without saving. No email/Telegram send or intake submission.
+- Release checks pass: 17 document tests, 11 organizer tests, four control-integrity
+  suites, lint, TypeScript/Vite build and diff check.
+- `PARTIAL`: filesystem export delivery and browser TXT/JSON import unverified;
+  no Word/PDF round-trip, PDF/DOCX export, signing, client publication or course-to-n8n
+  automation. This release smoke is not a new complete intake-delivery E2E.
+
 This file separates local implementation from local verification and production state.
 Code or a passing local test is not evidence that production has been updated.
 

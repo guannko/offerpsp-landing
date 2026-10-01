@@ -1,6 +1,38 @@
 # Captain's Bridge course organizer
 
-Status: local implementation, not deployed. Date: 2026-10-01.
+Status: production release verified. Date: 2026-10-01.
+
+## Production release evidence
+
+- Release commit: `fcb356669ae2a1c9944815dcb025f55b47988608`, branch
+  `codex/course-documents-20261001` (pushed to GitHub).
+- READY deployment: `dpl_4a8npyUy4hWHtctLTm3iPQ4j1NvV`.
+  Primary staff alias: https://ops-7q4m2x9k8v3n.vercel.app/ .
+  Browser reads build `fcb35666` and the new homepage/template gallery.
+- Assembled from actual production `7a7eb895db9292a737368bab701bb682bef73b54`
+  in an isolated checkout, preserving the original dirty workspace. API/vendor,
+  SEO/GEO and Vercel configuration are unchanged relative to this production base.
+- Applied migration history: `20261001191142 offerpsp_course_organizer` and
+  `20261001191143 offerpsp_workspace_documents`. Canonical SQL filenames below
+  have local preparation timestamps; do not reapply them as missing migrations.
+- Live authenticated transactional read/save/history/conflict/source/access tests
+  passed; all transactional test writes were rolled back. New private tables use
+  deny-all direct access; public RPCs explicitly require staff. Expected advisor
+  notices are four RLS-without-policy INFOs and five authenticated SECURITY DEFINER
+  WARNs; this does not resolve the pre-existing RPC review backlog.
+- Live UI: blank sheet plus PSP structure preserves the initial text; save v1,
+  separate library and server-backed reopen passed. One labelled internal example
+  remains (`b9a97b7f-5ce5-4bbb-8ff4-1569aee3fd5e`), seven blocks, no entity links,
+  no confirmed commercial terms. The initial course is still an unsaved suggestion.
+- Production mail loads 23 active threads and an expanded 11-message history;
+  inbox loads two working records. No new message or merchant submission was sent.
+- Actual clean-release checks: 17 document tests, 11 organizer tests, all four
+  control-integrity suites, ESLint, TypeScript/Vite build and diff check passed.
+- Remaining PARTIAL boundary: exported file delivery and browser TXT/JSON import
+  are not verified. Word/PDF round-trip, PDF/DOCX export and full automation are
+  not implemented. This release smoke is not a new full intake-delivery E2E.
+- Previous READY rollback: `dpl_2NQ7PFZMqJMayYXbxGCx1t2Yx5hq`,
+  https://ops-7q4m2x9k8v3n-2dbfqpnp4-annoris.vercel.app/ .
 
 ## Product contract
 
@@ -26,7 +58,8 @@ RU/CIS, USA and Intake directions are unsaved suggestions with no implicit entit
 ## Data and access
 
 - `CoursePage.tsx`: existing staff gate and core data, `get_offerpsp_operations_workspace`,
-  `get_offerpsp_mail_center` (read only, up to 250 threads), new course read/save RPCs.
+  `get_offerpsp_mail_index` (read-only headers, up to 250 threads, no mark-read),
+  new course read/save RPCs.
 - `CourseOrganizer.tsx`: actual React interface and receipt-based state updates.
 - `coursePlan.ts`: direction projection, priority ordering and validation.
 - `courseVisibility.ts`: QA/E2E, inactive-case, task and mail visibility boundaries.
