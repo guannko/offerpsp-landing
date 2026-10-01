@@ -1,6 +1,6 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-10-01
+Updated: 2026-10-02
 
 ## Calendar QA isolation and original-file smoke — 2026-10-02
 
@@ -22,7 +22,16 @@ Updated: 2026-10-01
 - `BLOCKED browser upload`: Brave extension file chooser rejected local-file
   access before uploading. A normal chooser retry did not open a native picker.
   Permission to enable extension file-URL access requested; no permission changed.
-  Neither binary is uploaded. Calendar rollout/live checks still pending below.
+  Neither binary is uploaded.
+- `VERIFIED production`: QA filter release `328d9186dd9d5354af3d2c7bca025d387cefde7b`,
+  READY deployment `dpl_H7C1zNGJ17xRrN1fHKX9KBYoD8fg`, unique and primary
+  manifests match. Live calendar no longer contains either QA event; real tasks
+  remain in its accessibility tree and Operations remains 3 open / 3 overdue.
+- Live screenshot revealed an additional pre-existing presentation defect: timed
+  month events and list rows inherited white labels on transparent backgrounds.
+  Narrow CSS fix uses paper ink for those rows and keeps white labels on solid
+  all-day bars. Synthetic month/all-day/list fixture visually verified in Brave;
+  control-integrity regression passes. Contrast rollout pending verification.
 
 ## Shared paper theme and private DOCX/PDF originals — 2026-10-01
 

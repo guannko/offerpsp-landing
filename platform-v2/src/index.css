@@ -785,11 +785,18 @@ span.flatpickr-weekday,
   color: #eef2f7;
 }
 
-.offerpsp-calendar .fc-event,
-.offerpsp-calendar .fc-event-main,
-.offerpsp-calendar .fc-event-title {
-  color: #ffffff !important;
+.offerpsp-calendar .fc-event {
   font-weight: 600;
+}
+
+/* Timed month events and list rows have transparent backgrounds, unlike bars. */
+.offerpsp-calendar .fc-daygrid-dot-event,
+.offerpsp-calendar .fc-list-event {
+  color: var(--bridge-ink, #344054);
+}
+
+.offerpsp-calendar .fc-h-event .fc-event-main {
+  color: #ffffff;
 }
 
 .dark .offerpsp-calendar .fc-daygrid-day-frame:hover {
