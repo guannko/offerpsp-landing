@@ -67,6 +67,9 @@
 .dark .bridge-paper [class*="dark:bg-[#"] {background-color: var(--bridge-surface)}
 .dark .bridge-paper [class*="dark:border-[#"] {border-color: var(--bridge-line)}
 .dark .bridge-paper [class*="dark:text-white"] {color: var(--bridge-ink)}
+.dark .bridge-paper :is(.dark\:text-gray-100,.dark\:text-gray-200,.dark\:text-gray-300) {color: var(--bridge-ink)}
+.dark .bridge-paper :is(.dark\:text-gray-400,.dark\:text-gray-500) {color: var(--bridge-muted)}
+.dark .bridge-paper .dark\:bg-white {background-color: var(--bridge-ink)}
 .dark .bridge-paper :is(.text-gray-600,.text-gray-700,.text-gray-800,.text-gray-900):not([class*="dark:text-"]) {color: var(--bridge-ink)}
 .dark .bridge-paper header .bg-white\/5 {background-color: transparent}
 .bridge-paper .fc {--fc-border-color: var(--bridge-line);--fc-page-bg-color: var(--bridge-surface);--fc-neutral-bg-color: var(--bridge-paper);--fc-today-bg-color: var(--bridge-active)}

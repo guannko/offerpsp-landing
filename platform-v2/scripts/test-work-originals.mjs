@@ -35,6 +35,11 @@ test('theme covers workspaces but preserves SEO/GEO and agents including detail 
   for(const path of ['/','/communications','/inbox','/operations','/psps/abc','/deals','/analytics'])assert.equal(usesPaperBridgeTheme(path),true);
   for(const path of ['/seo-geo','/seo-geo/history','/agents','/agents/abc'])assert.equal(usesPaperBridgeTheme(path),false);
 });
+test('dark foregrounds are separate from the shared border/surface tokens',async()=>{
+  const css=await readFile(new URL('../src/layout/BridgePaper.css',import.meta.url),'utf8');
+  assert.match(css,/dark\\:text-gray-200[^\n]+color: var\(--bridge-ink\)/);
+  assert.match(css,/dark\\:bg-white[^\n]+background-color: var\(--bridge-ink\)/);
+});
 test('supported bounded filenames and hashes; no .doc masquerading as DOCX',async()=>{
   assert.equal(workFileFormat('Contract.PDF',120),'pdf');assert.equal(workFileFormat('Договор.docx',120),'docx');
   for(const [name,size]of [['bad.doc',1],['bad.exe',1],['bad.pdf',0],['big.pdf',16000000],['bad\n.pdf',1]])assert.throws(()=>workFileFormat(name,size));
