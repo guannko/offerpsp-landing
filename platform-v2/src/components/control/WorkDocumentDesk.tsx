@@ -6,6 +6,8 @@ import type { BlockType, DocumentBlock, DocumentRead, DocumentRepository, Docume
 import { appendDocumentTemplate, createDocumentFromTemplate, documentTemplates } from "../../lib/documentTemplates";
 import type { DocumentTemplateId } from "../../lib/documentTemplates";
 import DocumentTemplateGallery from "./DocumentTemplateGallery";
+import WorkOriginalFiles from "./WorkOriginalFiles";
+import { appendOriginalText } from "../../lib/workDocumentFiles";
 import type { CourseDirection } from "../../lib/coursePlan";
 import type { Lead, Provider } from "../../types/offerpsp";
 import "./WorkDocumentDesk.css";
@@ -54,6 +56,7 @@ export default function WorkDocumentDesk({ repository, leads, providers, directi
   const dirty = Boolean(draft && !historical && (draft.revision === 0 || JSON.stringify(draft.body) !== baseline));
   const editable = Boolean(draft && !historical && !busy);
   function guardAction(action: () => void) {
+    if (busy) { setNotice("Дождись завершения операции с документом."); return; }
     if (dirty) setPending({ message: "В документе есть несохранённые изменения. Покинуть его без сохранения? Можно остаться и сначала сохранить или выгрузить TXT/JSON.", proceed: action });
     else action();
   }
@@ -71,29 +74,31 @@ export default function WorkDocumentDesk({ repository, leads, providers, directi
     return () => { active = false; };
   }, [repository]);
   useEffect(() => {
-    if (!dirty) return;
+    if (!dirty && !busy) return;
     const unload = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
     const navigation = (event: MouseEvent) => {
       if (!(event.target instanceof Element)) return;
       const anchor = event.target.closest("a");
       if (!anchor || anchor.target === "_blank" || anchor.hasAttribute("download") || anchor.origin !== window.location.origin || event.ctrlKey || event.metaKey || event.shiftKey || event.button !== 0) return;
       event.preventDefault(); event.stopPropagation();
+      if (busy) { setNotice("Дождись завершения операции с документом."); return; }
       const path = `${anchor.pathname}${anchor.search}${anchor.hash}`;
       setPending({ message: "Есть несохранённый документ. Перейти без сохранения?", proceed: () => navigate(path) });
     };
     window.addEventListener("beforeunload", unload); document.addEventListener("click", navigation, true);
     return () => { window.removeEventListener("beforeunload", unload); document.removeEventListener("click", navigation, true); };
-  }, [dirty, navigate]);
+  }, [dirty, busy, navigate]);
 
   function update(body: WorkDocumentBody) { if (editable && draft) { setUndo((stack) => [...stack, draft.body].slice(-20)); setRedo([]); setDraft({ ...draft, body }); setNotice(null); setExportCopy(null); } }
   function undoEdit() { if (!draft || !editable || !undo.length) return; setRedo((stack) => [...stack, draft.body]); setDraft({ ...draft, body: undo[undo.length - 1] }); setUndo(undo.slice(0, -1)); setNotice(null); setExportCopy(null); }
   function redoEdit() { if (!draft || !editable || !redo.length) return; setUndo((stack) => [...stack, draft.body]); setDraft({ ...draft, body: redo[redo.length - 1] }); setRedo(redo.slice(0, -1)); setNotice(null); setExportCopy(null); }
   function changeBlock(block: DocumentBlock) { if (draft) update({ ...draft.body, blocks: draft.body.blocks.map((item) => item.id === block.id ? block : item) }); }
-  function create(template: DocumentTemplateId) {
+  function create(template: DocumentTemplateId, originals = false) {
     if (busy) return;
     guardAction(() => {
       setDraft(createDocumentFromTemplate(template)); setBaseline(""); setSealedSource(false); setHistory([]); setHistorical(false); setPreview(false); setScreen("editor"); setError(null); setNotice(null);
       setUndo([]); setRedo([]); setExportCopy(null);
+      setContextOpen(originals);
     });
   }
   function acceptDocument(document: DocumentRead) {
@@ -138,7 +143,7 @@ export default function WorkDocumentDesk({ repository, leads, providers, directi
   }
   function copy() {
     if (!draft || busy) return;
-    setDraft(copyWorkDocument(draft)); setBaseline(""); setSealedSource(Boolean(draft.body.source)); setHistory([]); setHistorical(false); setPreview(false); setNotice("Рабочая копия открыта. Исходный документ и его версии не изменены; копию нужно сохранить."); setError(null);
+    setDraft(copyWorkDocument(draft)); setBaseline(""); setSealedSource(Boolean(draft.body.source)); setHistory([]); setHistorical(false); setPreview(false); setNotice("Рабочая копия открыта. Копируется текст, но не прикреплённые DOCX/PDF: оригиналы остаются в исходном документе. Копию нужно сохранить."); setError(null);
     setUndo([]); setRedo([]);
     setExportCopy(null);
   }
@@ -147,6 +152,15 @@ export default function WorkDocumentDesk({ repository, leads, providers, directi
     if (!draft || !editable) return;
     try { update(appendDocumentTemplate(draft.body, insertTemplate)); setError(null); setNotice("Заготовка добавлена в конец листа. Твой текст, связи и исходник сохранены; все новые разделы можно менять."); }
     catch (cause) { setError(errorMessage(cause)); }
+  }
+  function appendFileText(label: string, text: string) {
+    if (!draft || historical) throw new Error("Открой рабочую версию документа.");
+    // The upload panel holds the busy lock while calling back. Build the edit
+    // atomically rather than routing through the disabled editor controls.
+    const body = appendOriginalText(draft.body, label, text, !sealedSource);
+    setUndo((stack) => [...stack, draft.body].slice(-20)); setRedo([]);
+    setDraft({ ...draft, body }); setExportCopy(null); setError(null);
+    setNotice("Текст оригинала добавлен в рабочие блоки. Сохрани изменения; оригинальный файл не изменён.");
   }
   function download(format: "txt" | "json") {
     if (!draft) return;
@@ -199,12 +213,12 @@ export default function WorkDocumentDesk({ repository, leads, providers, directi
   const selectedProvider = providers.find((item) => item.id === draft?.body.links.provider_id);
 
   return <div className="workdoc-desk"><div inert={Boolean(pending)}>
-    <div className="course-toolbar workdoc-topbar"><div className="course-tools"><button disabled={busy} onClick={() => guardAction(onClose)}>← Мой курс</button><button disabled={busy} aria-pressed={screen === "templates"} onClick={() => setScreen("templates")}>Новый документ</button><button disabled={busy} aria-pressed={screen === "library"} onClick={() => setScreen("library")}>Мои документы</button>{draft && screen !== "editor" && <button disabled={busy} onClick={() => setScreen("editor")}>Продолжить документ</button>}</div><div className="course-tools"><span className="course-muted">Только staff · ничего не отправляется автоматически</span>{draft && screen === "editor" && <button aria-expanded={contextOpen} onClick={() => setContextOpen(!contextOpen)}>Контекст {contextOpen ? "−" : "+"}</button>}</div></div>
+    <div className="course-toolbar workdoc-topbar"><div className="course-tools"><button disabled={busy} onClick={() => guardAction(onClose)}>← Мой курс</button><button disabled={busy} aria-pressed={screen === "templates"} onClick={() => setScreen("templates")}>Новый документ</button><button disabled={busy} aria-pressed={screen === "library"} onClick={() => setScreen("library")}>Мои документы</button>{draft && screen !== "editor" && <button disabled={busy} onClick={() => setScreen("editor")}>Продолжить документ</button>}</div><div className="course-tools"><span className="course-muted">Только staff · ничего не отправляется автоматически</span>{draft && screen === "editor" && <button disabled={busy} aria-expanded={contextOpen} onClick={() => setContextOpen(!contextOpen)}>Контекст / DOCX / PDF {contextOpen ? "−" : "+"}</button>}</div></div>
     {error && <p role="alert" className="course-alert">{error}</p>}
     {notice && <p role="status" className="course-notice">{notice}</p>}
-    {screen === "templates" && <DocumentTemplateGallery busy={busy} onCreate={create}/>}
+    {screen === "templates" && <><DocumentTemplateGallery busy={busy} onCreate={create}/><div className="course-tools"><button disabled={busy} onClick={() => create("blank", true)}>Начать работу с DOCX / PDF</button><small className="course-muted">Создай и сохрани лист, затем подключи оригинал в контексте справа.</small></div></>}
     {draft && screen !== "editor" && dirty && <p className="course-caption">У тебя открыт несохранённый лист. Он остаётся в редакторе: нажми «Продолжить документ» или сохрани его перед созданием другого.</p>}
-    {exportCopy && screen === "editor" && <section className="workdoc-export" aria-label="Выгрузка документа"><div className="course-section-heading"><h3>Копия для выгрузки</h3><button onClick={() => setExportCopy(null)}>Закрыть выгрузку</button></div><p>Это рабочий текст, включая внутренние условия и исходник в JSON. Не автоматически обезличенная клиентская версия. Скачай файл или скопируй текст ниже.</p><a className="course-primary" href={exportCopy.url} download={exportCopy.filename}>Скачать {exportCopy.filename}</a><textarea aria-label={exportCopy.format === "json" ? "Текст JSON-копии" : "Текст TXT-копии"} readOnly value={exportCopy.content} onFocus={(event) => event.target.select()}/></section>}
+    {exportCopy && screen === "editor" && <section className="workdoc-export" aria-label="Выгрузка документа"><div className="course-section-heading"><h3>Копия для выгрузки</h3><button onClick={() => setExportCopy(null)}>Закрыть выгрузку</button></div><p>Это рабочий текст, включая внутренние условия и снимок текста в JSON. Прикреплённые DOCX/PDF не входят в выгрузку: скачай их отдельно в контексте. Это не автоматически обезличенная клиентская версия.</p><a className="course-primary" href={exportCopy.url} download={exportCopy.filename}>Скачать {exportCopy.filename}</a><textarea aria-label={exportCopy.format === "json" ? "Текст JSON-копии" : "Текст TXT-копии"} readOnly value={exportCopy.content} onFocus={(event) => event.target.select()}/></section>}
     {screen === "library" && <section className="workdoc-library" aria-label="Библиотека документов">
       <div className="course-section-heading"><div><span className="course-eyebrow">Рабочее пространство</span><h2>Мои документы</h2></div><button disabled={busy || loading} onClick={() => void refreshLibrary()}>Обновить список</button></div>
       <label className="workdoc-backup-import">Восстановить свою JSON-копию<input type="file" accept=".json,application/json" aria-label="Восстановить JSON-копию" disabled={busy} onChange={(event) => void importBackup(event)}/></label>
@@ -240,7 +254,8 @@ export default function WorkDocumentDesk({ repository, leads, providers, directi
             {selectedLead && <Link to={`/merchants/${selectedLead.lead_id}?tab=documents`}>Открыть карточку клиента →</Link>}{selectedProvider && <Link to={`/psps/${selectedProvider.id}`}>Открыть карточку PSP →</Link>}
             <p>Это связи рабочего документа; клиенту он не виден и в его реестр файлов автоматически не публикуется.</p>
           </section>
-          <section><h4>Исходник</h4>{draft.body.source ? <>
+          <WorkOriginalFiles key={draft.id} documentId={draft.id} revision={draft.revision} editable={editable} historical={historical} onBusy={setBusy} onAppend={appendFileText}/>
+          <section><h4>Снимок текста</h4>{draft.body.source ? <>
             <p>{sealedSource ? "Снимок зафиксирован. Правь рабочие блоки; исходник и история останутся прежними." : "Снимок станет неизменяемым после сохранения."}</p>
             <label>Название<input aria-label="Название исходника" disabled={!editable || sealedSource} value={draft.body.source.label} maxLength={200} onChange={(event) => update({ ...draft.body, source: { ...draft.body.source!, label: event.target.value } })}/></label>
             <label>Ссылка<input aria-label="Ссылка исходника" disabled={!editable || sealedSource} value={draft.body.source.url} maxLength={2000} onChange={(event) => update({ ...draft.body, source: { ...draft.body.source!, url: event.target.value } })}/></label>
@@ -255,7 +270,7 @@ export default function WorkDocumentDesk({ repository, leads, providers, directi
         </aside>}
       </div>
     </> : screen === "editor" && <p className="course-empty">Нажми «Новый документ» и выбери чистый лист или заготовку.</p>}
-    <footer className="course-footer"><span>Конструктор · до 100 блоков · ручное сохранение</span><span>Нет автоматической отправки, подписи или публикации. Word/PDF-редактор не подключён.</span></footer>
+    <footer className="course-footer"><span>Конструктор · до 100 блоков · ручное сохранение</span><span>DOCX/PDF: приватные оригиналы и отдельный рабочий текст. Нет точного Word round-trip, подписи или автоматической отправки.</span></footer>
     </div>{pending && <div className="workdoc-confirm-backdrop"><div role="alertdialog" aria-modal="true" aria-labelledby="workdoc-confirm-title" aria-describedby="workdoc-confirm-message" className="workdoc-confirm" onKeyDown={(event) => {
       if (event.key === "Escape") { event.preventDefault(); setPending(null); }
       if (event.key === "Tab") { event.preventDefault(); (document.activeElement === cancelRef.current ? proceedRef.current : cancelRef.current)?.focus(); }

@@ -2,6 +2,35 @@
 
 Updated: 2026-10-01
 
+## Shared paper theme and private DOCX/PDF originals — 2026-10-01
+
+- `VERIFIED locally`: shared paper/olive visual tokens cover staff workspaces;
+  routes, navigation widths and operational handlers are unchanged. SEO/GEO and
+  subagents deliberately keep their previous theme. Light/dark registry and actual
+  document-editor fixtures reviewed in Brave before release.
+- `VERIFIED`: additive `offerpsp_work_document_files` migration applied remotely
+  as `20261001202145`; local CLI-created source is `20261001195538`.
+  Private bucket `offerpsp-work-originals`: 15 MiB, PDF/DOCX only. Original uploads
+  require a saved current staff document plus reservation; replacement is forbidden.
+- `VERIFIED`: live rollback-only reserve/dedup/complete/staff/Storage checks passed.
+  No binary was uploaded during SQL tests. The first DELETE assertion encountered
+  Supabase's extra `storage.protect_delete` guard; the revised test verifies denial
+  without bypassing it. Failed and successful test writes were rolled back.
+- `VERIFIED locally`: 8 original-file tests, 17 document tests, 11 organizer tests,
+  four control-integrity suites, lint, TypeScript/Vite build and diff check pass.
+  Actual synthetic DOCX English/Russian extraction and one-page PDF text pass;
+  both fixtures were rendered and visually inspected. DOCX actual inflation is
+  bounded before parsing; PDF worker is bundled, with page/text/time limits.
+- New deliberate advisor notices: one private deny-by-default RLS table plus four
+  authenticated staff-gated SECURITY DEFINER RPCs (empty search paths, no anon or
+  service grants). Existing historical advisor debt is unchanged.
+- `PARTIAL`: frontend production rollout and authorized browser binary upload/
+  download/reopen smoke pending. Exact Word layout, tracked changes, signatures,
+  DOCX/PDF working-copy export, OCR and original cloning into TXT/JSON are not
+  implemented. Interrupted uploads resume by selecting the same original; pending
+  reservations remain visible, and no automatic purge is added.
+- Release evidence: `docs/OFFERPSP-BRIDGE-PAPER-DOCUMENT-FILES-2026-10-01.md`.
+
 ## Course organizer and universal documents — production 2026-10-01
 
 - `VERIFIED`: commit `fcb356669ae2a1c9944815dcb025f55b47988608` on

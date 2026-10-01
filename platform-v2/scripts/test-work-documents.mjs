@@ -151,7 +151,7 @@ test('UI uses staff RPCs, honest file limits and loss protection; no HTML inject
   const repository = await readFile(new URL('../src/lib/workDocumentRepository.ts', import.meta.url), 'utf8');
   assert.match(editor, /beforeunload/); assert.match(editor, /guardAction/); assert.match(editor, /historical/); assert.match(editor, /sealedSource/);
   assert.match(editor, /role="alertdialog"/); assert.doesNotMatch(editor, /window\.confirm/);
-  assert.match(editor, /Word\/PDF-редактор не подключён/); assert.match(editor, /ручное сохранение/);
+  assert.match(editor, /Нет точного Word round-trip/); assert.match(editor, /ручное сохранение/);
   assert.doesNotMatch(editor + repository, /dangerouslySetInnerHTML|localStorage|service_role|send_offerpsp|sendEmail|supabase\.from\(/);
   assert.match(repository, /p_expected_revision: draft.revision/); assert.match(repository, /outcome === "conflict"/);
 });
@@ -205,7 +205,7 @@ test('templates, library and editor are separate screens; no fixed document type
   const editor = await readFile(new URL('../src/components/control/WorkDocumentDesk.tsx', import.meta.url), 'utf8');
   const gallery = await readFile(new URL('../src/components/control/DocumentTemplateGallery.tsx', import.meta.url), 'utf8');
   assert.match(editor, /useState<"templates" \| "library" \| "editor">\("templates"\)/);
-  assert.match(editor, /screen === "templates" && <DocumentTemplateGallery/);
+  assert.match(editor, /screen === "templates" && <><DocumentTemplateGallery/);
   assert.match(editor, /draft && screen === "editor"/); assert.match(editor, /screen === "library"/);
   assert.doesNotMatch(editor, /aria-label="Тип документа"/); assert.match(editor, /appendDocumentTemplate\(draft.body/);
   assert.match(gallery, /Шаблоны нового документа/); assert.match(gallery, /любой лист можно превратить/);

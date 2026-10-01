@@ -1,0 +1,74 @@
+/* Shared visual tokens only: no route, data or operational behaviour changes. */
+.bridge-paper {
+  --bridge-paper: #f7f3eb;
+  --bridge-surface: #fcfaf5;
+  --bridge-ink: #343a32;
+  --bridge-muted: #6c7064;
+  --bridge-line: #dcd8cd;
+  --bridge-active: #e5e9dc;
+  --bridge-olive: #647052;
+  --color-white: var(--bridge-surface);
+  --color-gray-25: #fdfbf7;
+  --color-gray-50: var(--bridge-paper);
+  --color-gray-100: #eeece3;
+  --color-gray-200: var(--bridge-line);
+  --color-gray-300: #c6c6b8;
+  --color-gray-400: #898d7e;
+  --color-gray-500: var(--bridge-muted);
+  --color-gray-600: #596151;
+  --color-gray-700: #48503f;
+  --color-gray-800: #3d4437;
+  --color-gray-900: var(--bridge-ink);
+  --color-gray-950: #242b22;
+  --color-brand-25: #f5f6ee;
+  --color-brand-50: #eff2e6;
+  --color-brand-100: var(--bridge-active);
+  --color-brand-200: #d3dcc2;
+  --color-brand-300: #b9c79f;
+  --color-brand-400: #8a9c70;
+  --color-brand-500: #73845c;
+  --color-brand-600: var(--bridge-olive);
+  --color-brand-700: #526044;
+  --color-brand-800: #424e36;
+  --color-brand-900: #35402c;
+  --color-brand-950: #242d1e;
+  background: var(--bridge-paper) !important;
+  color: var(--bridge-ink);
+}
+.dark .bridge-paper {
+  --bridge-paper: #262922;
+  --bridge-surface: #2d3028;
+  --bridge-ink: #edece3;
+  --bridge-muted: #b0b4a5;
+  --bridge-line: #45483d;
+  --bridge-active: #3a4430;
+  --bridge-olive: #b6c399;
+  --color-gray-700: #45483d;
+  --color-gray-800: #33382c;
+  --color-gray-900: #262922;
+  --color-gray-dark: #2d3028;
+}
+.bridge-paper > div > aside,
+.bridge-paper header.sticky {
+  background: var(--bridge-surface) !important;
+  border-color: var(--bridge-line) !important;
+}
+.bridge-paper .menu-item-active {background: var(--bridge-active) !important;color: var(--bridge-olive) !important}
+.bridge-paper .menu-item-inactive {color: var(--bridge-muted) !important}
+.bridge-paper .menu-item-icon-active {color: var(--bridge-olive) !important}
+.bridge-paper .bridge-content {line-height: 1.55;min-width: 0}
+.bridge-paper .bridge-content h1,
+.bridge-paper .bridge-content h2 {font-family: Georgia, "Times New Roman", serif;font-weight: 400;letter-spacing: -.015em}
+.bridge-paper .bridge-content h1 {line-height: 1.25}
+.bridge-paper :is(.rounded-2xl,.rounded-xl,.rounded-lg) {border-radius: 5px}
+.bridge-paper :focus-visible {outline: 2px solid var(--bridge-olive);outline-offset: 3px}
+.bridge-paper input[type=checkbox] {accent-color: var(--bridge-olive)}
+/* Existing modules use hard-coded navy dark surfaces; leave status colours alone. */
+.dark .bridge-paper [class*="dark:bg-[#"] {background-color: var(--bridge-surface)}
+.dark .bridge-paper [class*="dark:border-[#"] {border-color: var(--bridge-line)}
+.dark .bridge-paper [class*="dark:text-white"] {color: var(--bridge-ink)}
+.dark .bridge-paper :is(.text-gray-600,.text-gray-700,.text-gray-800,.text-gray-900):not([class*="dark:text-"]) {color: var(--bridge-ink)}
+.dark .bridge-paper header .bg-white\/5 {background-color: transparent}
+.bridge-paper .fc {--fc-border-color: var(--bridge-line);--fc-page-bg-color: var(--bridge-surface);--fc-neutral-bg-color: var(--bridge-paper);--fc-today-bg-color: var(--bridge-active)}
+.bridge-paper .fc .fc-button-primary {background: var(--bridge-olive);border-color: var(--bridge-olive);color: var(--bridge-surface)}
+@media (prefers-reduced-motion: reduce) {.bridge-paper * {transition-duration: 0ms !important;animation-duration: 0ms !important}}
