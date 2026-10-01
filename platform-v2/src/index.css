@@ -828,3 +828,9 @@ span.flatpickr-weekday,
 .simplebar-scrollbar.simplebar-visible:before {
   @apply opacity-100;
 }
+.offerpsp-calendar .calendar-planned .fc-daygrid-event-dot {
+  border-style: dashed;
+}
+.offerpsp-calendar .calendar-planned .fc-list-event-dot {
+  border-style: dashed;
+}

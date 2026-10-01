@@ -221,8 +221,7 @@ assert.match(platform, /operationalRoutes = useMemo\(\(\) => routes\.filter\(\(r
 assert.match(header, /!isQaFixturePath\(item\.path\)/);
 assert.match(compliance, /operationalCases = useMemo/);
 assert.match(operations, /operationalTasks = useMemo/);
-assert.match(operations, /operationalTasks\.filter\(\(task\)=>task\.due_at\)\.map/);
-assert.match(operations, /task=operationalTasks\.find/);
+assert.match(operations, /OperationsCalendar tasks=\{operationalTasks\}/);
 assert.match(operations, /const openCount = operationalTasks\.filter/);
 assert.match(operations, /const overdueCount = operationalTasks\.filter/);
 assert.match(operations, /const dueToday = operationalTasks\.filter/);

@@ -2,6 +2,41 @@
 
 Updated: 2026-10-02
 
+## Three-layer business calendar — 2026-10-02
+
+- Boris requested `Было / Сейчас / Будет`: real history before local today,
+  today's facts and plans, and future scheduled work. Dates move by local civil
+  day without copying rows; overdue work is never marked completed by rollover.
+- `VERIFIED locally`: actual calendar UI uses a bounded, paginated staff RPC over
+  canonical messages, shared shortlists, tasks and selected merchant decisions.
+  Draft/failed/cancelled sends and QA/service/self/auth mail are excluded using
+  the existing mail classifier and fixture identity filters. No second history table.
+- Sent/received facts use actual transport timestamps, completed tasks use
+  `completed_at`, replies require parent-message evidence. Portal publication is
+  explicitly not email delivery. Offer context retains option codes/titles/version;
+  no source rate/margin is projected into the calendar.
+- `VERIFIED production database`: additive migrations applied as `20261001220213`
+  and corrective identity migration `20261001220425`.
+  Live schema revealed legacy `offerpsp_tasks.entity_id` is text; first read failed
+  before frontend rollout. Matching text-schema regression reproduced failure;
+  corrective migration compares identifiers as text without unsafe UUID casts.
+  Original applied migration remains intact. Subsequent read returns 105 records
+  for Sep 1–Oct 3 (54 sent, 38 received, 8 completed, 3 due, 2 merchant decisions),
+  0 QA, no pagination truncation. No business shortlist publication exists in this
+  live window; offer snapshot rendering is verified with synthetic local data.
+- `VERIFIED`: live anonymous and non-staff guards deny reads; no anon/service
+  EXECUTE grants, empty search path, explicit auth UID and staff checks. Advisors:
+  existing 40 private/no-policy INFO unchanged; 187→188 authenticated SD notices,
+  only new notice is intentional staff-gated `get_offerpsp_calendar_events`.
+  No broad privileges or table policies changed.
+- `VERIFIED locally`: calendar Postgres/date/DST/pagination/reply/QA/access checks,
+  four control-integrity suites, lint/build pass. Actual three-layer component
+  visually checked with a no-network synthetic reader. `vercel build --prod`
+  succeeds; local function-storage budget 105.6 MiB/11 functions passes. macOS
+  output is diagnostic only and must not be published as Linux prebuilt functions.
+- `PARTIAL`: frontend release and live calendar/mail/inbox smoke pending.
+  No emails, Telegram messages, offers or client statuses changed by this work.
+
 ## Calendar QA isolation and original-file smoke — 2026-10-02
 
 - `VERIFIED cause`: registered live QA intake merchant
@@ -31,7 +66,10 @@ Updated: 2026-10-02
   month events and list rows inherited white labels on transparent backgrounds.
   Narrow CSS fix uses paper ink for those rows and keeps white labels on solid
   all-day bars. Synthetic month/all-day/list fixture visually verified in Brave;
-  control-integrity regression passes. Contrast rollout pending verification.
+  control-integrity regression passes. `VERIFIED production` contrast release
+  `3210babd679e8d5a1529bf483287ed9cdbaf7dcf`, READY
+  `dpl_87AUnazztPDq2G2zH63MYgFfYBAj`, primary manifest matches and real month
+  labels are visibly readable. Superseded by the subsequent calendar-events release.
 
 ## Shared paper theme and private DOCX/PDF originals — 2026-10-01
 

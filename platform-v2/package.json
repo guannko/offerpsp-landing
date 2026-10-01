@@ -20,6 +20,7 @@
     "check:function-storage": "node scripts/check-function-storage.mjs",
     "test:modules": "node scripts/test-platform-modules.mjs",
     "test:course-organizer": "node --experimental-strip-types --test scripts/test-course-organizer.mjs",
+    "test:calendar-events": "node --experimental-strip-types --test scripts/test-calendar-events.mjs",
     "test:work-documents": "node --experimental-strip-types --test scripts/test-work-documents.mjs",
     "test:work-originals": "node --experimental-strip-types --test scripts/test-work-originals.mjs",
     "test:control-integrity": "node scripts/test-control-integrity.mjs && node scripts/test-delivery-evidence.mjs && node --experimental-strip-types scripts/test-qa-fixture-isolation.mjs && node --experimental-strip-types scripts/test-email-thread-view.mjs",
