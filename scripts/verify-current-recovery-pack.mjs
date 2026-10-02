@@ -15,7 +15,12 @@ assert.equal(exported.project_ref,'iceopurxqzqmwtcmwfzl');
 assert.match(exported.status,/^EXPORTED/);
 const proof=await mkdtemp(path.join(pack,'restore-proof-'));
 const servicesRequested=process.argv.includes('--check-services');
+const upgradeRequested=process.argv.includes('--target-pg17.11');
+const restoreImage=upgradeRequested?'public.ecr.aws/supabase/postgres:17.11.0.002':exported.image;
 const report={started_at:new Date().toISOString(),status:'IN_PROGRESS',scope:servicesRequested?'Logical PostgreSQL and local Storage restore with bounded isolated Auth/REST/Storage runtime checks; not hosted failover or external-integration recovery':'Logical PostgreSQL restore and local Storage byte verification; not a live Supabase service-stack restore',network:'none',published_ports:0,cron_enabled:false,production_mutations:false,steps:[]};
+report.source_version=exported.inventory.server_version;
+report.restore_image=restoreImage;
+report.upgrade_rehearsal=upgradeRequested;
 let container;
 async function save(){await writeFile(path.join(proof,'report.json'),JSON.stringify(report,null,2),{mode:0o600});}
 async function docker(args,input='',label='docker'){
@@ -33,10 +38,13 @@ try{
   for(const f of exported.steps){const b=await readFile(path.join(pack,f.file));assert.equal(b.length,f.bytes);assert.equal(sha(b),f.sha256);}
   report.steps.push({id:'dump-receipt-integrity',status:'PASS'});await save();
   const preload=servicesRequested?'pg_cron,pg_net,pgsodium':'pg_cron,pg_net';
-  container=(await docker(['run','--pull=never','-d','--network','none','--env','POSTGRES_HOST_AUTH_METHOD=trust','--env',`POSTGRES_PASSWORD=${randomUUID()}`,'--mount',`type=bind,source=${pack},target=/recovery,readonly`,'--name',`offerpsp-current-restore-${randomUUID()}`,exported.image,'postgres','-c',`shared_preload_libraries=${preload}`,...(servicesRequested?['-c','pgsodium.getkey_script=/usr/share/postgresql/extension/pgsodium_getkey']:[]),'-c','cron.launch_active_jobs=off','-c','pg_net.database_name=template1'],'','start')).toString().trim();
+  container=(await docker(['run','--pull=never','-d','--network','none','--env','POSTGRES_HOST_AUTH_METHOD=trust','--env',`POSTGRES_PASSWORD=${randomUUID()}`,'--mount',`type=bind,source=${pack},target=/recovery,readonly`,'--name',`offerpsp-current-restore-${randomUUID()}`,restoreImage,'postgres','-c',`shared_preload_libraries=${preload}`,...(servicesRequested?['-c','pgsodium.getkey_script=/usr/share/postgresql/extension/pgsodium_getkey']:[]),'-c','cron.launch_active_jobs=off','-c','pg_net.database_name=template1'],'','start')).toString().trim();
   assert.match(container,/^[0-9a-f]{64}$/);
   const psql=(sql,db='postgres',user='postgres')=>docker(['exec','-i',container,'psql','-h','127.0.0.1','-U',user,'-d',db,'-XqAt','-v','ON_ERROR_STOP=1'],sql,'sql');
   for(let i=0;i<100;i++){try{await psql('select 1');break;}catch(e){if(i===99)throw e;await new Promise(r=>setTimeout(r,200));}}
+  report.target_version=(await psql('show server_version')).toString().trim();
+  if(upgradeRequested)assert.match(report.target_version,/^17\.11(?:\s|$)/,'The rehearsal must run the actual 17.11 engine');
+  report.steps.push({id:'restore-engine-version',status:'PASS',version:report.target_version});await save();
   await psql('CREATE ROLE recovery_operator SUPERUSER LOGIN;','postgres','supabase_admin');
   // Preserve production role definitions without conflicting with image bootstrap roles.
   const roles=(await readFile(path.join(pack,'roles.sql'),'utf8')).replace(/^CREATE ROLE (.+);$/gm,(_,r)=>`DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname=${"'"+r.replace(/^"|"$/g,'').replaceAll("'","''")+"'"}) THEN CREATE ROLE ${r}; END IF; END $$;`);

@@ -5,8 +5,9 @@ an all-controls ASVS pass, or a completed WCAG conformance assessment.
 Initial production inspected: release `1bdaa523b06e03630cd4efd1206aa0a97d9db974`.
 Staff fixes are now deployed as `4ce6934e0ff7293bcbc65dd7706a6f36f686b175`;
 the public portal remains on the initial release. Delivery receipts follow below.
-Latest source checkpoint: 30 groups PASS / 0 FAIL / 0 BLOCKED at
-16:30:39–16:31:17 UTC. Reflow and browser/DOCX hardening are now deployed.
+Latest source checkpoint: 31 groups PASS / 0 FAIL / 0 BLOCKED at
+19:25:48–19:26:59 UTC. Reflow and browser/DOCX hardening are now deployed;
+the subsequent contrast fix awaits its own delivery receipt below.
 Earlier checkpoints below remain historical evidence.
 
 ## Latest staff release verification
@@ -152,9 +153,9 @@ evidence-inventory states, not 253 completed assessments. No whole-control PASS
 is inferred from a chapter's tests. Password requirements remain reviewable,
 not automatically N/A merely because the current UI is passwordless.
 
-The resource/script CSP control (V3.4.3) has moved to PARTIAL on the local
-implementation and browser evidence above; production and strict-policy review
-remain open. The remaining confirmed implementation gap is no antivirus gate
+The resource/script CSP control (V3.4.3) is PARTIAL on the implementation,
+production header and bounded browser evidence above; strict-policy and complete
+control review remain open. The remaining confirmed implementation gap is no antivirus gate
 for files from untrusted sources (V5.4.3).
 Type/signature/size checks do not replace antivirus. No customer document was
 submitted to a public scanner; remediation must retain private processing.
@@ -168,8 +169,9 @@ No affected ltree/float GiST indexes, custom selectivity-estimator operators or
 public/private application references to the affected PGP functions were found
 in the inspected categories from Supabase's September 25 upgrade guidance.
 This does not establish every workload's compatibility or inspect encrypted
-customer content. A managed 17.11 upgrade still needs a restore-backed staging
-rehearsal, reconnection/downtime plan and explicit production window; no engine
+customer content. The isolated official Supabase 17.11 rehearsal now passes,
+as recorded below. A managed upgrade still needs supported-target confirmation,
+reconnection/downtime acceptance and an explicit production window; no managed engine
 upgrade was attempted.
 Execution and failure handling are documented in
 `docs/OFFERPSP-POSTGRES-UPGRADE-PLAN-2026-10-02.md`; the plan is not a rehearsal
@@ -226,7 +228,8 @@ build and Docker concurrency suites, at 14:31:37–14:32:54 UTC:
 `tmp/quality-baseline/2026-10-02T14-31-37-054Z/report.json`.
 An earlier sandbox-only run had three Docker permission blocks, not three
 application failures. The authorized rerun resolves all three. These layout
-repairs are **not deployed** and therefore have no production retest receipt.
+repairs were not deployed at that checkpoint. The later 4ce6934 staff release
+delivered them and passed the bounded authenticated checks recorded above.
 The private fixture's broad Vite dependency scan reported missing mock exports
 for unrelated application entry points; the requested two real-component
 fixtures rendered and were measured successfully, and the normal production
@@ -503,18 +506,73 @@ pending in a confirmation dialog.
 ## Still open
 
 1. Individual ASVS applicability and missing evidence: the 253-row ledger is
-   created, but 183 controls remain NOT_TESTED, 54 have bounded PARTIAL evidence
-   and two implementation gaps require remediation. Remaining valid-role API,
+   created, but 183 controls remain NOT_TESTED, 55 have bounded PARTIAL evidence
+   and one implementation gap requires remediation. Remaining live valid-role API,
    removed-member, parser/SSRF, token, OAuth and WebSocket scenarios must be tested
    in scope rather than inferred from anonymous probes.
 2. Actual screen-reader journey and remaining accessibility/error/contrast states.
-   New 320-pixel layout repairs require production delivery and loaded-state
-   retest; local fixture results are not a production receipt.
+   The 320-pixel task/mail repairs are delivered; full all-state accessibility
+   still cannot be inferred from those bounded checks.
 3. Whole-service recovery configuration: Vault decryption, real dispatch and
    external integrations/hosted failover/RTO/RPO. Auth/REST/Storage serving and
    restart checks now pass in the bounded network-isolated drill.
-4. Restore-backed managed PostgreSQL security-upgrade rehearsal and an agreed
-   production window. Read-only compatibility inventory is not an upgrade PASS.
+4. Managed PostgreSQL supported-target confirmation and an agreed production
+   window. The isolated 17.11 rehearsal below passes; it is not a hosted upgrade.
+
+## Final bounded verification block — 2 October evening UTC
+
+Fresh authorized backup exported at 19:03:49 UTC into private
+`current-20261002-Q1HHtd`: logical dump 11,118,605 bytes, all 20 Storage objects
+6,357,644 bytes with stable inventories and hashes. The earlier verified pack
+is retained. DB and Storage are not one atomic snapshot.
+
+The official Supabase PostgreSQL 17.11.0.002 rehearsal passes at
+19:04:41–19:05:01 UTC: engine version asserted, restore with exit-on-error and
+one transaction, 159 table definitions, 62 policies, 265 public functions,
+seven extension versions, 156 COPY tables / 12,204 rows and all 20 files match.
+Nine rolled-back join-rejection cases and nine bounded Auth/REST/Storage checks
+also pass, including service restart. No networking, published ports, real SMTP
+or production signing key; all temporary containers removed. Details and limits
+are in the updated upgrade plan and private `restore-proof-1JB3BZ/report.json`.
+
+Private retrospective antivirus check passes at 19:12:16–19:12:46 UTC. Official
+ClamAV 1.4.6 / database 28141 uses updated signatures dated 2 October 06:26 UTC.
+The harmless EICAR positive control is detected and all 20 archived files are
+scanned with no detections. Document bytes enter only a network-none scanner;
+the network-enabled signature updater mounts only signatures, not documents or
+credentials. Limits/encrypted-file alerts fail closed. Evidence:
+`antivirus-proof-TPIWoF/report.json`. Initial capability/log-path fixture failures
+were corrected and retained as failures. This is NOT a production upload gate,
+continuous scanning or proof that every file is safe. V5.4.3 remains GAP until
+a private server-side quarantine/scanner path exists.
+
+Actual 13 staff API entrypoints pass 65 synthetic-auth scenarios: valid nonstaff
+(including spoofed user-editable owner metadata), revoked session, unavailable
+Auth, unavailable staff RPC and malformed staff result. Denials fail closed with
+no-store, error JSON and no downstream operations. No network fallback, real
+credentials, recipients or entity writes are allowed. These mocked-Auth handler
+regressions complement the actual local Auth/JWT drill; they are not live
+penetration testing of every role/API/OAuth scope.
+
+Actual live Brave search keyboard check passes: Meta-K opens the named dialog,
+Tab/Shift-Tab remain contained, Escape closes and returns focus to the launcher.
+Mail still contains 23 active chains. Another native VoiceOver attempt did not
+capture an actual spoken/captioned journey; switch was restored OFF. No new
+screen-reader conformance claim is made.
+
+Confirmed small contrast defects: favorite stars were 2.29:1 on paper / 1.98:1
+on the active background; small flagged-count text was 3.40:1. Targeted staff
+styling darkens only favorite icons and that count, preserving the paper palette
+and all mail logic. The new source/color regression fails before and passes
+after; production delivery will be recorded separately. Excluded module code,
+public portal, real partner correspondence and business data are unchanged.
+
+Final baseline after the contrast fix: 31 groups PASS / 0 FAIL / 0 BLOCKED,
+19:25:48–19:26:59 UTC; receipt
+`tmp/quality-baseline/2026-10-02T19-25-48-285Z/report.json`. The initial sandbox
+run had three Docker permission blocks, not application failures; the rerun
+with authorized local container access passes all three. This is a source
+checkpoint, not yet a production receipt for the new contrast classes.
 
 Before new organizer features, prioritize script/resource CSP, private file
 quarantine/scanning and the remaining high-risk authorization/parser checks.

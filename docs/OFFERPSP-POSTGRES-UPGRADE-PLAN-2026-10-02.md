@@ -1,8 +1,8 @@
 # OfferPSP managed PostgreSQL security upgrade plan
 
-Status: **PARTIAL**. The plan and read-only compatibility preflight are complete;
-the target-version rehearsal and production upgrade have not occurred. No
-downtime is authorized merely by saving this plan.
+Status: **PARTIAL**. Read-only compatibility preflight and the isolated official
+Supabase PostgreSQL 17.11 restore rehearsal pass. The managed production upgrade
+has not occurred. No downtime is authorized merely by saving this plan.
 
 ## Current evidence and target
 
@@ -29,6 +29,23 @@ managed Vault decryption, an atomic DB/Storage snapshot, hosted failover or an
 engine-downgrade guarantee. Keep these recovery limits explicit.
 
 ## Rehearsal before a production window
+
+Completed bounded rehearsal, 2 October 19:04:41–19:05:01 UTC: fresh private pack
+`current-20261002-Q1HHtd`, exported at 19:03:49 UTC, restored into official
+`public.ecr.aws/supabase/postgres:17.11.0.002`, image digest
+`sha256:0450166354dc9c1d25f0322ac8b580774d4fb0184d2b087f6e4fe9499c66cf53`.
+The verifier independently asserts the running engine is 17.11. All 159 table
+definitions, 62 policies, 265 public function definitions and seven extension
+versions match; all 156 archived COPY tables / 12,204 rows and 20 Storage files
+have exact content hashes. Nine rolled-back company-rejection cases and nine
+bounded Auth/REST/Storage checks, including restart, pass. Networking is none,
+no ports are published, cron is disabled and temporary containers are removed.
+Receipt: private `restore-proof-1JB3BZ/report.json`. The source engine remains
+17.6; this is not a managed platform upgrade, hosted failover, Vault decryption
+or proof that the dashboard offers this exact build. Those limits still apply.
+
+Reproduction: `node scripts/verify-current-recovery-pack.mjs <private-pack>
+--target-pg17.11 --check-services --check-company-rejection`.
 
 1. Confirm the dashboard's supported target, downtime estimate and rollback
    guidance. Record version, extension compatibility and any platform-specific

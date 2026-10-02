@@ -932,7 +932,8 @@
       "applicability": "APPLICABLE",
       "result": "GAP",
       "evidence": [
-        "No antivirus gate found in owned original-document upload/download paths; size/signature/archive checks are not antivirus scanning."
+        "No antivirus gate found in owned original-document upload/download paths; size/signature/archive checks are not antivirus scanning.",
+        "2026-10-02 19:12 UTC: private network-none ClamAV retrospective scan passes all 20 archived Storage files with updated signatures; EICAR positive control detected. Private antivirus-proof-TPIWoF/report.json. This does not enforce scanning on production uploads."
       ],
       "remaining": "Design a private scanner/quarantine gate; do not upload customer originals to third-party public scanners. Confirm infrastructure and retest before claiming this control."
     },

@@ -20,6 +20,18 @@ const operations=source('src/pages/OperationsWorkspace.tsx');
 assert.match(operations,/inline-flex max-w-full flex-wrap/,'Operations mode buttons must fit a 320px viewport');
 assert.match(operations,/grid w-full min-w-0 grid-cols-1[^\"]*\[overflow-wrap:anywhere\]/,'Long task identifiers must not force page-level horizontal scrolling');
 const mail=source('src/pages/CaptainPages.tsx');
+const sidebar=source('src/layout/AppSidebar.tsx');
+assert.doesNotMatch(sidebar,/text-warning-500|text-gray-300 hover:text-warning-500/,'Favorite controls must remain visible on paper backgrounds');
+assert.match(mail,/scope: "flagged"[^\n]*numberClass: "text-warning-700"/,'Small flagged-count text requires a darker warning color');
+const paper=source('src/layout/BridgePaper.css');
+const index=source('src/index.css');
+function color(text,name){const match=text.match(new RegExp(`${name}:\\s*(#[0-9a-f]{6})`,'i'));assert.ok(match,`Missing color ${name}`);return match[1];}
+function luminance(hex){const rgb=hex.slice(1).match(/../g).map(x=>parseInt(x,16)/255).map(x=>x<=0.04045?x/12.92:((x+0.055)/1.055)**2.4);return rgb[0]*0.2126+rgb[1]*0.7152+rgb[2]*0.0722;}
+function contrast(a,b){const values=[luminance(a),luminance(b)].sort((x,y)=>y-x);return (values[0]+0.05)/(values[1]+0.05);}
+for(const background of [color(paper,'--bridge-surface'),color(paper,'--bridge-active')]){
+ for(const foreground of [color(paper,'--bridge-accent'),color(paper,'--color-gray-600')])assert.ok(contrast(foreground,background)>=3,'Favorite icons require 3:1 contrast');
+ assert.ok(contrast(color(index,'--color-warning-700'),background)>=4.5,'Small flagged-count text requires 4.5:1 contrast');
+}
 assert.ok(mail.includes('mt-4 grid min-w-0 grid-cols-1 gap-3 xl:grid-cols-2'),'Mail accordion columns must be allowed to shrink');
 assert.ok(mail.includes('grid min-w-0 grid-cols-1 gap-3 lg:grid-cols-[140px_160px_minmax(0,1fr)]'),'Native datetime controls must not set the mail grid minimum width');
 assert.ok(mail.includes('absolute right-0 z-30 mt-2 w-56 max-w-[calc(100vw-3rem)]'),'Draft menu must remain inside narrow viewports');

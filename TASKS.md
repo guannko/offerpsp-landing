@@ -2,6 +2,27 @@
 
 Updated: 2026-10-02
 
+## Evening completion block — bounded checks, full audit still PARTIAL
+
+- `VERIFIED`: fresh private DB/Storage copy and actual official Supabase 17.11
+  restore rehearsal, 19:04:41–19:05:01 UTC; 156 COPY tables / 12,204 rows,
+  all 20 files, schema/policy/function/extension inventory match. Nine rejection
+  and nine bounded Auth/REST/Storage checks pass. No production engine upgrade.
+- `VERIFIED`: offline private ClamAV scan of all 20 archived files, updated
+  signatures and EICAR positive control. No external document disclosure.
+  This is not a production upload quarantine gate; that remains GAP.
+- `VERIFIED`: 65 synthetic-auth fail-closed scenarios across 13 actual staff API
+  entrypoints, no downstream operations; complements the actual local Auth drill.
+- `VERIFIED locally`: favorite-star and flagged-count contrast repairs; regression
+  fails before/passes after. Shared staff styling only, mail logic unchanged.
+- Latest final baseline: 31 PASS / 0 FAIL / 0 BLOCKED, 19:25:48–19:26:59 UTC.
+  Initial sandbox-only Docker blocks resolved by the authorized local rerun.
+- `PARTIAL`: 253-control ASVS review and complete accessibility; VoiceOver
+  spoken journey, remaining role/OAuth/parser checks, private continuous upload
+  scanner, managed upgrade window and whole-service recovery limits remain open.
+  Existing extended report and upgrade plan contain evidence and boundaries.
+- New grouped staff package is prepared; record exact delivery after verification.
+
 ## Staff browser and DOCX hardening release
 
 - `VERIFIED deployed`: full staff resource CSP denies inline scripts,

@@ -335,7 +335,7 @@ export function CommunicationsWorkspace() {
     { scope: "unread", label: "новых", count: mailCenter.metrics.unread, numberClass: "text-gray-900 dark:text-white" },
     { scope: "awaiting_reply", label: "ждём ответ", count: mailCenter.metrics.awaiting_reply, numberClass: "text-gray-900 dark:text-white" },
     { scope: "overdue", label: "просрочено", count: mailCenter.metrics.overdue_follow_up || 0, numberClass: "text-error-600" },
-    { scope: "flagged", label: "с флагом", count: mailCenter.metrics.flagged || 0, numberClass: "text-warning-600" },
+    { scope: "flagged", label: "с флагом", count: mailCenter.metrics.flagged || 0, numberClass: "text-warning-700" },
     { scope: "attachments", label: "файлов", count: mailCenter.metrics.attachments_to_review || 0, numberClass: "text-gray-900 dark:text-white" },
   ] as const;
 
