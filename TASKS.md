@@ -36,12 +36,17 @@ Updated: 2026-10-02
 - Follow-up: 28 live anonymous/invalid-token HTTP requests deny access. Four
   response helpers lacked explicit no-store; header-only repair and failing-
   before/passing-after regression are locally verified. Full 29-group baseline
-  passes at 14:25 Asia/Nicosia; production receipt for this follow-up is pending.
+  passes at 14:25 Asia/Nicosia. Source `93b68cd75e51efa866243fe8f35cfc1ca9156c42`
+  is deployed READY as `dpl_BwePHvy2mBcRUwUvr7HoUxwhVJif`; primary manifest
+  matches. Strict post-release HTTP check passes all 28 requests with no-store;
+  authenticated mail/calendar reload preserves 23 chains and three daily events.
 - Database password dependency review found no direct postgres/password dependency
   in 18 relevant active workflow graphs or either Vercel environment-name list.
   A rare external client remains possible. Existing Storage server key is readable
   in the dashboard, but hidden Terminal credential input is blocked by computer-use
-  policy. Manual private credential capture helper is prepared, not executed.
+  policy. Manual private credential capture helper is prepared; a synthetic
+  negative TTY test rejects a wrong-project key without creating a file. No real
+  credentials were saved. Blank password-reset dialog is handed to Boris.
 - VoiceOver activation is human-confirmed by Boris; actual transcript/caption
   capture still failed. Limited task focus/names verified; full reader journey
   remains PARTIAL. VoiceOver returned to OFF. No production credentials changed.

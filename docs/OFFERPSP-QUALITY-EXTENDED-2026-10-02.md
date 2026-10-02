@@ -3,7 +3,7 @@
 Status: **PARTIAL**. This is evidence from bounded tests, not ISO certification,
 an all-controls ASVS pass, or a completed WCAG conformance assessment.
 Initial production inspected: release `1bdaa523b06e03630cd4efd1206aa0a97d9db974`.
-Staff fixes are now deployed as `d99dd3679ecfbcfeccce71360a41e3eca7f02766`;
+Staff fixes are now deployed as `93b68cd75e51efa866243fe8f35cfc1ca9156c42`;
 the public portal remains on the initial release. Delivery receipts follow below.
 
 ## Closed checks
@@ -182,7 +182,10 @@ Prepared `scripts/capture-recovery-credentials.mjs` for Boris to run manually:
 hidden TTY input accepts only the database password and existing Storage API key,
 validates the legacy key's project/role, and creates a mode-600 JSON in an ignored
 mode-700 local directory. It refuses overwrite and makes no network call.
-Syntax checked; no real credential file has been created by the agent.
+Syntax checked. A hidden-input TTY test with synthetic credentials rejected a
+wrong-project legacy key before file creation; the exact credential target remains
+absent. No real credential file has been created by the agent. The blank database
+password-reset dialog is open for Boris; entry and submission have not occurred.
 
 ## Additional HTTP access and cache verification
 
@@ -198,7 +201,7 @@ Each helper now sets Cache-Control: no-store for success and error responses.
 A synthetic eight-response regression failed before the fix and passes after it,
 with all network calls disabled. The full local baseline at 14:24–14:25
 Asia/Nicosia passes **29 groups / 0 FAIL / 0 BLOCKED**.
-Delivery of this header-only follow-up requires its own receipt below.
+The follow-up deployment and strict post-release receipt are recorded below.
 
 ## Production delivery and smoke receipts
 
@@ -226,6 +229,23 @@ Delivery of this header-only follow-up requires its own receipt below.
 - Private durable evidence is in the ignored mode-700 directory
   `.private/quality-audit-20261002.a9nFLw`; it contains tests, bounded probe evidence,
   synthetic downloaded originals and rollback SQL, not a production DB snapshot.
+
+### Cache follow-up release
+
+- Full local checkpoint: 29 groups PASS / 0 FAIL / 0 BLOCKED,
+  11:24:30–11:25:19 UTC. Evidence:
+  `tmp/quality-baseline/2026-10-02T11-24-30-223Z/report.json`.
+- Source `93b68cd75e51efa866243fe8f35cfc1ca9156c42` is pushed and deployed READY
+  as `dpl_BwePHvy2mBcRUwUvr7HoUxwhVJif`. The primary staff alias was explicitly
+  assigned; its manifest matches this exact source and deployment.
+- Strict production HTTP check at 11:29:58–11:30:16 UTC: 28 requests PASS,
+  0 FAIL; all 14 protected routes deny anonymous/invalid tokens with JSON 401/403
+  and explicit `Cache-Control: no-store`. This does not test valid nonstaff
+  sessions, all OAuth scopes or production capacity.
+- Authenticated browser reloaded source 93b68cd7: three open/overdue tasks remain,
+  calendar contains three events today and Radio Room loads 23 active chains.
+  No task, membership or outbound message was changed. Public portal and SEO/GEO
+  were not deployed by this follow-up. VoiceOver remains OFF.
 
 ## Still open
 
