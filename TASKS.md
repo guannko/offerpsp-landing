@@ -21,7 +21,17 @@ Updated: 2026-10-02
   spoken journey, remaining role/OAuth/parser checks, private continuous upload
   scanner, managed upgrade window and whole-service recovery limits remain open.
   Existing extended report and upgrade plan contain evidence and boundaries.
-- New grouped staff package is prepared; record exact delivery after verification.
+- `VERIFIED deployed`: clean source `79f2a86e97e0a8d82d45ee945d047b026f616a1e`,
+  READY `dpl_E6nyyZY2CfNz215WtSHXuinn5dY8`; primary alias manifest matches.
+  Linux output 108.2 MiB; all 11 isolated function imports pass.
+- Final production HTTP: 44 checks PASS, 19:36:18–19:36:43 UTC, including 34
+  guarded API denials and exact OCR hashes/CSP. Initial provider test-input
+  assumption corrected; failed receipt preserved. Public release unchanged.
+- Actual staff browser: 23 mail chains, three open tasks, three daily events,
+  keyboard calendar focus/selection, organizer/templates and saved QA v2 load;
+  measured icon/count contrast passes. Private synthetic PDF renders with its
+  verified original hash. Five consecutive Titan poller executions succeed
+  after rollout, 19:37–19:41 UTC. No save/send/business mutation.
 
 ## Staff browser and DOCX hardening release
 

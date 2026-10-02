@@ -3,11 +3,11 @@
 Status: **PARTIAL**. This is evidence from bounded tests, not ISO certification,
 an all-controls ASVS pass, or a completed WCAG conformance assessment.
 Initial production inspected: release `1bdaa523b06e03630cd4efd1206aa0a97d9db974`.
-Staff fixes are now deployed as `4ce6934e0ff7293bcbc65dd7706a6f36f686b175`;
+Latest staff code is deployed as `79f2a86e97e0a8d82d45ee945d047b026f616a1e`;
 the public portal remains on the initial release. Delivery receipts follow below.
 Latest source checkpoint: 31 groups PASS / 0 FAIL / 0 BLOCKED at
 19:25:48–19:26:59 UTC. Reflow and browser/DOCX hardening are now deployed;
-the subsequent contrast fix awaits its own delivery receipt below.
+the contrast fix is now deployed and measured in production below.
 Earlier checkpoints below remain historical evidence.
 
 ## Latest staff release verification
@@ -131,7 +131,8 @@ functional regression, not a forced edit of a real provider profile.
 
 ### Transport hardening and known limits
 
-The deployed staff configuration adds nosniff, SAMEORIGIN, no-referrer and a limited
+Historical 11:03 UTC checkpoint, superseded by the resource CSP release above:
+the then-deployed staff configuration added nosniff, SAMEORIGIN, no-referrer and a limited
 CSP for base URI, objects and frame ancestry. This is **not** a complete script or
 connection CSP, and it does not establish XSS protection. OAuth, file previews
 and full OAuth/file-preview journeys remain separate from header verification.
@@ -564,7 +565,7 @@ Confirmed small contrast defects: favorite stars were 2.29:1 on paper / 1.98:1
 on the active background; small flagged-count text was 3.40:1. Targeted staff
 styling darkens only favorite icons and that count, preserving the paper palette
 and all mail logic. The new source/color regression fails before and passes
-after; production delivery will be recorded separately. Excluded module code,
+after; production delivery and measurements follow below. Excluded module code,
 public portal, real partner correspondence and business data are unchanged.
 
 Final baseline after the contrast fix: 31 groups PASS / 0 FAIL / 0 BLOCKED,
@@ -572,10 +573,61 @@ Final baseline after the contrast fix: 31 groups PASS / 0 FAIL / 0 BLOCKED,
 `tmp/quality-baseline/2026-10-02T19-25-48-285Z/report.json`. The initial sandbox
 run had three Docker permission blocks, not application failures; the rerun
 with authorized local container access passes all three. This is a source
-checkpoint, not yet a production receipt for the new contrast classes.
+checkpoint; the separate production receipt follows.
 
-Before new organizer features, prioritize script/resource CSP, private file
-quarantine/scanning and the remaining high-risk authorization/parser checks.
+### Final staff delivery receipt
+
+Exact source `79f2a86e97e0a8d82d45ee945d047b026f616a1e` was pushed to the existing
+GitHub branch and archived from a clean release checkout. Linux arm64/Node 24
+`vercel build --prod` passes with only the two public VITE variables. No server
+credentials or customer recovery files enter the build container. Storage budget
+108.2 MiB across 11 functions; all 11 import successfully with output-only mounts
+in a network-none container with no credentials.
+
+One grouped prebuilt production deployment is READY:
+`dpl_E6nyyZY2CfNz215WtSHXuinn5dY8`, unique URL
+`https://ops-7q4m2x9k8v3n-g6q7frinw-annoris.vercel.app`.
+The primary `https://ops-7q4m2x9k8v3n.vercel.app` alias was explicitly assigned
+after CLI automatically assigned only the secondary alias. Its exact commit
+manifest is verified. Public deployment remains READY and unchanged:
+`dpl_DsVRYnnAhDxpSaKaFDFBtdcWtQnM`.
+
+At 19:36:18–19:36:43 UTC, 44 HTTP assertions PASS: commit manifest, exact CSP,
+seven OCR byte-count/hash checks, 34 anonymous/invalid-token denials over 17 API
+routes with JSON and no-store, and public home 200. The initial check of provider
+source sent an empty body and received expected ID-validation 422 before Auth;
+it was an incorrect test input, not unauthorized file access. The corrected
+synthetic provider-ID input reaches Auth and receives 401/403. Both receipts are
+retained privately, not relabelled. A separate read-only production-version
+query confirms 17.6; an initial extra staff-count query named a nonexistent table
+and failed without executing any mutation. No staff count is inferred from it.
+
+Actual Brave reload keeps Boris staff access and all 23 mail chains. Favorite
+icon contrast is 5.90:1 on paper, unselected icon 6.51:1 and flagged small-text
+count 5.30:1. All exceed their tested 3:1 / 4.5:1 thresholds. Three open tasks,
+zero active AIBot missions and three daily mail events load. Keyboard ArrowRight
+selects/focuses the future tab with tabIndex 0; ArrowLeft returns to today.
+Organizer, six templates and the existing saved QA document v2 load without any
+save or business mutation. Captured browser console has no errors/warnings in
+these bounded journeys. Private screenshots and `staff-release-79f2a86-http.json`
+preserve the release evidence.
+The existing synthetic PDF renders visibly in the embedded viewer after private
+read; the application verifies SHA-256
+`308737580fadc6811fa583a0b955c378c8440927f413626041488e1d24eaf818`.
+The unchanged working sheet remains v2, and no original upload/save is performed.
+
+At 19:30 UTC authenticated health checks confirm Supabase, n8n, email and Telegram
+gateways respond; persisted delivery receipts are historical, not new sends.
+Read-only n8n execution inspection after deployment shows five consecutive
+Titan poller successes, 19:37–19:41 UTC, executions 652588, 652589, 652590,
+652592 and 652594. No manual poll/send/workflow mutation was performed.
+Production engine upgrade, continuous private antivirus/quarantine, complete
+253-control ASVS review, spoken VoiceOver journey and whole-service/hosted
+recovery guarantees are NOT closed by this release. Overall remains PARTIAL.
+
+Before new organizer features, prioritize private file quarantine/scanning and
+the remaining high-risk authorization/parser checks. Resource CSP is deployed;
+its complete control review remains distinct from deployment acceptance.
 No paid scanning provider or external customer-file disclosure is authorized by
 this report. User-owned browser content is retained and VoiceOver remains OFF.
 
