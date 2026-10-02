@@ -1,12 +1,15 @@
-// Preserve current public assets; this release changes only the company-access UI.
+// Preserve current public assets outside the explicitly selected portal release.
 import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = resolve(root, '.vercel/output/static');
-const snapshot = resolve(root, '.private/releases/20261001-company-members/public-baseline');
-const changed = new Set(['/portal/index.html', '/portal/app.js', '/portal/styles.css', '/portal/company-members.js']);
+const release = process.argv[2] || 'company-members';
+if (!['company-members', 'portal-quality'].includes(release)) throw Error('Unknown portal release scope');
+const snapshot = resolve(root, `.private/releases/${release === 'portal-quality' ? '20261002-portal-quality' : '20261001-company-members'}/public-baseline`);
+const changed = new Set(['/portal/index.html', '/portal/app.js', '/portal/styles.css',
+  release === 'portal-quality' ? '/portal/auth-status.js' : '/portal/company-members.js']);
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 async function files(dir) {
   const result = [];
