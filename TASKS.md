@@ -19,7 +19,7 @@ Updated: 2026-10-02
 - `VERIFIED isolated fixture`: three 120-workflow PostgreSQL 17.6 load/crash/dump
   restore runs, zero workflow errors and matching content hashes. These are not
   production capacity or full Supabase disaster-recovery results.
-- `BLOCKED fresh whole-system backup`: current Postgres password not found in
+- Earlier `BLOCKED fresh whole-system backup`: current Postgres password not found in
   scoped local files, accessible GitHub code search or Notes. Local Vercel env key
   is empty; exact-key API exposes metadata only. Whole production env access was
   rejected as excessive; no bypass, password reset or production restore attempted.
@@ -60,6 +60,21 @@ Updated: 2026-10-02
   confirms empty retry, short input reaching the key prompt, malformed-key retry
   and clean cancellation without credential creation. Durable helper replaced at
   the same previously supplied path. No production code or deployment changed.
+- `VERIFIED recovery follow-up` at 12:11 UTC: manual capture now contains both
+  current-project credentials privately. Verified TLS Session-pooler export:
+  10,988,842-byte logical dump plus role definitions without passwords; 20 Storage
+  files / 6,357,644 bytes / three private buckets with stable inventories and hashes.
+  No production mutations or sends. Network-isolated PostgreSQL 17.6 restore
+  passes with exit-on-error/single transaction; 159 table definitions and all
+  seven extension versions match. Exact COPY-data SHA-256 passes for all 156
+  archived tables / 11,829 rows, and all restored local Storage files match.
+  Transient extension-owned net request/response and realtime.messages rows are
+  not present in the ordinary logical dump and are not claimed as recovered.
+  Cron disabled, pg_net worker diverted to empty template1, no ports/network;
+  temporary containers/volumes removed, private pack retained. Runtime-stack
+  recovery, Storage API/Auth/JWT/SMTP/configuration and Vault decryption remain
+  PARTIAL, as do the other audit gaps. Scripts and receipts add no production
+  application change and do not require deployment.
 
 ## Standards-based quality baseline — 2026-10-02
 

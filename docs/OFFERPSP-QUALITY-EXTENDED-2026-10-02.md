@@ -135,7 +135,7 @@ a full Supabase-stack restore, or production RTO/RPO. Earlier development trials
 included one restore-hash mismatch before the three passing PostgreSQL 17.6 runs;
 it is not used as evidence of a pass.
 
-## Fresh production backup — BLOCKED
+## Fresh production backup and isolated logical restore
 
 Boris explicitly authorized a private local copy of the current database and
 Storage and a network-isolated restoration, without production replacement,
@@ -154,9 +154,45 @@ Vercel API returns metadata only, not the key. Loading all production secrets vi
 `vercel env run` was rejected by the approval reviewer as excessive credential
 access. That refusal is respected; no workaround or password reset was attempted.
 
-The scoped Storage exporter is prepared but **has not downloaded a production
-snapshot**. A credential-only handoff or an approved dedicated backup connection
-is required. No whole-production restoration pass is claimed.
+That credential blocker is now resolved: Boris manually saved the current-project
+database password and server key in the private capture helper at 11:54:05 UTC.
+Neither value was printed, committed, or sent to another service.
+
+`VERIFIED` at 12:11 UTC: `scripts/export-current-recovery-pack.mjs` exported the
+current PostgreSQL 17.6 database via the dashboard-confirmed Session pooler with
+`sslmode=verify-full` and Supabase's root certificate. The client TLS connection
+is verified independently of `pg_stat_ssl`, which observes the pooler backend
+leg. Logical dump size is 10,988,842 bytes. Roles are exported without passwords.
+All 20 Storage objects from three private buckets were downloaded, totaling
+6,357,644 bytes, with stable per-bucket before/after inventories and SHA-256.
+This is not an atomic database-plus-Storage snapshot.
+
+`VERIFIED` isolated restore: `scripts/verify-current-recovery-pack.mjs` restored
+the dump with `--exit-on-error --single-transaction` into a fresh PostgreSQL 17.6
+container. All 159 table definitions and seven extension versions match. Every
+archived COPY row matches restored output: 156 tables, 11,829 rows, compared as
+order-independent multisets with SHA-256. All 20 locally restored Storage files
+also match. Docker networking is `none`, no ports are published, cron is disabled,
+and the pg_net worker points at empty template1 rather than restored queues.
+Temporary test containers and their volumes were removed; private backup files
+remain on this Mac.
+
+The ordinary extension-aware dump does not contain COPY data for transient
+`net._http_response`, `net.http_request_queue`, and `realtime.messages`. These
+are not claimed as restored historical queue contents. Early restore trials
+failed on the local role's privilege and pg_net preload requirements; both were
+resolved. A later byte comparison initially differed because regclass formatting
+used a different search_path; matching pg_dump's text settings produces exact
+row hashes. Failure receipts are retained, not relabelled as passes.
+
+Private evidence: `.private/recovery-packs/current-20261002-kXVcKo/`, final
+`restore-proof-ti2Cq9/report.json`. Directories are private and files mode 600;
+no database contents, customer files, or credentials enter Git.
+
+`PARTIAL` whole-service recovery: the logical database and local file integrity
+pass does not verify a complete Supabase runtime, Storage API serving, Auth/JWT,
+SMTP, Edge Functions, external n8n/Vercel configuration, Vault decryption, or a
+measured production RTO/RPO. Those require a separate isolated service-stack drill.
 
 ### Password dependency review and credential handoff
 
@@ -252,7 +288,9 @@ The follow-up deployment and strict post-release receipt are recorded below.
 1. Live owner rejection using an isolated pending QA request; do not rewrite the
    previously approved membership/history as if it were a fresh E2E request.
 2. Actual screen-reader journey and remaining accessibility states.
-3. Fresh database + Storage export and full isolated restore once credentials exist.
+3. Full isolated service-stack recovery: fresh logical DB and local Storage bytes
+   are now verified, but runtime configuration, Auth/Storage serving, Vault
+   decryption, and end-to-end service restart remain unverified.
 4. Individual ASVS applicability/evidence, remaining HTTP/API negative scenarios,
    and a managed Postgres security-upgrade plan.
 
