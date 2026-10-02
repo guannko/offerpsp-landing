@@ -20,11 +20,18 @@ Updated: 2026-10-02
 - `VERIFIED live QA`: synthetic DOCX/PDF uploaded, original hashes/Storage receipts
   match, extraction appends without replacing first block, v2 survives reload.
   PDF preview renders. Download completion remains PARTIAL (browser event timeout).
-- `VERIFIED live QA`: second employee is pending owner approval and has no target
-  membership; one company card retained. Owner-decision/reload remains PARTIAL.
-- `BLOCKED browser cleanup`: normal QA close confirmation cannot be dismissed
-  by the current browser connection; user handoff requested. QA lead remains
-  active/new and isolated by the existing registry. Do not claim archive restored.
+- `VERIFIED live QA`: before approval the second employee had no target membership.
+  The owner entered through the fresh hello@brain-index.com link and Boris approved
+  viewer access at 08:30 UTC. Database attribution matches the owner; a fresh
+  bizdev@offerpsp.com login opens the same company and survives reload. One card retained.
+- `VERIFIED cleanup`: normal close/archive controls in a visible Brave tab restored
+  QA lead b4b715fd-9f2f-4d88-93dd-3015b823d376 to closed/archived. SQL confirms
+  that state and one exact company card. No evidence or membership rows deleted.
+- `VERIFIED auth finding`: invalid/reused link returns otp_expired, but the live
+  portal silently shows a blank login form. Local callback-error presentation fix
+  captures errors before client initialization, displays RU/EN recovery guidance,
+  leaves genuine sessions and access checks unchanged. Actual startup regression
+  and full npm validate pass. Public deployment/visual retest still pending.
 - New ten RPC guards and private bucket/table configuration inspected live.
   Full legacy security, WCAG, performance/recovery and individual MerchantPayd
   quote journey are not declared complete. No current package deployment yet.

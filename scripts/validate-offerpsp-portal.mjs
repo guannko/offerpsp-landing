@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
+import "./test-portal-auth-status.mjs";
 import { readFile } from "node:fs/promises";
 import {
   isPortalTerminalStatus,

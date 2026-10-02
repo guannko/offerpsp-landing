@@ -1,4 +1,5 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+import { readPortalAuthCallbackError, portalAuthErrorMessage } from "/portal/auth-status.js";
 import { isPortalTerminalStatus, portalEmptyStateKeys } from "/portal/request-state.js";
 import { createCompanyMembersPanel } from "/portal/company-members.js?v=20261001";
 import { collectPortalIntakeBrief, syncPortalIntakeUnknowns } from "/portal/intake-form.js?v=20260930";
@@ -10,6 +11,7 @@ import {
   readableOfferCode,
 } from "/portal/offer-localization.js";
 
+const authCallbackError = readPortalAuthCallbackError(window.location.href);
 const supabase = createClient(
   "https://iceopurxqzqmwtcmwfzl.supabase.co",
   "sb_publishable_6j6imdLpydTh8gt9wI861Q_YDITWOaM",
@@ -329,10 +331,7 @@ function friendlyError(error, fallback) {
   return fallback;
 }
 function friendlyAuthError(error) {
-  const message = String(error?.message || "").toLowerCase();
-  if (message.includes("invalid login credentials")) return state.language === "ru" ? "Неверный email или пароль." : "Invalid email or password.";
-  if (message.includes("rate limit")) return state.language === "ru" ? "Слишком много попыток. Подождите немного или войдите через Google." : "Too many attempts. Wait a moment or use Google sign-in.";
-  return state.language === "ru" ? "Не удалось войти. Попробуйте ещё раз." : "Could not sign in. Please try again.";
+  return portalAuthErrorMessage(error, state.language);
 }
 function formatDate(value) {
   if (!value) return "";
@@ -1338,8 +1337,11 @@ if (emailTokenHash) {
   window.history.replaceState({}, document.title, `${loginUrl.pathname}${loginUrl.search}${loginUrl.hash}`);
   if (error) setStatus(elements.authStatus, friendlyAuthError(error), "error");
 }
-const { data: { session } } = await supabase.auth.getSession();
+const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 await enterPortal(session);
+if (!session && (authCallbackError || sessionError)) {
+  setStatus(elements.authStatus, friendlyAuthError(authCallbackError || sessionError), "error");
+}
 supabase.auth.onAuthStateChange((event, nextSession) => {
   if (event === "SIGNED_OUT") enterPortal(null);
   else if (event === "SIGNED_IN" && nextSession?.user && nextSession.user.id !== state.user?.id) enterPortal(nextSession);

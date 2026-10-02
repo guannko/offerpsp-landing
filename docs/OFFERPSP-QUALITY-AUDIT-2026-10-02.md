@@ -48,8 +48,9 @@ marker is isolated, not every business description containing the word â€œtestâ€
 | Original read / PDF preview | Staff original reads pass application SHA-256 validation. Native PDF preview renders the synthetic page | VERIFIED |
 | Browser download completion | DOCX download event and PDF download helper time out; no matching file found in default Downloads | PARTIAL; do not claim a downloaded-file byte comparison |
 | Second employee before approval | Verified `bizdev@offerpsp.com` results in `pending_owner`, no active target membership, one company card. Portal explicitly says no access yet | VERIFIED |
-| Second employee owner decision | Fresh owner login requested for `hello@brain-index.com`; no fresh link found in Spark yet. Approval not performed | PARTIAL |
-| QA cleanup | Returning the test lead to closed opens a normal confirmation dialog. Browser control cannot dismiss it; a user handoff has been requested | BLOCKED; do not claim the prior archive state restored |
+| Second employee owner decision | Fresh hello link delivered at 10:45 local; owner entered at 08:29 UTC. Boris approved viewer access at 08:30 UTC. SQL confirms active viewer membership attributed to the owner. Fresh bizdev login opens the same company and survives reload; Boris confirms entry | VERIFIED approval/login/reload; live rejection still untested |
+| QA cleanup | Normal status and archive controls in a visible Brave tab restore the QA record to closed/archived. Read-only SQL confirms both values and exactly one company card; history retained | VERIFIED |
+| Invalid sign-in link | User-visible callback contains otp_expired but the live portal shows a blank login form without explaining the refusal. Fresh hello and bizdev links work. Local callback presentation fix and startup regression pass; full npm validate exits 0 | VERIFIED cause and local fix; public deployment/visual retest pending |
 | MerchantPayd canonical supplier | Exact staff search returns no provider/offer record; existing Merchant Bridge is a different counterparty | PARTIAL J11; no invented record or public buy rate |
 
 QA document: `c49a15bb-eeb3-405b-95ff-3058cb530e0d`.
@@ -60,15 +61,15 @@ QA company: `b4b715fd-9f2f-4d88-93dd-3015b823d376`.
 Join request: `cdc1c7ff-981e-4ed3-83a2-7237fad494e7`.
 
 Screenshots are saved in the calling task's local visualization directory:
-`bridge-docx-pdf-qa-20261002.png`, `bridge-qa-member-pending-20261002.png`.
+`bridge-docx-pdf-qa-20261002.png`, `bridge-qa-member-pending-20261002.png`,
+`bridge-qa-member-approved-20261002.png`, `bridge-qa-archived-20261002.png`.
 They contain only the internal synthetic scenario, not authentication links.
 
 ## Remaining work, not hidden behind a green build
 
-1. Complete the fresh owner-approval journey, requester access/reload and a live
-   negative decision. Local approval/rejection/expiry regressions pass, but do not
-   replace this live journey. Preserve history and return the QA lead to its prior
-   closed/archived state after the test.
+1. Complete a live negative owner decision. Fresh owner approval, requester
+   access/reload and closed/archived cleanup are verified. Local rejection/expiry
+   regressions pass but do not replace the remaining live negative journey.
 2. Complete download receipt/byte comparison in the real browser. Exact Word
    round-trip, tracked changes, signatures, scanned-PDF OCR and edited DOCX/PDF
    export are not implemented; the interface states these limits.
