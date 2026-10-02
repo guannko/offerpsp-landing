@@ -38,7 +38,7 @@ test('theme covers workspaces but preserves SEO/GEO and agents including detail 
 });
 test('paper palette uses the supplied reference and shares organizer colours',async()=>{
   const css=await readFile(new URL('../src/layout/BridgePaper.css',import.meta.url),'utf8');
-  for(const colour of ['#f8f4ee','#e9e3d9','#ecece3','#fffcf6','#2f2a25','#746c60','#7b5d3e'])assert.ok(css.includes(colour));
+  for(const colour of ['#f8f4ee','#e9e3d9','#ecece3','#fffcf6','#2f2a25','#6c6459','#7b5d3e'])assert.ok(css.includes(colour));
   assert.doesNotMatch(css,/\.dark/);
   const organizer=await readFile(new URL('../src/components/control/CourseOrganizer.css',import.meta.url),'utf8');
   assert.match(organizer,/--course-paper:var\(--bridge-paper/);assert.match(organizer,/--course-olive:var\(--bridge-accent/);

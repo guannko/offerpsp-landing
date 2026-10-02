@@ -2,6 +2,33 @@
 
 Updated: 2026-10-02
 
+## Standards-based quality baseline — 2026-10-02
+
+- Protocol uses public ISO 25010/29119 descriptions, ASVS 5.0.0, WSTG 4.2 and
+  WCAG 2.2 as verification references, not certification. Full results and limits:
+  `docs/OFFERPSP-QUALITY-AUDIT-2026-10-02.md`.
+- `VERIFIED locally`: final Node 24.19 baseline has 27 PASS / 0 FAIL / 0 BLOCKED.
+  Real isolated Postgres concurrency suites run with Docker 29.3.1; missing replay
+  inventory entries for five existing migrations repaired. No migration SQL changed.
+- AIBot missions now have read-only current/history/test views and compact human
+  descriptions. Future follow-up wording is date-aware. Muted paper text contrast
+  repaired without changing the calm palette. Targeted transitive updates leave
+  full npm audit with zero known advisories at check time.
+- Live QA screenshot also exposed a dark member-request panel with dark headings
+  in the otherwise light merchant portal. Scoped panel/text/select CSS repaired
+  locally with a regression; separate public-site deployment/visual retest pending.
+- `VERIFIED live QA`: synthetic DOCX/PDF uploaded, original hashes/Storage receipts
+  match, extraction appends without replacing first block, v2 survives reload.
+  PDF preview renders. Download completion remains PARTIAL (browser event timeout).
+- `VERIFIED live QA`: second employee is pending owner approval and has no target
+  membership; one company card retained. Owner-decision/reload remains PARTIAL.
+- `BLOCKED browser cleanup`: normal QA close confirmation cannot be dismissed
+  by the current browser connection; user handoff requested. QA lead remains
+  active/new and isolated by the existing registry. Do not claim archive restored.
+- New ten RPC guards and private bucket/table configuration inspected live.
+  Full legacy security, WCAG, performance/recovery and individual MerchantPayd
+  quote journey are not declared complete. No current package deployment yet.
+
 ## Small-text readability — 2026-10-02
 
 - Boris requested one size larger for small Bridge text. Paper-scoped Tailwind

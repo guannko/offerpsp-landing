@@ -1812,6 +1812,18 @@ textarea::placeholder { color: #646a78; }
   background: #f4f5f7;
 }
 
+/* Membership requests live in the light workspace, not in the legacy dark panel. */
+.portal .company-members-panel {
+  color: var(--paper);
+  background: #ffffff;
+}
+.portal .company-join-row p { color: #5b6270; }
+.portal .company-join-row select {
+  color: var(--paper);
+  background: #f4f5f7;
+  border: 1px solid var(--line-strong);
+}
+
 .portal-shell {
   min-height: 100vh;
   display: grid;

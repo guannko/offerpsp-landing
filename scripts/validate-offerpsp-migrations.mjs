@@ -372,6 +372,11 @@ async function applyMigrations() {
   "20261001074000_mcp_bulk_preview_evidence.sql",
   "20261001085616_offerpsp_seo_geo_integrity.sql",
   "20261001090334_offerpsp_geo_observation_evidence.sql",
+  "20261001165903_offerpsp_course_organizer.sql",
+  "20261001174709_offerpsp_workspace_documents.sql",
+  "20261001195538_offerpsp_work_document_files.sql",
+  "20261001215049_offerpsp_calendar_events.sql",
+  "20261001220320_offerpsp_calendar_task_identity_types.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {

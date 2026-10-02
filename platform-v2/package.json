@@ -8,6 +8,8 @@
     "build": "node scripts/write-build-manifest.mjs && tsc -b && vite build",
     "deploy:production": "node scripts/deploy-production.mjs",
     "lint": "eslint .",
+    "qa:local": "node scripts/run-quality-baseline.mjs",
+    "test:operations-presentation": "node --experimental-strip-types scripts/test-operations-presentation.mjs",
     "preview": "vite preview",
     "test:pdf-extractor": "node scripts/test-pdf-extractor.mjs",
     "test:offer-parser": "node scripts/test-offer-parser.mjs",

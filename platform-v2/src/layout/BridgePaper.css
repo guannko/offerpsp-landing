@@ -4,7 +4,8 @@
   --bridge-paper: #f8f4ee;
   --bridge-surface: #fffcf6;
   --bridge-ink: #2f2a25;
-  --bridge-muted: #746c60;
+  /* Ordinary small text also needs contrast on warm cards, not only on white. */
+  --bridge-muted: #6c6459;
   --bridge-line: #ddd5c8;
   --bridge-active: #ecece3;
   --bridge-olive: #6a7452;
@@ -26,7 +27,7 @@
   --color-gray-100: var(--bridge-warm);
   --color-gray-200: var(--bridge-line);
   --color-gray-300: #c5bbad;
-  --color-gray-400: #8b8173;
+  --color-gray-400: var(--bridge-muted);
   --color-gray-500: var(--bridge-muted);
   --color-gray-600: #645b4f;
   --color-gray-700: #51493f;

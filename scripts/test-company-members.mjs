@@ -1,5 +1,11 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { createCompanyMembersPanel } from '../portal/company-members.js';
+
+const portalCss = await readFile(new URL('../portal/styles.css', import.meta.url), 'utf8');
+assert.match(portalCss, /\.portal \.company-members-panel\s*\{[^}]*color:\s*var\(--paper\);[^}]*background:\s*#ffffff;/);
+assert.match(portalCss, /\.portal \.company-join-row p\s*\{\s*color:\s*#5b6270;/);
+assert.match(portalCss, /\.portal \.company-join-row select\s*\{[^}]*color:\s*var\(--paper\);[^}]*background:\s*#f4f5f7;/);
 
 class Element {
   constructor(tag) { this.tag = tag; this.children = []; this.dataset = {}; this.events = {}; this.hidden = false; }
