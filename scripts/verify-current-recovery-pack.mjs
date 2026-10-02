@@ -3,6 +3,7 @@ import {spawn} from 'node:child_process';
 import {readFile,writeFile,mkdir,mkdtemp,stat} from 'node:fs/promises';
 import {createHash,randomUUID} from 'node:crypto';
 import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 
 // Runs only against a newly-created container with no network and no published ports.
 process.umask(0o077);
@@ -74,6 +75,12 @@ try{
   const restoredFiles=path.join(proof,'storage');await mkdir(restoredFiles,{mode:0o700});
   for(const o of manifest.objects){const source=path.join(pack,'storage-export',o.local);assert.equal((await stat(source)).mode&0o077,0);const b=await readFile(source);assert.equal(b.length,o.bytes);assert.equal(sha(b),o.sha256);const target=path.join(restoredFiles,path.basename(o.local));await writeFile(target,b,{mode:0o600,flag:'wx'});assert.equal(sha(await readFile(target)),o.sha256);}
   report.steps.push({id:'storage-local-restore-sha256',status:'PASS',objects:manifest.objects.length,bytes:manifest.total_bytes});
+  if(process.argv.includes('--check-company-rejection')){
+    const fixture=await readFile(path.join(path.dirname(fileURLToPath(import.meta.url)),'restored-company-rejection.sql'),'utf8');
+    const result=await psql(fixture,'postgres','recovery_operator');
+    const parsed=JSON.parse(result.toString());assert.equal(parsed.status,'PASS');
+    report.steps.push({id:'restored-company-rejection',...parsed});await save();
+  }
   report.status='PASS: logical restore and local file integrity; service-stack recovery remains unverified';
 }catch(e){report.status='FAILED';report.error=e.message;process.exitCode=1;}
 finally{

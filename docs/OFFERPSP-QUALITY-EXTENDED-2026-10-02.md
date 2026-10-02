@@ -283,10 +283,39 @@ The follow-up deployment and strict post-release receipt are recorded below.
   No task, membership or outbound message was changed. Public portal and SEO/GEO
   were not deployed by this follow-up. VoiceOver remains OFF.
 
+## Company rejection check on the restored database
+
+`VERIFIED` bounded backend check: the restored production database passes nine
+company-join rejection cases using a fresh QA organization, lead and submission.
+The fixture uses only the two previously authorized verified QA identities;
+roles are exercised as authenticated users, not as the restore superuser.
+Pending access and applicant self-approval are denied; owner rejection succeeds;
+replay is idempotent; the opposite decision is denied. No applicant membership
+or contact is created, exactly one decision event exists, and claiming again
+does not grant access. The earlier approved QA request stays approved.
+The entire fixture rolls back and its isolated container is removed.
+
+Command: `node scripts/verify-current-recovery-pack.mjs <private-pack-path>
+--check-company-rejection`. Optional fixture source is
+`scripts/restored-company-rejection.sql`. This is **not** a browser E2E pass.
+Read-only production checks still find only the original approved request and
+the archived QA company; neither was changed for this test.
+
+The first functional trial confirmed a missing recovery dependency: inserting a
+new lead calls the screening dispatch trigger, which reads Vault and fails with
+`no server secret key defined` on this local restore. This is a recovery-runtime
+configuration limitation, not evidence of a production intake failure. Only the
+local rolled-back rejection fixture neutralizes screening dispatch and its secret
+reference; no authorization trigger is disabled. Vault recovery and real screening
+dispatch remain explicitly unverified. A second fixture trial also found an SQL
+variable-name ambiguity, corrected before the passing run.
+
 ## Still open
 
 1. Live owner rejection using an isolated pending QA request; do not rewrite the
    previously approved membership/history as if it were a fresh E2E request.
+   Nine restored-database backend rejection checks now pass, but do not replace
+   the fresh live browser scenario.
 2. Actual screen-reader journey and remaining accessibility states.
 3. Full isolated service-stack recovery: fresh logical DB and local Storage bytes
    are now verified, but runtime configuration, Auth/Storage serving, Vault

@@ -4,6 +4,17 @@ Updated: 2026-10-02
 
 ## Extended security/accessibility/recovery verification — 2026-10-02
 
+- `VERIFIED scoped follow-up`: nine company-join rejection checks pass against
+  the restored current production DB, as authenticated QA owner/applicant users,
+  on a separate fixture rolled back afterward. Pending/self-approval denied,
+  owner rejection, replay/opposite-decision guards, no membership/contact,
+  exactly-once journal and denied post-rejection claim pass; prior approved QA
+  history is untouched. Production read checks confirm only the approved archived
+  QA case; live browser rejection remains open. Functional restore also confirms
+  the Vault server-key/config dependency: a new intake fails locally without it.
+  Screening dispatch is neutralized only in the rolled-back local membership
+  fixture; Vault and whole-service recovery are not called PASS. No production
+  write, send, grant or deployment performed by this follow-up.
 - Overall `PARTIAL`, with evidence and remaining gates in
   `docs/OFFERPSP-QUALITY-EXTENDED-2026-10-02.md`. Not a complete ASVS/WCAG pass.
 - `VERIFIED`: native DOCX/PDF downloads complete and exact hashes match the QA
