@@ -11,6 +11,7 @@ const ALLOWED_EXTENSIONS = new Set([
 
 function sendJson(response, status, payload) {
   response.status(status).setHeader("Content-Type", "application/json; charset=utf-8");
+  response.setHeader("Cache-Control", "no-store");
   response.send(JSON.stringify(payload));
 }
 

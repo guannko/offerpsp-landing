@@ -3,6 +3,7 @@ import { deliverClaimedEmail } from "./_lib/email-delivery.mjs";
 const json = (response, status, body) => {
   response.statusCode = status;
   response.setHeader("Content-Type", "application/json; charset=utf-8");
+  response.setHeader("Cache-Control", "no-store");
   response.end(JSON.stringify(body));
 };
 

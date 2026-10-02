@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "qa:local": "node scripts/run-quality-baseline.mjs",
     "test:accessibility-boundaries": "node scripts/test-accessibility-boundaries.mjs",
+    "test:private-api-cache": "node scripts/test-private-api-cache.mjs",
     "test:operations-presentation": "node --experimental-strip-types scripts/test-operations-presentation.mjs",
     "preview": "vite preview",
     "test:pdf-extractor": "node scripts/test-pdf-extractor.mjs",

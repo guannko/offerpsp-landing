@@ -104,6 +104,12 @@ matching the original state. Accessibility-tree inspection is not a substitute
 for a screen-reader journey. Full focus/error/non-text-contrast coverage remains
 open; protected subagent, Telegram-group, Zoom and SEO implementations are unchanged.
 
+Follow-up at approximately 14:12–14:18 Asia/Nicosia: Boris confirmed that the
+enabled VoiceOver actually spoke. The task form retained accessible names and
+keyboard focus. The automation could not capture a spoken phrase or caption;
+this is a bounded human confirmation of activation, not a completed screen-reader
+journey. VoiceOver was explicitly switched OFF after this attempt.
+
 ## Measured isolated load, crash and restore
 
 `platform-v2/scripts/test-load-restore.mjs` uses only installed reviewed images,
@@ -151,6 +157,48 @@ access. That refusal is respected; no workaround or password reset was attempted
 The scoped Storage exporter is prepared but **has not downloaded a production
 snapshot**. A credential-only handoff or an approved dedicated backup connection
 is required. No whole-production restoration pass is claimed.
+
+### Password dependency review and credential handoff
+
+Read all 18 relevant active OfferPSP/iGaming workflow graphs (SEO agent excluded):
+no Postgres nodes, direct database URLs or database-password environment markers
+were found. Staff/public Vercel production environment-name inventories contain
+API keys/URLs, but no database-password or direct-connection variables. The
+application source uses Supabase HTTP clients; the only matching local script
+is the synthetic load/restore fixture. Current pg_stat_activity shows only
+managed services and no external password-authenticated postgres client.
+
+This does not prove that an infrequent external client never exists. Resetting
+the database password still needs Boris to enter, confirm and submit it himself,
+with a known reconnect risk. No password or API-key rotation was performed.
+
+The existing current-project service_role key is readable through the authorized
+Supabase dashboard. It was selected without logging its value, creating a key or
+changing permissions. Passing it through hidden local Terminal input was blocked
+because computer-use access to Terminal.app is disallowed. No broader secret
+export or workaround was attempted; the unused in-memory value was cleared.
+
+Prepared `scripts/capture-recovery-credentials.mjs` for Boris to run manually:
+hidden TTY input accepts only the database password and existing Storage API key,
+validates the legacy key's project/role, and creates a mode-600 JSON in an ignored
+mode-700 local directory. It refuses overwrite and makes no network call.
+Syntax checked; no real credential file has been created by the agent.
+
+## Additional HTTP access and cache verification
+
+At 14:20 Asia/Nicosia, 28 bounded anonymous/invalid-bearer requests to 14 protected
+staff endpoints returned JSON 401/403 denials. Empty bodies, no real identifiers,
+no valid session or communication content were used; no sends were invoked.
+This does not cover every session, scope, authorization or penetration-test case.
+
+These requests revealed four JSON response helpers without explicit no-store:
+send-email, extract-document, parse-offer and extract-offer-pdf. Authentication
+denial works; absence of the header is not evidence of an existing disclosure.
+Each helper now sets Cache-Control: no-store for success and error responses.
+A synthetic eight-response regression failed before the fix and passes after it,
+with all network calls disabled. The full local baseline at 14:24–14:25
+Asia/Nicosia passes **29 groups / 0 FAIL / 0 BLOCKED**.
+Delivery of this header-only follow-up requires its own receipt below.
 
 ## Production delivery and smoke receipts
 

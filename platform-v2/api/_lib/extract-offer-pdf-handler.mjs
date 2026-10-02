@@ -7,6 +7,7 @@ const MAX_PDF_BYTES = 15 * 1024 * 1024;
 
 function sendJson(response, status, payload) {
   response.status(status).setHeader("Content-Type", "application/json; charset=utf-8");
+  response.setHeader("Cache-Control", "no-store");
   response.send(JSON.stringify(payload));
 }
 

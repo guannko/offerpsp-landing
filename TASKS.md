@@ -33,6 +33,18 @@ Updated: 2026-10-02
   Live search/task focus and cancellation work; 23 active mail chains and three
   calendar events load. No task or outbound message was created. Public portal
   and separately owned modules were not redeployed by this package.
+- Follow-up: 28 live anonymous/invalid-token HTTP requests deny access. Four
+  response helpers lacked explicit no-store; header-only repair and failing-
+  before/passing-after regression are locally verified. Full 29-group baseline
+  passes at 14:25 Asia/Nicosia; production receipt for this follow-up is pending.
+- Database password dependency review found no direct postgres/password dependency
+  in 18 relevant active workflow graphs or either Vercel environment-name list.
+  A rare external client remains possible. Existing Storage server key is readable
+  in the dashboard, but hidden Terminal credential input is blocked by computer-use
+  policy. Manual private credential capture helper is prepared, not executed.
+- VoiceOver activation is human-confirmed by Boris; actual transcript/caption
+  capture still failed. Limited task focus/names verified; full reader journey
+  remains PARTIAL. VoiceOver returned to OFF. No production credentials changed.
 
 ## Standards-based quality baseline — 2026-10-02
 
