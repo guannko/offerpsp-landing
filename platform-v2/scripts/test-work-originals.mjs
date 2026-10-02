@@ -77,6 +77,19 @@ test('DOCX validates actual inflation, not just attacker-controlled declared ZIP
   view.setUint32(offset+24,10,true);
   await assert.rejects(validateDocxInflation(forged),/Фактический объём|каталогу/);
 });
+test('DOCX rejects active or embedded payloads, unsafe paths and inconsistent local names',async()=>{
+  for(const name of ['word/vbaProject.bin','word/embeddings/payload.doc','word/payload.exe','word/payload.js','word/bad\\name.xml','word/bad\nname.xml']){
+    const zip=new JSZip();zip.file('word/document.xml','<document>Safe text</document>');zip.file(name,'synthetic harmless payload');
+    const data=await zip.generateAsync({type:'arraybuffer',compression:'DEFLATE'});
+    assert.throws(()=>checkDocxArchive(data),/DOCX/);
+  }
+  const zip=new JSZip();zip.file('word/document.xml','<document>Safe text</document>');
+  const data=await zip.generateAsync({type:'arraybuffer',compression:'DEFLATE'}),view=new DataView(data);
+  assert.equal(view.getUint32(0,true),0x04034b50);
+  // Alter only a local filename, leaving the directory's document identity intact.
+  new Uint8Array(data)[30+12]='x'.charCodeAt(0);
+  assert.throws(()=>checkDocxArchive(data),/DOCX/);
+});
 test('reservation requires saved current document, validates metadata, deduplicates and requires uploaded object',()=>withDb(async(db,id)=>{
   await assert.rejects(reserve(db,crypto.randomUUID()),/save document/);
   await assert.rejects(reserve(db,id,0),/revision conflict/);

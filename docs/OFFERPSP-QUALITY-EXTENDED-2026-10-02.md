@@ -5,8 +5,40 @@ an all-controls ASVS pass, or a completed WCAG conformance assessment.
 Initial production inspected: release `1bdaa523b06e03630cd4efd1206aa0a97d9db974`.
 Staff fixes are now deployed as `93b68cd75e51efa866243fe8f35cfc1ca9156c42`;
 the public portal remains on the initial release. Delivery receipts follow below.
-Latest source checkpoint: 29 groups PASS / 0 FAIL / 0 BLOCKED at
-14:31:37–14:32:54 UTC. New reflow fixes are local only, not deployed.
+Latest source checkpoint: 30 groups PASS / 0 FAIL / 0 BLOCKED at
+16:30:39–16:31:17 UTC. Reflow and browser/DOCX hardening are local only,
+not deployed. Earlier checkpoints below remain historical evidence.
+
+## Browser and DOCX hardening follow-up
+
+The staff resource CSP now restricts scripts to the same origin, denies inline
+handlers and JavaScript eval, and allowlists the canonical Supabase HTTPS/WSS
+origin and two OCR language-data paths. OCR worker and WebAssembly core files
+are prepared from the pinned installed version as local static assets. Document
+bytes remain in the browser worker; language downloads do not transmit them.
+Inline CSS and HTTPS images remain explicit compatibility allowances. This is
+not a nonce/hash strict-CSP or complete ASVS conformance claim.
+
+Actual Brave tests under the exact configured response header pass: injected
+inline script, inline handler, external script and eval are denied; local-worker
+English/Russian OCR returns the expected synthetic text; DOCX and PDF extraction
+preserves the original hashes above; the blob PDF frame visibly renders its page.
+The isolated fixture performs no authentication, database writes or mail sends.
+Its first build inherited incompatible manual chunking and failed before OCR;
+correcting only the private fixture build resolved it. This failure is not a
+production defect or a completed production verification.
+
+The original-document DOCX parser also rejects unsafe/ambiguous ZIP entry names,
+duplicate entries, macros, executable/embedded content and mismatched local ZIP
+names/flags. Regression tests fail before and pass after the changes. These
+checks reduce the accepted document surface but do not detect every malicious
+file and do not replace a private antivirus/quarantine service.
+
+The 30-group baseline includes lint, build and Docker suites. The first run had
+two failures (control-character lint rule and an obsolete limited-CSP assertion);
+both are fixed and the full rerun passes. Receipt:
+`tmp/quality-baseline/2026-10-02T16-30-39-205Z/report.json`.
+Production rollout and authenticated post-release checks remain pending.
 
 ## Closed checks
 
@@ -88,14 +120,16 @@ operational security requirement.
 
 The pinned ASVS 5.0.0 Level 1/2 ledger is
 `docs/OFFERPSP-ASVS-5-LEDGER.json`: 253 unique requirements, currently 183
-NOT_TESTED, 54 PARTIAL, 7 NOT_APPLICABLE with a scoped rationale, 2 GAP and
+NOT_TESTED, 55 PARTIAL, 7 NOT_APPLICABLE with a scoped rationale, 1 GAP and
 7 OUT_OF_SCOPE for the explicitly excluded Zoom/WebRTC surface. These are
 evidence-inventory states, not 253 completed assessments. No whole-control PASS
 is inferred from a chapter's tests. Password requirements remain reviewable,
 not automatically N/A merely because the current UI is passwordless.
 
-The two confirmed implementation gaps are the incomplete resource/script CSP
-(V3.4.3) and no antivirus gate for files from untrusted sources (V5.4.3).
+The resource/script CSP control (V3.4.3) has moved to PARTIAL on the local
+implementation and browser evidence above; production and strict-policy review
+remain open. The remaining confirmed implementation gap is no antivirus gate
+for files from untrusted sources (V5.4.3).
 Type/signature/size checks do not replace antivirus. No customer document was
 submitted to a public scanner; remediation must retain private processing.
 

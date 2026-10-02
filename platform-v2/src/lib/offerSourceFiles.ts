@@ -92,7 +92,13 @@ async function extractOnServer(file: File, buffer: ArrayBuffer, accessToken: str
 
 async function createOcrWorker() {
   const { createWorker } = await import("tesseract.js");
-  return createWorker(["eng", "rus"]);
+  // The code is served from our locked build; only language data uses the
+  // explicitly allowlisted CDN paths. Documents are processed in this worker.
+  return createWorker(["eng", "rus"], 1, {
+    workerPath: new URL("/ocr/tesseract-7.0.0/worker.min.js", window.location.origin).href,
+    corePath: new URL("/ocr/tesseract-7.0.0/core", window.location.origin).href,
+    workerBlobURL:false,
+  });
 }
 
 async function extractImageWithOcr(image: File, onProgress?: ExtractionProgress) {

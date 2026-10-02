@@ -2,6 +2,25 @@
 
 Updated: 2026-10-02
 
+## Staff browser and DOCX hardening follow-up
+
+- `VERIFIED locally, NOT DEPLOYED`: full staff resource CSP denies inline scripts,
+  inline event handlers, JavaScript eval and external script origins. OCR worker
+  and core are version-pinned local build assets; only language data uses two
+  allowlisted CDN paths. Actual Brave checks pass English/Russian OCR, synthetic
+  DOCX/PDF extraction with original hashes and a rendered blob PDF preview.
+- `VERIFIED locally`: DOCX archive rejects macros, embedded/executable entries,
+  ambiguous/unsafe names, duplicate entries and mismatched local ZIP names/flags.
+  Failing-before/passing-after regression added; this is not antivirus scanning.
+- Latest baseline: 30 PASS / 0 FAIL / 0 BLOCKED, 16:30:39–16:31:17 UTC.
+  Includes lint, build and Docker concurrency/migration suites. Initial lint and
+  obsolete-header-contract failures are fixed; first fixture chunking failure
+  was isolated to its temporary build configuration, not counted as a pass.
+- ASVS ledger is still `PARTIAL`: 183 NOT_TESTED, 55 PARTIAL, 7 scoped N/A,
+  1 GAP (private antivirus gate), 7 excluded Zoom controls. No full-audit claim.
+- Pending: Linux release build/runtime/budget checks and grouped staff rollout;
+  public portals, SEO/GEO, subagents, Telegram group and Zoom code unchanged.
+
 ## Extended security/accessibility/recovery verification — 2026-10-02
 
 - Overall `PARTIAL`, with evidence and remaining gates in

@@ -41,5 +41,6 @@ const headers=Object.fromEntries(config.headers.find(h=>h.source==='/(.*)').head
 assert.equal(headers['X-Content-Type-Options'],'nosniff');
 assert.equal(headers['X-Frame-Options'],'SAMEORIGIN');
 assert.equal(headers['Referrer-Policy'],'no-referrer');
-assert.equal(headers['Content-Security-Policy'],"base-uri 'self'; object-src 'none'; frame-ancestors 'self'");
+const csp=headers['Content-Security-Policy'].split(';').map(value=>value.trim());
+for(const directive of ["base-uri 'self'","object-src 'none'","frame-ancestors 'self'"])assert.ok(csp.includes(directive));
 console.log('PASS: scoped accessible-name, keyboard/focus and transport-header source contracts (not WCAG certification)');
