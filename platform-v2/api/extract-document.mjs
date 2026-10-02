@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { decodeBase64File, FileInputError } from "./_lib/file-input.mjs";
 import { convertWithDocling, getDoclingConfig } from "./_lib/modules/docling.mjs";
 import { HttpError, requireOfferPspStaff } from "./_lib/staff-auth.mjs";
+import { validateOfficeInflation, validatePdfSignature } from "../shared/office-archive.mjs";
 
 const MAX_DOCUMENT_BYTES = 15 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = new Set([
@@ -56,6 +57,15 @@ export default async function handler(request, response) {
   }
   if (!buffer.length || buffer.length > MAX_DOCUMENT_BYTES) {
     return sendJson(response, 413, { error: "file_size_invalid", max_bytes: MAX_DOCUMENT_BYTES });
+  }
+
+  try {
+    const data = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+    const kind = extension(filename);
+    if (["docx", "xlsx"].includes(kind)) await validateOfficeInflation(data, kind);
+    if (kind === "pdf") validatePdfSignature(data);
+  } catch {
+    return sendJson(response, 415, { error: "unsafe_document" });
   }
 
   const config = getDoclingConfig();

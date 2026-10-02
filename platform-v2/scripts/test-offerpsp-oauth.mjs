@@ -18,6 +18,7 @@ process.env.OFFERPSP_MCP_ORIGIN = "https://ops.test";
 process.env.OFFERPSP_OAUTH_ENCRYPTION_KEY = Buffer.alloc(32, 11).toString("base64");
 
 const staffUser = { id: "11111111-1111-4111-8111-111111111111", email: "staff@example.test" };
+let staffActive = true;
 const tables = {
   offerpsp_mcp_oauth_clients: [],
   offerpsp_mcp_oauth_requests: [],
@@ -91,7 +92,7 @@ global.fetch = async (input, init = {}) => {
     });
   }
   if (url.pathname === "/auth/v1/user") return Response.json(staffUser);
-  if (url.pathname === "/rest/v1/rpc/is_offerpsp_staff") return Response.json(true);
+  if (url.pathname === "/rest/v1/rpc/is_offerpsp_staff") return Response.json(staffActive);
 
   const prefix = "/rest/v1/";
   if (!url.pathname.startsWith(prefix)) throw new Error(`Unexpected fetch ${url}`);
@@ -271,4 +272,21 @@ await assert.rejects(
   /bound to another resource/,
 );
 
-console.log("OfferPSP OAuth 2.1 tests passed");
+// Existing tokens must not preserve access after staff/client revocation.
+const actionsAccess = actionsTokenResponse.payload.access_token;
+staffActive = false;
+await assert.rejects(
+  () => requireOfferPspMcpStaff({ headers: { authorization: `Bearer ${actionsAccess}` } }, offerPspActionsResource()),
+  /Staff access required/,
+);
+staffActive = true;
+const actionsClient = tables.offerpsp_mcp_oauth_clients.find(row => row.client_id === actionsClientId);
+actionsClient.revoked_at = new Date().toISOString();
+await assert.rejects(
+  () => requireOfferPspMcpStaff({ headers: { authorization: `Bearer ${actionsAccess}` } }, offerPspActionsResource()),
+  /OAuth client was revoked/,
+);
+actionsClient.revoked_at = null;
+await requireOfferPspMcpStaff({ headers: { authorization: `Bearer ${actionsAccess}` } }, offerPspActionsResource());
+
+console.log("OfferPSP OAuth 2.1 tests passed, including live staff/client revocation checks");

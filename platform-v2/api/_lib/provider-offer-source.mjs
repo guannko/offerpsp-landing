@@ -38,6 +38,34 @@ function encodedStoragePath(path) {
   return String(path).split("/").map(encodeURIComponent).join("/");
 }
 
+export async function readBoundedSource(response, maxBytes = MAX_SOURCE_BYTES) {
+  const declared = Number(response.headers.get("content-length"));
+  if (declared > maxBytes) {
+    await response.body?.cancel();
+    throw new HttpError(413, "Offer source size is invalid");
+  }
+  if (!response.body) throw new HttpError(413, "Offer source size is invalid");
+  const reader = response.body.getReader(), chunks = [];
+  let size = 0;
+  const expires = Date.now() + 15000;
+  try {
+    for (;;) {
+      let timer;
+      const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new HttpError(504, "Private source download timed out")), Math.max(1, expires - Date.now())); });
+      let chunk;
+      try { chunk = await Promise.race([reader.read(), timeout]); } finally { clearTimeout(timer); }
+      if (chunk.done) break;
+      size += chunk.value.byteLength;
+      if (size > maxBytes) throw new HttpError(413, "Offer source size is invalid");
+      chunks.push(Buffer.from(chunk.value));
+    }
+    if (!size) throw new HttpError(413, "Offer source size is invalid");
+    return Buffer.concat(chunks, size);
+  } finally {
+    void reader.cancel().catch(() => undefined);
+  }
+}
+
 export async function providerOfferSourceHandler(request, response) {
   setCors(request, response);
   if (request.method === "OPTIONS") return response.status(204).end();
@@ -67,8 +95,7 @@ export async function providerOfferSourceHandler(request, response) {
       `storage/v1/object/authenticated/offerpsp-private-sources/${encodedStoragePath(storagePath)}`,
       { method: "GET" },
     );
-    const buffer = Buffer.from(await sourceResponse.arrayBuffer());
-    if (!buffer.length || buffer.length > MAX_SOURCE_BYTES) throw new HttpError(413, "Offer source size is invalid");
+    const buffer = await readBoundedSource(sourceResponse);
 
     let result = null;
     if (DIRECT_EXTENSIONS.has(fileExtension)) {
@@ -78,6 +105,8 @@ export async function providerOfferSourceHandler(request, response) {
         content: buffer,
       }, { maxBytes: MAX_SOURCE_BYTES });
     }
+
+    if (result?.accepted === false) throw new HttpError(415, result.extraction_error || "Unsafe offer source");
 
     if ((!result?.extracted_text || ["needs_ocr", "needs_review"].includes(result.status)) && DOCLING_EXTENSIONS.has(fileExtension)) {
       const config = getDoclingConfig();

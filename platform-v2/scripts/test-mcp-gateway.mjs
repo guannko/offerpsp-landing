@@ -31,6 +31,7 @@ const calls = [];
 let bulkAgentReply = { success: true, answer: "Prepared only", confirmation_required: false };
 let bulkPreviewEvidence = null;
 global.fetch = async (url, init = {}) => {
+  if (String(url).includes("/rest/v1/offerpsp_mcp_oauth_clients?")) return Response.json([{client_id:"op_client_test",revoked_at:null}]);
   calls.push({ url: String(url), init });
   if (String(url).includes("/rest/v1/offerpsp_mcp_oauth_access_tokens?")) return Response.json([{
     token_hash: "mocked-by-query",

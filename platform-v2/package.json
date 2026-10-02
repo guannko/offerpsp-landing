@@ -16,6 +16,7 @@
     "test:operations-presentation": "node --experimental-strip-types scripts/test-operations-presentation.mjs",
     "preview": "vite preview",
     "test:pdf-extractor": "node scripts/test-pdf-extractor.mjs",
+    "test:file-boundaries": "node --test scripts/test-file-boundaries.mjs",
     "test:offer-parser": "node scripts/test-offer-parser.mjs",
     "test:provider-source": "node scripts/test-provider-offer-source.mjs",
     "test:mailbox-poller": "node scripts/test-mailbox-poller.mjs",

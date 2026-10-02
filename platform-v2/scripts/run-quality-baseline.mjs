@@ -17,6 +17,7 @@ const suites = [
   ["private-api-cache", app, "npm", ["run", "test:private-api-cache"]],
   ["nonstaff-api-boundaries", app, "npm", ["run", "test:nonstaff-api-boundaries"]],
   ["browser-security", app, "npm", ["run", "test:browser-security"]],
+  ["file-boundaries", app, "npm", ["run", "test:file-boundaries"]],
   ...["operations-presentation", "calendar-events", "course-organizer", "work-documents", "work-originals", "operational-consistency", "offer-parser", "provider-source", "mailbox-poller", "sent-mail-archive", "document-processing", "intake-autopilot", "intake-auto-reply", "intake-display", "intake-concurrency", "company-screening", "screening-concurrency", "research-screening", "mcp", "pdf-extractor", "bridges", "modules", "pwa"].map((name) => [name, app, "npm", ["run", `test:${name}`]]),
   ["build", app, "npm", ["run", "build"]],
 ];

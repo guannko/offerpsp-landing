@@ -180,6 +180,9 @@ export async function extractOfferSource(
   // Calculate this before any extractor can transfer or detach the buffer.
   const sha256 = await digestHex(buffer.slice(0));
   const suffix = file.name.split(".").pop()?.toLowerCase() || "";
+  // Run once before either parser; a server rejection cannot be bypassed by fallback.
+  if (suffix === "docx" || suffix === "xlsx") await validateOfficeInflation(buffer, suffix);
+  if (suffix === "pdf") validatePdfSignature(buffer);
   let text = "";
   let extractionMethod = `offerpsp-browser-adapter:${suffix || "text"}`;
   const format = suffix || "text";
@@ -240,3 +243,4 @@ export const safeStorageName = (name: string) => name
   .replace(/[^a-zA-Z0-9._-]+/g, "-")
   .replace(/^-+|-+$/g, "")
   .slice(0, 120) || "offer-source";
+import { validateOfficeInflation, validatePdfSignature } from "../../shared/office-archive.mjs";

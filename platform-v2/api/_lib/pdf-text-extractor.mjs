@@ -29,29 +29,35 @@ function textContentToLines(content) {
 
 export async function extractPdfText(buffer) {
   const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  const document = await getDocument({
+  const loading = getDocument({
     data: new Uint8Array(buffer),
     disableFontFace: true,
     useSystemFonts: false,
-  }).promise;
+    isEvalSupported: false,
+  });
 
-  if (document.numPages > MAX_PDF_PAGES) {
-    throw new Error(`PDF has ${document.numPages} pages; maximum is ${MAX_PDF_PAGES}.`);
+  try {
+    const document = await loading.promise;
+    if (document.numPages > MAX_PDF_PAGES) {
+      throw new Error(`PDF has ${document.numPages} pages; maximum is ${MAX_PDF_PAGES}.`);
+    }
+
+    const pages = [];
+    for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+      const page = await document.getPage(pageNumber);
+      const content = await page.getTextContent({ includeMarkedContent: false });
+      const text = textContentToLines(content);
+      if (text) pages.push(text);
+      page.cleanup();
+    }
+
+    const text = normalizeText(pages.join("\n\n"));
+    return {
+      text,
+      pageCount: document.numPages,
+      extractionMethod: text ? "offerpsp-server-pdfjs-v1" : "offerpsp-server-pdfjs-empty-v1",
+    };
+  } finally {
+    await loading.destroy();
   }
-
-  const pages = [];
-  for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
-    const page = await document.getPage(pageNumber);
-    const content = await page.getTextContent({ includeMarkedContent: false });
-    const text = textContentToLines(content);
-    if (text) pages.push(text);
-    page.cleanup();
-  }
-
-  const text = normalizeText(pages.join("\n\n"));
-  return {
-    text,
-    pageCount: document.numPages,
-    extractionMethod: text ? "offerpsp-server-pdfjs-v1" : "offerpsp-server-pdfjs-empty-v1",
-  };
 }

@@ -640,6 +640,8 @@ export async function requireOfferPspMcpStaff(request, expectedResource = null) 
   if (!record || !supportedResource(record.resource) || (expectedResource && record.resource !== expectedResource)) {
     throw new HttpError(401, "OfferPSP OAuth access token is invalid, expired or bound to another resource");
   }
+  // Revoking a client must invalidate its already-issued access tokens too.
+  if (!await findClient(record.client_id)) throw new HttpError(401, "OAuth client was revoked");
   const session = decryptPayload(record.session_ciphertext);
   if (session.user_id !== record.actor_user_id || !session.access_token) throw new HttpError(401, "OfferPSP OAuth session binding mismatch");
   const context = await requireOfferPspStaff({ headers: { authorization: `Bearer ${session.access_token}` } });

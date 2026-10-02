@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import mammoth from "mammoth";
 import readXlsxWorkbook from "read-excel-file/node";
 import { extractPdfText } from "./pdf-text-extractor.mjs";
+import { validateOfficeInflation, validatePdfSignature } from "../../shared/office-archive.mjs";
 
 export const MAX_EMAIL_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 export const MAX_EMAIL_ATTACHMENTS_BYTES = 12 * 1024 * 1024;
@@ -71,6 +72,16 @@ export async function extractOfferEmailAttachment(attachment, options = {}) {
   const maxBytes = Number(options.maxBytes || MAX_EMAIL_ATTACHMENT_BYTES);
   if (size > maxBytes) {
     return { ...base, accepted: false, status: "too_large", extraction_error: `Attachment exceeds the ${Math.floor(maxBytes / 1024 / 1024)} MB limit` };
+  }
+
+  // Validate before native parsing and before attaching original bytes to ingest.
+  // Security rejection is not a parser failure eligible for review/fallback.
+  try {
+    const data = content.buffer.slice(content.byteOffset, content.byteOffset + content.byteLength);
+    if (["docx", "xlsx"].includes(extension)) await validateOfficeInflation(data, extension);
+    if (extension === "pdf") validatePdfSignature(data);
+  } catch (error) {
+    return { ...base, accepted: false, status: "rejected_unsafe", extraction_error: error.message.slice(0, 500) };
   }
 
   try {
