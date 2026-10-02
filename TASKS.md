@@ -11,10 +11,11 @@ Updated: 2026-10-02
 - `VERIFIED`: inventory of all 414 functions and security boundaries, 370 bounded
   live role/entity probes (369 expected safe results; one read-only writer probe
   inconclusive). Confirmed internal provider-field leak in profile-save response;
-  local explicit projection plus failing-before/passing-after regression prepared.
-- `VERIFIED locally`: modal nested focus/return and calendar keyboard behavior;
+  explicit projection applied live as migration `20261002104515`, with a
+  failing-before/passing-after synthetic regression and unchanged access grants.
+- `VERIFIED`: modal nested focus/return and calendar keyboard behavior;
   accessible control names, skip navigation, alerts and limited staff security
-  headers prepared. Actual VoiceOver journey remains unverified.
+  headers deployed. Actual VoiceOver journey remains unverified.
 - `VERIFIED isolated fixture`: three 120-workflow PostgreSQL 17.6 load/crash/dump
   restore runs, zero workflow errors and matching content hashes. These are not
   production capacity or full Supabase disaster-recovery results.
@@ -24,7 +25,14 @@ Updated: 2026-10-02
   rejected as excessive; no bypass, password reset or production restore attempted.
 - Still required: actual pending-QA owner rejection, screen reader/all-state
   accessibility, full current DB+Storage restore and individual security-control
-  ledger. The new local fixes need separate production receipts.
+  ledger.
+- `VERIFIED production`: staff commit `d99dd3679ecfbcfeccce71360a41e3eca7f02766`,
+  READY deployment `dpl_35SkewRqp8Lpeui4UY7vp3uWNeTo`; explicitly assigned primary
+  alias manifest matches. The preceding source package passed 28 local groups;
+  the final label-only follow-up passed accessibility contracts, lint and build.
+  Live search/task focus and cancellation work; 23 active mail chains and three
+  calendar events load. No task or outbound message was created. Public portal
+  and separately owned modules were not redeployed by this package.
 
 ## Standards-based quality baseline — 2026-10-02
 

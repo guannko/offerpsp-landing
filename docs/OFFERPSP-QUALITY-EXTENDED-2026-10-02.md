@@ -2,8 +2,9 @@
 
 Status: **PARTIAL**. This is evidence from bounded tests, not ISO certification,
 an all-controls ASVS pass, or a completed WCAG conformance assessment.
-Production inspected: release `1bdaa523b06e03630cd4efd1206aa0a97d9db974`.
-The fixes described below are local until a separate production receipt is added.
+Initial production inspected: release `1bdaa523b06e03630cd4efd1206aa0a97d9db974`.
+Staff fixes are now deployed as `d99dd3679ecfbcfeccce71360a41e3eca7f02766`;
+the public portal remains on the initial release. Delivery receipts follow below.
 
 ## Closed checks
 
@@ -60,14 +61,20 @@ membership, grants and publication behavior, but returns an explicit provider
 allowlist and omits `profile.updated_by`. Full local migration replay passes after
 the fix. Immediately before rollout the live function definition was unchanged
 from the audited version. Its original definition is retained privately for rollback.
-**Production application is not claimed here.**
+Applied to production at 10:45:15 UTC as migration version `20261002104515`,
+name `offerpsp_provider_profile_response_boundary`. Live definition confirms the
+full-row response is absent, the explicit allowlist is present and the internal
+profile actor is removed. Anonymous EXECUTE remains false; authenticated and
+service grants are unchanged. This is a configuration receipt plus synthetic
+functional regression, not a forced edit of a real provider profile.
 
 ### Transport hardening and known limits
 
-The local staff configuration adds nosniff, SAMEORIGIN, no-referrer and a limited
+The deployed staff configuration adds nosniff, SAMEORIGIN, no-referrer and a limited
 CSP for base URI, objects and frame ancestry. This is **not** a complete script or
 connection CSP, and it does not establish XSS protection. OAuth, file previews
-and live response headers still require post-release verification.
+and full OAuth/file-preview journeys remain separate from header verification.
+The primary staff response at 11:03:14 UTC contains all four configured headers.
 
 The current managed PostgreSQL 17.6 also requires a separately planned review
 against Supabase's September security upgrade guidance. No production engine
@@ -85,7 +92,7 @@ without document-level horizontal overflow in the inspected states. Internal
 tables and kanban retain deliberate local scrolling. This is not a full 400%
 reflow or all-state test.
 
-Local changes add names to previously unnamed controls, visible skip navigation,
+Deployed changes add names to previously unnamed controls, visible skip navigation,
 search combobox/list semantics, active navigation semantics, error alerts, modal
 focus containment/return and keyboard calendar tabs. Existing wrapped labels are
 preserved rather than overwritten by example placeholders. A source-contract
@@ -145,6 +152,33 @@ The scoped Storage exporter is prepared but **has not downloaded a production
 snapshot**. A credential-only handoff or an approved dedicated backup connection
 is required. No whole-production restoration pass is claimed.
 
+## Production delivery and smoke receipts
+
+- Source package `d3b3c69251713e9143777f186d7c97251ac34000` passed the 28-group
+  baseline above and was deployed READY as `dpl_6rEYBCYPiVExmtHtnQMExwuMfaYr`.
+- A subsequent browser check found the task dialog's close control was unnamed.
+  The two-file follow-up `d99dd3679ecfbcfeccce71360a41e3eca7f02766` adds its
+  accessible name and a source regression. Accessibility contracts, lint, build
+  and diff check passed after that change; the full 28 groups were not rerun for
+  this label-only follow-up.
+- Final Linux production deployment `dpl_35SkewRqp8Lpeui4UY7vp3uWNeTo` is READY.
+  The primary alias `https://ops-7q4m2x9k8v3n.vercel.app` was assigned explicitly;
+  its manifest at 11:03:14 UTC matches the exact final commit and deployment ID.
+- Authenticated live staff search holds keyboard focus, closes with Escape and
+  returns focus to its launcher. Final task dialog focuses `Закрыть форму задачи`;
+  cancelling returns focus to `+ Новая задача`. No task was saved.
+- Radio Room loads 23 active chains without an alert. Calendar loads three real
+  events for today; keyboard layer changes and associated panels work. Existing
+  three open/overdue manual tasks remain unchanged.
+- Actual `/api/integration-health` anonymous request returns 401 and no-store.
+  A guessed `/api/health` SPA fallback is not used as an API-authentication test.
+- Browser zoom was restored from 200% to 100% (1440 CSS pixels); VoiceOver is OFF
+  as originally inspected. Notes search was cleared and the original partner-
+  commission note remains selected. The temporary Vite server was stopped.
+- Private durable evidence is in the ignored mode-700 directory
+  `.private/quality-audit-20261002.a9nFLw`; it contains tests, bounded probe evidence,
+  synthetic downloaded originals and rollback SQL, not a production DB snapshot.
+
 ## Still open
 
 1. Live owner rejection using an isolated pending QA request; do not rewrite the
@@ -153,8 +187,6 @@ is required. No whole-production restoration pass is claimed.
 3. Fresh database + Storage export and full isolated restore once credentials exist.
 4. Individual ASVS applicability/evidence, remaining HTTP/API negative scenarios,
    and a managed Postgres security-upgrade plan.
-5. Commit/deploy the tested package and record exact build, migration and live
-   smoke receipts. A green local build is not a production receipt.
 
 Sources: [ASVS 5.0.0](https://github.com/OWASP/ASVS/releases/tag/v5.0.0),
 [WCAG 2.2](https://www.w3.org/TR/WCAG22/),
