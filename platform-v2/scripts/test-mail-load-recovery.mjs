@@ -23,6 +23,8 @@ assert.equal(keepReadSnapshot(saved, null, true, false, empty), empty);
 assert.deepEqual(keepReadSnapshot(saved, { threads: [] }, false, true, empty), empty);
 const context = await readFile(new URL('../src/context/ControlBridgeContext.tsx', import.meta.url), 'utf8');
 const page = await readFile(new URL('../src/pages/CaptainPages.tsx', import.meta.url), 'utf8');
+const course = await readFile(new URL('../src/pages/CoursePage.tsx', import.meta.url), 'utf8');
+assert.match(course, /shareRead\(`\$\{userId\}:mail-index`, \(\) => supabase\.rpc\("get_offerpsp_mail_index"/);
 assert.match(context, /if \(!firstError\) writeCoreCache/);
 assert.match(context, /get_offerpsp_mail_index/);
 assert.match(page, /ошибка загрузки, а не пустой ящик/);

@@ -9,6 +9,7 @@
     "deploy:production": "node scripts/deploy-production.mjs",
     "lint": "eslint .",
     "qa:local": "node scripts/run-quality-baseline.mjs",
+    "test:accessibility-boundaries": "node scripts/test-accessibility-boundaries.mjs",
     "test:operations-presentation": "node --experimental-strip-types scripts/test-operations-presentation.mjs",
     "preview": "vite preview",
     "test:pdf-extractor": "node scripts/test-pdf-extractor.mjs",

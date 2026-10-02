@@ -2,6 +2,30 @@
 
 Updated: 2026-10-02
 
+## Extended security/accessibility/recovery verification — 2026-10-02
+
+- Overall `PARTIAL`, with evidence and remaining gates in
+  `docs/OFFERPSP-QUALITY-EXTENDED-2026-10-02.md`. Not a complete ASVS/WCAG pass.
+- `VERIFIED`: native DOCX/PDF downloads complete and exact hashes match the QA
+  originals; anonymous expired-link guidance is visible on the public release.
+- `VERIFIED`: inventory of all 414 functions and security boundaries, 370 bounded
+  live role/entity probes (369 expected safe results; one read-only writer probe
+  inconclusive). Confirmed internal provider-field leak in profile-save response;
+  local explicit projection plus failing-before/passing-after regression prepared.
+- `VERIFIED locally`: modal nested focus/return and calendar keyboard behavior;
+  accessible control names, skip navigation, alerts and limited staff security
+  headers prepared. Actual VoiceOver journey remains unverified.
+- `VERIFIED isolated fixture`: three 120-workflow PostgreSQL 17.6 load/crash/dump
+  restore runs, zero workflow errors and matching content hashes. These are not
+  production capacity or full Supabase disaster-recovery results.
+- `BLOCKED fresh whole-system backup`: current Postgres password not found in
+  scoped local files, accessible GitHub code search or Notes. Local Vercel env key
+  is empty; exact-key API exposes metadata only. Whole production env access was
+  rejected as excessive; no bypass, password reset or production restore attempted.
+- Still required: actual pending-QA owner rejection, screen reader/all-state
+  accessibility, full current DB+Storage restore and individual security-control
+  ledger. The new local fixes need separate production receipts.
+
 ## Standards-based quality baseline — 2026-10-02
 
 - `VERIFIED production`: release `1bdaa523b06e03630cd4efd1206aa0a97d9db974`

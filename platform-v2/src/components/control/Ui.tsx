@@ -161,7 +161,7 @@ export function EmptyState({ title, description }: { title: string; description:
 }
 
 export function ErrorBanner({ message }: { message: string }) {
-  return <div className="mb-6 rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-500/20 dark:bg-error-500/10 dark:text-error-300">{message}</div>;
+  return <div role="alert" className="mb-6 rounded-xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700 dark:border-error-500/20 dark:bg-error-500/10 dark:text-error-300">{message}</div>;
 }
 
 export function SkeletonPage({ label = "Загружаем рабочие данные…" }: { label?: string }) {

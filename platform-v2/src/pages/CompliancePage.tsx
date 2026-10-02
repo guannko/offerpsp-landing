@@ -86,7 +86,7 @@ export default function CompliancePage() {
         <div className="-mx-1 min-w-0 overflow-x-auto px-1 pb-1">
           <div className="flex w-max gap-2">{filters.map(([value, label]) => <button key={value} onClick={() => setFilter(value)} className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold ${filter === value ? "bg-brand-500 text-white" : "bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300"}`}>{label}</button>)}</div>
         </div>
-        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Компания, email, GEO, роль…" className="h-11 w-full shrink-0 rounded-lg border border-gray-200 bg-transparent px-4 text-sm outline-none focus:border-brand-400 dark:border-gray-700 2xl:w-80"/>
+        <input aria-label="Поиск входящих лидов" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Компания, email, GEO, роль…" className="h-11 w-full shrink-0 rounded-lg border border-gray-200 bg-transparent px-4 text-sm outline-none focus:border-brand-400 dark:border-gray-700 2xl:w-80"/>
       </div>
       {visible.length ? <>
         <div className="mt-5 grid gap-4 2xl:hidden">

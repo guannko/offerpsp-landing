@@ -377,6 +377,7 @@ async function applyMigrations() {
   "20261001195538_offerpsp_work_document_files.sql",
   "20261001215049_offerpsp_calendar_events.sql",
   "20261001220320_offerpsp_calendar_task_identity_types.sql",
+  "20261002103000_offerpsp_provider_profile_response_boundary.sql",
   ];
   for (const migrationName of migrationNames) discoveredNames.delete(migrationName);
   if (discoveredNames.size) {
@@ -1316,6 +1317,7 @@ async function verifyProviderPortalBoundary() {
     const providerId = providers.rows.find((item) => item.brand_name === "Provider Portal Fixture").id;
     const foreignProviderId = providers.rows.find((item) => item.brand_name === "Foreign Provider Fixture").id;
     const firstOwnerProviderId = providers.rows.find((item) => item.brand_name === "First Owner Fixture").id;
+    await query("update private.offerpsp_providers set relationship_notes='INTERNAL_ONLY_NOT_FOR_PSP', margin_included_default=true, strategic_priority=5 where id=$1", [providerId]);
     await setUser(STAFF_ID);
     await expectTransactionFailure(
       "select public.save_offerpsp_provider_member($1, null, 'agent@example.com', 'viewer', true)",
@@ -1370,8 +1372,8 @@ async function verifyProviderPortalBoundary() {
       "select public.submit_offerpsp_provider_offer_draft($1, $2) as value",
       [providerId, saved.rows[0].value.id],
     );
-    await query(
-      "select public.save_offerpsp_provider_portal_profile($1, $2::jsonb)",
+    const profileSaved = await query(
+      "select public.save_offerpsp_provider_portal_profile($1, $2::jsonb) as value",
       [providerId, JSON.stringify({
         brand_name: "Provider Portal Fixture",
         legal_name: "Provider Portal Fixture Ltd",
@@ -1386,6 +1388,9 @@ async function verifyProviderPortalBoundary() {
         licences: [{ jurisdiction: "GB", status: "declared" }],
       })],
     );
+    if (/INTERNAL_ONLY_NOT_FOR_PSP|relationship_notes|strategic_priority|margin_included_default|owner_user_id|legacy_psp_id|merged_by|archived_by/.test(JSON.stringify(profileSaved.rows[0].value))) {
+      throw new Error("Provider profile save response exposes staff-only fields");
+    }
     await query(
       "select public.save_offerpsp_provider_portal_contact($1, null, $2::jsonb)",
       [providerId, JSON.stringify({ full_name: "PSP Manager", role_title: "Sales", email: "manager@provider.invalid", preferred_channel: "email", active: true })],
@@ -1444,6 +1449,11 @@ async function verifyProviderPortalBoundary() {
       [providerId],
       "PSP workspace must keep at least one active owner",
     );
+    await query("update public.offerpsp_provider_memberships set active=false where provider_id=$1 and user_id=$2", [providerId, OTHER_CLIENT_ID]);
+    await setUser(OTHER_CLIENT_ID);
+    const removed = (await query("select public.list_offerpsp_my_provider_workspaces() as value")).rows[0].value;
+    if (removed.length !== 0) throw new Error("Revoked PSP membership still lists the workspace");
+    await expectTransactionFailure("select public.get_offerpsp_provider_portal_workspace($1)", [providerId], "PSP workspace access required");
   } finally {
     await query("rollback");
     await setRole("authenticated");

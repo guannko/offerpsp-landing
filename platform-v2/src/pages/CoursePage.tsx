@@ -4,6 +4,7 @@ import { SkeletonPage } from "../components/control/Ui";
 import CourseOrganizer from "../components/control/CourseOrganizer";
 import { useControlBridge } from "../context/ControlBridgeContext";
 import { supabase } from "../lib/supabase";
+import { shareRead } from "../lib/readSnapshot";
 import { initialCoursePlan } from "../lib/coursePlan";
 import type { CourseSnapshot } from "../lib/coursePlan";
 import { isQaFixtureLeadId, isQaFixtureProvider } from "../lib/qaFixtures";
@@ -32,7 +33,7 @@ export default function CoursePage() {
         supabase.rpc("get_offerpsp_course_plan"),
         supabase.rpc("get_offerpsp_operations_workspace"),
         // Use only thread headers from this existing snapshot; no mark-read writes.
-        supabase.rpc("get_offerpsp_mail_index", { p_limit: 250 }),
+        shareRead(`${userId}:mail-index`, () => supabase.rpc("get_offerpsp_mail_index", { p_limit: 250 })),
       ]);
       const problems: string[] = [];
       if (course.error) problems.push(`План не загружен; редактирование отключено. ${course.error.message}`);

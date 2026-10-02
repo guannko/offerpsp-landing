@@ -11,6 +11,7 @@ import { appendOriginalText } from "../../lib/workDocumentFiles";
 import type { CourseDirection } from "../../lib/coursePlan";
 import type { Lead, Provider } from "../../types/offerpsp";
 import "./WorkDocumentDesk.css";
+import { useDialogFocus } from "../../hooks/useDialogFocus";
 
 type Props = { repository: DocumentRepository; leads: Lead[]; providers: Provider[]; directions: CourseDirection[]; onClose: () => void };
 const date = (value: string | null) => value ? new Date(value).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "ещё не сохранён";
@@ -53,6 +54,8 @@ export default function WorkDocumentDesk({ repository, leads, providers, directi
   const [exportCopy, setExportCopy] = useState<{ content: string; url: string; filename: string; format: "txt" | "json" } | null>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const proceedRef = useRef<HTMLButtonElement>(null);
+  const confirmRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(Boolean(pending), confirmRef);
   const dirty = Boolean(draft && !historical && (draft.revision === 0 || JSON.stringify(draft.body) !== baseline));
   const editable = Boolean(draft && !historical && !busy);
   function guardAction(action: () => void) {
@@ -61,7 +64,6 @@ export default function WorkDocumentDesk({ repository, leads, providers, directi
     else action();
   }
   function confirmChange(message: string, action: () => void) { setPending({ message, proceed: action }); }
-  useEffect(() => { if (pending) cancelRef.current?.focus(); }, [pending]);
   useEffect(() => () => { if (exportCopy) URL.revokeObjectURL(exportCopy.url); }, [exportCopy]);
 
   useEffect(() => {
@@ -271,7 +273,7 @@ export default function WorkDocumentDesk({ repository, leads, providers, directi
       </div>
     </> : screen === "editor" && <p className="course-empty">Нажми «Новый документ» и выбери чистый лист или заготовку.</p>}
     <footer className="course-footer"><span>Конструктор · до 100 блоков · ручное сохранение</span><span>DOCX/PDF: приватные оригиналы и отдельный рабочий текст. Нет точного Word round-trip, подписи или автоматической отправки.</span></footer>
-    </div>{pending && <div className="workdoc-confirm-backdrop"><div role="alertdialog" aria-modal="true" aria-labelledby="workdoc-confirm-title" aria-describedby="workdoc-confirm-message" className="workdoc-confirm" onKeyDown={(event) => {
+    </div>{pending && <div className="workdoc-confirm-backdrop"><div ref={confirmRef} tabIndex={-1} role="alertdialog" aria-modal="true" aria-labelledby="workdoc-confirm-title" aria-describedby="workdoc-confirm-message" className="workdoc-confirm" onKeyDown={(event) => {
       if (event.key === "Escape") { event.preventDefault(); setPending(null); }
       if (event.key === "Tab") { event.preventDefault(); (document.activeElement === cancelRef.current ? proceedRef.current : cancelRef.current)?.focus(); }
     }}><h2 id="workdoc-confirm-title">Сначала сохраним работу?</h2><p id="workdoc-confirm-message">{pending.message}</p><div className="course-tools"><button ref={cancelRef} onClick={() => setPending(null)}>Остаться</button><button ref={proceedRef} onClick={() => { const action = pending.proceed; setPending(null); action(); }}>Продолжить</button></div></div></div>}

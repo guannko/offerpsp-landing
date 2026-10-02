@@ -13,6 +13,7 @@ const suites = [
   ["public-portal-contracts", root, "npm", ["run", "validate"]],
   ["migration-replay", root, process.execPath, ["scripts/validate-offerpsp-migrations.mjs", app]],
   ["lint", app, "npm", ["run", "lint"]],
+  ["accessibility-boundaries", app, "npm", ["run", "test:accessibility-boundaries"]],
   ...["operations-presentation", "calendar-events", "course-organizer", "work-documents", "work-originals", "operational-consistency", "offer-parser", "provider-source", "mailbox-poller", "sent-mail-archive", "document-processing", "intake-autopilot", "intake-auto-reply", "intake-display", "intake-concurrency", "company-screening", "screening-concurrency", "research-screening", "mcp", "pdf-extractor", "bridges", "modules", "pwa"].map((name) => [name, app, "npm", ["run", `test:${name}`]]),
   ["build", app, "npm", ["run", "build"]],
 ];

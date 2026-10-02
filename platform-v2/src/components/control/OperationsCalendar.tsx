@@ -114,7 +114,14 @@ export default function OperationsCalendar({ tasks, onEditTask, onNewTask, readP
 
   return <Panel className="mt-5">
     <div className="flex items-start justify-between gap-4"><div><p className="text-xs uppercase tracking-[0.16em] text-gray-500">Рабочая хроника</p><h2 className="mt-1 font-serif text-2xl text-gray-900">Было. Сейчас. Будет.</h2><p className="mt-2 text-sm text-gray-500">Факты и планы на одной линии времени. Дни переходят между слоями автоматически.</p></div><button onClick={() => { setNow(new Date()); setRefresh((value) => value + 1); }} disabled={loading} className="rounded-lg border border-gray-300 px-3 py-2 text-sm disabled:opacity-50">Обновить</button></div>
-    <div className="mt-5 grid grid-cols-3 gap-2" role="tablist" aria-label="Слой календаря">{layers.map((item) => <button key={item.id} role="tab" aria-selected={layer === item.id} onClick={() => changeLayer(item.id)} className={`rounded-xl border px-3 py-3 text-left ${layer === item.id ? "border-brand-300 bg-brand-50" : "border-gray-200 bg-white"}`}><strong className="block text-sm text-gray-900">{item.title}</strong><span className="mt-1 hidden text-xs text-gray-500 sm:block">{item.detail}</span></button>)}</div>
+    <div className="mt-5 grid grid-cols-3 gap-2" role="tablist" aria-label="Слой календаря">{layers.map((item, index) => <button key={item.id} id={`calendar-layer-${item.id}`} role="tab" tabIndex={layer === item.id ? 0 : -1} aria-selected={layer === item.id} aria-controls="calendar-layer-panel" onClick={() => changeLayer(item.id)} onKeyDown={(event) => {
+      const nextIndex = event.key === "ArrowRight" ? (index + 1) % layers.length : event.key === "ArrowLeft" ? (index + layers.length - 1) % layers.length : event.key === "Home" ? 0 : event.key === "End" ? layers.length - 1 : null;
+      if (nextIndex === null) return;
+      event.preventDefault();
+      changeLayer(layers[nextIndex].id);
+      document.getElementById(`calendar-layer-${layers[nextIndex].id}`)?.focus();
+    }} className={`rounded-xl border px-3 py-3 text-left ${layer === item.id ? "border-brand-300 bg-brand-50" : "border-gray-200 bg-white"}`}><strong className="block text-sm text-gray-900">{item.title}</strong><span className="mt-1 hidden text-xs text-gray-500 sm:block">{item.detail}</span></button>)}</div>
+    <div id="calendar-layer-panel" role="tabpanel" aria-labelledby={`calendar-layer-${layer}`}>
     <div className="my-4 flex flex-wrap items-center gap-2">{filters.map(([id, label]) => <button key={id} aria-pressed={filter === id} onClick={() => setFilter(id)} className={`rounded-lg px-3 py-2 text-xs ${filter === id ? "bg-brand-500 text-white" : "bg-gray-100 text-gray-600"}`}>{label}</button>)}<input aria-label="Поиск событий" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Кому, что, какое предложение…" className="ml-auto min-w-48 rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm"/></div>
     {error && <ErrorBanner message={`События загружены не полностью: ${error}`}/>}
     <p className="mb-3 text-xs text-gray-500" aria-live="polite">{loading ? "Загружаю записи…" : `Записей по фильтру: ${visible.length} · загружено за период: ${events.length}`}{hasMore ? " · есть ещё записи: загрузите продолжение" : ""}{generatedAt ? ` · обновлено ${stamp(generatedAt)}` : ""}</p>
@@ -138,5 +145,6 @@ export default function OperationsCalendar({ tasks, onEditTask, onNewTask, readP
     {!loading && !error && !window && <EmptyState title="В этом месяце нет дат выбранного слоя" description="Перейдите к предыдущему или следующему месяцу."/>}
     {hasMore && <button disabled={loading || offset > 10000} onClick={() => void loadMore()} className="mt-4 rounded-lg border border-gray-300 px-4 py-2 text-sm disabled:opacity-50">{offset > 10000 ? "Сузьте период: достигнут предел выборки" : "Загрузить ещё события"}</button>}
     <p className="mt-5 text-xs leading-5 text-gray-500">Даты — в вашем часовом поясе ({Intl.DateTimeFormat().resolvedOptions().timeZone}). Автообновление раз в минуту. Метка «План» — ещё не результат. Показаны записи рубки: почта, публикация подборок, задачи, follow-up и решения по заявкам. Незарегистрированные действия в Spark/Telegram не придумываются; почта появляется после синхронизации. Черновики и QA исключены.</p>
+    </div>
   </Panel>;
 }
