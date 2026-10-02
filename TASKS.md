@@ -50,6 +50,16 @@ Updated: 2026-10-02
 - VoiceOver activation is human-confirmed by Boris; actual transcript/caption
   capture still failed. Limited task focus/names verified; full reader journey
   remains PARTIAL. VoiceOver returned to OFF. No production credentials changed.
+- Recovery credential handoff follow-up: Boris reports the database password was
+  reset, but the local credential file remains absent. The capture helper's
+  unnecessary 12-character policy rejected existing input; removed that policy,
+  retaining empty-input rejection and current-project/server-key validation with
+  retries. Hidden input now uses Node readline with discarded output. Four
+  synthetic tests pass on Node 22.17.0, including private permissions, no-overwrite,
+  wrong-project/public-key rejection, UTF-8/paste/editing and Ctrl-C. Actual TTY
+  confirms empty retry, short input reaching the key prompt, malformed-key retry
+  and clean cancellation without credential creation. Durable helper replaced at
+  the same previously supplied path. No production code or deployment changed.
 
 ## Standards-based quality baseline — 2026-10-02
 
