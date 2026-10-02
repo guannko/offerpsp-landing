@@ -14,8 +14,8 @@ for (const name of ["name", "work_email", "company", "vertical", ...canonicalKey
   assert.match(tag, /\brequired\b/, `Portal must visibly require ${name}`);
 }
 assert.match(formMarkup, /briefRequiredHint/);
-assert.match(html, /app\.js\?v=20261001-members/);
-assert.match(html, /styles\.css\?v=20261001-members/);
+assert.match(html, /app\.js\?v=20261002-quality/);
+assert.match(html, /styles\.css\?v=20261002-quality/);
 
 const complete = {
   name: "Alex Merchant", work_email: "wrong@untrusted.example", company: "Example Merchant Ltd",
