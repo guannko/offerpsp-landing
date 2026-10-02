@@ -95,3 +95,51 @@ Release verification is recorded separately after the exact committed package is
 deployed and the primary URL is checked.
 Staff Bridge and the public portal are separate deployment targets; a staff-only
 deployment cannot be cited as delivery of the portal CSS fix.
+
+## Production release verification — 2 October, 09:00 UTC
+
+**VERIFIED deployment**, separate from the PARTIAL complete verification programme.
+
+- Deployed commit: `1bdaa523b06e03630cd4efd1206aa0a97d9db974`.
+  This includes the original `791edf7` package, callback-error guidance and portal
+  cache version `20261002-quality`. Later documentation-only commits do not
+  change the deployed commit identity.
+- Staff: READY Linux cloud build `dpl_DXo1PEsSGNpJVxyX8xRBEK7SbQFW`;
+  unique deployment `https://ops-7q4m2x9k8v3n-brirdwr4a-annoris.vercel.app`.
+  Primary `https://ops-7q4m2x9k8v3n.vercel.app` is explicitly assigned and its
+  build manifest matches the exact deployed commit. No macOS native function
+  output was published to the staff deployment.
+- Public: READY `dpl_DsVRYnnAhDxpSaKaFDFBtdcWtQnM`, promoted to the existing
+  project domains; unique `https://offerpsp-landing-j4b8v4zko-annoris.vercel.app`.
+  Deployed metadata records the same release commit. Root prebuilt output contains
+  only the existing pure-JavaScript functions, not local native binaries.
+- Post-promotion SHA-256 comparison against `https://offerpsp.com` checks all
+  **63 static files: four intentional portal changes, 59 unchanged live files,
+  zero mismatches**. Only `/portal/index.html`, `/portal/app.js`,
+  `/portal/styles.css` and new `/portal/auth-status.js` change. Repository drift
+  in public SEO/GEO, sitemap and PSP assets was intentionally not published.
+- Fresh local baseline 08:43:47–08:44:24 UTC: **27 PASS / 0 FAIL / 0 BLOCKED**,
+  report `tmp/quality-baseline/2026-10-02T08-43-47-022Z/report.json`.
+  This precedes the cache-query-only change; after updating its exact regression
+  expectation, full public `npm run validate` and production build pass. The
+  initial stale cache-version assertion failed and was corrected before deployment.
+- Live staff missions: current/history/test 0/12/1; human titles, collapsed
+  diagnostics and compact status pills. Three open/overdue manual tasks unchanged.
+  Saved screenshot: `bridge-quality-release-20261002.png`.
+- Live mail: 23 active chains, latest PayLolly message renders; its 20-message
+  previous history expands and shows existing originals. No messages sent and no
+  business next-step status changed by smoke testing.
+- Public portal retains the approved `bizdev@offerpsp.com` session, loads both new
+  cache-version resources, and computes white member-panel background with dark
+  text. With the QA company archived, no active test request is shown. Delivery
+  of CSS and callback code is verified; populated owner-panel and unauthenticated
+  expired-callback visual retests are not claimed by this post-release smoke.
+- Staff-authorized health at 09:00 UTC: Supabase, email, Telegram and n8n gateways
+  authenticated/reachable; GoRules shadow and Meilisearch active are healthy.
+  Stored email/Telegram receipts remain historical; no fresh delivery test implied.
+
+Previous READY deployments retained for rollback:
+staff `dpl_5MsjmdiVJArP2CJf2JBNMdsoi6j7`, public
+`dpl_xv2bKh7U2sTahmPmkCzAgARx1Zj3`. No schema migration or workflow mutation
+was performed by this release. Live negative member decision, original download
+completion and the wider security/accessibility/recovery programme remain open.

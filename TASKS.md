@@ -4,6 +4,20 @@ Updated: 2026-10-02
 
 ## Standards-based quality baseline — 2026-10-02
 
+- `VERIFIED production`: release `1bdaa523b06e03630cd4efd1206aa0a97d9db974`
+  is live on both targets. Staff Linux deployment
+  `dpl_DXo1PEsSGNpJVxyX8xRBEK7SbQFW` and public portal deployment
+  `dpl_DsVRYnnAhDxpSaKaFDFBtdcWtQnM` are READY; primary staff build manifest
+  matches the release. Public-domain SHA-256 verification covers all 63 static
+  files: four intended portal changes, 59 preserved live files, zero mismatches.
+  SEO/GEO and PSP public assets were preserved, not replaced by repository drift.
+- `VERIFIED post-release smoke`: staff missions show current/history/test
+  0/12/1 with compact human-readable history; 3 manual tasks remain unchanged.
+  Mail loads 23 active chains and expands 20 previous PayLolly messages.
+  Public portal retains the approved bizdev session, loads the new cache version,
+  and its member-panel computed background is white with dark ink.
+  Staff health at 09:00 UTC confirms authenticated core gateways reachable;
+  transport receipt timestamps are historical, not a new send test.
 - Protocol uses public ISO 25010/29119 descriptions, ASVS 5.0.0, WSTG 4.2 and
   WCAG 2.2 as verification references, not certification. Full results and limits:
   `docs/OFFERPSP-QUALITY-AUDIT-2026-10-02.md`.
@@ -16,7 +30,9 @@ Updated: 2026-10-02
   full npm audit with zero known advisories at check time.
 - Live QA screenshot also exposed a dark member-request panel with dark headings
   in the otherwise light merchant portal. Scoped panel/text/select CSS repaired
-  locally with a regression; separate public-site deployment/visual retest pending.
+  with a regression; delivered in the separate public deployment above.
+  Post-release computed panel colours verified; populated owner-panel visual
+  retest remains separate because the QA company is already archived.
 - `VERIFIED live QA`: synthetic DOCX/PDF uploaded, original hashes/Storage receipts
   match, extraction appends without replacing first block, v2 survives reload.
   PDF preview renders. Download completion remains PARTIAL (browser event timeout).
@@ -31,10 +47,12 @@ Updated: 2026-10-02
   portal silently shows a blank login form. Local callback-error presentation fix
   captures errors before client initialization, displays RU/EN recovery guidance,
   leaves genuine sessions and access checks unchanged. Actual startup regression
-  and full npm validate pass. Public deployment/visual retest still pending.
+  and full npm validate pass. Public delivery verified; an unauthenticated expired
+  callback visual retest remains pending. Existing valid session is not disturbed.
 - New ten RPC guards and private bucket/table configuration inspected live.
   Full legacy security, WCAG, performance/recovery and individual MerchantPayd
-  quote journey are not declared complete. No current package deployment yet.
+  quote journey are not declared complete. The current package is deployed;
+  remaining verification limits are not represented as completed work.
 
 ## Small-text readability — 2026-10-02
 
