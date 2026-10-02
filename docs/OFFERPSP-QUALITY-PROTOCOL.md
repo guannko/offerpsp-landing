@@ -22,6 +22,9 @@ ASVS official versioned JSON was inspected, version 5.0.0, SHA-256
 `bcdbec214d70abcfad9284a31d4f9e5134305831d628aad3aa85d7e26626cb35`.
 Requirements use version-qualified IDs in findings; preserve the referenced version.
 The protocol does not reproduce the standard's requirement text.
+The 253 Level 1/2 requirement rows and bounded evidence states are tracked in
+`docs/OFFERPSP-ASVS-5-LEDGER.json`. An inventory row or PARTIAL result is not a
+completed assessment or a conformance claim.
 
 ## Scope and safety
 

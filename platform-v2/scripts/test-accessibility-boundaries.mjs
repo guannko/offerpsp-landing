@@ -16,6 +16,13 @@ for(const file of ['src/pages/OperationsWorkspace.tsx','src/pages/CompliancePage
 }
 const header=source('src/layout/AppHeader.tsx');
 assert.match(source('src/pages/OperationsWorkspace.tsx'),/aria-label="Закрыть форму задачи"/);
+const operations=source('src/pages/OperationsWorkspace.tsx');
+assert.match(operations,/inline-flex max-w-full flex-wrap/,'Operations mode buttons must fit a 320px viewport');
+assert.match(operations,/grid w-full min-w-0 grid-cols-1[^\"]*\[overflow-wrap:anywhere\]/,'Long task identifiers must not force page-level horizontal scrolling');
+const mail=source('src/pages/CaptainPages.tsx');
+assert.ok(mail.includes('mt-4 grid min-w-0 grid-cols-1 gap-3 xl:grid-cols-2'),'Mail accordion columns must be allowed to shrink');
+assert.ok(mail.includes('grid min-w-0 grid-cols-1 gap-3 lg:grid-cols-[140px_160px_minmax(0,1fr)]'),'Native datetime controls must not set the mail grid minimum width');
+assert.ok(mail.includes('absolute right-0 z-30 mt-2 w-56 max-w-[calc(100vw-3rem)]'),'Draft menu must remain inside narrow viewports');
 assert.match(header,/useDialogFocus\(paletteOpen, paletteRef/);
 assert.match(header,/aria-label="Поиск записей и команд"/);
 assert.match(header,/role="combobox"/);

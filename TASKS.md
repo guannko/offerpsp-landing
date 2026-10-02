@@ -4,19 +4,19 @@ Updated: 2026-10-02
 
 ## Extended security/accessibility/recovery verification — 2026-10-02
 
-- `VERIFIED scoped follow-up`: nine company-join rejection checks pass against
-  the restored current production DB, as authenticated QA owner/applicant users,
-  on a separate fixture rolled back afterward. Pending/self-approval denied,
-  owner rejection, replay/opposite-decision guards, no membership/contact,
-  exactly-once journal and denied post-rejection claim pass; prior approved QA
-  history is untouched. Production read checks confirm only the approved archived
-  QA case; live browser rejection remains open. Functional restore also confirms
-  the Vault server-key/config dependency: a new intake fails locally without it.
-  Screening dispatch is neutralized only in the rolled-back local membership
-  fixture; Vault and whole-service recovery are not called PASS. No production
-  write, send, grant or deployment performed by this follow-up.
 - Overall `PARTIAL`, with evidence and remaining gates in
   `docs/OFFERPSP-QUALITY-EXTENDED-2026-10-02.md`. Not a complete ASVS/WCAG pass.
+- `VERIFIED live rejection`: fresh authorized hello/bizdev QA company, new owner
+  and employee sessions, pending-owner/no access, actual owner rejection at
+  13:38:15 UTC, applicant denial after fresh login, no applicant membership and
+  exactly one journal event. Only the fresh QA card was closed/archived through
+  the native staff UI; its tasks are done/cancelled. Previously approved QA
+  membership/history remains unchanged. No counterparties were messaged.
+- `VERIFIED isolated rejection`: nine authenticated backend scenarios against
+  the restored DB pass, including self-approval denial, rejection, idempotent
+  replay, opposite-decision denial and no member/contact. Fixture rolls back.
+  Screening dispatch is neutralized only in that local fixture; managed Vault
+  decryption and real dispatch are not called PASS.
 - `VERIFIED`: native DOCX/PDF downloads complete and exact hashes match the QA
   originals; anonymous expired-link guidance is visible on the public release.
 - `VERIFIED`: inventory of all 414 functions and security boundaries, 370 bounded
@@ -30,13 +30,6 @@ Updated: 2026-10-02
 - `VERIFIED isolated fixture`: three 120-workflow PostgreSQL 17.6 load/crash/dump
   restore runs, zero workflow errors and matching content hashes. These are not
   production capacity or full Supabase disaster-recovery results.
-- Earlier `BLOCKED fresh whole-system backup`: current Postgres password not found in
-  scoped local files, accessible GitHub code search or Notes. Local Vercel env key
-  is empty; exact-key API exposes metadata only. Whole production env access was
-  rejected as excessive; no bypass, password reset or production restore attempted.
-- Still required: actual pending-QA owner rejection, screen reader/all-state
-  accessibility, full current DB+Storage restore and individual security-control
-  ledger.
 - `VERIFIED production`: staff commit `d99dd3679ecfbcfeccce71360a41e3eca7f02766`,
   READY deployment `dpl_35SkewRqp8Lpeui4UY7vp3uWNeTo`; explicitly assigned primary
   alias manifest matches. The preceding source package passed 28 local groups;
@@ -53,24 +46,22 @@ Updated: 2026-10-02
   authenticated mail/calendar reload preserves 23 chains and three daily events.
 - Database password dependency review found no direct postgres/password dependency
   in 18 relevant active workflow graphs or either Vercel environment-name list.
-  A rare external client remains possible. Existing Storage server key is readable
-  in the dashboard, but hidden Terminal credential input is blocked by computer-use
-  policy. Manual private credential capture helper is prepared; a synthetic
-  negative TTY test rejects a wrong-project key without creating a file. No real
-  credentials were saved. Blank password-reset dialog is handed to Boris.
+  A rare external client remains possible. Earlier credential search/capture
+  blocks are resolved: Boris reset the password himself and manually captured
+  only the existing current-project DB/Storage credentials privately at 11:54 UTC.
+  No agent credential rotation, broad env export or secret output/commit occurred.
 - VoiceOver activation is human-confirmed by Boris; actual transcript/caption
   capture still failed. Limited task focus/names verified; full reader journey
-  remains PARTIAL. VoiceOver returned to OFF. No production credentials changed.
-- Recovery credential handoff follow-up: Boris reports the database password was
-  reset, but the local credential file remains absent. The capture helper's
+  remains PARTIAL. VoiceOver returned to OFF. No agent credential change occurred.
+- Recovery credential capture helper: the helper's
   unnecessary 12-character policy rejected existing input; removed that policy,
   retaining empty-input rejection and current-project/server-key validation with
   retries. Hidden input now uses Node readline with discarded output. Four
   synthetic tests pass on Node 22.17.0, including private permissions, no-overwrite,
   wrong-project/public-key rejection, UTF-8/paste/editing and Ctrl-C. Actual TTY
   confirms empty retry, short input reaching the key prompt, malformed-key retry
-  and clean cancellation without credential creation. Durable helper replaced at
-  the same previously supplied path. No production code or deployment changed.
+  and clean cancellation. Durable helper replaced at the same supplied path;
+  Boris subsequently completed real private capture. No production app change.
 - `VERIFIED recovery follow-up` at 12:11 UTC: manual capture now contains both
   current-project credentials privately. Verified TLS Session-pooler export:
   10,988,842-byte logical dump plus role definitions without passwords; 20 Storage
@@ -82,10 +73,39 @@ Updated: 2026-10-02
   Transient extension-owned net request/response and realtime.messages rows are
   not present in the ordinary logical dump and are not claimed as recovered.
   Cron disabled, pg_net worker diverted to empty template1, no ports/network;
-  temporary containers/volumes removed, private pack retained. Runtime-stack
-  recovery, Storage API/Auth/JWT/SMTP/configuration and Vault decryption remain
-  PARTIAL, as do the other audit gaps. Scripts and receipts add no production
-  application change and do not require deployment.
+  temporary containers/volumes removed, private pack retained.
+- `VERIFIED bounded service recovery` at 14:11:06–14:11:26 UTC: nine checks pass
+  on restored DB plus official Auth/REST/Storage/local-Mailpit containers sharing
+  a network-none loopback namespace, no published ports/external SMTP or reused
+  signing key. Actual QA OTP/session/RPC works; shared staff guard rejects valid
+  nonstaff with 403; tampered/expired JWTs denied. All 20 Storage API downloads
+  match exact hashes; missing/anon JWT modes give 40 denials before and after
+  service restart, with session/RPC/file integrity preserved. All six containers
+  removed. Final private receipt `restore-proof-s2sWsN`. Managed Vault, real
+  dispatch, external integrations, hosted failover and production RTO/RPO remain
+  unverified. First host-xattr Storage fixture failure is retained, not PASS.
+- `VERIFIED locally, NOT DEPLOYED`: task grid/mode wrapping and Radio Room
+  organizer/drafts menu reflow fixes. Actual real-component synthetic fixtures
+  at 320 CSS pixels no longer extend to 411/424/453 pixels; desktop 1440 fits.
+  No mail fetch/state/send or task mutation logic changed. Final baseline at
+  14:31:37–14:32:54 UTC: 29 PASS / 0 FAIL / 0 BLOCKED, including Docker suites.
+  Earlier three Docker sandbox blocks resolved on authorized rerun.
+- `PARTIAL security ledger`: `docs/OFFERPSP-ASVS-5-LEDGER.json` pins all 253 ASVS
+  5.0.0 L1/2 IDs; 183 NOT_TESTED, 54 PARTIAL, 7 scoped N/A, 2 GAP, 7 excluded Zoom
+  controls. This is an evidence inventory, not 253 completed reviews. Confirmed
+  gaps: incomplete script/resource CSP and absent private antivirus gate.
+  Both current prod/full npm audits return zero advisories; bounded staff
+  metadata paths expose only SPA fallback and TRACE is 405. Not a full pentest.
+- `PARTIAL managed Postgres upgrade`: live 17.6 and seven extensions inventoried;
+  no affected ltree/float GiST indexes, custom estimator operators or scoped
+  application PGP references found. No engine upgrade attempted. Need staging
+  restore/compatibility drill, downtime/reconnect plan and production window.
+  The execution/failure plan is saved in
+  `docs/OFFERPSP-POSTGRES-UPGRADE-PLAN-2026-10-02.md`; no downtime approved.
+- Still required before claiming complete: remaining control-specific security
+  evidence/remediation, actual screen-reader/all-state accessibility, delivery
+  and live retest of local layout fixes, full recovery of managed configuration
+  and external integrations, and planned Postgres security upgrade.
 
 ## Standards-based quality baseline — 2026-10-02
 

@@ -5,6 +5,8 @@ an all-controls ASVS pass, or a completed WCAG conformance assessment.
 Initial production inspected: release `1bdaa523b06e03630cd4efd1206aa0a97d9db974`.
 Staff fixes are now deployed as `93b68cd75e51efa866243fe8f35cfc1ca9156c42`;
 the public portal remains on the initial release. Delivery receipts follow below.
+Latest source checkpoint: 29 groups PASS / 0 FAIL / 0 BLOCKED at
+14:31:37–14:32:54 UTC. New reflow fixes are local only, not deployed.
 
 ## Closed checks
 
@@ -84,6 +86,35 @@ ASVS applicability/evidence per individual control is **not complete**. Negative
 SQL probes alone do not cover every API, session, upload, OAuth, dependency or
 operational security requirement.
 
+The pinned ASVS 5.0.0 Level 1/2 ledger is
+`docs/OFFERPSP-ASVS-5-LEDGER.json`: 253 unique requirements, currently 183
+NOT_TESTED, 54 PARTIAL, 7 NOT_APPLICABLE with a scoped rationale, 2 GAP and
+7 OUT_OF_SCOPE for the explicitly excluded Zoom/WebRTC surface. These are
+evidence-inventory states, not 253 completed assessments. No whole-control PASS
+is inferred from a chapter's tests. Password requirements remain reviewable,
+not automatically N/A merely because the current UI is passwordless.
+
+The two confirmed implementation gaps are the incomplete resource/script CSP
+(V3.4.3) and no antivirus gate for files from untrusted sources (V5.4.3).
+Type/signature/size checks do not replace antivirus. No customer document was
+submitted to a public scanner; remediation must retain private processing.
+
+At approximately 14:13 UTC both `npm audit --omit=dev --json` and
+`npm audit --json` returned zero advisories against the current lockfile.
+This is not an assessment of every external runtime or a complete SBOM.
+
+Read-only upgrade preflight confirms PostgreSQL 17.6 with seven extensions.
+No affected ltree/float GiST indexes, custom selectivity-estimator operators or
+public/private application references to the affected PGP functions were found
+in the inspected categories from Supabase's September 25 upgrade guidance.
+This does not establish every workload's compatibility or inspect encrypted
+customer content. A managed 17.11 upgrade still needs a restore-backed staging
+rehearsal, reconnection/downtime plan and explicit production window; no engine
+upgrade was attempted.
+Execution and failure handling are documented in
+`docs/OFFERPSP-POSTGRES-UPGRADE-PLAN-2026-10-02.md`; the plan is not a rehearsal
+receipt or approval of downtime.
+
 ## Accessibility scope
 
 At actual Brave 200% zoom, loaded home/document/tasks/mail/inbox/compliance/
@@ -109,6 +140,38 @@ enabled VoiceOver actually spoke. The task form retained accessible names and
 keyboard focus. The automation could not capture a spoken phrase or caption;
 this is a bounded human confirmation of activation, not a completed screen-reader
 journey. VoiceOver was explicitly switched OFF after this attempt.
+
+Later native inspection again confirms VoiceOver OFF. Accessible search focus
+and names were observed, but the attempted speech/caption capture did not supply
+a verifiable spoken journey. This remains open rather than being inferred from
+the accessibility tree.
+
+### Narrow viewport defects and local repairs
+
+At 320 CSS pixels, the fully loaded production task page extended to 411 pixels
+and Radio Room to 424 pixels. Initial inbox/compliance samples were still loading
+and are not counted as loaded-state passes. A real-component synthetic fixture
+also reproduced a drafts dropdown extending to 453 pixels.
+
+Local repairs constrain implicit grid minimum widths, wrap long task identifiers
+and mode controls, and right-align/bound the small-screen drafts dropdown. No
+mail loading, mail state, send path or task mutation logic changed.
+Actual component checks after repair: task list 320/320 pixels; Radio Room
+320/320 with organizer open and separately with drafts dropdown open; both
+desktop fixtures 1440/1440. Synthetic fixtures prohibit outgoing fetches and
+use no customer data. Five source assertions supplement those browser checks.
+
+The final baseline after these changes passes all 29 groups, including lint,
+build and Docker concurrency suites, at 14:31:37–14:32:54 UTC:
+`tmp/quality-baseline/2026-10-02T14-31-37-054Z/report.json`.
+An earlier sandbox-only run had three Docker permission blocks, not three
+application failures. The authorized rerun resolves all three. These layout
+repairs are **not deployed** and therefore have no production retest receipt.
+The private fixture's broad Vite dependency scan reported missing mock exports
+for unrelated application entry points; the requested two real-component
+fixtures rendered and were measured successfully, and the normal production
+build passed independently. The fixture is not a replacement for running the
+complete application. Its temporary server was stopped after verification.
 
 ## Measured isolated load, crash and restore
 
@@ -186,13 +249,41 @@ used a different search_path; matching pg_dump's text settings produces exact
 row hashes. Failure receipts are retained, not relabelled as passes.
 
 Private evidence: `.private/recovery-packs/current-20261002-kXVcKo/`, final
-`restore-proof-ti2Cq9/report.json`. Directories are private and files mode 600;
+`restore-proof-s2sWsN/report.json`. Directories are private and files mode 600;
 no database contents, customer files, or credentials enter Git.
 
-`PARTIAL` whole-service recovery: the logical database and local file integrity
-pass does not verify a complete Supabase runtime, Storage API serving, Auth/JWT,
-SMTP, Edge Functions, external n8n/Vercel configuration, Vault decryption, or a
-measured production RTO/RPO. Those require a separate isolated service-stack drill.
+### Isolated Auth REST and Storage runtime
+
+At 14:11:06–14:11:26 UTC, the same restored database passes nine bounded
+service checks via `--check-services --check-company-rejection`.
+`scripts/check-restored-services.mjs` starts already installed official
+Auth 2.196.0, PostgREST 16.2, Storage 1.72.1 and Mailpit 1.30.2 images in the
+network-none container's shared loopback namespace. No Mac ports are published,
+no production signing key is reused and SMTP terminates in local Mailpit.
+
+An existing approved QA owner's OTP creates a real local Auth session; it reads
+the restored company-request RPC. Anonymous RPC access is denied. The actual
+shared staff-auth helper denies that valid nonstaff session with 403; this is
+not a valid-user test of every staff endpoint. Tampered signatures and expired
+JWTs receive Auth 403 and REST 401.
+
+All 20 restored files are downloaded through Storage API and match their exact
+byte counts and SHA-256. Missing-bearer and valid-anon-role requests produce
+40 denial responses (HTTP 400, not 500). After restarting Auth, REST and Storage,
+the same session still works, all 20 file hashes match and the same 40 denials
+hold. Root and all five sidecar containers are removed; the private backup stays.
+Evidence: `restore-proof-s2sWsN/services-report.json` and `report.json`.
+
+The first Storage trial failed with 500 because Docker Desktop host bind mounts
+did not provide the Linux extended attributes the official file backend needs.
+A disposable copy inside the Linux container fixed this fixture issue; original
+private bytes remain intact. That failed trial is retained, not called PASS.
+
+`PARTIAL` whole-service recovery: managed Vault decryption, real screening
+dispatch, Google OAuth, external SMTP, Edge Functions, n8n/Vercel configuration,
+hosted failover and measured production RTO/RPO remain unverified. A new local
+root key cannot decrypt the managed Vault ciphertext. The successful bounded
+Auth/REST/Storage drill does not remove those limits.
 
 ### Password dependency review and credential handoff
 
@@ -204,9 +295,9 @@ application source uses Supabase HTTP clients; the only matching local script
 is the synthetic load/restore fixture. Current pg_stat_activity shows only
 managed services and no external password-authenticated postgres client.
 
-This does not prove that an infrequent external client never exists. Resetting
-the database password still needs Boris to enter, confirm and submit it himself,
-with a known reconnect risk. No password or API-key rotation was performed.
+This does not prove that an infrequent external client never exists. Boris
+subsequently reset the database password himself and completed private credential
+capture. The agent did not rotate credentials or create a new API key.
 
 The existing current-project service_role key is readable through the authorized
 Supabase dashboard. It was selected without logging its value, creating a key or
@@ -218,10 +309,12 @@ Prepared `scripts/capture-recovery-credentials.mjs` for Boris to run manually:
 hidden TTY input accepts only the database password and existing Storage API key,
 validates the legacy key's project/role, and creates a mode-600 JSON in an ignored
 mode-700 local directory. It refuses overwrite and makes no network call.
-Syntax checked. A hidden-input TTY test with synthetic credentials rejected a
-wrong-project legacy key before file creation; the exact credential target remains
-absent. No real credential file has been created by the agent. The blank database
-password-reset dialog is open for Boris; entry and submission have not occurred.
+Syntax checked. Synthetic hidden-input tests reject wrong-project/public keys,
+retain no-overwrite and private permissions, and cover cancellation/UTF-8 editing.
+The unnecessary minimum-length restriction was removed: this helper captures an
+existing password rather than imposing a new password policy. Boris manually
+completed the real capture at 11:54:05 UTC; the earlier absent-file/dialog blocker
+is resolved. The helper and credential file remain ignored and private.
 
 ## Additional HTTP access and cache verification
 
@@ -229,6 +322,12 @@ At 14:20 Asia/Nicosia, 28 bounded anonymous/invalid-bearer requests to 14 protec
 staff endpoints returned JSON 401/403 denials. Empty bodies, no real identifiers,
 no valid session or communication content were used; no sends were invoked.
 This does not cover every session, scope, authorization or penetration-test case.
+
+At 14:31:41–14:31:43 UTC, four bounded requests to `/.git/HEAD`, `/.git/config`,
+`/.env` and `/package.json` returned the same 1,443-byte HTML SPA fallback as the
+root, not source-control, environment or package contents. HTTP TRACE on
+`/api/integration-health` returned 405. This covers those paths on the staff
+origin only, not every deployment file or every origin.
 
 These requests revealed four JSON response helpers without explicit no-store:
 send-email, extract-document, parse-offer and extract-offer-pdf. Authentication
@@ -298,8 +397,10 @@ The entire fixture rolls back and its isolated container is removed.
 Command: `node scripts/verify-current-recovery-pack.mjs <private-pack-path>
 --check-company-rejection`. Optional fixture source is
 `scripts/restored-company-rejection.sql`. This is **not** a browser E2E pass.
-Read-only production checks still find only the original approved request and
-the archived QA company; neither was changed for this test.
+At that restored-database checkpoint, read-only production checks found only the
+original approved request and archived QA company. A separate fresh live browser
+case was subsequently created and completed, as recorded below; the original
+approved history was not rewritten.
 
 The first functional trial confirmed a missing recovery dependency: inserting a
 new lead calls the screening dispatch trigger, which reads Vault and fails with
@@ -310,18 +411,55 @@ reference; no authorization trigger is disabled. Vault recovery and real screeni
 dispatch remain explicitly unverified. A second fixture trial also found an SQL
 variable-name ambiguity, corrected before the passing run.
 
+## Fresh live owner rejection and QA cleanup
+
+The separately authorized two-email browser test created only
+`OfferPSP Rejection E2E 20261002 — NO ACTION REQUIRED`, with reserved `.invalid`
+website and synthetic brief. Lead `c0f12f6d-c803-4f7c-aa9c-0f00eb556ef1`,
+organization `df6ffb20-a7dc-4d94-9bcd-64d27d9400d8` and join request
+`71c3e92c-39f7-430c-a6c3-c6cab1eef5fb` identify this case.
+
+Hello claimed the new company with a real mail link; bizdev repeated the same
+company submission and logged in as the proposed employee. The live portal showed
+pending-owner status and no access. A newer owner login invalidated the earlier
+link; the expired-link guidance remained closed and readable.
+
+With a fresh owner session, keyboard submission of `Отказать` rejected the
+request at 13:38:15.476769 UTC. A fresh applicant login displayed
+`В добавлении отказано. Свяжитесь с владельцем или командой OfferPSP.` with no
+active offers. Read-only database checks confirm exactly one rejection journal
+event, the actual owner as deciding actor, and no applicant membership.
+
+The native staff interface then closed and archived only this fresh QA card,
+preserving history and excluding it from working queues. Its related tasks are
+done/cancelled rather than open. The earlier approved company
+`b4b715fd-9f2f-4d88-93dd-3015b823d376` and request
+`cdc1c7ff-981e-4ed3-83a2-7237fad494e7` remain approved and archived, unchanged.
+Private screenshots record both applicant denial and final QA archive. The stale
+hidden-dialog tab was removed without accepting an invisible write; the real
+native page was used for the status/archive actions. No user action remains
+pending in a confirmation dialog.
+
 ## Still open
 
-1. Live owner rejection using an isolated pending QA request; do not rewrite the
-   previously approved membership/history as if it were a fresh E2E request.
-   Nine restored-database backend rejection checks now pass, but do not replace
-   the fresh live browser scenario.
-2. Actual screen-reader journey and remaining accessibility states.
-3. Full isolated service-stack recovery: fresh logical DB and local Storage bytes
-   are now verified, but runtime configuration, Auth/Storage serving, Vault
-   decryption, and end-to-end service restart remain unverified.
-4. Individual ASVS applicability/evidence, remaining HTTP/API negative scenarios,
-   and a managed Postgres security-upgrade plan.
+1. Individual ASVS applicability and missing evidence: the 253-row ledger is
+   created, but 183 controls remain NOT_TESTED, 54 have bounded PARTIAL evidence
+   and two implementation gaps require remediation. Remaining valid-role API,
+   removed-member, parser/SSRF, token, OAuth and WebSocket scenarios must be tested
+   in scope rather than inferred from anonymous probes.
+2. Actual screen-reader journey and remaining accessibility/error/contrast states.
+   New 320-pixel layout repairs require production delivery and loaded-state
+   retest; local fixture results are not a production receipt.
+3. Whole-service recovery configuration: Vault decryption, real dispatch and
+   external integrations/hosted failover/RTO/RPO. Auth/REST/Storage serving and
+   restart checks now pass in the bounded network-isolated drill.
+4. Restore-backed managed PostgreSQL security-upgrade rehearsal and an agreed
+   production window. Read-only compatibility inventory is not an upgrade PASS.
+
+Before new organizer features, prioritize script/resource CSP, private file
+quarantine/scanning and the remaining high-risk authorization/parser checks.
+No paid scanning provider or external customer-file disclosure is authorized by
+this report. User-owned browser content is retained and VoiceOver remains OFF.
 
 Sources: [ASVS 5.0.0](https://github.com/OWASP/ASVS/releases/tag/v5.0.0),
 [WCAG 2.2](https://www.w3.org/TR/WCAG22/),

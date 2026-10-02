@@ -14,7 +14,8 @@ const exported=JSON.parse(await readFile(path.join(pack,'export-report.json'),'u
 assert.equal(exported.project_ref,'iceopurxqzqmwtcmwfzl');
 assert.match(exported.status,/^EXPORTED/);
 const proof=await mkdtemp(path.join(pack,'restore-proof-'));
-const report={started_at:new Date().toISOString(),status:'IN_PROGRESS',scope:'Logical PostgreSQL restore and local Storage byte verification; not a live Supabase service-stack restore',network:'none',published_ports:0,cron_enabled:false,production_mutations:false,steps:[]};
+const servicesRequested=process.argv.includes('--check-services');
+const report={started_at:new Date().toISOString(),status:'IN_PROGRESS',scope:servicesRequested?'Logical PostgreSQL and local Storage restore with bounded isolated Auth/REST/Storage runtime checks; not hosted failover or external-integration recovery':'Logical PostgreSQL restore and local Storage byte verification; not a live Supabase service-stack restore',network:'none',published_ports:0,cron_enabled:false,production_mutations:false,steps:[]};
 let container;
 async function save(){await writeFile(path.join(proof,'report.json'),JSON.stringify(report,null,2),{mode:0o600});}
 async function docker(args,input='',label='docker'){
@@ -31,7 +32,8 @@ try{
   await save();
   for(const f of exported.steps){const b=await readFile(path.join(pack,f.file));assert.equal(b.length,f.bytes);assert.equal(sha(b),f.sha256);}
   report.steps.push({id:'dump-receipt-integrity',status:'PASS'});await save();
-  container=(await docker(['run','--pull=never','-d','--network','none','--env','POSTGRES_HOST_AUTH_METHOD=trust','--env',`POSTGRES_PASSWORD=${randomUUID()}`,'--mount',`type=bind,source=${pack},target=/recovery,readonly`,'--name',`offerpsp-current-restore-${randomUUID()}`,exported.image,'postgres','-c','shared_preload_libraries=pg_cron,pg_net','-c','cron.launch_active_jobs=off','-c','pg_net.database_name=template1'],'','start')).toString().trim();
+  const preload=servicesRequested?'pg_cron,pg_net,pgsodium':'pg_cron,pg_net';
+  container=(await docker(['run','--pull=never','-d','--network','none','--env','POSTGRES_HOST_AUTH_METHOD=trust','--env',`POSTGRES_PASSWORD=${randomUUID()}`,'--mount',`type=bind,source=${pack},target=/recovery,readonly`,'--name',`offerpsp-current-restore-${randomUUID()}`,exported.image,'postgres','-c',`shared_preload_libraries=${preload}`,...(servicesRequested?['-c','pgsodium.getkey_script=/usr/share/postgresql/extension/pgsodium_getkey']:[]),'-c','cron.launch_active_jobs=off','-c','pg_net.database_name=template1'],'','start')).toString().trim();
   assert.match(container,/^[0-9a-f]{64}$/);
   const psql=(sql,db='postgres',user='postgres')=>docker(['exec','-i',container,'psql','-h','127.0.0.1','-U',user,'-d',db,'-XqAt','-v','ON_ERROR_STOP=1'],sql,'sql');
   for(let i=0;i<100;i++){try{await psql('select 1');break;}catch(e){if(i===99)throw e;await new Promise(r=>setTimeout(r,200));}}
@@ -81,7 +83,12 @@ try{
     const parsed=JSON.parse(result.toString());assert.equal(parsed.status,'PASS');
     report.steps.push({id:'restored-company-rejection',...parsed});await save();
   }
-  report.status='PASS: logical restore and local file integrity; service-stack recovery remains unverified';
+  if(servicesRequested){
+    const {checkRestoredServices}=await import('./check-restored-services.mjs');
+    report.service_check=await checkRestoredServices({container,pack,proof,docker,psql});
+    await save();
+  }
+  report.status=servicesRequested?'PASS: logical restore, local files and bounded Auth/REST/Storage drill; external integrations remain unverified':'PASS: logical restore and local file integrity; service-stack recovery remains unverified';
 }catch(e){report.status='FAILED';report.error=e.message;process.exitCode=1;}
 finally{
   if(container&&/^[0-9a-f]{64}$/.test(container)){try{await docker(['rm','--force','--volumes',container],'','cleanup');report.temporary_container_removed=true;}catch(e){report.cleanup_error=e.message;report.status='FAILED';process.exitCode=1;}}
