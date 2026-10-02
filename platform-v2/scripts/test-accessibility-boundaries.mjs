@@ -15,6 +15,7 @@ for(const file of ['src/pages/OperationsWorkspace.tsx','src/pages/CompliancePage
  }walk(ast);
 }
 const header=source('src/layout/AppHeader.tsx');
+assert.match(source('src/pages/OperationsWorkspace.tsx'),/aria-label="Закрыть форму задачи"/);
 assert.match(header,/useDialogFocus\(paletteOpen, paletteRef/);
 assert.match(header,/aria-label="Поиск записей и команд"/);
 assert.match(header,/role="combobox"/);
