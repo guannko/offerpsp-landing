@@ -2,9 +2,9 @@
 
 Updated: 2026-10-02
 
-## Staff browser and DOCX hardening follow-up
+## Staff browser and DOCX hardening release
 
-- `VERIFIED locally, NOT DEPLOYED`: full staff resource CSP denies inline scripts,
+- `VERIFIED deployed`: full staff resource CSP denies inline scripts,
   inline event handlers, JavaScript eval and external script origins. OCR worker
   and core are version-pinned local build assets; only language data uses two
   allowlisted CDN paths. Actual Brave checks pass English/Russian OCR, synthetic
@@ -18,8 +18,20 @@ Updated: 2026-10-02
   was isolated to its temporary build configuration, not counted as a pass.
 - ASVS ledger is still `PARTIAL`: 183 NOT_TESTED, 55 PARTIAL, 7 scoped N/A,
   1 GAP (private antivirus gate), 7 excluded Zoom controls. No full-audit claim.
-- Pending: Linux release build/runtime/budget checks and grouped staff rollout;
-  public portals, SEO/GEO, subagents, Telegram group and Zoom code unchanged.
+- `VERIFIED release`: code `4ce6934e0ff7293bcbc65dd7706a6f36f686b175`, READY
+  deployment `dpl_DGDXdXWYQpKF78xoj5Gd7PWSwuMg`. Explicitly assigned primary
+  staff alias; manifest matches. Linux arm64/Node 24 build passes, 11 isolated
+  function imports pass without credentials/network; budget 108.2 MiB.
+- Post-release HTTP: 38 checks PASS (manifest, exact CSP, seven OCR hashes,
+  28 anonymous/invalid-token private API denials with no-store, public home 200).
+  The first receipt script incorrectly expected a public build-manifest and
+  failed on its 404; fixed to the actual public availability check. Vercel
+  independently confirms unchanged public deployment `dpl_DsVRYnnAhDxpSaKaFDFBtdcWtQnM`.
+- Actual authenticated Brave reload: Boris staff access, 23 active mail chains,
+  three daily calendar events, organizer/document templates, existing QA sheet
+  and rendered private original PDF with verified SHA-256. No console errors or
+  warnings captured during these journeys; no task/document/save/send performed.
+  Public portals, SEO/GEO, subagents, Telegram group and Zoom code unchanged.
 
 ## Extended security/accessibility/recovery verification — 2026-10-02
 

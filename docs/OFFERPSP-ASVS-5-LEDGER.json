@@ -570,9 +570,10 @@
       "result": "PARTIAL",
       "evidence": [
         "Locally implemented full resource CSP: same-origin scripts, no inline handlers or JavaScript eval, exact Supabase and OCR-language connection origins; local version-pinned OCR worker/core assets.",
-        "Actual Brave fixture using the configured response policy blocks inline script, handler, external script and eval; English/Russian OCR and synthetic DOCX/PDF extraction and blob PDF preview pass. Baseline: 30 groups PASS at 16:30:39–16:31:17 UTC. Not a production rollout receipt."
+        "Actual Brave fixture using the configured response policy blocks inline script, handler, external script and eval; English/Russian OCR and synthetic DOCX/PDF extraction and blob PDF preview pass. Baseline: 30 groups PASS at 16:30:39–16:31:17 UTC.",
+        "Code 4ce6934 is READY as dpl_DGDXdXWYQpKF78xoj5Gd7PWSwuMg; primary staff alias returns exact CSP, source identity and seven OCR hashes. Authenticated mail/calendar/organizer/QA original PDF journeys pass with no captured console errors."
       ],
-      "remaining": "Verify exact policy on production and authenticated journeys. Review ASVS nonce/hash strictness and remaining inline-style/HTTPS-image allowances; wasm-unsafe-eval is limited to local OCR support. No complete ASVS L2 CSP conformance claim."
+      "remaining": "Review ASVS nonce/hash strictness and remaining inline-style/HTTPS-image allowances; wasm-unsafe-eval is limited to local OCR support. Complete OAuth and all other relevant journeys; bounded post-release journeys are not complete ASVS L2 CSP conformance."
     },
     {
       "id": "V3.4.4",

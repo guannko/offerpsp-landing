@@ -3,11 +3,36 @@
 Status: **PARTIAL**. This is evidence from bounded tests, not ISO certification,
 an all-controls ASVS pass, or a completed WCAG conformance assessment.
 Initial production inspected: release `1bdaa523b06e03630cd4efd1206aa0a97d9db974`.
-Staff fixes are now deployed as `93b68cd75e51efa866243fe8f35cfc1ca9156c42`;
+Staff fixes are now deployed as `4ce6934e0ff7293bcbc65dd7706a6f36f686b175`;
 the public portal remains on the initial release. Delivery receipts follow below.
 Latest source checkpoint: 30 groups PASS / 0 FAIL / 0 BLOCKED at
-16:30:39–16:31:17 UTC. Reflow and browser/DOCX hardening are local only,
-not deployed. Earlier checkpoints below remain historical evidence.
+16:30:39–16:31:17 UTC. Reflow and browser/DOCX hardening are now deployed.
+Earlier checkpoints below remain historical evidence.
+
+## Latest staff release verification
+
+Code commit `4ce6934e0ff7293bcbc65dd7706a6f36f686b175` is deployed READY as
+`dpl_DGDXdXWYQpKF78xoj5Gd7PWSwuMg`. The primary staff alias was assigned
+explicitly after CLI updated only the secondary alias; its manifest matches.
+Linux arm64/Node 24 build passes. All 11 function bundles import successfully
+in a network-none container with only built output mounted and no credentials.
+Function storage budget is 108.2 MiB, below the 120 MiB total limit.
+
+Post-release HTTP checks pass 38 assertions: source identity, exact configured
+CSP, all seven OCR executable hashes, 28 anonymous/invalid-token private API
+denials with no-store and public home availability. The first receipt script
+incorrectly expected a build-manifest on the public site and failed on 404 after
+the staff assertions passed; that assumption was removed. Separate Vercel
+inspection confirms the public deployment remains
+`dpl_DsVRYnnAhDxpSaKaFDFBtdcWtQnM`, identical to its previous receipt.
+
+Actual authenticated Brave reload preserves Boris staff access, 23 active mail
+chains, three daily events, organizer/template library and the existing QA work
+sheet. Its private synthetic PDF visibly renders in the embedded viewer; the
+reader verifies the original SHA-256. No console error or warning was captured
+during those journeys. No document save, task mutation or mail send was performed.
+Protected module code and public portals were not changed. OCR execution remains
+a local browser test with the same policy/assets, not a new production upload.
 
 ## Browser and DOCX hardening follow-up
 
@@ -38,7 +63,8 @@ The 30-group baseline includes lint, build and Docker suites. The first run had
 two failures (control-character lint rule and an obsolete limited-CSP assertion);
 both are fixed and the full rerun passes. Receipt:
 `tmp/quality-baseline/2026-10-02T16-30-39-205Z/report.json`.
-Production rollout and authenticated post-release checks remain pending.
+Production rollout and bounded authenticated post-release checks pass as recorded
+above. Full ASVS/WCAG assessment and antivirus infrastructure remain incomplete.
 
 ## Closed checks
 
