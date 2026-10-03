@@ -1,4 +1,4 @@
-// Preserve the separately-owned workspaces, including their shared chrome.
+// Keep the agents workspace unchanged; SEO/GEO shares the staff paper theme.
 export function usesPaperBridgeTheme(pathname: string): boolean {
-  return !/^\/(seo-geo|agents)(\/|$)/.test(pathname);
+  return !/^\/agents(\/|$)/.test(pathname);
 }

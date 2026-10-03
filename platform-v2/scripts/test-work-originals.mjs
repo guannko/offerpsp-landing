@@ -32,9 +32,9 @@ async function withDb(fn){
 const fileId='00000000-0000-4000-8000-000000000009',hash='a'.repeat(64);
 const reserve=async(db,id,rev=1,extra={})=>(await db.query('select public.reserve_offerpsp_work_file($1,$2,$3,$4,$5,$6,$7,$8) result',[id,rev,extra.id||fileId,extra.name||'contract.pdf',extra.format||'pdf',extra.size??100,extra.hash||hash,extra.text??'Original clause'])).rows[0].result;
 const complete=async(db,id=fileId)=>(await db.query('select public.complete_offerpsp_work_file($1) result',[id])).rows[0].result;
-test('theme covers workspaces but preserves SEO/GEO and agents including detail routes',()=>{
-  for(const path of ['/','/communications','/inbox','/operations','/psps/abc','/deals','/analytics'])assert.equal(usesPaperBridgeTheme(path),true);
-  for(const path of ['/seo-geo','/seo-geo/history','/agents','/agents/abc'])assert.equal(usesPaperBridgeTheme(path),false);
+test('theme covers workspaces and SEO/GEO but preserves agents including detail routes',()=>{
+  for(const path of ['/','/communications','/inbox','/operations','/psps/abc','/deals','/analytics','/seo-geo','/seo-geo/history'])assert.equal(usesPaperBridgeTheme(path),true);
+  for(const path of ['/agents','/agents/abc'])assert.equal(usesPaperBridgeTheme(path),false);
 });
 test('paper palette uses the supplied reference and shares organizer colours',async()=>{
   const css=await readFile(new URL('../src/layout/BridgePaper.css',import.meta.url),'utf8');
