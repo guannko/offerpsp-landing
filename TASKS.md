@@ -2,7 +2,7 @@
 
 Updated: 2026-10-06
 
-## Radio Room incoming/sent separation — release candidate
+## Radio Room incoming/sent separation — 2026-10-06
 
 - `VERIFIED locally`: Inbox is the default; explicit Inbox, Sent, Unread and
   All conversations controls preserve both directions inside a thread.
@@ -18,8 +18,15 @@ Updated: 2026-10-06
 - Read-only production check: 90 outgoing messages were already marked read;
   25 unread incoming messages belong to archived nonoperational threads. No
   historical flags, archive state, emails, bot workflows or database were changed.
-- Production baseline: `e234d10a07c08deaf36053297532a59717846f22` on
-  `ops-7q4m2x9k8v3n.vercel.app`. Deployment is not yet verified for this candidate.
+- `VERIFIED deployed`: release `6b885a3092d8fc5a004d3ef224468ac922d84c0c`,
+  READY `dpl_DBAJSPiTMHkxW5rMovtcqmFw4vQK`, remote Linux build. Primary alias
+  `ops-7q4m2x9k8v3n.vercel.app` was explicitly assigned; manifest matches.
+  Communications HTTP 200; anonymous poll-mailbox 401, no processing triggered.
+- Actual staff browser: six incoming chains, twenty sent/active chains, five
+  separate drafts, zero unread incoming. David's incoming and Valerija's accepted
+  sent message load; Sent read action disabled, no console errors.
+- Native PWA refresh remains `PARTIAL`: Mac is locked. Cmd+R after unlocking
+  loads the verified live release; this is not a deployment blocker.
 
 
 ## Evening completion block — bounded checks, full audit still PARTIAL
