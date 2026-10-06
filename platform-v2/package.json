@@ -20,6 +20,7 @@
     "test:offer-parser": "node scripts/test-offer-parser.mjs",
     "test:provider-source": "node scripts/test-provider-offer-source.mjs",
     "test:mailbox-poller": "node scripts/test-mailbox-poller.mjs",
+    "test:mail-folders": "node --experimental-strip-types scripts/test-mail-folders.mjs",
     "test:mail-recovery": "node --experimental-strip-types scripts/test-mail-load-recovery.mjs && node scripts/test-mail-index-postgres.mjs",
     "test:operational-consistency": "node --experimental-strip-types scripts/test-mail-work-queue.mjs && node --experimental-strip-types scripts/test-task-work-queue.mjs && node --experimental-strip-types scripts/test-mail-company-suggestion.mjs && node --experimental-strip-types scripts/test-merchant-request-patch.mjs && node scripts/test-merchant-next-action.mjs && node scripts/test-mailbox-consistency-postgres.mjs && node scripts/test-intake-review-task-postgres.mjs && node scripts/test-merchant-context-postgres.mjs",
     "test:sent-mail-archive": "node scripts/test-sent-mail-archive.mjs",

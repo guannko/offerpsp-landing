@@ -5,7 +5,8 @@ import { EmptyState, ErrorBanner, Metric, PageHeading, Panel, SkeletonPage, Stat
 import ResearchEntityEditor from "../components/control/ResearchEntityEditor";
 import TelegramWorkspace from "../components/control/TelegramWorkspace";
 import { useControlBridge } from "../context/ControlBridgeContext";
-import { emailMessageTimestamp, presentEmailBody, sortEmailMessagesChronologically, splitEmailBody } from "../lib/emailThread";
+import { presentEmailBody, sortEmailMessagesChronologically, splitEmailBody } from "../lib/emailThread";
+import { buildMailFolderIndex, isCorrespondenceMessage, mailFolderMessage } from "../lib/mailFolders";
 import { EnvelopeIcon, EyeIcon, MoreDotIcon, TrashBinIcon } from "../icons";
 import { isQaFixtureLead, isQaFixtureLeadId, isQaFixtureProvider, isQaFixtureProviderId } from "../lib/qaFixtures";
 import { supabase } from "../lib/supabase";
@@ -170,12 +171,16 @@ export function CommunicationsWorkspace() {
     refreshing, user, leads: allLeads, providers: allProviders, refresh, ready } = useControlBridge();
   const leads = useMemo(() => allLeads.filter((lead) => !isQaFixtureLead(lead)), [allLeads]);
   const providers = useMemo(() => allProviders.filter((provider) => !isQaFixtureProvider(provider)), [allProviders]);
+  const mailFolders = useMemo(() => buildMailFolderIndex(fullMailCenter.messages), [fullMailCenter.messages]);
   const mailCenter = useMemo(() => ({
     ...fullMailCenter,
     threads: fullMailCenter.threads.filter((thread) => !isQaFixtureLeadId(thread.lead_id)
       && !(thread.counterparty_type === "merchant" && isQaFixtureLeadId(thread.counterparty_id))
-      && !(thread.counterparty_type === "provider" && isQaFixtureProviderId(thread.counterparty_id))),
-  }), [fullMailCenter]);
+      && !(thread.counterparty_type === "provider" && isQaFixtureProviderId(thread.counterparty_id))
+      && mailFolders.latest.has(thread.id))
+      .map((thread) => ({ ...thread, unread_count: !isSpamMailThread(thread) && !["archived", "trashed"].includes(thread.status)
+        ? mailFolders.unreadCounts.get(thread.id) || 0 : 0 })),
+  }), [fullMailCenter, mailFolders]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [to, setTo] = useState(""); const [subject, setSubject] = useState(""); const [body, setBody] = useState("");
   const [leadId, setLeadId] = useState(""); const [busy, setBusy] = useState(false); const [message, setMessage] = useState<{error?:boolean;text:string}|null>(null);
@@ -183,7 +188,7 @@ export function CommunicationsWorkspace() {
   const [section, setSection] = useState<"mail" | "compose" | "telegram">("mail");
   const [threadId, setThreadId] = useState(searchParams.get("thread") || "");
   const [query, setQuery] = useState("");
-  const [mailScope, setMailScope] = useState<"active" | "unread" | "inbox" | "sent" | "awaiting_reply" | "overdue" | "flagged" | "follow_up" | "attachments" | "closed" | "archived" | "spam" | "trash" | "all">("active");
+  const [mailScope, setMailScope] = useState<"active" | "unread" | "inbox" | "sent" | "awaiting_reply" | "overdue" | "flagged" | "follow_up" | "attachments" | "closed" | "archived" | "spam" | "trash" | "all">("inbox");
   const [clockNow, setClockNow] = useState(Date.now);
   useEffect(() => {
     const tick = () => setClockNow(Date.now());
@@ -215,14 +220,6 @@ export function CommunicationsWorkspace() {
   const [threadBodyError, setThreadBodyError] = useState<string | null>(null);
   const [threadBodyRetry, setThreadBodyRetry] = useState(0);
 
-  const lastMessageByThread = useMemo(() => {
-    const result = new Map<string, EmailMessage>();
-    mailCenter.messages.forEach((entry) => {
-      const current = result.get(entry.thread_id);
-      if (!current || emailMessageTimestamp(entry) >= emailMessageTimestamp(current)) result.set(entry.thread_id, entry);
-    });
-    return result;
-  }, [mailCenter.messages]);
   const messageThreadById = useMemo(() => {
     const result = new Map<string, string>();
     mailCenter.messages.forEach((entry) => result.set(entry.id, entry.thread_id));
@@ -234,13 +231,12 @@ export function CommunicationsWorkspace() {
   const visibleThreads = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return mailCenter.threads.filter((thread) => {
-      const lastDirection = lastMessageByThread.get(thread.id)?.direction;
       const normalThread = !isSpamMailThread(thread);
       const scopeMatch = (mailScope === "all" && normalThread && thread.status !== "trashed")
         || (mailScope === "active" ? normalThread && !["archived", "trashed"].includes(thread.status)
           : mailScope === "unread" ? normalThread && !["archived", "trashed"].includes(thread.status) && thread.unread_count > 0
-          : mailScope === "inbox" ? normalThread && !["archived", "trashed"].includes(thread.status) && lastDirection === "inbound"
-          : mailScope === "sent" ? normalThread && !["archived", "trashed"].includes(thread.status) && lastDirection === "outbound"
+          : mailScope === "inbox" ? normalThread && !["archived", "trashed"].includes(thread.status) && mailFolders.inbox.has(thread.id)
+          : mailScope === "sent" ? normalThread && !["archived", "trashed"].includes(thread.status) && mailFolders.sent.has(thread.id)
           : mailScope === "awaiting_reply" ? thread.status === "awaiting_reply"
           : mailScope === "overdue" ? isOverdueThread(thread)
           : mailScope === "flagged" ? Boolean(thread.is_flagged) && isActiveMailThread(thread)
@@ -250,7 +246,7 @@ export function CommunicationsWorkspace() {
           : mailScope === "archived" ? normalThread && thread.status === "archived"
           : mailScope === "spam" ? isSpamMailThread(thread) && thread.status !== "trashed"
           : thread.status === "trashed");
-      const last = lastMessageByThread.get(thread.id);
+      const last = mailFolderMessage(mailFolders, thread.id, mailScope);
       return scopeMatch && [thread.subject, thread.participant_email, thread.counterparty_type, thread.status, thread.organizer_notes, thread.ai_summary, ...(thread.tags || []), last?.text_body]
         .filter(Boolean).join(" ").toLowerCase().includes(needle);
     }).sort((left, right) => {
@@ -258,9 +254,10 @@ export function CommunicationsWorkspace() {
       const priorityDifference = (priorityWeight[right.priority || "normal"] || 2) - (priorityWeight[left.priority || "normal"] || 2);
       if (priorityDifference) return priorityDifference;
       if (isOverdueThread(left) !== isOverdueThread(right)) return isOverdueThread(left) ? -1 : 1;
-      return new Date(right.last_message_at).getTime() - new Date(left.last_message_at).getTime();
+      return new Date(messageDate(mailFolderMessage(mailFolders, right.id, mailScope) || { created_at: right.last_message_at })).getTime()
+        - new Date(messageDate(mailFolderMessage(mailFolders, left.id, mailScope) || { created_at: left.last_message_at })).getTime();
     });
-  }, [attachmentThreadIds, lastMessageByThread, mailCenter.threads, mailScope, query]);
+  }, [attachmentThreadIds, mailFolders, mailCenter.threads, mailScope, query]);
   const selectedThread = threadId ? mailCenter.threads.find((thread) => thread.id === threadId) : visibleThreads[0];
   const companySuggestion = selectedThread?.counterparty_type === "general"
     ? mailCompanySuggestion(selectedThread.participant_email, captainsBridge.psp_providers) : null;
@@ -277,13 +274,15 @@ export function CommunicationsWorkspace() {
     return indexedMessages.map((entry) => ({ ...entry, text_body: full.get(entry.id)?.text_body,
       html_body: full.get(entry.id)?.html_body, body_loaded: true }));
   }, [indexedMessages, needsThreadBody, threadBody, threadBodyKey]);
-  const orderedSelectedMessages = useMemo(() => sortEmailMessagesChronologically(selectedMessages), [selectedMessages]);
+  const orderedSelectedMessages = useMemo(() => sortEmailMessagesChronologically(selectedMessages.filter(isCorrespondenceMessage)), [selectedMessages]);
   const selectedMessageIds = new Set(selectedMessages.map((entry) => entry.id));
   const selectedAttachments = mailCenter.attachments.filter((entry) => selectedMessageIds.has(entry.message_id));
   const lastSelectedMessage = orderedSelectedMessages[orderedSelectedMessages.length - 1];
+  const focusedSelectedMessage = selectedThread
+    ? mailFolderMessage(buildMailFolderIndex(orderedSelectedMessages), selectedThread.id, mailScope) || lastSelectedMessage : undefined;
   const olderSelectedMessages = useMemo(
-    () => orderedSelectedMessages.slice(0, -1).reverse(),
-    [orderedSelectedMessages],
+    () => orderedSelectedMessages.filter((entry) => entry.id !== focusedSelectedMessage?.id).reverse(),
+    [orderedSelectedMessages, focusedSelectedMessage],
   );
   const followUpState = selectedThread ? mailFollowUpPresentation(selectedThread, clockNow) : null;
   const selectedThreadState = selectedThread ? (isSpamMailThread(selectedThread) ? mailThreadLabels.spam : (selectedThread.tags || []).includes("system:reply_not_needed") ? mailThreadLabels.reply_not_needed : { ...(mailThreadLabels[selectedThread.status] || mailThreadLabels.open), ...followUpState }) : null;
@@ -310,7 +309,7 @@ export function CommunicationsWorkspace() {
   const pendingDrafts = captainsBridge.email_drafts.filter((entry) => ["draft", "failed"].includes(entry.status || "draft"));
   const mailFolderOptions = useMemo(() => {
     const activeThreads = mailCenter.threads.filter((thread) => !isSpamMailThread(thread) && !["archived", "trashed"].includes(thread.status));
-    const countByDirection = (direction: EmailMessage["direction"]) => activeThreads.filter((thread) => lastMessageByThread.get(thread.id)?.direction === direction).length;
+    const countByDirection = (direction: EmailMessage["direction"]) => activeThreads.filter((thread) => (direction === "inbound" ? mailFolders.inbox : mailFolders.sent).has(thread.id)).length;
     return [
       { id: "active", label: "Все активные", count: activeThreads.length },
       { id: "unread", label: "Непрочитанные", count: activeThreads.filter((thread) => thread.unread_count > 0).length },
@@ -327,12 +326,12 @@ export function CommunicationsWorkspace() {
       { id: "trash", label: "Корзина", count: mailCenter.metrics.trash || 0 },
       { id: "all", label: "Вся почта", count: mailCenter.threads.filter((thread) => !isSpamMailThread(thread) && thread.status !== "trashed").length },
     ] as const;
-  }, [attachmentThreadIds, lastMessageByThread, mailCenter.metrics.awaiting_reply, mailCenter.metrics.flagged, mailCenter.metrics.follow_up, mailCenter.metrics.overdue_follow_up, mailCenter.metrics.trash, mailCenter.threads]);
+  }, [attachmentThreadIds, mailFolders, mailCenter.metrics.awaiting_reply, mailCenter.metrics.flagged, mailCenter.metrics.follow_up, mailCenter.metrics.overdue_follow_up, mailCenter.metrics.trash, mailCenter.threads]);
   const activeDraft = activeDraftId === null
     ? null
     : captainsBridge.email_drafts.find((entry) => entry.id === activeDraftId) || null;
   const mailQuickFilters = [
-    { scope: "unread", label: "новых", count: mailCenter.metrics.unread, numberClass: "text-gray-900 dark:text-white" },
+    { scope: "unread", label: "непрочитанных входящих", count: mailCenter.threads.reduce((sum, thread) => sum + thread.unread_count, 0), numberClass: "text-gray-900 dark:text-white" },
     { scope: "awaiting_reply", label: "ждём ответ", count: mailCenter.metrics.awaiting_reply, numberClass: "text-gray-900 dark:text-white" },
     { scope: "overdue", label: "просрочено", count: mailCenter.metrics.overdue_follow_up || 0, numberClass: "text-error-600" },
     { scope: "flagged", label: "с флагом", count: mailCenter.metrics.flagged || 0, numberClass: "text-warning-700" },
@@ -484,14 +483,14 @@ export function CommunicationsWorkspace() {
   const openThread = useCallback(async (id: string) => {
     setThreadId(id); setSection("mail");
     const thread = mailCenter.threads.find((item) => item.id === id);
-    if (thread?.unread_count) {
+    if (thread?.unread_count && mailScope !== "sent") {
       setBusy(true);
       const result = await supabase.rpc("set_offerpsp_email_thread_state", { p_thread_id: id, p_status: thread.status, p_mark_read: true });
       if (result.error) setMessage({ error: true, text: `Переписка открыта, но отметка о прочтении не записана: ${result.error.message}` });
       await refresh();
       setBusy(false);
     }
-  }, [mailCenter.threads, refresh]);
+  }, [mailCenter.threads, mailScope, refresh]);
 
   useEffect(() => {
     const requestedThread = searchParams.get("thread");
@@ -609,7 +608,7 @@ export function CommunicationsWorkspace() {
   }
 
   async function setThreadReadState(markRead: boolean) {
-    if (!selectedThread) return;
+    if (!selectedThread || focusedSelectedMessage?.direction !== "inbound") return;
     setBusy(true); setMessage(null);
     const result = await supabase.rpc("set_offerpsp_email_thread_state", {
       p_thread_id: selectedThread.id,
@@ -618,7 +617,7 @@ export function CommunicationsWorkspace() {
     });
     setMessage(result.error
       ? { error: true, text: result.error.message }
-      : { text: markRead ? "Переписка помечена прочитанной." : "Переписка возвращена в непрочитанные." });
+      : { text: markRead ? "Входящие письма помечены прочитанными." : "Последнее входящее письмо возвращено в непрочитанные." });
     await refresh(); setBusy(false);
   }
 
@@ -883,7 +882,7 @@ export function CommunicationsWorkspace() {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <strong className={`text-xs uppercase tracking-[0.12em] ${outbound ? "text-brand-600" : "text-success-600"}`}>{outbound ? "Исходящее письмо →" : "← Входящее письмо"}</strong>
-            {latest && <span className="rounded-full bg-gray-900 px-2 py-0.5 text-[10px] font-semibold text-white dark:bg-white dark:text-gray-900">Последнее</span>}
+            {latest && <span className="rounded-full bg-gray-900 px-2 py-0.5 text-[10px] font-semibold text-white dark:bg-white dark:text-gray-900">{mailScope==="sent"?"Последнее отправленное":mailScope==="inbox"?"Последнее входящее":mailScope==="unread"?"Непрочитанное входящее":"Последнее"}</span>}
           </div>
           <p className="mt-1.5 truncate text-sm font-medium text-gray-800 dark:text-gray-100">{entry.sender_email}</p>
           <p className="mt-0.5 truncate text-xs text-gray-400">Кому: {entry.recipient_emails.join(", ") || "не указано"}</p>
@@ -915,33 +914,40 @@ export function CommunicationsWorkspace() {
       <button type="button" onClick={()=>{setHideTrashNotice(true);setTrashNoticeVisible(false);}} className="mt-3 text-xs font-semibold text-brand-600 hover:text-brand-700">Больше не показывать</button>
     </aside>}
     <Panel className="mb-3 !p-3"><div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between"><div className="flex flex-wrap gap-1.5">{[
-      ["mail", "Радиорубка", mailCenterLoaded ? `${mailCenter.metrics.threads} цепочек` : "Почта не загружена"],
+      ["mail", "Радиорубка", mailCenterLoaded ? `${mailFolderOptions.find((folder)=>folder.id==="active")?.count || 0} цепочек` : "Почта не загружена"],
       ["compose", "Написать", "bizdev@offerpsp.com"],
       ["telegram", "Telegram / AIBot", `${captainsBridge.telegram_log.length} сообщений`],
     ].map(([id,label,hint])=><button key={id} onClick={()=>setSection(id as typeof section)} className={`rounded-lg border px-3 py-2 text-left transition ${section===id?"border-brand-300 bg-brand-50 text-brand-700 dark:border-brand-500/40 dark:bg-brand-500/10 dark:text-brand-300":"border-gray-200 bg-white text-gray-600 hover:border-gray-300 dark:border-gray-700 dark:bg-transparent dark:text-gray-300"}`}><strong className="block text-xs">{label}</strong><span className="mt-0.5 block max-w-40 truncate text-[10px] text-gray-400">{hint}</span></button>)}
       {pendingDrafts.length>0?<details className="group relative"><summary aria-label="Открыть черновики" className="cursor-pointer list-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-gray-600 transition hover:border-gray-300 dark:border-gray-700 dark:bg-transparent dark:text-gray-300"><strong className="block text-xs">Черновики</strong><span className="mt-0.5 block text-[10px] text-gray-400">{pendingDrafts.length}</span></summary><div className="absolute right-0 z-30 mt-2 w-56 max-w-[calc(100vw-3rem)] space-y-1 sm:left-0 sm:right-auto sm:w-72 rounded-xl border border-gray-200 bg-white p-2 shadow-theme-lg dark:border-gray-700 dark:bg-gray-900">{pendingDrafts.map((draft)=><button key={draft.id} type="button" onClick={()=>setSearchParams({draft:String(draft.id)})} className="block w-full rounded-lg px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/5"><strong className="block truncate text-xs text-gray-800 dark:text-gray-200">{draft.subject || `Черновик #${draft.id}`}</strong><span className="block truncate text-[11px] text-gray-400">{draft.to_email || "нет получателя"}</span></button>)}</div></details>:<button type="button" aria-label="Создать первое письмо" onClick={()=>setSection("compose")} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-gray-600 transition hover:border-gray-300 dark:border-gray-700 dark:bg-transparent dark:text-gray-300"><strong className="block text-xs">Черновики</strong><span className="mt-0.5 block text-[10px] text-gray-400">0</span></button>}
     </div><div aria-label="Быстрые фильтры почты" className="flex flex-wrap gap-1 text-[11px] text-gray-500 dark:text-gray-400">{mailCenterLoaded && mailQuickFilters.map((item)=>{const active=section==="mail"&&mailScope===item.scope;return <button key={item.scope} type="button" aria-pressed={active} title={`Открыть: ${item.label}`} onClick={()=>openMailScope(item.scope)} className={`group rounded-lg border px-2.5 py-1.5 text-left transition ${active?"border-brand-300 bg-brand-50 shadow-theme-xs dark:border-brand-500/40 dark:bg-brand-500/10":"border-transparent hover:border-gray-200 hover:bg-gray-50 dark:hover:border-gray-700 dark:hover:bg-white/5"}`}><strong className={`text-sm ${item.numberClass}`}>{item.count}</strong> {item.label}</button>})}</div></div>
     </Panel>
+    {section === "mail" && <nav aria-label="Основные папки почты" className="mb-4 flex flex-wrap gap-2">
+      {(["inbox", "sent", "unread", "active"] as const).map((scope) => <button key={scope} type="button" aria-pressed={mailScope === scope}
+        onClick={() => openMailScope(scope)} className={`rounded-lg border px-4 py-2.5 text-sm font-semibold transition ${mailScope === scope ? "border-brand-300 bg-brand-50 text-brand-700" : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"}`}>
+        {scope === "active" ? "Все переписки" : mailFolderOptions.find((folder) => folder.id === scope)?.label}
+        <span className="ml-2 text-xs opacity-60">{mailFolderOptions.find((folder) => folder.id === scope)?.count || 0}</span>
+      </button>)}
+    </nav>}
     {section === "mail" && !mailCenterLoaded && mailCenterError ? <Panel><p role="status">Список писем недоступен. Повторите загрузку — письма не удалены.</p></Panel> : section === "mail" ? <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[390px_minmax(0,1fr)] 2xl:grid-cols-[190px_350px_minmax(0,1fr)]">
-      <Panel className="hidden min-w-0 2xl:block"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Папки</p><nav className="mt-3 space-y-1">{mailFolderOptions.map((folder)=><button key={folder.id} onClick={()=>setMailScope(folder.id)} className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition ${mailScope===folder.id?"bg-brand-50 font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-300":"text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"}`}><span>{folder.label}</span><span className="text-xs text-gray-400">{folder.count}</span></button>)}<button onClick={()=>pendingDrafts[0]?setSearchParams({draft:String(pendingDrafts[0].id)}):setSection("compose")} className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"><span>Черновики</span><span className="text-xs text-gray-400">{pendingDrafts.length}</span></button></nav></Panel>
-      <Panel className="min-w-0 !p-3"><div className="flex items-center justify-between gap-3"><div className="flex items-baseline gap-2"><h2 className="text-base font-semibold text-gray-900 dark:text-white">Переписки</h2><span className="text-xs text-gray-400">{visibleThreads.length}</span></div><select aria-label="Папка почты" className="h-9 max-w-44 rounded-lg border border-gray-300 bg-transparent px-2.5 text-xs text-gray-700 outline-none dark:border-gray-700 dark:text-gray-200 2xl:hidden" value={mailScope} onChange={(event)=>setMailScope(event.target.value as typeof mailScope)}>{mailFolderOptions.map((folder)=><option key={folder.id} value={folder.id}>{folder.label} · {folder.count}</option>)}</select></div><input aria-label="Поиск по перепискам" className={`${field} mt-3 !h-10`} value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Поиск по перепискам…"/><div className="mt-2 max-h-[820px] space-y-1 overflow-y-auto pr-1">{visibleThreads.map((thread)=>{const last=lastMessageByThread.get(thread.id);const outbound=last?.direction==="outbound";const overdue=isOverdueThread(thread);const preview=presentEmailBody(splitEmailBody(last?.text_body || (last?.html_body ? stripHtml(last.html_body) : "")).currentText).contentText;const threadIsSpam=isSpamMailThread(thread);const exceptionalStatus=thread.status!=="open"||threadIsSpam;const threadState=threadIsSpam?mailThreadLabels.spam:{...mailThreadLabels[thread.status],...mailFollowUpPresentation(thread,clockNow)};return <button key={thread.id} onClick={()=>void openThread(thread.id)} className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${selectedThread?.id===thread.id?"border-brand-200 bg-brand-50 dark:border-brand-500/30 dark:bg-brand-500/10":"border-transparent hover:border-gray-200 hover:bg-gray-50 dark:hover:border-gray-700 dark:hover:bg-white/[0.03]"}`}><div className="flex items-center justify-between gap-3"><span className={`text-[10px] font-semibold uppercase tracking-wide ${outbound?"text-brand-600":"text-success-600"}`}>{outbound?"Исходящее →":"← Входящее"}</span><span className="shrink-0 text-[10px] text-gray-400">{formatDate(last ? messageDate(last) : thread.last_message_at)}</span></div><strong className="mt-1 block line-clamp-1 text-sm text-gray-900 dark:text-white">{thread.subject || "Без темы"}</strong><div className="mt-1 flex items-center justify-between gap-2"><span className="min-w-0 truncate text-[11px] text-gray-500">{thread.participant_email}</span><div className="flex shrink-0 items-center gap-1">{thread.is_flagged&&<span title="Закреплено" className="text-[11px] text-warning-600">★</span>}{exceptionalStatus&&<span className="max-w-28 truncate text-[10px] font-medium text-gray-500">{threadState?.label || humanizeCode(thread.status)}</span>}{thread.unread_count>0&&<span className="rounded-full bg-brand-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">{thread.unread_count}</span>}</div></div><p className="mt-1.5 line-clamp-1 text-[11px] leading-4 text-gray-400">{preview || (last?.html_body ? "HTML-письмо" : "Сообщений в цепочке пока нет")}</p>{(thread.priority&&!['normal','low'].includes(thread.priority)||thread.follow_up_at)&&<div className="mt-1.5 flex flex-wrap gap-1.5">{thread.priority&&!["normal","low"].includes(thread.priority)&&<span className="rounded-full bg-error-50 px-2 py-0.5 text-[10px] font-semibold text-error-700">{priorityLabels[thread.priority]}</span>}{thread.follow_up_at&&<span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${overdue?"bg-error-50 text-error-700":"bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300"}`}>{overdue?"Просрочено":"До"} {formatDate(thread.follow_up_at)}</span>}</div>}</button>})}{!visibleThreads.length&&<EmptyState title="Писем не найдено" description="Измените папку, поиск или создайте новое письмо."/>}</div></Panel>
+      <Panel className="hidden min-w-0 2xl:block"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Папки</p><nav className="mt-3 space-y-1">{mailFolderOptions.map((folder)=><button key={folder.id} onClick={()=>openMailScope(folder.id)} className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition ${mailScope===folder.id?"bg-brand-50 font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-300":"text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"}`}><span>{folder.label}</span><span className="text-xs text-gray-400">{folder.count}</span></button>)}<button onClick={()=>pendingDrafts[0]?setSearchParams({draft:String(pendingDrafts[0].id)}):setSection("compose")} className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"><span>Черновики</span><span className="text-xs text-gray-400">{pendingDrafts.length}</span></button></nav></Panel>
+      <Panel className="min-w-0 !p-3"><div className="flex items-center justify-between gap-3"><div className="flex items-baseline gap-2"><h2 className="text-base font-semibold text-gray-900 dark:text-white">{mailFolderOptions.find((folder)=>folder.id===mailScope)?.label || "Переписки"}</h2><span className="text-xs text-gray-400">{visibleThreads.length}</span></div><select aria-label="Папка почты" className="h-9 max-w-44 rounded-lg border border-gray-300 bg-transparent px-2.5 text-xs text-gray-700 outline-none dark:border-gray-700 dark:text-gray-200 2xl:hidden" value={mailScope} onChange={(event)=>openMailScope(event.target.value as typeof mailScope)}>{mailFolderOptions.map((folder)=><option key={folder.id} value={folder.id}>{folder.label} · {folder.count}</option>)}</select></div><input aria-label="Поиск по перепискам" className={`${field} mt-3 !h-10`} value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Поиск по перепискам…"/><div className="mt-2 max-h-[820px] space-y-1 overflow-y-auto pr-1">{visibleThreads.map((thread)=>{const last=mailFolderMessage(mailFolders,thread.id,mailScope);const outbound=last?.direction==="outbound";const overdue=isOverdueThread(thread);const preview=presentEmailBody(splitEmailBody(last?.text_body || (last?.html_body ? stripHtml(last.html_body) : "")).currentText).contentText;const threadIsSpam=isSpamMailThread(thread);const exceptionalStatus=thread.status!=="open"||threadIsSpam;const threadState=threadIsSpam?mailThreadLabels.spam:{...mailThreadLabels[thread.status],...mailFollowUpPresentation(thread,clockNow)};return <button key={thread.id} onClick={()=>void openThread(thread.id)} className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${selectedThread?.id===thread.id?"border-brand-200 bg-brand-50 dark:border-brand-500/30 dark:bg-brand-500/10":"border-transparent hover:border-gray-200 hover:bg-gray-50 dark:hover:border-gray-700 dark:hover:bg-white/[0.03]"}`}><div className="flex items-center justify-between gap-3"><span className={`text-[10px] font-semibold uppercase tracking-wide ${outbound?"text-brand-600":"text-success-600"}`}>{outbound?"Исходящее →":"← Входящее"}</span><span className="shrink-0 text-[10px] text-gray-400">{formatDate(last ? messageDate(last) : thread.last_message_at)}</span></div><strong className="mt-1 block line-clamp-1 text-sm text-gray-900 dark:text-white">{thread.subject || "Без темы"}</strong><div className="mt-1 flex items-center justify-between gap-2"><span className="min-w-0 truncate text-[11px] text-gray-500">{thread.participant_email}</span><div className="flex shrink-0 items-center gap-1">{thread.is_flagged&&<span title="Закреплено" className="text-[11px] text-warning-600">★</span>}{exceptionalStatus&&<span className="max-w-28 truncate text-[10px] font-medium text-gray-500">{threadState?.label || humanizeCode(thread.status)}</span>}{mailScope!=="sent"&&thread.unread_count>0&&<span title="Непрочитанные входящие письма" className="rounded-full bg-brand-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">{thread.unread_count} входящих</span>}</div></div><p className="mt-1.5 line-clamp-1 text-[11px] leading-4 text-gray-400">{preview || (last?.html_body ? "HTML-письмо" : "Сообщений в цепочке пока нет")}</p>{(thread.priority&&!['normal','low'].includes(thread.priority)||thread.follow_up_at)&&<div className="mt-1.5 flex flex-wrap gap-1.5">{thread.priority&&!["normal","low"].includes(thread.priority)&&<span className="rounded-full bg-error-50 px-2 py-0.5 text-[10px] font-semibold text-error-700">{priorityLabels[thread.priority]}</span>}{thread.follow_up_at&&<span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${overdue?"bg-error-50 text-error-700":"bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300"}`}>{overdue?"Просрочено":"До"} {formatDate(thread.follow_up_at)}</span>}</div>}</button>})}{!visibleThreads.length&&<EmptyState title="Писем не найдено" description="Измените папку, поиск или создайте новое письмо."/>}</div></Panel>
       <Panel className="min-w-0">{selectedThread && selectedThreadState ? <>
         <div className="sticky top-14 z-10 -mx-4 -mt-4 flex flex-col gap-4 border-b border-gray-100 bg-white/95 px-4 pb-4 pt-4 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95 sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${lastSelectedMessage?.direction==="outbound"?"border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300":"border-success-200 bg-success-50 text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-300"}`}>{lastSelectedMessage?.direction==="outbound"?"Последнее: исходящее":"Последнее: входящее"}</span>
+              <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${focusedSelectedMessage?.direction==="outbound"?"border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300":"border-success-200 bg-success-50 text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-300"}`}>{focusedSelectedMessage?.direction==="outbound"?"Показано: отправленное":"Показано: входящее"}</span>
               <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${selectedThreadState.className}`}>{selectedThreadState.label}</span>
             </div>
             <h2 className="mt-3 text-xl font-semibold leading-tight text-gray-900 dark:text-white">{selectedThread.subject || "Без темы"}</h2>
             <p className="mt-2 text-sm text-gray-500"><strong className="text-gray-700 dark:text-gray-200">OfferPSP</strong> ↔ {selectedThread.participant_email}</p>
-            <p className="mt-1 text-xs text-gray-400">Цепочка · {selectedMessages.length} {selectedMessages.length===1?"письмо":"писем"} · {selectedThreadState.hint}</p>
+            <p className="mt-1 text-xs text-gray-400">Цепочка · {orderedSelectedMessages.length} {orderedSelectedMessages.length===1?"письмо":"писем"} · {selectedThreadState.hint}</p>
           </div>
           {selectedThread.status === "trashed"
             ? <button disabled={busy} onClick={()=>void changeThreadState("restore")} className="shrink-0 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40">Восстановить</button>
             : <div className="flex shrink-0 items-center gap-1.5" aria-label="Действия с перепиской">
               <button type="button" onClick={startReply} title={lastSelectedMessage?.direction==="inbound"?"Ответить":"Написать follow-up"} aria-label={lastSelectedMessage?.direction==="inbound"?"Ответить":"Написать follow-up"} className="grid h-10 w-10 place-items-center rounded-lg bg-brand-500 text-white shadow-theme-xs hover:bg-brand-600"><EnvelopeIcon className="h-5 w-5"/></button>
               <button type="button" disabled={busy} onClick={()=>void saveOrganizer({is_flagged:!organizerFlagged}, organizerFlagged?"Переписка откреплена.":"Переписка закреплена.")} title={organizerFlagged?"Открепить":"Закрепить"} aria-label={organizerFlagged?"Открепить переписку":"Закрепить переписку"} className={`grid h-10 w-10 place-items-center rounded-lg border text-lg disabled:opacity-40 ${organizerFlagged?"border-warning-300 bg-warning-50 text-warning-600":"border-gray-200 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-white/5"}`}>{organizerFlagged?"★":"☆"}</button>
-              <button type="button" disabled={busy || !selectedMessages.some((entry)=>entry.direction==="inbound")} onClick={()=>void setThreadReadState(selectedThread.unread_count > 0)} title={selectedThread.unread_count > 0?"Пометить прочитанным":"Вернуть в непрочитанные"} aria-label={selectedThread.unread_count > 0?"Пометить прочитанным":"Вернуть в непрочитанные"} className="grid h-10 w-10 place-items-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 dark:border-gray-700 dark:hover:bg-white/5"><EyeIcon className="h-5 w-5"/></button>
+              <button type="button" disabled={busy || focusedSelectedMessage?.direction!=="inbound"} onClick={()=>void setThreadReadState(selectedThread.unread_count > 0)} title={focusedSelectedMessage?.direction!=="inbound"?"Прочтение относится только к входящим письмам":selectedThread.unread_count > 0?"Прочитать входящие":"Вернуть входящее в непрочитанные"} aria-label={selectedThread.unread_count > 0?"Прочитать входящие":"Вернуть входящее в непрочитанные"} className="grid h-10 w-10 place-items-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 dark:border-gray-700 dark:hover:bg-white/5"><EyeIcon className="h-5 w-5"/></button>
               <details className="group relative">
                 <summary title="Другие действия" aria-label="Другие действия" className="grid h-10 w-10 cursor-pointer list-none place-items-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-white/5"><MoreDotIcon className="h-5 w-5"/></summary>
                 <div className="absolute right-0 z-30 mt-2 w-56 rounded-xl border border-gray-200 bg-white p-1.5 shadow-theme-lg dark:border-gray-700 dark:bg-gray-900">
@@ -961,8 +967,8 @@ export function CommunicationsWorkspace() {
         </div>
         {!threadBodyReady ? <div role="status" className="mt-4 rounded-xl border border-gray-200 p-4 text-sm text-gray-500">
           {threadBodyError ? <><p>Не удалось загрузить полное письмо: {threadBodyError}</p><button className="mt-2 font-semibold text-brand-600" onClick={() => setThreadBodyRetry((value) => value + 1)}>Повторить загрузку письма</button></> : "Загружаю полную переписку…"}
-        </div> : lastSelectedMessage ? <section className="mt-4" aria-label="Последнее письмо">
-          {renderThreadMessage(lastSelectedMessage, true)}
+        </div> : focusedSelectedMessage ? <section className="mt-4" aria-label="Письмо выбранной папки">
+          {renderThreadMessage(focusedSelectedMessage, true)}
         </section> : <div className="mt-4"><EmptyState title="В цепочке пока нет писем" description="Можно подготовить новое письмо этому контакту."/></div>}
 
         {threadBodyReady && olderSelectedMessages.length > 0 && <details className="group mt-3 rounded-xl border border-gray-200 bg-gray-50/70 dark:border-gray-800 dark:bg-white/[0.03]">
@@ -1001,7 +1007,7 @@ export function CommunicationsWorkspace() {
                 <button disabled={busy} onClick={()=>void changeThreadState("closed")} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold dark:border-gray-700">Закрыть</button>
                 <button disabled={busy} onClick={()=>void changeThreadState("archived")} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-500 dark:border-gray-700">В архив</button>
                 <button disabled={busy} onClick={()=>void setThreadSpam(!isSpamMailThread(selectedThread))} className={`rounded-lg border px-3 py-2 text-xs font-semibold ${isSpamMailThread(selectedThread)?"border-success-200 text-success-700":"border-gray-200 text-gray-500"} dark:border-gray-700`}>{isSpamMailThread(selectedThread)?"Не спам":"В спам"}</button>
-                <button disabled={busy || !selectedMessages.some((entry)=>entry.direction==="inbound")} title={selectedMessages.some((entry)=>entry.direction==="inbound") ? undefined : "В цепочке нет входящего письма"} onClick={()=>void setThreadReadState(selectedThread.unread_count > 0)} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-500 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700">{selectedThread.unread_count > 0 ? "Прочитано" : "Вернуть в непрочитанные"}</button>
+                <button disabled={busy || focusedSelectedMessage?.direction!=="inbound"} title={focusedSelectedMessage?.direction==="inbound" ? undefined : "Прочтение относится только к входящим письмам"} onClick={()=>void setThreadReadState(selectedThread.unread_count > 0)} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-500 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700">{selectedThread.unread_count > 0 ? "Прочитать входящие" : "Вернуть входящее в непрочитанные"}</button>
                 <button disabled={busy} title="Переместить в корзину на 15 дней" onClick={()=>void changeThreadState("trashed")} className="rounded-lg border border-error-200 px-3 py-2 text-xs font-semibold text-error-600 hover:bg-error-50 disabled:opacity-40 dark:border-error-500/30 dark:text-error-300 dark:hover:bg-error-500/10">Удалить</button>
               </div>}
             </div>

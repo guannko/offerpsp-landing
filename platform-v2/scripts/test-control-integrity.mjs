@@ -106,7 +106,9 @@ assert.match(productionDeployScript, /--build-env/);
 assert.match(productionDeployScript, /status.*--porcelain.*--untracked-files=normal/);
 assert.match(productionDeployScript, /Refusing to deploy a dirty working tree/);
 
-assert.match(captain, /Вернуть в непрочитанные/);
+assert.match(captain, /Вернуть входящее в непрочитанные/);
+assert.match(captain, /focusedSelectedMessage\?\.direction!=="inbound"/);
+assert.match(captain, /mailScope!=="sent"&&thread\.unread_count>0/);
 assert.match(captain, /p_mark_read: markRead/);
 assert.match(captain, /p_mark_read: null/);
 assert.match(captain, /Письмо отправлено[^\n]+требуется техническая проверка/);
@@ -116,8 +118,8 @@ assert.match(captain, /Редактируется существующая за�
 assert.match(captain, /activeDraft\?"Отправить этот черновик":"Отправить письмо"/);
 assert.match(captain, /Черновики/);
 assert.match(captain, /setSearchParams\(\{draft:String\(draft\.id\)\}\)/);
-assert.match(captain, /Последнее: исходящее/);
-assert.match(captain, /Последнее: входящее/);
+assert.match(captain, /Показано: отправленное/);
+assert.match(captain, /Показано: входящее/);
 assert.match(captain, /Исходящее письмо →/);
 assert.match(captain, /← Входящее письмо/);
 assert.match(captain, /Написать follow-up/);
@@ -161,7 +163,8 @@ assert.match(captain, /Показать подпись/);
 assert.match(captain, /sticky top-14/);
 assert.match(captain, /Управление цепочкой/);
 assert.match(captain, />Органайзер</);
-assert.ok(captain.indexOf('aria-label="Последнее письмо"') < captain.indexOf("Управление цепочкой"), "latest email must render before workflow controls");
+assert.ok(captain.indexOf('aria-label="Письмо выбранной папки"') >= 0
+  && captain.indexOf('aria-label="Письмо выбранной папки"') < captain.indexOf("Управление цепочкой"), "folder email must render before workflow controls");
 assert.match(captain, /update_offerpsp_email_thread_organizer/);
 assert.match(captain, /AI-резюме/);
 assert.match(captain, /Рабочий шаблон/);

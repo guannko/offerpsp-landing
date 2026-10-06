@@ -1,6 +1,26 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-10-02
+Updated: 2026-10-06
+
+## Radio Room incoming/sent separation — release candidate
+
+- `VERIFIED locally`: Inbox is the default; explicit Inbox, Sent, Unread and
+  All conversations controls preserve both directions inside a thread.
+- Only received inbound mail contributes to unread counts and read actions.
+  Sent previews contain accepted sent/delivered messages, never saved drafts.
+- Replying no longer removes a thread from Inbox; later incoming mail does not
+  remove its sent correspondence. Preview and sorting follow the chosen folder.
+- Helper regressions, control-integrity, mail thread view, poller, sent archive,
+  work queue, lint and TypeScript/Vite production build pass.
+- Actual CommunicationsWorkspace was exercised in an offline synthetic browser
+  fixture: deliberately unread outgoing flags do not count; Sent does not mark
+  incoming read; read/unread actions operate on incoming only; history survives.
+- Read-only production check: 90 outgoing messages were already marked read;
+  25 unread incoming messages belong to archived nonoperational threads. No
+  historical flags, archive state, emails, bot workflows or database were changed.
+- Production baseline: `e234d10a07c08deaf36053297532a59717846f22` on
+  `ops-7q4m2x9k8v3n.vercel.app`. Deployment is not yet verified for this candidate.
+
 
 ## Evening completion block — bounded checks, full audit still PARTIAL
 
