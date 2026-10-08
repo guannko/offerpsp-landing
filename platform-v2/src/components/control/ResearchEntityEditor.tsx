@@ -5,6 +5,7 @@ import type { AgentPspProvider, CasinoLead, EmailDraft, EmailMessage, EmailThrea
 import { supabase } from "../../lib/supabase";
 import { QuickStatusSelect, type QuickStatusOption } from "./QuickStatusSelect";
 import { VisibilityToggleButton } from "./VisibilityToggleButton";
+import ProviderReliabilityPanel from "./ProviderReliabilityPanel";
 
 type EntityType = "casino" | "psp";
 type ResearchRecord = CasinoLead | AgentPspProvider;
@@ -405,6 +406,7 @@ export default function ResearchEntityEditor({ entityType, record, onClose, onSa
             <span className={`rounded-full px-3 py-1 text-xs font-semibold ${archived ? "bg-error-50 text-error-600" : "bg-success-50 text-success-700"}`}>{statusLabels[String(record?.record_state || "active")] || text(record?.record_state)}</span>
           </div>
           <ScreeningPanel screening={screening} busy={busy} archived={archived} onQueue={() => void queueScreening()}/>
+          {entityType === "psp" && record && <ProviderReliabilityPanel key={record.id} entityType="research_psp" entityId={String(record.id)} onSaved={onSaved}/>}
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.8fr)]">
             <Section title="Основная информация">
               <Detail label="Название" value={draft.name}/>

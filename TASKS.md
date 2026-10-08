@@ -1,6 +1,25 @@
 # OfferPSP tasks and verified state
 
-Updated: 2026-10-06
+Updated: 2026-10-09
+
+## Provider reliability categories — approved ratings, rollout pending
+
+- `VERIFIED locally`: staff-only assessment storage, weighted evidence scores,
+  explicit unknown criteria, disjoint "Review later" registry category and
+  optimistic edit conflict protection. Contact/archive states, offers, matching
+  and merchant-facing projections are unchanged.
+- `VERIFIED locally`: immutable session-bound batch preview/confirmation,
+  explicit new research identity creation, atomic rollback, expiry and replay
+  protection. New identities are never substituted by fuzzy search matches.
+- Boris approved PayOp 35%, MuchBetter 45%, Inpay 40% and Finrax 35% in
+  "Review later"; DECTA 65% remains pending research, not an approved partner.
+  Exact explanations and sources: artifacts/psp-reliability-proposed-20261009.json.
+- Tests: actual PGlite migration/permissions/concurrency snapshots, MCP/OAuth,
+  control-integrity, mail folders, organizer and work documents pass. Production
+  build and function storage budget (105.7 MiB / 11 functions) pass locally.
+- `PARTIAL`: production migration/deployment and exact immutable live batch
+  confirmation still pending. No live assessment or missing PSP created yet.
+
 
 ## Radio Room incoming/sent separation — release candidate
 

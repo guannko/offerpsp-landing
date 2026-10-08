@@ -9,12 +9,14 @@ import EntityRelationshipsPanel from "../components/control/EntityRelationshipsP
 import { useControlBridge } from "../context/ControlBridgeContext";
 import { supabase } from "../lib/supabase";
 import { ActivityPanel, DocumentsPanel, documentCategoryLabels, useEntityWorkspace, type EntityWorkspaceSnapshot } from "../components/control/EntityWorkspace360";
+import ProviderReliabilityPanel from "../components/control/ProviderReliabilityPanel";
 
 type JsonRow = Record<string, string | number | null | undefined>;
 type Provider = {
   id: string; internal_code?: string; brand_name: string; legal_name?: string; website?: string;
   relationship_status?: string; relationship_tier?: string; strategic_priority?: number;
   margin_included_default?: boolean; relationship_notes?: string; last_verified_at?: string;
+  legacy_psp_id?: number | null;
 };
 type Contact = { id: string; provider_id?: string; full_name: string; role_title?: string; region?: string; telegram?: string; email?: string; phone?: string; preferred_channel?: string; active?: boolean; notes?: string };
 type Margin = { id: string; route_id?: string | null; flow: string; mode: string; percent_value?: number | null; fixed_value?: number | null; fixed_currency?: string | null; active?: boolean; effective_to?: string | null };
@@ -272,7 +274,7 @@ export default function ProviderWorkspace() {
               {providerTabs.map((item) => <button key={item.id} onClick={() => selectTab(item.id)} className={`whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium ${tab === item.id ? "bg-brand-500 text-white" : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"}`}>{item.label}</button>)}
             </div>
             {tab === "overview"
-              ? <ProviderOverview workspace={workspace} entity={entityWorkspace.data} setTab={selectTab}/>
+              ? <div className="space-y-6"><ProviderReliabilityPanel key={workspace.provider.id} entityType="provider" entityId={workspace.provider.id} researchId={workspace.provider.legacy_psp_id} onSaved={entityWorkspace.refresh}/><ProviderOverview workspace={workspace} entity={entityWorkspace.data} setTab={selectTab}/></div>
               : tab === "edit"
                 ? <div className="max-w-2xl space-y-6"><ProviderForm draft={providerDraft} setDraft={setProviderDraft} save={() => void saveProvider()} busy={busy}/><EntityAliasEditor entityType="provider" entityId={workspace.provider.id}/><DefaultMarkupPanel draft={defaultMarkupDraft} setDraft={setDefaultMarkupDraft} save={() => void saveDefaultMarkups()} busy={busy}/></div>
               : tab === "contacts"

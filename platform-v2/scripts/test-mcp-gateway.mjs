@@ -67,6 +67,8 @@ global.fetch = async (url, init = {}) => {
   });
   if (String(url).endsWith("/rpc/record_offerpsp_mcp_action")) return Response.json({ ok: true, journal_id: "33333333-3333-4333-8333-333333333333" });
   if (String(url).endsWith("/rpc/save_offerpsp_task")) return Response.json({ id: "44444444-4444-4444-8444-444444444444", title: "Follow up" });
+  if (String(url).endsWith("/rpc/prepare_offerpsp_provider_reliability_batch")) return Response.json({ handled: true, status: "pending", confirmation_required: true, confirmation_token: "77777777-7777-4777-8777-777777777777", preview: JSON.parse(init.body).p_items });
+  if (String(url).endsWith("/rpc/confirm_offerpsp_provider_reliability_batch")) return Response.json(JSON.parse(init.body).p_confirmation_token === "77777777-7777-4777-8777-777777777777" ? { handled: true, status: "executed", assessments: [{ score: 35 }] } : { handled: false });
   if (String(url).endsWith("/rpc/prepare_offerpsp_route_replacements")) return Response.json({
     handled: true,
     confirmation_required: true,
@@ -234,6 +236,7 @@ bulkAgentReply = { success: true, answer: "No preview created for merchant 22222
   confirmation_required: true, confirmation_token: "22222222-2222-4222-8222-222222222222" };
 const unsupportedBulk = responseMock();
 await mcpHandler(request({jsonrpc:'2.0',id:60,method:'tools/call',params:{name:'prepare_bulk_operation',arguments:{instruction:'Archive this merchant only'}}}), unsupportedBulk);
+assert.ok(unsupportedBulk.payload.result.structuredContent, JSON.stringify(unsupportedBulk.payload.result));
 assert.equal(unsupportedBulk.payload.result.structuredContent.success,false);
 assert.equal(unsupportedBulk.payload.result.structuredContent.confirmation_required,false);
 assert.equal(unsupportedBulk.payload.result.structuredContent.confirmation_token,null);
@@ -281,6 +284,15 @@ assert.equal(confirmedRoutes.payload.result.structuredContent.processed, 2);
 assert.equal(calls.filter((entry) => entry.url.includes("/api/aibot-command")).length, agentCommandCount + 2);
 
 const source = await readFile(new URL("../api/_lib/offerpsp-mcp.mjs", import.meta.url), "utf8");
+const reliabilityPrepared = responseMock();
+const reliabilityItem = { name: "Example PSP", website: "https://example.com", entity_type: "research_psp", entity_id: null, payload: { category: "review_later" } };
+await mcpHandler(request({ jsonrpc: "2.0", id: 71, method: "tools/call", params: { name: "prepare_bulk_operation", arguments: { instruction: `PSP_RELIABILITY_BATCH:${JSON.stringify({ items: [reliabilityItem] })}` } } }), reliabilityPrepared);
+assert.equal(reliabilityPrepared.payload.result.structuredContent.confirmation_required, true);
+assert.deepEqual(reliabilityPrepared.payload.result.structuredContent.preview, [reliabilityItem]);
+const reliabilityConfirmed = responseMock();
+await mcpHandler(request({ jsonrpc: "2.0", id: 72, method: "tools/call", params: { name: "confirm_bulk_operation", arguments: { confirmation_token: "77777777-7777-4777-8777-777777777777" } } }), reliabilityConfirmed);
+assert.deepEqual(reliabilityConfirmed.payload.result.structuredContent.assessments, [{ score: 35 }]);
+assert.equal(calls.filter((entry) => entry.url.includes("/api/aibot-command")).length, agentCommandCount + 2, "structured assessments never delegate to an agent");
 assert.equal(source.includes("SUPABASE_SERVICE_ROLE_KEY"), false);
 assert.equal(source.includes("send-email"), false);
 assert.equal(source.includes("send-telegram"), false);

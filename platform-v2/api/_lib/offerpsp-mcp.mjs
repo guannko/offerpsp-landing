@@ -1,5 +1,6 @@
 import { HttpError, staffSupabaseRequest } from "./staff-auth.mjs";
 import { createOperationEnvelope, createSupabasePrimaryDataPlane } from "./data-plane.mjs";
+import { providerReliabilityItems } from "./provider-reliability-input.mjs";
 import { merchantNextAction } from "../../shared/merchant-next-action.mjs";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -110,7 +111,8 @@ export const offerPspTools = [
   }, readOnly),
   tool("prepare_bulk_operation", "Prepare bulk operation", "Create an immutable bulk preview and one-time server confirmation token. Explicit OFF-code route pairs use the staff-authenticated atomic replacement path; other supported bulk requests use the existing AIBot. This never executes the change.", {
     properties: {
-      instruction: stringSchema("Exact bulk action, entity type, IDs and requested changes", 3000),
+      instruction: stringSchema("Exact bulk action. Reliability: PSP_RELIABILITY_BATCH: followed by JSON {items:[{name,website,entity_type,entity_id,payload}]} (explicit IDs or null to create missing research PSP). Never executes the change.", 20000),
+      provider_reliability: { type: "array", minItems: 1, maxItems: 50, items: { type: "object", required: ["name", "website", "entity_type", "entity_id", "payload"], properties: { name: { type: "string", maxLength: 200 }, website: { type: "string", maxLength: 300 }, entity_type: { enum: ["provider", "research_psp"] }, entity_id: { type: ["string", "null"] }, payload: { type: "object" } } } },
       route_replacements: {
         type: "array",
         minItems: 1,
@@ -467,6 +469,11 @@ export async function executeOfferPspTool(name, args, { request, context, callId
       input);
   }
   if (name === "prepare_bulk_operation") {
+    const reliabilityItems = providerReliabilityItems(input);
+    if (reliabilityItems) {
+      return audited(context, callId, { action_type: "mcp_prepare_provider_reliability", description: `Prepare ${reliabilityItems.length} PSP assessments`, entity_type: "system", entity_id: "bulk" },
+        () => rpc(context, "prepare_offerpsp_provider_reliability_batch", { p_items: reliabilityItems }));
+    }
     const instruction = clamp(input.instruction, 3000);
     const replacements = routeReplacementPairs(input);
     if (replacements.length) {
@@ -494,6 +501,8 @@ export async function executeOfferPspTool(name, args, { request, context, callId
     const token = requireUuid(input.confirmation_token, "confirmation_token");
     return audited(context, callId, { action_type: "mcp_confirm_bulk", description: "Confirm server-bound bulk operation", entity_type: "system", entity_id: token },
       async () => {
+        const reliability = await rpc(context, "confirm_offerpsp_provider_reliability_batch", { p_confirmation_token: token });
+        if (reliability?.handled === true) return reliability;
         const routeReplacement = await rpc(context, "confirm_offerpsp_route_replacements", { p_confirmation_token: token });
         if (routeReplacement?.handled === true) return routeReplacement;
         return askAgent(request, context, `Confirm the already prepared bulk operation with confirmation token ${token}. Execute only that immutable token-bound preview.`);
