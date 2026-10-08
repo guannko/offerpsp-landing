@@ -2,7 +2,7 @@
 
 Updated: 2026-10-09
 
-## Provider reliability categories — approved ratings, rollout pending
+## Provider reliability categories — deployed, live batch confirmation pending
 
 - `VERIFIED locally`: staff-only assessment storage, weighted evidence scores,
   explicit unknown criteria, disjoint "Review later" registry category and
@@ -17,8 +17,16 @@ Updated: 2026-10-09
 - Tests: actual PGlite migration/permissions/concurrency snapshots, MCP/OAuth,
   control-integrity, mail folders, organizer and work documents pass. Production
   build and function storage budget (105.7 MiB / 11 functions) pass locally.
-- `PARTIAL`: production migration/deployment and exact immutable live batch
-  confirmation still pending. No live assessment or missing PSP created yet.
+- `VERIFIED deployed`: code 48cef9ee962fa5fb65ff23626ae3fa6db7fbb16b,
+  READY dpl_Dop891cMUPtkzLsWBFMzvq2LLKp5. Primary staff alias was explicitly
+  assigned after CLI deployment; its manifest matches. Staff browser loads
+  the new registry and all four active providers. 28 anonymous/invalid-token
+  API denials pass with no-store. Live private tables use RLS/no direct grants;
+  four guarded assessment RPCs deny anon/service_role execution.
+- `PARTIAL`: exact live immutable preview confirmation remains pending.
+  Cached connector schema limits instructions to 3,000 characters, so the
+  unchanged approved payload was prepared as three bounded previews through
+  the existing Operator gateway. No live assessment or missing PSP created yet.
 
 
 ## Radio Room incoming/sent separation — release candidate
